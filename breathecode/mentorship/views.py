@@ -646,7 +646,7 @@ class MentorSessionView(APIView, HeaderLimitOffsetPagination):
 
 
 class BillView(APIView, HeaderLimitOffsetPagination):
-    @capable_of('read_mentorship_bills')
+    @capable_of('read_mentorship_bill')
     def get(self, request, bill_id=None, academy_id=None):
 
         if bill_id is not None:
@@ -687,7 +687,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @capable_of('crud_mentorship_bills')
+    @capable_of('read_mentorship_bill')
     def put(self, request, bill_id=None, academy_id=None):
 
         if bill_id is None:
@@ -709,7 +709,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('crud_mentorship_bills')
+    @capable_of('read_mentorship_bill')
     def post(self, request, academy_id=None, mentor_id=None):
 
         if mentor_id is None:
