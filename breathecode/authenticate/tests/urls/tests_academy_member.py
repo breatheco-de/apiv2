@@ -1650,7 +1650,7 @@ class MemberPostTestSuite(AuthTestCase):
         invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
         params = {'callback': 'https://admin.breatheco.de'}
         querystr = urllib.parse.urlencode(params)
-        # TODO: obj is not defined
+
         url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
             str(TOKEN) + '?' + querystr
 
@@ -1677,7 +1677,57 @@ class MemberPostTestSuite(AuthTestCase):
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('random.getrandbits', MagicMock(side_effect=getrandbits))
-    def test_academy_member__post__without_user_in_data__invite_already_exists(self):
+    def test_academy_member__post__cohort_not_found(self):
+        """Test /academy/:id/member"""
+
+        role = 'god'
+        self.bc.request.set_headers(academy=1)
+        user = {'email': 'dude@dude.dude'}
+        user_invite = {'email': 'dude2@dude.dude'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=user,
+                                        user_invite=user_invite,
+                                        role=role,
+                                        skip_cohort=True,
+                                        capability='crud_member',
+                                        profile_academy=1)
+
+        url = reverse_lazy('authenticate:academy_member')
+        data = {
+            'role': 'god',
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'cohort': 1,
+            'invite': True,
+            'email': 'dude2@dude.dude',
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'cohort-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+        invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
+        params = {'callback': 'https://admin.breatheco.de'}
+        querystr = urllib.parse.urlencode(params)
+
+        url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+            str(TOKEN) + '?' + querystr
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            self.bc.format.to_dict(model.user_invite),
+        ])
+
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('random.getrandbits', MagicMock(side_effect=getrandbits))
+    def test_academy_member__post__without_user_in_data__invite_already_exists__cohort_none_in_data(self):
         """Test /academy/:id/member"""
 
         role = 'god'
@@ -1713,7 +1763,7 @@ class MemberPostTestSuite(AuthTestCase):
         invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
         params = {'callback': 'https://admin.breatheco.de'}
         querystr = urllib.parse.urlencode(params)
-        # TODO: obj is not defined
+
         url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
             str(TOKEN) + '?' + querystr
 
@@ -1722,6 +1772,101 @@ class MemberPostTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('random.getrandbits', MagicMock(side_effect=getrandbits))
+    def test_academy_member__post__without_user_in_data__invite_already_exists__diff_cohort_in_data(self):
+        """Test /academy/:id/member"""
+
+        role = 'god'
+        self.bc.request.set_headers(academy=1)
+        user = {'email': 'dude@dude.dude'}
+        user_invite = {'email': 'dude2@dude.dude'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=user,
+                                        user_invite=user_invite,
+                                        cohort=2,
+                                        role=role,
+                                        capability='crud_member',
+                                        profile_academy=1)
+
+        url = reverse_lazy('authenticate:academy_member')
+        data = {
+            'role': 'god',
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'cohort': 2,
+            'invite': True,
+            'email': 'dude2@dude.dude',
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {
+            'address': None,
+            'email': 'dude2@dude.dude',
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'phone': '',
+            'role': role,
+            'status': 'INVITED',
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy), {
+                'academy_id': 1,
+                'address': None,
+                'email': 'dude2@dude.dude',
+                'first_name': 'Kenny',
+                'id': 2,
+                'last_name': 'McKornick',
+                'phone': '',
+                'role_id': role,
+                'status': 'INVITED',
+                'user_id': None,
+            }
+        ])
+
+        invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
+        params = {'callback': 'https://admin.breatheco.de'}
+        querystr = urllib.parse.urlencode(params)
+
+        url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+            str(TOKEN) + '?' + querystr
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            generate_user_invite({
+                'id': 1,
+                'cohort_id': 1,
+                'academy_id': 1,
+                'author_id': 1,
+                'email': 'dude2@dude.dude',
+                'role_id': role,
+                'token': model.user_invite.token,
+            }),
+            generate_user_invite({
+                'id': 2,
+                'cohort_id': 2,
+                'academy_id': 1,
+                'author_id': 1,
+                'email': 'dude2@dude.dude',
+                'first_name': 'Kenny',
+                'last_name': 'McKornick',
+                'role_id': role,
+                'token': TOKEN,
+            }),
+        ])
+
+        self.assertEqual(actions.send_email_message.call_args_list, [
+            call('welcome_academy', 'dude2@dude.dude', {
+                'email': 'dude2@dude.dude',
+                'subject': 'Welcome to 4Geeks',
+                'LINK': url,
+                'FIST_NAME': 'Kenny'
+            })
+        ])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('random.getrandbits', MagicMock(side_effect=getrandbits))
@@ -1760,7 +1905,7 @@ class MemberPostTestSuite(AuthTestCase):
         invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
         params = {'callback': 'https://admin.breatheco.de'}
         querystr = urllib.parse.urlencode(params)
-        # TODO: obj is not defined
+
         url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
             str(TOKEN) + '?' + querystr
 

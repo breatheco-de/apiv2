@@ -308,12 +308,14 @@ class UserMeSerializer(serializers.ModelSerializer):
 
 class MemberPOSTSerializer(serializers.ModelSerializer):
     invite = serializers.BooleanField(write_only=True, required=False)
+    cohort = serializers.IntegerField(write_only=True, required=False)
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
 
     class Meta:
         model = ProfileAcademy
-        fields = ('email', 'role', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'status')
+        fields = ('email', 'role', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'cohort',
+                  'status')
 
     def validate(self, data):
         if 'email' in data and data['email']:
@@ -360,6 +362,12 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
         role = validated_data['role']
 
+        cohort = None
+        if 'cohort' in validated_data:
+            cohort = Cohort.objects.filter(id=validated_data.pop('cohort')).first()
+            if cohort is None:
+                raise ValidationException('Cohort not found', slug='cohort-not-found')
+
         user = None
         email = None
         status = 'INVITED'
@@ -393,7 +401,18 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
         if 'user' not in validated_data:
             validated_data.pop('invite')  # the front end sends invite=true so we need to remove it
             email = validated_data['email'].lower()
-            invite = UserInvite.objects.filter(email=email, author=self.context.get('request').user).first()
+
+            query = {
+                'cohort': cohort,
+                'email__iexact': email,
+                'author': self.context.get('request').user,
+            }
+
+            # if the cohort is not specified, proccess to find if the user was invite ignoring the cohort
+            if not cohort:
+                del query['cohort']
+
+            invite = UserInvite.objects.filter(**query).first()
 
             # avoid double invite
             if invite is not None:
@@ -412,6 +431,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                 first_name=validated_data['first_name'],
                                 last_name=validated_data['last_name'],
                                 academy=academy,
+                                cohort=cohort,
                                 role=role,
                                 author=self.context.get('request').user,
                                 token=token)
@@ -541,10 +561,20 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             return profile_academy
 
         if 'user' not in validated_data:
-            validated_data.pop('invite')
-            email = validated_data['email']
-            invite = UserInvite.objects.filter(email=validated_data['email'],
-                                               author=self.context.get('request').user).first()
+            validated_data.pop('invite')  # the front end sends invite=true so we need to remove it
+            email = validated_data['email'].lower()
+
+            query = {
+                'cohort': cohort,
+                'email__iexact': email,
+                'author': self.context.get('request').user,
+            }
+
+            # if the cohort is not specified, proccess to find if the user was invite ignoring the cohort
+            if not cohort:
+                del query['cohort']
+
+            invite = UserInvite.objects.filter(**query).first()
             if invite is not None:
                 raise ValidationException('You already invited this user', code=400, slug='already-invited')
 
@@ -554,7 +584,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 if not UserInvite.objects.filter(token=token).exists():
                     break
 
-            invite = UserInvite(email=validated_data['email'],
+            invite = UserInvite(email=email,
                                 first_name=validated_data['first_name'],
                                 last_name=validated_data['last_name'],
                                 academy=academy,
