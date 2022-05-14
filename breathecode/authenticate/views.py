@@ -788,8 +788,7 @@ def save_github_token(request):
 
             # create the user if not exists
             if user is None:
-                user = User(username=github_user['email'].lower(), email=github_user['email'].lower())
-                user.save()
+                raise ValidationException('User does not exist', code=403, slug='user-not-found')
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
 
