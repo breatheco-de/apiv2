@@ -33,6 +33,7 @@ from .serializers import (
     BigBillSerializer,
     GETBillSmallSerializer,
     MentorshipBillPUTSerializer,
+    MentorshipBillPUTListSerializer,
     BillSessionSerializer,
 )
 from rest_framework.response import Response
@@ -689,23 +690,46 @@ class BillView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('read_mentorship_bill')
     def put(self, request, bill_id=None, academy_id=None):
+        print(request.data)
+        many = isinstance(request.data, list)
+        print(many)
+        if many:
+            current = []
+            for obj in request.data:
+                print('OBJJJ')
+                print(obj)
+                current.append(MentorshipBill.objects.filter(id=obj['id']).first())
+            print(current)
+            serializer = MentorshipBillPUTListSerializer(current,
+                                                         data=request.data,
+                                                         many=many,
+                                                         context={
+                                                             'request': request,
+                                                             'academy_id': academy_id
+                                                         })
+            bill = current
+            print(request.data)
+            print(serializer.is_valid())
+        else:
+            if bill_id is None:
+                raise ValidationException('Missing bill ID on the URL', 404)
 
-        if bill_id is None:
-            raise ValidationException('Missing bill ID on the URL', 404)
+            bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
+            if bill is None:
+                raise ValidationException('This bill does not exist for this academy', 404)
 
-        bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
-        if bill is None:
-            raise ValidationException('This bill does not exist for this academy', 404)
-
-        serializer = MentorshipBillPUTSerializer(bill,
-                                                 data=request.data,
-                                                 context={
-                                                     'request': request,
-                                                     'academy_id': academy_id
-                                                 })
+            serializer = MentorshipBillPUTSerializer(bill,
+                                                     data=request.data,
+                                                     context={
+                                                         'request': request,
+                                                         'academy_id': academy_id
+                                                     })
         if serializer.is_valid():
+            print(1)
             mentor = serializer.save()
+            print(2)
             _serializer = GETBillSmallSerializer(bill)
+            print(3)
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

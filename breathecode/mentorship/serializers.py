@@ -452,3 +452,14 @@ class MentorshipBillPUTSerializer(serializers.ModelSerializer):
                                       slug='academy-not-found')
 
         return {**data, 'academy': academy}
+
+
+class MentorshipBillPUTListSerializer(serializers.ListSerializer):
+    class Meta:
+        model = MentorshipBill
+
+    def update(self, instance, validated_data):
+
+        bills = super().update(instance, validated_data)
+
+        return bills
