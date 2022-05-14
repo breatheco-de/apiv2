@@ -52,6 +52,31 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    def test_github_callback__user_not_exist_but_waiting_list(self):
+        """Test /github/callback"""
+
+        user_invite = {'status': 'WAITING_LIST', 'email': 'jdefreitaspinto@gmail.com'}
+        self.bc.database.create(user_invite=user_invite)
+
+        original_url_callback = 'https://google.co.ve'
+        code = 'Konan'
+
+        url = reverse_lazy('authenticate:github_callback')
+        params = {'url': original_url_callback, 'code': code}
+
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+        json = response.json()
+        expected = {'detail': 'user-not-found-but-waiting-list', 'status_code': 403}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
+
+    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
+    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
     def test_github_callback__with_user(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
