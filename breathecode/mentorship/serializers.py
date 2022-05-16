@@ -438,11 +438,24 @@ class SessionSerializer(serializers.ModelSerializer):
         return supper().validate(data)
 
 
+class MentorshipBillPUTListSerializer(serializers.ListSerializer):
+    def update(self, instances, validated_data):
+
+        instance_hash = {index: instance for index, instance in enumerate(instances)}
+
+        result = [
+            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
+        ]
+
+        return result
+
+
 class MentorshipBillPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = MentorshipBill
         exclude = ('created_at', 'updated_at', 'academy', 'mentor', 'reviewer', 'total_duration_in_minutes',
                    'total_duration_in_hours', 'total_price', 'overtime_minutes')
+        list_serializer_class = MentorshipBillPUTListSerializer
 
     def validate(self, data):
 
@@ -452,14 +465,3 @@ class MentorshipBillPUTSerializer(serializers.ModelSerializer):
                                       slug='academy-not-found')
 
         return {**data, 'academy': academy}
-
-
-class MentorshipBillPUTListSerializer(serializers.ListSerializer):
-    class Meta:
-        model = MentorshipBill
-
-    def update(self, instance, validated_data):
-
-        bills = super().update(instance, validated_data)
-
-        return bills

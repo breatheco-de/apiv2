@@ -582,6 +582,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     private = serializers.BooleanField(required=False)
     kickoff_date = serializers.DateTimeField(required=False)
     ending_date = serializers.DateTimeField(required=False, allow_null=True)
+    remote_available = serpy.Field(required=False)
     current_day = serializers.IntegerField(required=False)
     current_module = serializers.IntegerField(required=False)
     stage = serializers.CharField(required=False)
@@ -589,9 +590,9 @@ class CohortPUTSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-                  'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private', 'online_meeting_url',
-                  'timezone', 'current_module')
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'remote_available', 'current_day',
+                  'stage', 'language', 'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private',
+                  'online_meeting_url', 'timezone', 'current_module')
 
     def update(self, instance, validated_data):
         last_schedule = instance.schedule
