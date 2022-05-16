@@ -713,10 +713,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
                                                  })
         if serializer.is_valid():
             mentor = serializer.save()
-            if (many):
-                return Response(serializer.data, status=status.HTTP_200_OK)
-
-            _serializer = GETBillSmallSerializer(bill)
+            _serializer = GETBillSmallSerializer(bill, many=many)
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
