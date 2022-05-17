@@ -786,10 +786,23 @@ def save_github_token(request):
                     Q(credentialsgithub__github_id=github_user['id'])
                     | Q(email__iexact=github_user['email'])).first()
 
-            # create the user if not exists
-            if user is None:
-                user = User(username=github_user['email'].lower(), email=github_user['email'].lower())
-                user.save()
+            user_does_not_exists = user is None
+            if user_does_not_exists:
+                invite = UserInvite.objects.filter(status='WAITING_LIST', email=github_user['email']).first()
+
+            if user_does_not_exists and invite:
+                raise ValidationException(
+                    f'You are still number {invite.id} on the waiting list, we will email you once you are '
+                    'given access',
+                    code=403,
+                    slug='user-not-found-but-waiting-list')
+
+            if user_does_not_exists:
+                raise ValidationException(
+                    'We could not find in our records the email associated to this github account, '
+                    'perhaps you want to signup to the platform first?',
+                    code=403,
+                    slug='user-not-found')
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
 
