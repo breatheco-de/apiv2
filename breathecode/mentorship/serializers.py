@@ -1,11 +1,9 @@
-import serpy, re, math, requests
+import serpy
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
-from .actions import mentor_is_ready
-from breathecode.admissions.models import Academy
+import breathecode.mentorship.actions as actions
+from breathecode.admissions.models import Academy, Syllabus
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from django.utils import timezone
 from breathecode.utils.datetime_interger import duration_to_str
 
 
@@ -157,7 +155,6 @@ class BigBillSerializer(GETBillSmallSerializer):
 
     def get_sessions(self, obj):
         _sessions = obj.mentorshipsession_set.order_by('created_at').all()
-        print('session', _sessions)
         return BillSessionSerializer(_sessions, many=True).data
 
     def get_unfinished_sessions(self, obj):
@@ -360,6 +357,8 @@ class ServicePOSTSerializer(serializers.ModelSerializer):
 
 
 class ServicePUTSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(required=False)
+
     class Meta:
         model = MentorshipService
         exclude = ('created_at', 'updated_at', 'academy', 'slug')
@@ -384,25 +383,19 @@ class MentorSerializer(serializers.ModelSerializer):
 
 
 class MentorUpdateSerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=False)
+    price_per_hour = serializers.FloatField(required=False)
+    service = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(), required=False)
+
     class Meta:
         model = MentorProfile
         exclude = ('created_at', 'updated_at', 'user', 'token')
 
     def validate(self, data):
-
-        if 'user' in data:
-            raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',
-                                      slug='user-read-only')
-        if 'token' in data:
-            raise ValidationException('Mentor token cannot be updated', slug='token-read-only')
-
-        if 'academy' in data:
-            raise ValidationException('Mentor academy cannot be updated', slug='academy-read-only')
-
         if 'status' in data and data['status'] in ['ACTIVE', 'UNLISTED'
                                                    ] and self.instance.status != data['status']:
             try:
-                mentor_is_ready(self.instance)
+                actions.mentor_is_ready(self.instance)
             except Exception as e:
                 raise ValidationException(str(e))
 
@@ -435,7 +428,7 @@ class SessionSerializer(serializers.ModelSerializer):
                         f'The field {field} is automatically set by the system during online mentorships',
                         slug='read-only-field-online')
 
-        return supper().validate(data)
+        return super().validate(data)
 
 
 class MentorshipBillPUTSerializer(serializers.ModelSerializer):

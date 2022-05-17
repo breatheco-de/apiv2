@@ -1,0 +1,551 @@
+"""
+This file just can contains duck tests refert to AcademyInviteView
+"""
+from datetime import timedelta
+import hashlib
+from unittest.mock import MagicMock, call, patch
+from django.urls.base import reverse_lazy
+from rest_framework import status
+
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+from ..mixins import MentorshipTestCase
+from django.utils import timezone
+
+UTC_NOW = timezone.now()
+
+
+def get_serializer(self, mentor_profile, mentorship_service, user, data={}):
+    return {
+        'booking_url': mentor_profile.booking_url,
+        'created_at': self.bc.datetime.to_iso_string(mentor_profile.created_at),
+        'email': mentor_profile.email,
+        'id': mentor_profile.id,
+        'online_meeting_url': mentor_profile.online_meeting_url,
+        'price_per_hour': mentor_profile.price_per_hour,
+        'service': {
+            'academy': {
+                'icon_url': mentorship_service.academy.icon_url,
+                'id': mentorship_service.academy.id,
+                'logo_url': mentorship_service.academy.logo_url,
+                'name': mentorship_service.academy.name,
+                'slug': mentorship_service.academy.slug,
+            },
+            'allow_mentee_to_extend': mentorship_service.allow_mentee_to_extend,
+            'allow_mentors_to_extend': mentorship_service.allow_mentors_to_extend,
+            'created_at': self.bc.datetime.to_iso_string(mentorship_service.created_at),
+            'duration': self.bc.datetime.from_timedelta(mentorship_service.duration),
+            'id': mentorship_service.id,
+            'language': mentorship_service.language,
+            'logo_url': mentorship_service.logo_url,
+            'max_duration': self.bc.datetime.from_timedelta(mentorship_service.max_duration),
+            'missed_meeting_duration':
+            self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
+            'name': mentorship_service.name,
+            'slug': mentorship_service.slug,
+            'status': mentorship_service.status,
+            'updated_at': self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+        },
+        'slug': mentor_profile.slug,
+        'status': mentor_profile.status,
+        'timezone': mentor_profile.timezone,
+        'updated_at': self.bc.datetime.to_iso_string(mentor_profile.updated_at),
+        'user': {
+            'email': user.email,
+            'first_name': user.first_name,
+            'id': user.id,
+            'last_name': user.last_name,
+        },
+        **data,
+    }
+
+
+def post_serializer(self, mentorship_service, user, data={}):
+    return {
+        'id': 0,
+        'slug': '',
+        'user': {
+            'id': user.id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+        },
+        'service': {
+            'id': mentorship_service.id,
+            'slug': mentorship_service.slug,
+            'name': mentorship_service.name,
+            'status': mentorship_service.status,
+            'academy': {
+                'id': mentorship_service.academy.id,
+                'slug': mentorship_service.academy.slug,
+                'name': mentorship_service.academy.name,
+                'logo_url': mentorship_service.academy.logo_url,
+                'icon_url': mentorship_service.academy.icon_url,
+            },
+            'logo_url': mentorship_service.logo_url,
+            'duration': self.bc.datetime.from_timedelta(mentorship_service.duration),
+            'language': mentorship_service.language,
+            'allow_mentee_to_extend': mentorship_service.allow_mentee_to_extend,
+            'allow_mentors_to_extend': mentorship_service.allow_mentors_to_extend,
+            'max_duration': self.bc.datetime.from_timedelta(mentorship_service.max_duration),
+            'missed_meeting_duration':
+            self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
+            'created_at': self.bc.datetime.to_iso_string(mentorship_service.created_at),
+            'updated_at': self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+            'description': mentorship_service.description,
+        },
+        'status': 'INVITED',
+        'price_per_hour': 20.0,
+        'booking_url': None,
+        'online_meeting_url': None,
+        'timezone': None,
+        'syllabus': [],
+        'email': None,
+        'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        **data,
+    }
+
+
+def mentor_profile_columns(data={}):
+    token = hashlib.sha1(
+        (str(data['slug'] if 'slug' in data else '') + str(UTC_NOW)).encode('UTF-8')).hexdigest()
+    return {
+        'bio': None,
+        'booking_url': None,
+        'email': None,
+        'id': 0,
+        'name': '',
+        'online_meeting_url': None,
+        'price_per_hour': 0,
+        'service_id': 0,
+        'slug': 'mirai-nikki',
+        'status': 'INVITED',
+        'timezone': None,
+        'token': token,
+        'user_id': 0,
+        **data,
+    }
+
+
+class AcademyServiceTestSuite(MentorshipTestCase):
+    """
+    🔽🔽🔽 Auth
+    """
+    def test__get__without_auth(self):
+        url = reverse_lazy('mentorship:academy_mentor')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test__get__without_academy_header(self):
+        model = self.bc.database.create(user=1)
+
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = {
+            'detail': "Missing academy_id parameter expected for the endpoint url or 'Academy' header",
+            'status_code': 403,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    """
+    🔽🔽🔽 GET capability
+    """
+
+    def test__get__without_capabilities(self):
+        model = self.bc.database.create(user=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = {
+            'detail': "You (user: 1) don't have this capability: read_mentorship_mentor for academy 1",
+            'status_code': 403,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    """
+    🔽🔽🔽 GET without data
+    """
+
+    def test__get__without_data(self):
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    """
+    🔽🔽🔽 GET with one MentorProfile
+    """
+
+    def test__get__with_one_mentor_profile(self):
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        mentor_profile=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [
+            get_serializer(self, model.mentor_profile, model.mentorship_service, model.user),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+            self.bc.format.to_dict(model.mentor_profile),
+        ])
+
+    """
+    🔽🔽🔽 GET with two MentorProfile
+    """
+
+    def test__get__with_two_mentor_profile(self):
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        mentor_profile=2,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        response = self.client.get(url)
+
+        json = response.json()
+        mentor_profile = sorted(model.mentor_profile, key=lambda x: x.created_at, reverse=True)
+        expected = [
+            get_serializer(self, mentor_profile[0], model.mentorship_service, model.user),
+            get_serializer(self, mentor_profile[1], model.mentorship_service, model.user),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'),
+                         self.bc.format.to_dict(model.mentor_profile))
+
+    """
+    🔽🔽🔽 GET with two MentorProfile passing service in querystring
+    """
+
+    def test__get__with_two_mentor_profile__passing_bad_service(self):
+        mentorship_service = {'slug': self.bc.fake.slug()}
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        mentor_profile=2,
+                                        mentorship_service=mentorship_service,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=model.academy.id)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor') + f'?service={self.bc.fake.slug()}'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of('mentorship.MentorProfile'),
+            self.bc.format.to_dict(model.mentor_profile),
+        )
+
+        self.bc.database.delete('mentorship.MentorProfile')
+
+    def test__get__with_two_mentor_profile__passing_service(self):
+        slug = self.bc.fake.slug()
+        mentorship_service = {'slug': slug}
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        mentor_profile=2,
+                                        mentorship_service=mentorship_service,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=model.academy.id)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor') + f'?service={slug}'
+        response = self.client.get(url)
+
+        json = response.json()
+        mentor_profile = sorted(model.mentor_profile, key=lambda x: x.created_at, reverse=True)
+        expected = [
+            get_serializer(self, mentor_profile[0], model.mentorship_service, model.user),
+            get_serializer(self, mentor_profile[1], model.mentorship_service, model.user),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of('mentorship.MentorProfile'),
+            self.bc.format.to_dict(model.mentor_profile),
+        )
+
+        self.bc.database.delete('mentorship.MentorProfile')
+
+    """
+    🔽🔽🔽 GET with two MentorProfile passing status in querystring
+    """
+
+    def test__get__with_two_mentor_profile__passing_bad_status(self):
+        statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
+
+        for n in range(0, 3):
+            # 0, 1, 10, 11, 0
+            current_bin_key = bin(n).replace('0b', '')[-2:]
+            current_key = int(current_bin_key, 2)
+            current_status = statuses[current_key]
+
+            # 0, 1, 10, 11, 0
+            bad_bin_key = bin(n + 1).replace('0b', '')[-2:]
+            bad_key = int(bad_bin_key, 2)
+            bad_status = statuses[bad_key]
+
+            mentor_profile = {'status': current_status}
+            model = self.bc.database.create(user=1,
+                                            role=1,
+                                            capability='read_mentorship_mentor',
+                                            mentor_profile=(2, mentor_profile),
+                                            profile_academy=1)
+
+            self.bc.request.set_headers(academy=model.academy.id)
+            self.bc.request.authenticate(model.user)
+
+            url = reverse_lazy('mentorship:academy_mentor') + f'?status={bad_status}'
+            response = self.client.get(url)
+
+            json = response.json()
+            expected = []
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                self.bc.database.list_of('mentorship.MentorProfile'),
+                self.bc.format.to_dict(model.mentor_profile),
+            )
+
+            self.bc.database.delete('mentorship.MentorProfile')
+
+    def test__get__with_two_mentor_profile__passing_status(self):
+        statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
+
+        for current_status in statuses:
+            mentor_profile = {'status': current_status}
+            model = self.bc.database.create(user=1,
+                                            role=1,
+                                            capability='read_mentorship_mentor',
+                                            mentor_profile=(2, mentor_profile),
+                                            profile_academy=1)
+
+            self.bc.request.set_headers(academy=model.academy.id)
+            self.bc.request.authenticate(model.user)
+
+            url = reverse_lazy('mentorship:academy_mentor') + f'?status{current_status}'
+            response = self.client.get(url)
+
+            json = response.json()
+            mentor_profile = sorted(model.mentor_profile, key=lambda x: x.created_at, reverse=True)
+            expected = [
+                get_serializer(self,
+                               mentor_profile[0],
+                               model.mentorship_service,
+                               model.user,
+                               data={'status': current_status}),
+                get_serializer(self,
+                               mentor_profile[1],
+                               model.mentorship_service,
+                               model.user,
+                               data={'status': current_status}),
+            ]
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                self.bc.database.list_of('mentorship.MentorProfile'),
+                self.bc.format.to_dict(model.mentor_profile),
+            )
+
+            self.bc.database.delete('mentorship.MentorProfile')
+
+    """
+    🔽🔽🔽 Spy the extensions
+    """
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test__get__spy_extensions(self):
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        mentor_profile=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension', 'SortExtension']),
+        ])
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(sort='-created_at', paginate=True),
+        ])
+
+    """
+    🔽🔽🔽 POST capability
+    """
+
+    def test__post__without_capabilities(self):
+        model = self.bc.database.create(user=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        response = self.client.post(url)
+
+        json = response.json()
+        expected = {
+            'detail': "You (user: 1) don't have this capability: crud_mentor for academy 1",
+            'status_code': 403,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    """
+    🔽🔽🔽 POST without slug in the field
+    """
+
+    def test__post__without_slug_fields_in_body(self):
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentor', profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        response = self.client.post(url)
+
+        json = response.json()
+        expected = {'detail': 'missing-slug-field', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    """
+    🔽🔽🔽 POST without required fields in body
+    """
+
+    def test__post__without_required_fields_in_body(self):
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentor', profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        data = {'slug': 'mirai-nikki', 'name': 'Mirai Nikki'}
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {
+            'price_per_hour': ['This field is required.'],
+            'service': ['This field is required.'],
+            'user': ['This field is required.'],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [])
+
+    """
+    🔽🔽🔽 POST creating a element
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__post__creating_a_element(self):
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentor',
+                                        profile_academy=1,
+                                        mentorship_service=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        data = {
+            'slug': 'mirai-nikki',
+            'name': 'Mirai Nikki',
+            'price_per_hour': 20,
+            'service': 1,
+            'user': 1,
+        }
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = post_serializer(self,
+                                   model.mentorship_service,
+                                   model.user,
+                                   data={
+                                       'id': 1,
+                                       'slug': 'mirai-nikki'
+                                   })
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+            mentor_profile_columns({
+                'id': 1,
+                'name': 'Mirai Nikki',
+                'slug': 'mirai-nikki',
+                'bio': None,
+                'service_id': 1,
+                'user_id': 1,
+                'price_per_hour': 20.0,
+            }),
+        ])
