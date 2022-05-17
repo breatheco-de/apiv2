@@ -694,7 +694,10 @@ class BillView(APIView, HeaderLimitOffsetPagination):
         if many:
             bill = []
             for obj in request.data:
-                bill.append(MentorshipBill.objects.filter(id=obj['id']).first())
+                elem = MentorshipBill.objects.filter(id=obj['id']).first()
+                if elem is None:
+                    raise ValidationException(f'Bill {obj["id"]} not found', 404)
+                bill.append(elem)
 
         else:
             if bill_id is None:
