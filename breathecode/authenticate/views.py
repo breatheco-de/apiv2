@@ -791,6 +791,9 @@ def save_github_token(request):
                 invite = UserInvite.objects.filter(status='WAITING_LIST', email=github_user['email']).first()
 
             if user_does_not_exists and invite:
+                if url is None or url == '':
+                    url = os.getenv('APP_URL', 'https://4geeks.com')
+
                 return render_message(
                     request,
                     f'You are still number {invite.id} on the waiting list, we will email you once you are '
