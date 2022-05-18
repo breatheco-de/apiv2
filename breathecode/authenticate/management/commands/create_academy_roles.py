@@ -341,6 +341,7 @@ ROLES = [
             'read_assignment',
             'read_single_cohort',
             'read_my_academy',
+            'read_all_cohort',
             'crud_activity',
             'read_mentorship_service',
             'read_mentorship_mentor',
