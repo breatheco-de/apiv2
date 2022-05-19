@@ -556,7 +556,12 @@ class LoginView(ObtainAuthToken):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.get_or_create(user=user, token_type='login')
-        return Response({'token': token.key, 'user_id': user.pk, 'email': user.email})
+        return Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'email': user.email,
+            'expires_at': token.expires_at
+        })
 
 
 @api_view(['GET'])
