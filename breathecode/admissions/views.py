@@ -322,6 +322,8 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             if users is not None:
                 items = items.filter(user__id__in=users.split(','))
 
+            items = items.order_by(request.GET.get('order_by', '-role'))
+
         except Exception as e:
             raise ValidationException(str(e), 400)
 
