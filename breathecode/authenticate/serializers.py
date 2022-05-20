@@ -33,6 +33,8 @@ class GitpodUserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     github_username = serpy.Field()
     created_at = serpy.Field()
+    delete_status = serpy.Field()
+    assignee_id = serpy.Field()
     expires_at = serpy.Field()
     user = UserTinySerializer(required=False)
 

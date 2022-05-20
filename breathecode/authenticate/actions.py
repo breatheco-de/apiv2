@@ -135,7 +135,7 @@ def set_gitpod_user_expiration(gitpod_user):
             gitpod_user.delete_status = f'User will be deleted when cohort {cu.cohort.name} finishes on {cu.cohort.ending_date}'
 
     if gitpod_user.user is None or gitpod_user.expires_at is None:
-        gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=7)
+        gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=3)
         gitpod_user.delete_status = 'User will be deleted because no active cohort could be associated to it, please set a cohort if you want to avoid deletion'
 
     if gitpod_user.user is not None:
