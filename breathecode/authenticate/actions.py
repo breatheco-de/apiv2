@@ -127,7 +127,7 @@ def set_gitpod_user_expiration(gitpod_user):
         # find last cohort
         cu = gitpod_user.user.cohortuser_set.filter(
             educational_status__in=['ACTIVE'],
-            cohort__status=['PREWORK', 'STARTED', 'FINAL_PROJECT']).order_by('-cohort__ending_date').first()
+            cohort__stage=['PREWORK', 'STARTED', 'FINAL_PROJECT']).order_by('-cohort__ending_date').first()
         if cu is not None:
             gitpod_user.expires_at = cu.cohort.ending_date
             gitpod_user.academy = cu.cohort.academy
