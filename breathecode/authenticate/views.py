@@ -1681,7 +1681,13 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
                                       code=404,
                                       slug='gitpoduser-not-found')
 
-        item = set_gitpod_user_expiration(item)
+        if request.data is None or ('expires_at' in request.data and request.data['expires_at'] is None):
+            item = set_gitpod_user_expiration(item)
+            serializer = GitpodUserSmallSerializer(item, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-        serializer = GetGitpodUserSerializer(item, many=False)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = GetGitpodUserSerializer(item, data=request.data)
+        if serializer.is_valid():
+            _item = serializer.save()
+            return Response(GitpodUserSmallSerializer(_item, many=False).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
