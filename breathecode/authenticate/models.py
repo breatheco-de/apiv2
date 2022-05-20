@@ -362,6 +362,7 @@ class GitpodUser(models.Model):
     delete_status = models.TextField(null=True, default=None, blank=True)
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, default=None, blank=True)
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
+    target_cohort = models.ForeignKey(Cohort, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

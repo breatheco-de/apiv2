@@ -1663,9 +1663,13 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
 
         items = GitpodUser.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
 
-        github = request.GET.get('like', None)
-        if github is not None:
-            items = items.filter(github_username__icontains=github)
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(
+                Q(github_username__icontains=like) | Q(user__email__icontains=like)
+                | Q(user__first_name__icontains=like) | Q(user__last_name__icontains=like))
+
+        items = items.order_by(request.GET.get('sort', 'expires_at'))
 
         items = handler.queryset(items)
         serializer = GitpodUserSmallSerializer(items, many=True)
@@ -1682,6 +1686,8 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
                                       slug='gitpoduser-not-found')
 
         if request.data is None or ('expires_at' in request.data and request.data['expires_at'] is None):
+            item.expires_at = None
+            item.save()
             item = set_gitpod_user_expiration(item)
             serializer = GitpodUserSmallSerializer(item, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
