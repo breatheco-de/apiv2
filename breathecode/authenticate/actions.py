@@ -1,7 +1,7 @@
-import os, string, logging, urllib.parse, random
+import os, string, logging, urllib.parse, random, re, datetime
 from django.contrib.auth.models import User
 from django.utils import timezone
-from .models import DeviceId, Token, Role, ProfileAcademy
+from .models import DeviceId, Token, Role, ProfileAcademy, GitpodUser, CredentialsGithub
 from breathecode.notify.actions import send_email_message
 from breathecode.admissions.models import Academy
 from random import randint
@@ -113,3 +113,80 @@ def generate_academy_token(academy_id, force=False):
         token.save()
 
     return token
+
+
+def set_gitpod_user_expiration(gitpod_user):
+
+    # If no user is connected, find the user on breathecode by searching the github credentials
+    if gitpod_user.user is None:
+        github_user = CredentialsGithub.objects.filter(username=gitpod_user.github_username).first()
+        if github_user is not None:
+            gitpod_user.user = github_user.user
+
+    if gitpod_user.user is not None:
+        # find last cohort
+        cu = gitpod_user.user.cohortuser_set.filter(
+            educational_status__in=['ACTIVE'],
+            cohort__status=['PREWORK', 'STARTED', 'FINAL_PROJECT']).order_by('-cohort__ending_date').first()
+        if cu is not None:
+            gitpod_user.expires_at = cu.cohort.ending_date
+            gitpod_user.academy = cu.cohort.academy
+            gitpod_user.delete_status = f'User will be deleted when cohort {cu.cohort.name} finishes on {cu.cohort.ending_date}'
+
+    if gitpod_user.user is None and gitpod_user.expires_at is None:
+        gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=7)
+        gitpod_user.delete_status = 'User will be deleted because no active cohort could be associated to it, please set a cohort if you want to avoid deletion'
+
+    if gitpod_user.user is not None:
+        conflict = GitpodUser.objects.filter(user=gitpod_user.user).first()
+        if conflict is not None:
+            return None
+
+    gitpod_user.save()
+    return gitpod_user
+
+
+def update_gitpod_users(html):
+    all_users = []
+    all_usernames = []
+    findings = list(re.finditer(r'<input([^>]+)>', html))
+    position = 0
+    while len(findings) > 0:
+        position += 1
+        user = {'position': position}
+        match = findings.pop(0)
+        input_html = html[match.start():match.end()]
+
+        matches = list(re.finditer('"assignee-([\w\-]+)"', input_html))
+        if len(matches) > 0:
+            match = matches.pop(0)
+            user['assignee'] = match.group(1)
+
+        matches = list(re.finditer('github\.com\/([\w\-]+)"', input_html))
+        if len(matches) > 0:
+            match = matches.pop(0)
+            user['github'] = match.group(1)
+
+            if user['github'] in all_usernames:
+                render_message(
+                    f"Error: user {user['github']} seems to be duplicated on the incoming list from Gitpod")
+
+            all_usernames.append(user['github'])
+            all_users.append(user)
+
+    GitpodUser.objects.exclude(github_username__in=all_usernames).delete()
+    for user in all_users:
+
+        # create if not exists
+        gitpod_user = GitpodUser.objects.filter(github_username=user['github']).first()
+        if gitpod_user is None:
+            gitpod_user = GitpodUser(github_username=user['github'],
+                                     position_in_gitpod_team=user['position'],
+                                     assignee_id=user['assignee'])
+
+        if set_gitpod_user_expiration(gitpod_user) is None:
+            raise Exception(
+                f'Gitpod user {user["github"]} could not be processed, maybe its duplicated or another user is incorrectly assigned to the Gitpod account'
+            )
+
+    return all_users

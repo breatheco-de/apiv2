@@ -29,7 +29,7 @@ from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .authentication import ExpiringTokenAuthentication
 
-from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
+from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, SyncGithubUsersForm, LoginForm, InviteForm
 from .models import (
     Profile,
     CredentialsGithub,
@@ -40,8 +40,9 @@ from .models import (
     UserInvite,
     Role,
     ProfileAcademy,
+    GitpodUser,
 )
-from .actions import reset_password, resend_invite, generate_academy_token
+from .actions import reset_password, resend_invite, generate_academy_token, update_gitpod_users
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.notify.actions import send_email_message
@@ -50,11 +51,26 @@ from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffse
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import set_query_parameter
-from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
-                          AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
-                          MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer,
-                          RoleBigSerializer, ProfileAcademySmallSerializer, UserTinySerializer)
+from .serializers import (
+    GetProfileAcademySmallSerializer,
+    UserInviteWaitingListSerializer,
+    UserSerializer,
+    AuthSerializer,
+    UserSmallSerializer,
+    GetProfileAcademySerializer,
+    MemberPOSTSerializer,
+    MemberPUTSerializer,
+    StudentPOSTSerializer,
+    RoleSmallSerializer,
+    UserMeSerializer,
+    UserInviteSerializer,
+    TokenSmallSerializer,
+    RoleBigSerializer,
+    ProfileAcademySmallSerializer,
+    UserTinySerializer,
+    GitpodUserSmallSerializer,
+    GetGitpodUserSerializer,
+)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -1195,6 +1211,27 @@ class TokenTemporalView(APIView):
         return Response(serializer.data)
 
 
+def sync_gitpod_users_view(request):
+
+    if request.method == 'POST':
+        _dict = request.POST.copy()
+        form = SyncGithubUsersForm(_dict)
+
+        if 'html' not in _dict or _dict['html'] == '':
+            messages.error(request, 'HTML string is required')
+            return render(request, 'form.html', {'form': form})
+
+        try:
+            all_usernames = update_gitpod_users(_dict['html'])
+            return render(request, 'message.html', {'MESSAGE': f'{len(all_usernames)} users found'})
+        except Exception as e:
+            return render_message(request, str(e))
+
+    else:
+        form = SyncGithubUsersForm()
+    return render(request, 'form.html', {'form': form})
+
+
 def reset_password_view(request):
 
     if request.method == 'POST':
@@ -1605,3 +1642,32 @@ def save_google_token(request):
     else:
         logger.error(resp.json())
         raise APIException('Error from google credentials')
+
+
+class GitpodUserView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of('get_gitpod_user')
+    def get(self, request, academy_id, gitpoduser_id=None):
+        handler = self.extensions(request)
+
+        if gitpoduser_id is not None:
+            item = GitpodUser.objects.filter(id=gitpoduser_id, academy_id=academy_id).first()
+            if item is None:
+                raise ValidationException('Gitpod User not found for this academy',
+                                          code=404,
+                                          slug='gitpoduser-not-found')
+
+            serializer = GetGitpodUserSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = GitpodUser.objects.filter(academy__id=academy_id)
+
+        github = request.GET.get('like', None)
+        if github is not None:
+            items = items.filter(github_username__icontains=github)
+
+        items = handler.queryset(items)
+        serializer = GitpodUserSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)

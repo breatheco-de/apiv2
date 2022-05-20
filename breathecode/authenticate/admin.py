@@ -1,13 +1,17 @@
-import base64, os, urllib.parse, logging
+import base64, os, urllib.parse, logging, datetime
 from django.contrib import admin
+from django.utils import timezone
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
+from django.contrib import messages
 from .actions import delete_tokens, generate_academy_token
 from django.utils.html import format_html
 from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy,
-                     Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy)
-from .actions import reset_password
+                     Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy,
+                     GitpodUser)
+from .actions import reset_password, set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
+from breathecode.utils.datetime_interger import from_now
 
 logger = logging.getLogger(__name__)
 
@@ -205,3 +209,50 @@ class AcademyAdmin(admin.ModelAdmin):
 class DeviceIdAdmin(admin.ModelAdmin):
     list_display = ('name', 'key')
     search_fields = ['name']
+
+
+def recalculate_expiration(modeladmin, request, queryset):
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu = set_gitpod_user_expiration(gpu)
+        if gpu is None:
+            messages.add_message(
+                request, messages.ERROR,
+                f'Error: Gitpod user {gpu.github_username} {gpu.assignee_id} could not be processed')
+        else:
+            messages.add_message(
+                request, messages.INFO,
+                f'Success: Gitpod user {gpu.github_username} {gpu.assignee_id} was successfully processed')
+
+
+def extend_expiration(modeladmin, request, queryset):
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu.expires_at = gpu.expires_at + datetime.timedelta(days=3)
+        gpu.delete_status = gpu.delete_status + '. The expiration date was extend for 3 days'
+        gpu.save()
+        messages.add_message(request, messages.INFO, f'Success: Expiration was successfully extended')
+
+
+def mark_as_expired(modeladmin, request, queryset):
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu.expires_at = timezone.now()
+        gpu.delete_status = gpu.delete_status + '. The user was expired by force.'
+        gpu.save()
+        messages.add_message(request, messages.INFO, f'Success: Gitpod user was expired')
+
+
+@admin.register(GitpodUser)
+class GitpodUserAdmin(admin.ModelAdmin):
+    list_display = ('github_username', 'expiration', 'user', 'assignee_id', 'expires_at')
+    search_fields = ['github_username', 'user__email', 'user__first_name', 'user__last_name', 'assignee_id']
+    actions = [recalculate_expiration, extend_expiration, mark_as_expired]
+
+    def expiration(self, obj):
+        now = timezone.now()
+
+        if now > obj.expires_at:
+            return format_html(f"<span class='badge bg-error'>EXPIRED</span>")
+        else:
+            return format_html(f"<span class='badge'>In {from_now(obj.expires_at, include_days=True)}</span>")

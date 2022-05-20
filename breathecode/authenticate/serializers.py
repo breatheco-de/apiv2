@@ -7,7 +7,7 @@ import urllib.parse
 import breathecode.notify.actions as notify_actions
 from django.utils import timezone
 from django.contrib.auth.models import User
-from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token
+from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort
 from rest_framework.exceptions import ValidationError
@@ -25,6 +25,16 @@ class UserTinySerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
     first_name = serpy.Field()
+
+
+class GitpodUserSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    github_username = serpy.Field()
+    created_at = serpy.Field()
+    expires_at = serpy.Field()
+    user = UserTinySerializer(required=False)
 
 
 class AcademyTinySerializer(serpy.Serializer):
@@ -653,6 +663,12 @@ class UserInvitePUTSerializer(serializers.ModelSerializer):
             raise ValidationException('Missing status on invite')
 
         return data
+
+
+class GetGitpodUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GitpodUser
+        exclude = ('updated_at', 'created_at')
 
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
