@@ -1661,7 +1661,7 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
             serializer = GetGitpodUserSerializer(item, many=False)
             return Response(serializer.data)
 
-        items = GitpodUser.objects.filter(Q(academy__id=academy.id) | Q(academy__isnull=True))
+        items = GitpodUser.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
 
         github = request.GET.get('like', None)
         if github is not None:
