@@ -267,6 +267,10 @@ CAPABILITIES = [
         'slug': 'crud_tag',
         'description': 'Update, create and delete a marketing tag and its details'
     },
+    {
+        'slug': 'get_gitpod_user',
+        'description': 'List gitpod user the academy is consuming'
+    },
 ]
 
 ROLES = [
@@ -498,6 +502,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_session',
             'crud_mentorship_bill',
             'read_mentorship_bill',
+            'get_gitpod_user',
         ]
     })
     roles.append({
