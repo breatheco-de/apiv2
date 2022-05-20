@@ -21,9 +21,9 @@ content_html = ''
 for u in gitpod_users_to_delete:
     # beware!! from_now cannot be used inside a map or join function, you have to do a traditional for loop
     if u.user is not None:
-        content_html += f'- {u.user.first_name} {u.user.last_name} ({u.github_username}) in {from_now(u.expires_at)}: {u.delete_status} \n'
+        content_html += f'- {u.user.first_name} {u.user.last_name} ({u.github_username}) in {from_now(u.expires_at, include_days=True)}: {u.delete_status} \n'
     else:
-        content_html += f'- {u.github_username} in {from_now(u.expires_at)}: {u.delete_status} \n'
+        content_html += f'- {u.github_username} in {from_now(u.expires_at, include_days=True)}: {u.delete_status} \n'
 
 if len(gitpod_users_to_delete) > 0:
     raise ScriptNotification(

@@ -670,7 +670,8 @@ class UserInvitePUTSerializer(serializers.ModelSerializer):
 class GetGitpodUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = GitpodUser
-        exclude = ('updated_at', 'created_at')
+        exclude = ('updated_at', 'created_at', 'user', 'academy', 'assignee_id', 'github_username',
+                   'position_in_gitpod_team', 'delete_status')
 
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):

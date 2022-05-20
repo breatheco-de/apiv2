@@ -141,7 +141,14 @@ def set_gitpod_user_expiration(gitpod_user):
     if gitpod_user.user is not None:
         conflict = GitpodUser.objects.filter(user=gitpod_user.user).first()
         if conflict is not None:
-            return None
+            if conflict.assignee_id != gitpod_user.assignee_id:
+                return None
+            else:
+                if conflict.expires_at is None:
+                    conflict.expires_at = gitpod_user.expires_at
+                    conflict.delete_status = gitpod_user.delete_status
+                    conflict.save()
+                return conflict
 
     gitpod_user.save()
     return gitpod_user
