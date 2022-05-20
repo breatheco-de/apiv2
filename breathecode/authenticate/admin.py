@@ -4,12 +4,11 @@ from django.utils import timezone
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
-from .actions import delete_tokens, generate_academy_token
+from .actions import delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password
 from django.utils.html import format_html
 from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy,
                      Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy,
                      GitpodUser)
-from .actions import reset_password
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
 from breathecode.utils.datetime_interger import from_now
@@ -212,7 +211,29 @@ class DeviceIdAdmin(admin.ModelAdmin):
     search_fields = ['name']
 
 
+def async_recalculate_expiration(modeladmin, request, queryset):
+    queryset.update(expires_at=None)
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu = async_set_gitpod_user_expiration.delay(gpu.id)
+
+
 def recalculate_expiration(modeladmin, request, queryset):
+    queryset.update(expires_at=None)
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu = set_gitpod_user_expiration(gpu.id)
+        if gpu is None:
+            messages.add_message(
+                request, messages.ERROR,
+                f'Error: Gitpod user {gpu.github_username} {gpu.assignee_id} could not be processed')
+        else:
+            messages.add_message(
+                request, messages.INFO,
+                f'Success: Gitpod user {gpu.github_username} {gpu.assignee_id} was successfully processed')
+
+
+def async_recalculate_expiration(modeladmin, request, queryset):
     queryset.update(expires_at=None)
     gp_users = queryset.all()
     for gpu in gp_users:
@@ -250,7 +271,10 @@ def mark_as_expired(modeladmin, request, queryset):
 class GitpodUserAdmin(admin.ModelAdmin):
     list_display = ('github_username', 'expiration', 'user', 'assignee_id', 'expires_at')
     search_fields = ['github_username', 'user__email', 'user__first_name', 'user__last_name', 'assignee_id']
-    actions = [recalculate_expiration, extend_expiration_2_weeks, extend_expiration_4_months, mark_as_expired]
+    actions = [
+        async_recalculate_expiration, recalculate_expiration, extend_expiration_2_weeks,
+        extend_expiration_4_months, mark_as_expired
+    ]
 
     def expiration(self, obj):
         now = timezone.now()
