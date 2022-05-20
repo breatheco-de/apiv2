@@ -130,14 +130,17 @@ def set_gitpod_user_expiration(gitpod_user):
                                                         'PREWORK', 'STARTED', 'FINAL_PROJECT'
                                                     ]).order_by('-cohort__ending_date').first()
         if cu is not None:
-            gitpod_user.expires_at = cu.cohort.ending_date
+            gitpod_user.expires_at = cu.cohort.ending_date + datetime.timedelta(days=14)
             gitpod_user.academy = cu.cohort.academy
-            gitpod_user.delete_status = f'User will be deleted when cohort {cu.cohort.name} finishes on {cu.cohort.ending_date}'
+            gitpod_user.target_cohort = cu.cohort
+            gitpod_user.delete_status = f'User will be deleted 14 days after cohort {cu.cohort.name} finishes on {cu.cohort.ending_date}'
         else:
             # if no active academy was found, at least we can retreive the latest one to asociate the user to an academy
             last_cohort = gitpod_user.user.cohortuser_set.all().order_by('-cohort__ending_date').first()
             if last_cohort is not None:
                 gitpod_user.academy = last_cohort.cohort.academy
+                gitpod_user.target_cohort = last_cohort.cohort
+                gitpod_user.delete_status = f'It will be deleted soon because no active cohort was found, the last one it had active was ' + last_cohort.cohort.name
 
     if gitpod_user.user is None or gitpod_user.expires_at is None:
         gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=3)
@@ -151,6 +154,8 @@ def set_gitpod_user_expiration(gitpod_user):
             else:
                 if conflict.expires_at is None:
                     conflict.expires_at = gitpod_user.expires_at
+                    conflict.target_cohort = gitpod_user.target_cohort
+                    conflict.academy = gitpod_user.academy
                     conflict.delete_status = gitpod_user.delete_status
                     conflict.save()
                 return conflict
