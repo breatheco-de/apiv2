@@ -134,7 +134,8 @@ def set_gitpod_user_expiration(gitpoduser_id):
                                                         'PREWORK', 'STARTED', 'FINAL_PROJECT'
                                                     ]).order_by('-cohort__ending_date').first()
         if cu is not None:
-            gitpod_user.expires_at = cu.cohort.ending_date + datetime.timedelta(days=14)
+            gitpod_user.expires_at = cu.cohort.ending_date + datetime.timedelta(
+                days=14) if cu.cohort.ending_date is not None else None
             gitpod_user.academy = cu.cohort.academy
             gitpod_user.target_cohort = cu.cohort
             gitpod_user.delete_status = f'User will be deleted 14 days after cohort {cu.cohort.name} finishes on {cu.cohort.ending_date}'
