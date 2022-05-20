@@ -137,7 +137,7 @@ def set_gitpod_user_expiration(gitpod_user):
             # if no active academy was found, at least we can retreive the latest one to asociate the user to an academy
             last_cohort = gitpod_user.user.cohortuser_set.all().order_by('-cohort__ending_date').first()
             if last_cohort is not None:
-                gitpod_user.academy = cu.cohort.academy
+                gitpod_user.academy = last_cohort.cohort.academy
 
     if gitpod_user.user is None or gitpod_user.expires_at is None:
         gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=3)
