@@ -42,7 +42,7 @@ from .models import (
     ProfileAcademy,
     GitpodUser,
 )
-from .actions import reset_password, resend_invite, generate_academy_token, update_gitpod_users
+from .actions import reset_password, resend_invite, generate_academy_token, update_gitpod_users, set_gitpod_user_expiration
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.notify.actions import send_email_message
@@ -1671,3 +1671,17 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
         serializer = GitpodUserSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    @capable_of('update_gitpod_user')
+    def put(self, request, academy_id, gitpoduser_id):
+
+        item = GitpodUser.objects.filter(id=gitpoduser_id, academy_id=academy_id).first()
+        if item is None:
+            raise ValidationException('Gitpod User not found for this academy',
+                                      code=404,
+                                      slug='gitpoduser-not-found')
+
+        item = set_gitpod_user_expiration(item)
+
+        serializer = GetGitpodUserSerializer(item, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)

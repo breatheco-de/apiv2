@@ -271,6 +271,10 @@ CAPABILITIES = [
         'slug': 'get_gitpod_user',
         'description': 'List gitpod user the academy is consuming'
     },
+    {
+        'slug': 'update_gitpod_user',
+        'description': 'Update gitpod user expiration based on available information'
+    },
 ]
 
 ROLES = [
@@ -503,6 +507,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_bill',
             'read_mentorship_bill',
             'get_gitpod_user',
+            'update_gitpod_user',
         ]
     })
     roles.append({

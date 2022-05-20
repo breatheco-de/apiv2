@@ -252,7 +252,11 @@ class GitpodUserAdmin(admin.ModelAdmin):
     def expiration(self, obj):
         now = timezone.now()
 
-        if now > obj.expires_at:
+        if obj.expires_at is None:
+            return format_html(f"<span class='badge bg-warning'>NEVER</span>")
+        elif now > obj.expires_at:
             return format_html(f"<span class='badge bg-error'>EXPIRED</span>")
+        elif now > (obj.expires_at + datetime.timedelta(days=3)):
+            return format_html(f"<span class='badge bg-warning'>In {from_now(obj.expires_at, include_days=True)}</span>")
         else:
-            return format_html(f"<span class='badge'>In {from_now(obj.expires_at, include_days=True)}</span>")
+            return format_html(f"<span class='badge bg-success'>In {from_now(obj.expires_at, include_days=True)}</span>")
