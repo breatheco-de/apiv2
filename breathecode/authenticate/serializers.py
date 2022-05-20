@@ -19,6 +19,14 @@ logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
 
 
+class GetSmallAcademySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    name = serpy.Field()
+    slug = serpy.Field()
+
+
 class UserTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -37,6 +45,7 @@ class GitpodUserSmallSerializer(serpy.Serializer):
     assignee_id = serpy.Field()
     expires_at = serpy.Field()
     user = UserTinySerializer(required=False)
+    academy = GetSmallAcademySerializer(required=False)
 
 
 class AcademyTinySerializer(serpy.Serializer):
