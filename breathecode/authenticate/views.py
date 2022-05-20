@@ -1688,7 +1688,7 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
         if request.data is None or ('expires_at' in request.data and request.data['expires_at'] is None):
             item.expires_at = None
             item.save()
-            item = set_gitpod_user_expiration(item)
+            item = set_gitpod_user_expiration(item.id)
             serializer = GitpodUserSmallSerializer(item, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 

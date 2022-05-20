@@ -115,7 +115,11 @@ def generate_academy_token(academy_id, force=False):
     return token
 
 
-def set_gitpod_user_expiration(gitpod_user):
+def set_gitpod_user_expiration(gitpoduser_id):
+
+    gitpod_user = GitpodUser.objects.filter(id=gitpoduser_id).first()
+    if gitpod_user is None:
+        raise Exception(f'Invalid gitpod user id: {gitpoduser_id}')
 
     # If no user is connected, find the user on breathecode by searching the github credentials
     if gitpod_user.user is None:
@@ -202,7 +206,7 @@ def update_gitpod_users(html):
                                      position_in_gitpod_team=user['position'],
                                      assignee_id=user['assignee'])
 
-        if set_gitpod_user_expiration(gitpod_user) is None:
+        if set_gitpod_user_expiration(gitpod_user.id) is None:
             raise Exception(
                 f'Gitpod user {user["github"]} could not be processed, maybe its duplicated or another user is incorrectly assigned to the Gitpod account'
             )
