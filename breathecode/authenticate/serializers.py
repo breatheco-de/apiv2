@@ -444,6 +444,20 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
 
 # This method is almost repeated but now for students instead of academy memebers.
+class StudentPOSTListSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+
+        result = [self.child.create(attrs) for attrs in validated_data]
+
+        try:
+            self.child.Meta.model.objects.bulk_create(result)
+        except IntegrityError as e:
+            raise ValidationError(e)
+
+        return result
+
+
+# This method is almost repeated but now for students instead of academy memebers.
 class StudentPOSTSerializer(serializers.ModelSerializer):
     invite = serializers.BooleanField(write_only=True, required=False)
     cohort = serializers.IntegerField(write_only=True, required=False)
@@ -454,8 +468,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         model = ProfileAcademy
         fields = ('email', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'cohort',
                   'status')
+        list_serializer_class = StudentPOSTListSerializer
 
     def validate(self, data):
+        print(data)
         if 'email' in data and data['email']:
             data['email'] = data['email'].lower()
             user = User.objects.filter(email=data['email']).first()
@@ -499,6 +515,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
         cohort = None
         if 'cohort' in validated_data:
+            print('in cohort')
             cohort = Cohort.objects.filter(id=validated_data.pop('cohort')).first()
             if cohort is None:
                 raise ValidationException('Cohort not found', slug='cohort-not-found')
@@ -518,7 +535,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             if 'invite' in validated_data:
                 del validated_data['invite']
-
+            print('validated_data')
+            print(validated_data)
             profile_academy = ProfileAcademy.objects.create(
                 **{
                     **validated_data,
