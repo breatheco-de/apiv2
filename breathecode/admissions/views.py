@@ -318,6 +318,10 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             if cohorts is not None:
                 items = items.filter(cohort__slug__in=cohorts.split(','))
 
+            syllabus = request.GET.get('syllabus', None)
+            if syllabus is not None:
+                items = items.filter(cohort__syllabus_version__syllabus__slug__in=syllabus.split(','))
+
             users = request.GET.get('users', None)
             if users is not None:
                 items = items.filter(user__id__in=users.split(','))
