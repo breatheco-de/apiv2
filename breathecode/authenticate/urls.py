@@ -34,7 +34,7 @@ urlpatterns = [
     path('role', get_roles, name='role'),
     path('role/<str:role_slug>', get_roles, name='role_slug'),
     path('profile/me', ProfileMeView.as_view(), name='profile_me'),
-    path('profile/invite/me', ProfileMeView.as_view(), name='profile_invite_me'),
+    path('profile/invite/me', ProfileInviteMeView.as_view(), name='profile_invite_me'),
     path('member/invite/<str:token>', render_invite, name='member_invite_token'),
     path('member/<int:profile_academy_id>/token',
          TokenTemporalView.as_view(),
