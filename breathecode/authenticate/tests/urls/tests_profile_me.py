@@ -2,8 +2,6 @@
 Test cases for /user
 """
 import random
-import re
-import pytz, datetime
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
@@ -232,8 +230,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'github_username': self.bc.fake.name().replace(' ', '-'),
             'portfolio_url': self.bc.fake.url(),
             'linkedin_url': self.bc.fake.url(),
-            'blog': re.sub(r' $', '',
-                           self.bc.fake.text()[:150])[0],
+            'blog': self.bc.fake.text()[:150].strip(),
         }
 
         response = self.client.post(url, data)
@@ -334,7 +331,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'github_username': self.bc.fake.name().replace(' ', '-'),
             'portfolio_url': self.bc.fake.url(),
             'linkedin_url': self.bc.fake.url(),
-            'blog': self.bc.fake.text()[:150],
+            'blog': self.bc.fake.text()[:150].strip(),
         }
         response = self.client.put(url, data)
 
