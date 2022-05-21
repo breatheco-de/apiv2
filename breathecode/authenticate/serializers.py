@@ -41,6 +41,16 @@ class UserTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
+    username = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    email = serpy.Field()
+
+
+class UserBigSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     email = serpy.Field()
     first_name = serpy.Field()
 
@@ -123,9 +133,20 @@ class GithubSmallSerializer(serpy.Serializer):
 
 
 class GetProfileSmallSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
+
+
+class GetProfileSerializer(serpy.Serializer):
+    user = UserTinySerializer(many=False)
+    avatar_url = serpy.Field()
+    bio = serpy.Field()
+    phone = serpy.Field()
+    show_tutorial = serpy.Field()
+    twitter_username = serpy.Field()
+    github_username = serpy.Field()
+    portfolio_url = serpy.Field()
+    linkedin_url = serpy.Field()
+    blog = serpy.Field()
 
 
 class UserInviteSerializer(serpy.Serializer):
@@ -692,6 +713,12 @@ class GetGitpodUserSerializer(serializers.ModelSerializer):
         model = GitpodUser
         exclude = ('updated_at', 'created_at', 'user', 'academy', 'assignee_id', 'github_username',
                    'position_in_gitpod_team', 'delete_status')
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        exclude = ()
 
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
