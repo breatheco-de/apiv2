@@ -318,6 +318,10 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             if cohorts is not None:
                 items = items.filter(cohort__slug__in=cohorts.split(','))
 
+            watching = request.GET.get('watching', None)
+            if watching is not None:
+                items = items.filter(watching=watching.lower() == 'true')
+
             syllabus = request.GET.get('syllabus', None)
             if syllabus is not None:
                 items = items.filter(cohort__syllabus_version__syllabus__slug__in=syllabus.split(','))
