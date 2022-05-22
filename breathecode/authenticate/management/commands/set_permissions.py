@@ -28,9 +28,6 @@ PERMISSIONS = [
     },
 ]
 
-# from django.apps import apps
-
-# apps.get_model('admissions', 'Cohort')
 GROUPS = [
     {
         'name': 'Admin',
