@@ -40,7 +40,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(data, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
@@ -72,7 +72,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
@@ -107,7 +107,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
@@ -131,9 +131,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -185,9 +183,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -241,9 +237,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
@@ -276,9 +270,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -333,9 +325,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -389,9 +379,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -452,7 +440,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), self.bc.format.to_dict(model.user))
+        self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -514,7 +502,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), self.bc.format.to_dict(model.user))
+        self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':

@@ -1,5 +1,3 @@
-import re
-from importlib import import_module
 from typing import Any, Optional
 from rest_framework.test import APITestCase
 from django.db.models import Model
@@ -26,11 +24,9 @@ class Database:
             return cls._cache[path]
 
         app, model_name = path.split('.')
+        from django.apps import apps
 
-        module_path = f'breathecode.{app}.models'
-        module = import_module(module_path)
-
-        cls._cache[path] = getattr(module, model_name)
+        cls._cache[path] = apps.get_model(app, model_name)
 
         return cls._cache[path]
 

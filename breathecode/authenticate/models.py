@@ -9,6 +9,7 @@ from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
+from django.contrib.contenttypes.models import ContentType
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
@@ -16,7 +17,7 @@ from .signals import invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
 __all__ = [
-    'User', 'Group', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
+    'User', 'Group', 'ContentType', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
     'ProfileAcademy', 'CredentialsGithub', 'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks',
     'CredentialsGoogle', 'DeviceId', 'Token'
 ]
