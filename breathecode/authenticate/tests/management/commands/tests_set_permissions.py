@@ -41,40 +41,6 @@ GROUPS = [
     },
 ]
 
-PERMISSIONS_SECOND_TIME = [
-    {
-        'name': 'Can delete job',
-        'codename': 'delete_job',
-    },
-    {
-        'name': 'Get my profile',
-        'codename': 'get_my_profile',
-    },
-    {
-        'name': 'Create my profile',
-        'codename': 'create_my_profile',
-    },
-    {
-        'name': 'Update my profile',
-        'codename': 'update_my_profile',
-    },
-]
-
-GROUPS_SECOND_TIME = [
-    {
-        'name': 'Admin',
-        'permissions': [x['codename'] for x in PERMISSIONS_SECOND_TIME],
-    },
-    {
-        'name': 'Default',
-        'permissions': ['delete_job', 'get_my_profile', 'create_my_profile', 'update_my_profile'],
-    },
-    {
-        'name': 'Student',
-        'permissions': ['delete_job', 'get_my_profile', 'create_my_profile', 'update_my_profile'],
-    },
-]
-
 
 def sort_by_id(items):
     return sorted(items, key=lambda x: x['id'])
@@ -265,9 +231,9 @@ class TokenTestSuite(AuthTestCase):
     """
 
     @patch('breathecode.authenticate.management.commands.set_permissions.get_permissions',
-           MagicMock(return_value=PERMISSIONS_SECOND_TIME))
+           MagicMock(return_value=PERMISSIONS))
     @patch('breathecode.authenticate.management.commands.set_permissions.get_groups',
-           MagicMock(return_value=GROUPS_SECOND_TIME))
+           MagicMock(return_value=GROUPS))
     def test__execute__ends_successfully__run_second_time(self):
         num_permissions_was_deleted = 3
         permission = [
