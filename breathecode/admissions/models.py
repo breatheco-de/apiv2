@@ -311,6 +311,9 @@ class CohortUser(models.Model):
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT)
 
+    watching = models.BooleanField(
+        default=False, help_text='You can active students to the watch list and monitor them closely')
+
     finantial_status = models.CharField(max_length=15, choices=FINANTIAL_STATUS, default=None, null=True)
     educational_status = models.CharField(max_length=15, choices=EDU_STATUS, default=None, null=True)
 

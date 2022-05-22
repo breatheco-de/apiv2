@@ -501,7 +501,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'finantial_status': None,
             'id': 1,
             'role': 'REVIEWER',
-            'user_id': 1
+            'user_id': 1,
+            'watching': False,
         }])
 
     """
@@ -553,6 +554,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'id': 1,
             'role': model.role.slug.upper(),
             'user_id': 1,
+            'watching': False,
         }])
 
     """
@@ -605,6 +607,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'id': 1,
             'role': 'student',
             'user_id': 1,
+            'watching': False,
         }])
 
     """
