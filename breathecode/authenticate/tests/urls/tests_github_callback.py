@@ -6,9 +6,25 @@ import urllib
 from unittest import mock
 from django.urls.base import reverse_lazy
 from rest_framework import status
+from django.template import loader
 from ..mixins.new_auth_test_case import AuthTestCase
 from ...models import Role
 from ..mocks import GithubRequestsMock
+
+
+def render(message):
+    request = None
+    return loader.render_to_string(
+        'message.html',
+        {
+            'MESSAGE': message,
+            'BUTTON': None,
+            'BUTTON_TARGET': '_blank',
+            'LINK': None
+        },
+        request,
+        using=None,
+    )
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -40,11 +56,21 @@ class AuthenticateTestSuite(AuthTestCase):
         params = {'url': original_url_callback, 'code': code}
 
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
-        json = response.json()
-        expected = {'detail': 'user-not-found', 'status_code': 403}
+        content = self.bc.format.from_bytes(response.content)
+        expected = render('We could not find in our records the email associated to this github account, '
+                          'perhaps you want to signup to the platform first? <a href="' +
+                          original_url_callback + '">Back to 4Geeks.com</a>')
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
@@ -65,11 +91,21 @@ class AuthenticateTestSuite(AuthTestCase):
         params = {'url': original_url_callback, 'code': code}
 
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
-        json = response.json()
-        expected = {'detail': 'user-not-found-but-waiting-list', 'status_code': 403}
+        content = self.bc.format.from_bytes(response.content)
+        expected = render(
+            'You are still number 1 on the waiting list, we will email you once you are given access '
+            f'<a href="{original_url_callback}">Back to 4Geeks.com</a>')
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])

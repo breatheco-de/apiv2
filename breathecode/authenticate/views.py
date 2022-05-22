@@ -818,23 +818,13 @@ def save_github_token(request):
                 return render_message(
                     request,
                     f'You are still number {invite.id} on the waiting list, we will email you once you are '
-                    'given access <a href="{url}">Back to 4Geeks.com</a>')
-                # raise ValidationException(
-                #     f'You are still number {invite.id} on the waiting list, we will email you once you are '
-                #     'given access',
-                #     code=403,
-                #     slug='user-not-found-but-waiting-list')
+                    f'given access <a href="{url}">Back to 4Geeks.com</a>')
 
             if user_does_not_exists:
                 return render_message(
                     request, 'We could not find in our records the email associated to this github account, '
                     'perhaps you want to signup to the platform first? <a href="' + url +
                     '">Back to 4Geeks.com</a>')
-                # raise ValidationException(
-                #     'We could not find in our records the email associated to this github account, '
-                #     'perhaps you want to signup to the platform first?',
-                #     code=403,
-                #     slug='user-not-found')
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
 
