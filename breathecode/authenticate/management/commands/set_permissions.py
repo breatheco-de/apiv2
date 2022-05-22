@@ -26,6 +26,10 @@ PERMISSIONS = [
         'name': 'Update my profile',
         'codename': 'update_my_profile',
     },
+    {
+        'name': 'Get my certificate',
+        'codename': 'get_my_certificate',
+    },
 ]
 
 GROUPS = [
@@ -39,7 +43,7 @@ GROUPS = [
     },
     {
         'name': 'Student',
-        'permissions': ['get_my_profile', 'create_my_profile', 'update_my_profile'],
+        'permissions': ['get_my_certificate'],
     },
 ]
 
