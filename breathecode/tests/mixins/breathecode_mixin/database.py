@@ -1,5 +1,6 @@
 from typing import Any, Optional
 from rest_framework.test import APITestCase
+from django.apps import apps
 from django.db.models import Model
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
@@ -23,10 +24,8 @@ class Database:
         if path in cls._cache:
             return cls._cache[path]
 
-        app, model_name = path.split('.')
-        from django.apps import apps
-
-        cls._cache[path] = apps.get_model(app, model_name)
+        app_label, model_name = path.split('.')
+        cls._cache[path] = apps.get_model(app_label, model_name)
 
         return cls._cache[path]
 
