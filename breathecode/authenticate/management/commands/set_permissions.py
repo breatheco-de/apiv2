@@ -68,7 +68,6 @@ class Command(BaseCommand):
         # reset the permissions
         Permission.objects.filter(content_type=content_type).delete()
 
-        # Here is a list of all the current capabilities in the system
         permissions = get_permissions()
         groups = get_groups()
 
