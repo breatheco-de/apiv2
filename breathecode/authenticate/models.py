@@ -13,7 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
-from .signals import invite_accepted
+from .signals import invite_accepted, profile_academy_saved
 from breathecode.admissions.models import Academy, Cohort
 
 __all__ = [
@@ -160,9 +160,12 @@ class ProfileAcademy(models.Model):
         return f'{self.email} for academy ({self.academy.name})'
 
     def save(self, *args, **kwargs):
+        created = not self.id
 
         if self.__old_status != self.status and self.status == 'ACTIVE':
             invite_accepted.send(instance=self, sender=ProfileAcademy)
+
+        profile_academy_saved.send(instance=self, sender=self.__class__, created=created)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 

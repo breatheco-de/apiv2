@@ -45,6 +45,10 @@ GROUPS = [
         'name': 'Student',
         'permissions': ['get_my_certificate'],
     },
+    {
+        'name': 'Mentor',
+        'permissions': ['get_my_certificate'],
+    },
 ]
 
 
