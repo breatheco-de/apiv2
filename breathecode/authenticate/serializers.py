@@ -546,20 +546,16 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         if role is None:
             raise ValidationException('Role student not found', slug='role-not-found')
 
-        cohort = [None]
+        cohort = []
         if 'cohort' in validated_data:
 
             cohort_list = validated_data.pop('cohort')
 
-            cohort = []
             for cohort_id in cohort_list:
                 cohort_search = Cohort.objects.filter(id=cohort_id).first()
-                if cohort_search is not None:
-                    cohort.append(cohort_search)
-                else:
+                if cohort_search is None:
                     raise ValidationException('Cohort not found', slug='cohort-not-found')
-            # if cohort is None or cohort == []:
-            #     raise ValidationException('Cohort not found', slug='cohort-not-found')
+                cohort.append(cohort_search)
 
         user = None
         email = None
@@ -605,10 +601,11 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if invite is not None:
                 raise ValidationException('You already invited this user', code=400, slug='already-invited')
 
-            # prevent duplicate token (very low probability)
-
+            if (len(cohort) == 0):
+                cohort = [None]
             for single_cohort in cohort:
                 while True:
+                    # prevent duplicate token (very low probability)
                     token = random.getrandbits(128)
                     if not UserInvite.objects.filter(token=token).exists():
                         break
