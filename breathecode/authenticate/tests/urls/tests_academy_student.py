@@ -1147,7 +1147,7 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    def test_academy_student__post__without_user_in_data__invite_already_exists(self):
+    def test_academy_student__post__without_user_in_data__invite_already_exists__cohort_none_in_data(self):
         """Test /academy/:id/member"""
 
         role = 'student'
@@ -1190,6 +1190,97 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('random.getrandbits', MagicMock(side_effect=getrandbits))
+    def test_academy_student__post__without_user_in_data__invite_already_exists__diff_cohort_in_data(self):
+        """Test /academy/:id/member"""
+
+        role = 'student'
+        self.bc.request.set_headers(academy=1)
+        user = {'email': 'dude@dude.dude'}
+        user_invite = {'email': 'dude2@dude.dude'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=user,
+                                        user_invite=user_invite,
+                                        cohort=2,
+                                        role=role,
+                                        capability='crud_student',
+                                        profile_academy=1)
+
+        url = reverse_lazy('authenticate:academy_student')
+        data = {
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'cohort': [2],
+            'invite': True,
+            'email': 'dude2@dude.dude',
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {
+            'address': None,
+            'email': 'dude2@dude.dude',
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'phone': '',
+            'status': 'INVITED',
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy), {
+                'academy_id': 1,
+                'address': None,
+                'email': 'dude2@dude.dude',
+                'first_name': 'Kenny',
+                'id': 2,
+                'last_name': 'McKornick',
+                'phone': '',
+                'role_id': 'student',
+                'status': 'INVITED',
+                'user_id': None,
+            }
+        ])
+
+        params = {'callback': ''}
+        querystr = urllib.parse.urlencode(params)
+        url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+            str(TOKEN) + '?' + querystr
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            generate_user_invite({
+                'id': 1,
+                'cohort_id': 1,
+                'academy_id': 1,
+                'author_id': 1,
+                'email': 'dude2@dude.dude',
+                'role_id': 'student',
+                'token': model.user_invite.token,
+            }),
+            generate_user_invite({
+                'id': 2,
+                'cohort_id': 2,
+                'academy_id': 1,
+                'author_id': 1,
+                'email': 'dude2@dude.dude',
+                'first_name': 'Kenny',
+                'last_name': 'McKornick',
+                'role_id': 'student',
+                'token': TOKEN,
+            }),
+        ])
+
+        self.assertEqual(actions.send_email_message.call_args_list, [
+            call('welcome', 'dude2@dude.dude', {
+                'email': 'dude2@dude.dude',
+                'subject': 'Welcome to 4Geeks.com',
+                'LINK': url,
+                'FIST_NAME': 'Kenny'
+            })
+        ])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_student__post__without_user_in_data__user_already_exists(self):
