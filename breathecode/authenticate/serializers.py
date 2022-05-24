@@ -1,4 +1,5 @@
 import hashlib
+from django.db import IntegrityError
 import serpy
 import logging
 import random
@@ -340,7 +341,9 @@ class UserMeSerializer(serializers.ModelSerializer):
 
 class MemberPOSTSerializer(serializers.ModelSerializer):
     invite = serializers.BooleanField(write_only=True, required=False)
-    cohort = serializers.IntegerField(write_only=True, required=False)
+    cohort = serializers.ListField(child=serializers.IntegerField(write_only=True, required=False),
+                                   write_only=True,
+                                   required=False)
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
 
@@ -394,11 +397,16 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
         role = validated_data['role']
 
-        cohort = None
+        cohort = []
         if 'cohort' in validated_data:
-            cohort = Cohort.objects.filter(id=validated_data.pop('cohort')).first()
-            if cohort is None:
-                raise ValidationException('Cohort not found', slug='cohort-not-found')
+
+            cohort_list = validated_data.pop('cohort')
+
+            for cohort_id in cohort_list:
+                cohort_search = Cohort.objects.filter(id=cohort_id).first()
+                if cohort_search is None:
+                    raise ValidationException('Cohort not found', slug='cohort-not-found')
+                cohort.append(cohort_search)
 
         user = None
         email = None
@@ -434,55 +442,60 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             validated_data.pop('invite')  # the front end sends invite=true so we need to remove it
             email = validated_data['email'].lower()
 
-            query = {
-                'cohort': cohort,
-                'email__iexact': email,
-                'author': self.context.get('request').user,
-            }
+            if (len(cohort) == 0):
+                cohort = [None]
 
-            # if the cohort is not specified, proccess to find if the user was invite ignoring the cohort
-            if not cohort:
-                del query['cohort']
+            for single_cohort in cohort:
+                query = {
+                    'cohort': single_cohort,
+                    'email__iexact': email,
+                    'author': self.context.get('request').user,
+                }
 
-            invite = UserInvite.objects.filter(**query).first()
+                # if the cohort is not specified, process to find if the user was invite ignoring the cohort
+                if not single_cohort:
+                    del query['cohort']
 
-            # avoid double invite
-            if invite is not None:
-                raise ValidationException(
-                    'You already invited this user, check for previous invites and resend',
-                    code=400,
-                    slug='already-invited')
+                invite = UserInvite.objects.filter(**query).first()
 
-            # prevent duplicate token (very low probability)
-            while True:
-                token = random.getrandbits(128)
-                if not UserInvite.objects.filter(token=token).exists():
-                    break
+                # avoid double invite
+                if invite is not None:
+                    raise ValidationException(
+                        'You already invited this user, check for previous invites and resend',
+                        code=400,
+                        slug='already-invited')
 
-            invite = UserInvite(email=email,
-                                first_name=validated_data['first_name'],
-                                last_name=validated_data['last_name'],
-                                academy=academy,
-                                cohort=cohort,
-                                role=role,
-                                author=self.context.get('request').user,
-                                token=token)
-            invite.save()
+            for single_cohort in cohort:
+                # prevent duplicate token (very low probability)
+                while True:
+                    token = random.getrandbits(128)
+                    if not UserInvite.objects.filter(token=token).exists():
+                        break
 
-            logger.debug('Sending invite email to ' + email)
+                invite = UserInvite(email=email,
+                                    first_name=validated_data['first_name'],
+                                    last_name=validated_data['last_name'],
+                                    academy=academy,
+                                    cohort=single_cohort,
+                                    role=role,
+                                    author=self.context.get('request').user,
+                                    token=token)
+                invite.save()
 
-            params = {'callback': 'https://admin.breatheco.de'}
-            querystr = urllib.parse.urlencode(params)
-            url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
-                str(invite.token) + '?' + querystr
+                logger.debug('Sending invite email to ' + email)
 
-            notify_actions.send_email_message(
-                'welcome_academy', email, {
-                    'email': email,
-                    'subject': 'Welcome to 4Geeks',
-                    'LINK': url,
-                    'FIST_NAME': validated_data['first_name']
-                })
+                params = {'callback': 'https://admin.breatheco.de'}
+                querystr = urllib.parse.urlencode(params)
+                url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+                    str(invite.token) + '?' + querystr
+
+                notify_actions.send_email_message(
+                    'welcome_academy', email, {
+                        'email': email,
+                        'subject': 'Welcome to 4Geeks',
+                        'LINK': url,
+                        'FIST_NAME': validated_data['first_name']
+                    })
 
         # add member to the academy (the cohort is inside validated_data
         return super().create({
@@ -495,7 +508,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
         })
 
 
-# This method is almost repeated but now for students instead of academy memebers.
+# This method is almost repeated but now for students instead of academy members.
 class StudentPOSTListSerializer(serializers.ListSerializer):
     def create(self, validated_data):
 
@@ -617,19 +630,25 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             validated_data.pop('invite')  # the front end sends invite=true so we need to remove it
             email = validated_data['email'].lower()
 
-            query = {
-                'cohort': cohort,
-                'email__iexact': email,
-                'author': self.context.get('request').user,
-            }
+            if (len(cohort) == 0):
+                cohort = [None]
 
-            # if the cohort is not specified, proccess to find if the user was invite ignoring the cohort
-            if not cohort:
-                del query['cohort']
+            for single_cohort in cohort:
+                query = {
+                    'cohort': single_cohort,
+                    'email__iexact': email,
+                    'author': self.context.get('request').user,
+                }
 
-            invite = UserInvite.objects.filter(**query).first()
-            if invite is not None:
-                raise ValidationException('You already invited this user', code=400, slug='already-invited')
+                # if the cohort is not specified, process to find if the user was invite ignoring the cohort
+                if not single_cohort:
+                    del query['cohort']
+
+                invite = UserInvite.objects.filter(**query).first()
+                if invite is not None:
+                    raise ValidationException('You already invited this user',
+                                              code=400,
+                                              slug='already-invited')
 
             if (len(cohort) == 0):
                 cohort = [None]
@@ -667,11 +686,12 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             return ProfileAcademy.objects.create(
                 **{
-                    **validated_data, 'email': email,
+                    **validated_data,
+                    'email': email,
                     'user': user,
                     'academy': academy,
                     'role': role,
-                    'status': status
+                    'status': status,
                 })
 
 

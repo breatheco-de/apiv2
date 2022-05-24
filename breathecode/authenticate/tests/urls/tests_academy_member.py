@@ -1697,7 +1697,7 @@ class MemberPostTestSuite(AuthTestCase):
             'role': 'god',
             'first_name': 'Kenny',
             'last_name': 'McKornick',
-            'cohort': 1,
+            'cohort': [1],
             'invite': True,
             'email': 'dude2@dude.dude',
         }
@@ -1795,7 +1795,7 @@ class MemberPostTestSuite(AuthTestCase):
             'role': 'god',
             'first_name': 'Kenny',
             'last_name': 'McKornick',
-            'cohort': 2,
+            'cohort': [2],
             'invite': True,
             'email': 'dude2@dude.dude',
         }
