@@ -340,6 +340,7 @@ class GetCohortUserSerializer(serpy.Serializer):
     role = serpy.Field()
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
+    watching = serpy.Field()
     created_at = serpy.Field()
     profile_academy = serpy.MethodField()
 
@@ -719,6 +720,10 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         if not id and cohort_user:
             id = cohort_user.id
 
+        watching = request_item.get('watching') == True
+        if watching and cohort_user.educational_status != 'ACTIVE':
+            raise ValidationException('The student is not active in this cohort', slug='student-not-active')
+
         is_graduated = request_item.get('educational_status') == 'GRADUATED'
         is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else
                    request_item.get('finantial_status') == 'LATE')
@@ -842,7 +847,7 @@ class CohortUserPOSTSerializer(serpy.Serializer):
 class CohortUserPUTSerializer(CohortUserSerializerMixin):
     class Meta:
         model = CohortUser
-        fields = ['id', 'role', 'educational_status', 'finantial_status']
+        fields = ['id', 'role', 'educational_status', 'finantial_status', 'watching']
         list_serializer_class = CohortUserListSerializer
 
 

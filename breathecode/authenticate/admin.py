@@ -1,13 +1,17 @@
-import base64, os, urllib.parse, logging
+import base64, os, urllib.parse, logging, datetime
 from django.contrib import admin
+from django.utils import timezone
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
-from .actions import delete_tokens, generate_academy_token
+from django.contrib import messages
+from .actions import delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password
 from django.utils.html import format_html
 from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy,
-                     Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy)
-from .actions import reset_password
+                     Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy,
+                     GitpodUser)
+from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
+from breathecode.utils.datetime_interger import from_now
 
 logger = logging.getLogger(__name__)
 
@@ -205,3 +209,83 @@ class AcademyAdmin(admin.ModelAdmin):
 class DeviceIdAdmin(admin.ModelAdmin):
     list_display = ('name', 'key')
     search_fields = ['name']
+
+
+def async_recalculate_expiration(modeladmin, request, queryset):
+    queryset.update(expires_at=None)
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu = async_set_gitpod_user_expiration.delay(gpu.id)
+
+
+def recalculate_expiration(modeladmin, request, queryset):
+    queryset.update(expires_at=None)
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu = set_gitpod_user_expiration(gpu.id)
+        if gpu is None:
+            messages.add_message(
+                request, messages.ERROR,
+                f'Error: Gitpod user {gpu.github_username} {gpu.assignee_id} could not be processed')
+        else:
+            messages.add_message(
+                request, messages.INFO,
+                f'Success: Gitpod user {gpu.github_username} {gpu.assignee_id} was successfully processed')
+
+
+def async_recalculate_expiration(modeladmin, request, queryset):
+    queryset.update(expires_at=None)
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu = async_set_gitpod_user_expiration.delay(gpu.id)
+
+
+def extend_expiration_2_weeks(modeladmin, request, queryset):
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu.expires_at = gpu.expires_at + datetime.timedelta(days=17)
+        gpu.delete_status = gpu.delete_status + '. The expiration date was extend for 2 weeks days'
+        gpu.save()
+        messages.add_message(request, messages.INFO, f'Success: Expiration was successfully extended')
+
+
+def extend_expiration_4_months(modeladmin, request, queryset):
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu.expires_at = gpu.expires_at + datetime.timedelta(days=120)
+        gpu.delete_status = gpu.delete_status + '. The expiration date was extend for 4 months'
+        gpu.save()
+        messages.add_message(request, messages.INFO, f'Success: Expiration was successfully extended')
+
+
+def mark_as_expired(modeladmin, request, queryset):
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu.expires_at = timezone.now()
+        gpu.delete_status = gpu.delete_status + '. The user was expired by force.'
+        gpu.save()
+        messages.add_message(request, messages.INFO, f'Success: Gitpod user was expired')
+
+
+@admin.register(GitpodUser)
+class GitpodUserAdmin(admin.ModelAdmin):
+    list_display = ('github_username', 'expiration', 'user', 'assignee_id', 'expires_at')
+    search_fields = ['github_username', 'user__email', 'user__first_name', 'user__last_name', 'assignee_id']
+    actions = [
+        async_recalculate_expiration, recalculate_expiration, extend_expiration_2_weeks,
+        extend_expiration_4_months, mark_as_expired
+    ]
+
+    def expiration(self, obj):
+        now = timezone.now()
+
+        if obj.expires_at is None:
+            return format_html(f"<span class='badge bg-warning'>NEVER</span>")
+        elif now > obj.expires_at:
+            return format_html(f"<span class='badge bg-error'>EXPIRED</span>")
+        elif now > (obj.expires_at + datetime.timedelta(days=3)):
+            return format_html(
+                f"<span class='badge bg-warning'>In {from_now(obj.expires_at, include_days=True)}</span>")
+        else:
+            return format_html(
+                f"<span class='badge bg-success'>In {from_now(obj.expires_at, include_days=True)}</span>")

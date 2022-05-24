@@ -148,6 +148,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'role': model.cohort_user.role,
             'educational_status': model.cohort_user.educational_status,
             'finantial_status': model.cohort_user.finantial_status,
+            'watching': False,
         }
 
         self.assertEqual(json, expected)

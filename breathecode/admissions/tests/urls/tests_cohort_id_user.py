@@ -288,6 +288,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 1,
+            'watching': False,
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -352,6 +353,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 2,
+            'watching': False
         }, {
             'cohort_id': 1,
             'educational_status': None,
@@ -359,6 +361,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 2,
             'role': 'STUDENT',
             'user_id': 3,
+            'watching': False
         }])
 
     """
