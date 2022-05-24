@@ -922,7 +922,7 @@ class StudentPostTestSuite(AuthTestCase):
             'last_name': 'McKornick',
             'invite': True,
             'email': 'dude@dude.dude',
-            'cohort': 1,
+            'cohort': [1],
         }
 
         response = self.client.post(url, data, format='json')
@@ -1002,7 +1002,7 @@ class StudentPostTestSuite(AuthTestCase):
             'invite': True,
             'email': 'dude@dude.dude',
             'user': 2,
-            'cohort': 1,
+            'cohort': [1],
         }
 
         response = self.client.post(url, data, format='json')
