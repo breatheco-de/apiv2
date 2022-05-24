@@ -7,7 +7,7 @@ import urllib.parse
 import breathecode.notify.actions as notify_actions
 from django.utils import timezone
 from django.contrib.auth.models import User
-from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token
+from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort
 from rest_framework.exceptions import ValidationError
@@ -19,12 +19,44 @@ logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
 
 
+class GetSmallCohortSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    ending_date = serpy.Field()
+    stage = serpy.Field()
+
+
+class GetSmallAcademySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    name = serpy.Field()
+    slug = serpy.Field()
+
+
 class UserTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
     first_name = serpy.Field()
+
+
+class GitpodUserSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    github_username = serpy.Field()
+    created_at = serpy.Field()
+    delete_status = serpy.Field()
+    assignee_id = serpy.Field()
+    expires_at = serpy.Field()
+    user = UserTinySerializer(required=False)
+    academy = GetSmallAcademySerializer(required=False)
+    target_cohort = GetSmallCohortSerializer(required=False)
 
 
 class AcademyTinySerializer(serpy.Serializer):
@@ -683,6 +715,13 @@ class UserInvitePUTSerializer(serializers.ModelSerializer):
             raise ValidationException('Missing status on invite')
 
         return data
+
+
+class GetGitpodUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GitpodUser
+        exclude = ('updated_at', 'created_at', 'user', 'academy', 'assignee_id', 'github_username',
+                   'position_in_gitpod_team', 'delete_status')
 
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):

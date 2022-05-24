@@ -29,7 +29,7 @@ from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .authentication import ExpiringTokenAuthentication
 
-from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
+from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, SyncGithubUsersForm, LoginForm, InviteForm
 from .models import (
     Profile,
     CredentialsGithub,
@@ -40,8 +40,9 @@ from .models import (
     UserInvite,
     Role,
     ProfileAcademy,
+    GitpodUser,
 )
-from .actions import reset_password, resend_invite, generate_academy_token
+from .actions import reset_password, resend_invite, generate_academy_token, update_gitpod_users, set_gitpod_user_expiration
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.notify.actions import send_email_message
@@ -50,11 +51,26 @@ from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffse
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import set_query_parameter
-from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
-                          AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
-                          MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer,
-                          RoleBigSerializer, ProfileAcademySmallSerializer, UserTinySerializer)
+from .serializers import (
+    GetProfileAcademySmallSerializer,
+    UserInviteWaitingListSerializer,
+    UserSerializer,
+    AuthSerializer,
+    UserSmallSerializer,
+    GetProfileAcademySerializer,
+    MemberPOSTSerializer,
+    MemberPUTSerializer,
+    StudentPOSTSerializer,
+    RoleSmallSerializer,
+    UserMeSerializer,
+    UserInviteSerializer,
+    TokenSmallSerializer,
+    RoleBigSerializer,
+    ProfileAcademySmallSerializer,
+    UserTinySerializer,
+    GitpodUserSmallSerializer,
+    GetGitpodUserSerializer,
+)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -556,7 +572,12 @@ class LoginView(ObtainAuthToken):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.get_or_create(user=user, token_type='login')
-        return Response({'token': token.key, 'user_id': user.pk, 'email': user.email})
+        return Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'email': user.email,
+            'expires_at': token.expires_at
+        })
 
 
 @api_view(['GET'])
@@ -786,10 +807,24 @@ def save_github_token(request):
                     Q(credentialsgithub__github_id=github_user['id'])
                     | Q(email__iexact=github_user['email'])).first()
 
-            # create the user if not exists
-            if user is None:
-                user = User(username=github_user['email'].lower(), email=github_user['email'].lower())
-                user.save()
+            user_does_not_exists = user is None
+            if user_does_not_exists:
+                invite = UserInvite.objects.filter(status='WAITING_LIST', email=github_user['email']).first()
+
+            if user_does_not_exists and invite:
+                if url is None or url == '':
+                    url = os.getenv('APP_URL', 'https://4geeks.com')
+
+                return render_message(
+                    request,
+                    f'You are still number {invite.id} on the waiting list, we will email you once you are '
+                    f'given access <a href="{url}">Back to 4Geeks.com</a>')
+
+            if user_does_not_exists:
+                return render_message(
+                    request, 'We could not find in our records the email associated to this github account, '
+                    'perhaps you want to signup to the platform first? <a href="' + url +
+                    '">Back to 4Geeks.com</a>')
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
 
@@ -1164,6 +1199,27 @@ class TokenTemporalView(APIView):
         token, created = Token.get_or_create(user=profile_academy.user, token_type='temporal')
         serializer = TokenSmallSerializer(token)
         return Response(serializer.data)
+
+
+def sync_gitpod_users_view(request):
+
+    if request.method == 'POST':
+        _dict = request.POST.copy()
+        form = SyncGithubUsersForm(_dict)
+
+        if 'html' not in _dict or _dict['html'] == '':
+            messages.error(request, 'HTML string is required')
+            return render(request, 'form.html', {'form': form})
+
+        try:
+            all_usernames = update_gitpod_users(_dict['html'])
+            return render(request, 'message.html', {'MESSAGE': f'{len(all_usernames)} users found'})
+        except Exception as e:
+            return render_message(request, str(e))
+
+    else:
+        form = SyncGithubUsersForm()
+    return render(request, 'form.html', {'form': form})
 
 
 def reset_password_view(request):
@@ -1576,3 +1632,58 @@ def save_google_token(request):
     else:
         logger.error(resp.json())
         raise APIException('Error from google credentials')
+
+
+class GitpodUserView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of('get_gitpod_user')
+    def get(self, request, academy_id, gitpoduser_id=None):
+        handler = self.extensions(request)
+
+        if gitpoduser_id is not None:
+            item = GitpodUser.objects.filter(id=gitpoduser_id, academy_id=academy_id).first()
+            if item is None:
+                raise ValidationException('Gitpod User not found for this academy',
+                                          code=404,
+                                          slug='gitpoduser-not-found')
+
+            serializer = GetGitpodUserSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = GitpodUser.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(
+                Q(github_username__icontains=like) | Q(user__email__icontains=like)
+                | Q(user__first_name__icontains=like) | Q(user__last_name__icontains=like))
+
+        items = items.order_by(request.GET.get('sort', 'expires_at'))
+
+        items = handler.queryset(items)
+        serializer = GitpodUserSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of('update_gitpod_user')
+    def put(self, request, academy_id, gitpoduser_id):
+
+        item = GitpodUser.objects.filter(id=gitpoduser_id, academy_id=academy_id).first()
+        if item is None:
+            raise ValidationException('Gitpod User not found for this academy',
+                                      code=404,
+                                      slug='gitpoduser-not-found')
+
+        if request.data is None or ('expires_at' in request.data and request.data['expires_at'] is None):
+            item.expires_at = None
+            item.save()
+            item = set_gitpod_user_expiration(item.id)
+            serializer = GitpodUserSmallSerializer(item, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        serializer = GetGitpodUserSerializer(item, data=request.data)
+        if serializer.is_valid():
+            _item = serializer.save()
+            return Response(GitpodUserSmallSerializer(_item, many=False).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
