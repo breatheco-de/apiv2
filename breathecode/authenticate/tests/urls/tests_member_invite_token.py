@@ -612,6 +612,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'id': 1,
             'role': model.role.slug.upper(),
             'user_id': 1,
+            'watching': False,
         }])
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
@@ -662,6 +663,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'id': 1,
             'role': model.role.slug.upper(),
             'user_id': 1,
+            'watching': False,
         }])
 
     """
