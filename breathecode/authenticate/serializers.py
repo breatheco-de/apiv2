@@ -460,7 +460,9 @@ class StudentPOSTListSerializer(serializers.ListSerializer):
 # This method is almost repeated but now for students instead of academy memebers.
 class StudentPOSTSerializer(serializers.ModelSerializer):
     invite = serializers.BooleanField(write_only=True, required=False)
-    cohort = serializers.IntegerField(write_only=True, required=False)
+    cohort = serializers.ListField(child=serializers.IntegerField(write_only=True, required=False),
+                                   write_only=True,
+                                   required=False)
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
 
@@ -471,7 +473,6 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         list_serializer_class = StudentPOSTListSerializer
 
     def validate(self, data):
-        print(data)
         if 'email' in data and data['email']:
             data['email'] = data['email'].lower()
             user = User.objects.filter(email=data['email']).first()
@@ -513,12 +514,20 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         if role is None:
             raise ValidationException('Role student not found', slug='role-not-found')
 
-        cohort = None
+        cohort = [None]
         if 'cohort' in validated_data:
-            print('in cohort')
-            cohort = Cohort.objects.filter(id=validated_data.pop('cohort')).first()
-            if cohort is None:
-                raise ValidationException('Cohort not found', slug='cohort-not-found')
+
+            cohort_list = validated_data.pop('cohort')
+
+            cohort = []
+            for cohort_id in cohort_list:
+                cohort_search = Cohort.objects.filter(id=cohort_id).first()
+                if cohort_search is not None:
+                    cohort.append(cohort_search)
+                else:
+                    raise ValidationException('Cohort not found', slug='cohort-not-found')
+            # if cohort is None or cohort == []:
+            #     raise ValidationException('Cohort not found', slug='cohort-not-found')
 
         user = None
         email = None
@@ -535,8 +544,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             if 'invite' in validated_data:
                 del validated_data['invite']
-            print('validated_data')
-            print(validated_data)
+
             profile_academy = ProfileAcademy.objects.create(
                 **{
                     **validated_data,
@@ -555,7 +563,6 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     'user': UserSmallSerializer(user).data,
                     'LINK': url,
                 })
-
             return profile_academy
 
         if 'user' not in validated_data:
@@ -567,34 +574,35 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 raise ValidationException('You already invited this user', code=400, slug='already-invited')
 
             # prevent duplicate token (very low probability)
-            while True:
-                token = random.getrandbits(128)
-                if not UserInvite.objects.filter(token=token).exists():
-                    break
 
-            invite = UserInvite(email=validated_data['email'],
-                                first_name=validated_data['first_name'],
-                                last_name=validated_data['last_name'],
-                                academy=academy,
-                                cohort=cohort,
-                                role=role,
-                                author=self.context.get('request').user,
-                                token=token)
-            invite.save()
+            for single_cohort in cohort:
+                while True:
+                    token = random.getrandbits(128)
+                    if not UserInvite.objects.filter(token=token).exists():
+                        break
+                invite = UserInvite(email=validated_data['email'],
+                                    first_name=validated_data['first_name'],
+                                    last_name=validated_data['last_name'],
+                                    academy=academy,
+                                    cohort=single_cohort,
+                                    role=role,
+                                    author=self.context.get('request').user,
+                                    token=token)
+                invite.save()
 
-            logger.debug('Sending invite email to ' + email)
+                logger.debug('Sending invite email to ' + email)
 
-            querystr = urllib.parse.urlencode({'callback': APP_URL})
-            url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
-                str(invite.token) + '?' + querystr
+                querystr = urllib.parse.urlencode({'callback': APP_URL})
+                url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+                    str(invite.token) + '?' + querystr
 
-            notify_actions.send_email_message(
-                'welcome', email, {
-                    'email': email,
-                    'subject': 'Welcome to 4Geeks.com',
-                    'LINK': url,
-                    'FIST_NAME': validated_data['first_name']
-                })
+                notify_actions.send_email_message(
+                    'welcome', email, {
+                        'email': email,
+                        'subject': 'Welcome to 4Geeks.com',
+                        'LINK': url,
+                        'FIST_NAME': validated_data['first_name']
+                    })
 
             return ProfileAcademy.objects.create(
                 **{

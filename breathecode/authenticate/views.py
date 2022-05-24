@@ -464,16 +464,15 @@ class StudentView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_student')
     def post(self, request, academy_id=None):
-        print(1)
-        many = isinstance(request.data, list)
-        print(many)
-        for c in request.data:
-            serializer = StudentPOSTSerializer(data=c, context={'academy_id': academy_id, 'request': request})
-            if serializer.is_valid():
-                serializer.save()
+
+        serializer = StudentPOSTSerializer(data=request.data,
+                                           context={
+                                               'academy_id': academy_id,
+                                               'request': request
+                                           })
 
         if serializer.is_valid():
-            # serializer.save()
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
