@@ -22,7 +22,7 @@ from .views import (TokenTemporalView, WaitingListView, get_users, get_user_by_i
                     save_facebook_token, MemberView, reset_password_view, login_html_view, StudentView,
                     get_roles, render_invite, AcademyInviteView, MeInviteView, AcademyTokenView,
                     PasswordResetView, get_google_token, save_google_token, render_academy_invite,
-                    ProfileInviteMeView, sync_gitpod_users_view, GitpodUserView)
+                    ProfileInviteMeView, sync_gitpod_users_view, GitpodUserView, ProfileMeView, GithubMeView)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -33,6 +33,7 @@ urlpatterns = [
     path('user/<str:id_or_email>', get_user_by_id_or_email),
     path('role', get_roles, name='role'),
     path('role/<str:role_slug>', get_roles, name='role_slug'),
+    path('profile/me', ProfileMeView.as_view(), name='profile_me'),
     path('profile/invite/me', ProfileInviteMeView.as_view(), name='profile_invite_me'),
     path('member/invite/<str:token>', render_invite, name='member_invite_token'),
     path('member/<int:profile_academy_id>/token',
@@ -73,6 +74,7 @@ urlpatterns = [
          name='member_password_reset'),
     path('password/<str:token>', pick_password, name='password_token'),
     path('github/', get_github_token, name='github'),
+    path('github/me', GithubMeView.as_view(), name='github_me'),
     path('github/<str:token>', get_github_token, name='github_token'),
     path('github/callback/', save_github_token, name='github_callback'),
     path('slack/', get_slack_token, name='slack'),

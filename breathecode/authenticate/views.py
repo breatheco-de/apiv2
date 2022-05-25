@@ -27,6 +27,7 @@ from datetime import datetime
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import has_permission
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, SyncGithubUsersForm, LoginForm, InviteForm
@@ -53,6 +54,8 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import set_query_parameter
 from .serializers import (
     GetProfileAcademySmallSerializer,
+    GetProfileSerializer,
+    ProfileSerializer,
     UserInviteWaitingListSerializer,
     UserSerializer,
     AuthSerializer,
@@ -480,11 +483,13 @@ class StudentView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_student')
     def post(self, request, academy_id=None):
+
         serializer = StudentPOSTSerializer(data=request.data,
                                            context={
                                                'academy_id': academy_id,
                                                'request': request
                                            })
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -1687,3 +1692,66 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
             _item = serializer.save()
             return Response(GitpodUserSmallSerializer(_item, many=False).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileMeView(APIView, GenerateLookupsMixin):
+    @has_permission('get_my_profile')
+    def get(self, request):
+        item = Profile.objects.filter(user=request.user).first()
+        if not item:
+            raise ValidationException('Profile not found', code=404, slug='profile-not-found')
+
+        serializer = GetProfileSerializer(item, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @has_permission('create_my_profile')
+    def post(self, request):
+        if Profile.objects.filter(user__id=request.user.id).exists():
+            raise ValidationException('Profile already exists', code=400, slug='profile-already-exist')
+
+        data = {}
+        for key in request.data:
+            data[key] = request.data[key]
+
+        data['user'] = request.user.id
+
+        serializer = ProfileSerializer(data=data)
+        if serializer.is_valid():
+            instance = serializer.save()
+            serializer = GetProfileSerializer(instance, many=False)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @has_permission('update_my_profile')
+    def put(self, request):
+        item = Profile.objects.filter(user__id=request.user.id).first()
+        if not item:
+            raise ValidationException('Profile not found', code=404, slug='profile-not-found')
+
+        data = {}
+        for key in request.data:
+            data[key] = request.data[key]
+
+        data['user'] = request.user.id
+
+        serializer = ProfileSerializer(item, data=data)
+        if serializer.is_valid():
+            instance = serializer.save()
+            serializer = GetProfileSerializer(instance, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GithubMeView(APIView):
+    def delete(self, request):
+        instance = CredentialsGithub.objects.filter(user=request.user).first()
+        if not instance:
+            raise ValidationException('This user not have Github account associated with with account',
+                                      code=404,
+                                      slug='not-found')
+
+        instance.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+

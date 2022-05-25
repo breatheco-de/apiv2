@@ -77,6 +77,8 @@ class AuthenticateTestSuite(AuthTestCase):
                     'id': 1,
                     'email': profile_academy.user.email,
                     'first_name': profile_academy.user.first_name,
+                    'last_name': profile_academy.user.last_name,
+                    'username': profile_academy.user.username,
                 },
                 'key': f'{token}',
                 'reset_password_url': f'http://localhost:8000/v1/auth/password/{token}',
