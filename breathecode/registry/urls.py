@@ -13,6 +13,7 @@ from .views import (
     render_preview_html,
     handle_test_asset,
     forward_asset_url,
+    get_alias_redirects,
 )
 
 app_name = 'feedback'
@@ -25,6 +26,7 @@ urlpatterns = [
     path('translation', get_translations),
     path('syllabus/test', handle_test_syllabus),
     path('asset/test', handle_test_asset),
+    path('alias/redirect', get_alias_redirects),
     path('asset/<str:asset_slug>.<str:extension>', render_readme),
     path('asset/<str:asset_slug>', AssetView.as_view()),
     path('asset/preview/<str:asset_slug>', render_preview_html),
