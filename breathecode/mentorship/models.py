@@ -133,10 +133,13 @@ class MentorProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def save(self, *args, **kwargs):
+        created = not self.id
 
         utc_now = timezone.now()
         if self.token is None or self.token == '':
             self.token = hashlib.sha1((str(self.user.id) + str(utc_now)).encode('UTF-8')).hexdigest()
+
+        signals.mentor_profile_saved.send(instance=self, sender=self.__class__, created=created)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 

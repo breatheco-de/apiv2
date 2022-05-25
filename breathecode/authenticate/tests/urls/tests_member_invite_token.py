@@ -216,7 +216,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
@@ -251,7 +251,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
@@ -287,7 +287,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
@@ -328,7 +328,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
@@ -370,8 +370,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          }])
 
         user_db = [
-            x for x in self.bc.database.list_of('authenticate.User')
-            if x['date_joined'] and x.pop('date_joined')
+            x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')
         ]
         self.assertEqual(user_db, [{
             'email': 'user@dotdotdotdot.dot',
@@ -429,8 +428,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          }])
 
         user_db = [
-            x for x in self.bc.database.list_of('authenticate.User')
-            if x['date_joined'] and x.pop('date_joined')
+            x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')
         ]
         self.assertEqual(user_db, [{
             'email': 'user@dotdotdotdot.dot',
@@ -485,7 +483,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'status': 'ACCEPTED',
                          }])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 
@@ -545,7 +543,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'status': 'ACCEPTED',
                          }])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 
@@ -705,7 +703,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'status': 'ACCEPTED',
                          }])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 
@@ -761,7 +759,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 

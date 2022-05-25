@@ -18,6 +18,7 @@ from .monitoring_models_mixin import MonitoringModelsMixin
 from .media_models_mixin import MediaModelsMixin
 from .mentorship_models_mixin import MentorshipModelsMixin
 from .career_models_mixin import CareerModelsMixin
+from .content_types_mixin import ContentTypesMixin
 
 __all__ = ['GenerateModelsMixin']
 
@@ -25,7 +26,8 @@ __all__ = ['GenerateModelsMixin']
 class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMixin, AuthenticateMixin,
                           CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
                           AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin,
-                          MonitoringModelsMixin, MediaModelsMixin, MentorshipModelsMixin, CareerModelsMixin):
+                          MonitoringModelsMixin, MediaModelsMixin, MentorshipModelsMixin, CareerModelsMixin,
+                          ContentTypesMixin):
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
         for key in kwargs:
@@ -84,6 +86,7 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
         models = self.__inject_models__(models, **kwargs)
 
         fn = self.__flow__(
+            self.generate_contenttypes_models,
             self.generate_credentials,
             self.generate_admissions_models,
             self.generate_assignments_models,
