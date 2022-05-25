@@ -484,6 +484,21 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
             return Response(serializer.data, status=200)
 
 
+class AcademyProcessView(APIView, GenerateLookupsMixin):
+    @capable_of('crud_lead')
+    def put(self, request, academy_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id'])
+        if not lookups:
+            raise ValidationException('Missing id parameters in the querystring', code=400)
+
+        items = FormEntry.objects.filter(**lookups, academy__id=academy_id)
+        for item in items:
+            persist_single_lead.delay(item.toFormData())
+
+        return Response({'details': f'{items.count()} leads added to the processing queue'},
+                        status=status.HTTP_200_OK)
+
+
 class AcademyLeadView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -535,6 +550,22 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
         serializer = FormEntrySmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    @capable_of('crud_lead')
+    def post(self, request, academy_id=None):
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(f'Academy {academy_id} not found', slug='academy-not-found')
+
+        # ignore the incoming location information and override with the session academy
+        data = {**request.data, 'location': academy.active_campaign_slug}
+
+        serializer = PostFormEntrySerializer(data=data, context={'request': request, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_lead')
     def delete(self, request, academy_id=None):
