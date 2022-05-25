@@ -483,11 +483,13 @@ class StudentView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_student')
     def post(self, request, academy_id=None):
+
         serializer = StudentPOSTSerializer(data=request.data,
                                            context={
                                                'academy_id': academy_id,
                                                'request': request
                                            })
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -1740,3 +1742,16 @@ class ProfileMeView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GithubMeView(APIView):
+    def delete(self, request):
+        instance = CredentialsGithub.objects.filter(user=request.user).first()
+        if not instance:
+            raise ValidationException('This user not have Github account associated with with account',
+                                      code=404,
+                                      slug='not-found')
+
+        instance.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
