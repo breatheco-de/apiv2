@@ -45,6 +45,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    syllabus_schedule_time_slot=False,
                                    monitor_script=False,
                                    mentor_profile=False,
+                                   user_specialty=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -74,7 +75,8 @@ class AdmissionsModelsMixin(ModelsMixin):
 
         if not 'academy' in models and (is_valid(academy) or is_valid(profile_academy) or is_valid(syllabus)
                                         or is_valid(cohort) or is_valid(monitor_script)
-                                        or is_valid(mentorship_service) or is_valid(mentor_profile)):
+                                        or is_valid(mentorship_service) or is_valid(mentor_profile)
+                                        or is_valid(user_specialty)):
             kargs = {}
 
             if 'country' in models:
