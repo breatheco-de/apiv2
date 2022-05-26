@@ -806,6 +806,7 @@ def save_github_token(request):
                 user = User.objects.filter(
                     Q(credentialsgithub__github_id=github_user['id'])
                     | Q(email__iexact=github_user['email'])).first()
+                logger.debug(f'Found user {user.id} with email {user.email}, connecting to github account')
 
             user_does_not_exists = user is None
             if user_does_not_exists:
