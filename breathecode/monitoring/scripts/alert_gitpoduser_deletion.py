@@ -10,7 +10,6 @@ from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Academy
 from breathecode.utils.datetime_interger import from_now
 
-academy = Academy.objects.filter(id=4).first()
 
 in_three_days = timezone.now() + datetime.timedelta(days=3)
 
