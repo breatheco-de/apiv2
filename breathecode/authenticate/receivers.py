@@ -5,7 +5,6 @@ from django.contrib.auth.models import User, Group
 
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.mentorship.models import MentorProfile
-# from .signals import profile_academy_saved
 
 logger = logging.getLogger(__name__)
 
