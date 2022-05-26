@@ -160,12 +160,9 @@ class ProfileAcademy(models.Model):
         return f'{self.email} for academy ({self.academy.name})'
 
     def save(self, *args, **kwargs):
-        created = not self.id
 
         if self.__old_status != self.status and self.status == 'ACTIVE':
             invite_accepted.send(instance=self, sender=ProfileAcademy)
-
-        profile_academy_saved.send(instance=self, sender=self.__class__, created=created)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
