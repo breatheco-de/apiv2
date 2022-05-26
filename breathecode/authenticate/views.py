@@ -1743,6 +1743,7 @@ class ProfileMeView(APIView, GenerateLookupsMixin):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class GithubMeView(APIView):
     def delete(self, request):
         instance = CredentialsGithub.objects.filter(user=request.user).first()
@@ -1754,4 +1755,3 @@ class GithubMeView(APIView):
         instance.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
-
