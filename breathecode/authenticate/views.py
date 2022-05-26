@@ -1213,7 +1213,11 @@ def sync_gitpod_users_view(request):
 
         try:
             all_usernames = update_gitpod_users(_dict['html'])
-            return render(request, 'message.html', {'MESSAGE': f'{len(all_usernames)} users found'})
+            return render(
+                request, 'message.html', {
+                    'MESSAGE':
+                    f'{len(all_usernames["active"])} active and {len(all_usernames["inactive"])} inactive users found'
+                })
         except Exception as e:
             return render_message(request, str(e))
 
