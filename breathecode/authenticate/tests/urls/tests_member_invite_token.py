@@ -599,7 +599,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite[1]),
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 
@@ -650,7 +650,7 @@ class AuthenticateTestSuite(AuthTestCase):
             },
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 

@@ -20,4 +20,5 @@ logger = logging.getLogger(__name__)
 def post_save_profile_academy(sender, instance: MentorProfile, created: bool, **kwargs):
     if created:
         group = Group.objects.filter(name='Mentor').first()
-        instance.user.groups.add(group)
+        if group:
+            instance.user.groups.add(group)
