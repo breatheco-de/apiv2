@@ -10,18 +10,22 @@ CAN_DELETE_JOB_PERMISSION_ID = 447
 PERMISSIONS = [
     {
         'name': 'Can delete job',
+        'description': 'Can delete job',
         'codename': 'delete_job',
     },
     {
         'name': 'Get my profile',
+        'description': 'Get my profile',
         'codename': 'get_my_profile',
     },
     {
         'name': 'Create my profile',
+        'description': 'Create my profile',
         'codename': 'create_my_profile',
     },
     {
         'name': 'Update my profile',
+        'description': 'Update my profile',
         'codename': 'update_my_profile',
     },
 ]
@@ -55,8 +59,9 @@ class TokenTestSuite(AuthTestCase):
 
         for permission in PERMISSIONS:
             self.assertRegex(permission['name'], r'^[a-zA-Z ]+$')
+            self.assertRegex(permission['description'], r'^[a-zA-Z,. _()"]+$')
             self.assertRegex(permission['codename'], r'^[a-z_]+$')
-            self.assertEqual(len(permission), 2)
+            self.assertEqual(len(permission), 3)
 
     """
     🔽🔽🔽 format of GROUPS
