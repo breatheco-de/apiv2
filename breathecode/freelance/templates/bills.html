@@ -166,7 +166,7 @@
 
                 <td>
                     <button class="btn" onClick="location.href = '/v1/freelance/bills/{{ bill.id }}/html';">view</button>
-                    <select id="change_status" onChange="chanceBillStatus({{ bill.id }}, {{ bill.academy.id }}, this.value);">
+                    <select id="change_status" onChange="chanceBillStatus({{ bill.id }}, {{ bill.academy.id|'null' }}, this.value);">
                         <option value="mark_as">Mark as</option>
                         {% for key, label in possible_status %}
                         <option value="{{ key }}">{{ label }}</option>
