@@ -764,3 +764,4 @@ class AuthenticateTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
+        assert 0

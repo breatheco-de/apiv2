@@ -1323,7 +1323,6 @@ def render_invite(request, token, member_id=None):
     _dict['callback'] = request.GET.get('callback', '')
 
     if request.method == 'GET':
-
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
             callback_msg = ''
@@ -1332,6 +1331,18 @@ def render_invite(request, token, member_id=None):
                     'callback'] + '</a>'
             return render_message(
                 request, 'Invitation not found with this token or it was already accepted' + callback_msg)
+
+        if User.objects.filter(email=invite.email).exists():
+            invites = UserInvite.objects.filter(email=invite.email, status='PENDING')
+            querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token.key})
+            url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
+            return render(
+                request, 'academy_invite.html', {
+                    'subject': f'Invitation to study at 4Geeks.com',
+                    'invites': ProfileAcademySmallSerializer(invites, many=True).data,
+                    'LINK': url,
+                    'user': UserTinySerializer(token.user, many=False).data
+                })
 
         form = InviteForm({
             'callback': [''],
