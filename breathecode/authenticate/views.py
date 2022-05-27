@@ -365,6 +365,14 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         else:
             invites = invites.filter(status='PENDING')
 
+        if 'role' in self.request.GET:
+            param = self.request.GET.get('role')
+            invites = invites.filter(role__name__icontains=param)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            invites = query_like_by_full_name(like=like, items=invites)
+
         invites = invites.order_by(request.GET.get('sort', '-created_at'))
 
         page = self.paginate_queryset(invites, request)
