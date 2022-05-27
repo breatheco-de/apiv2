@@ -36,7 +36,7 @@ def render_html_all_bills(request, token):
     if 'academy' in request.GET:
         lookup['academy__id__in'] = request.GET.get('academy').split(',')
 
-    items = Bill.objects.filter(**lookup).exclude(academy__isnull=True)
+    items = Bill.objects.filter(**lookup)#.exclude(academy__isnull=True)
     serializer = BigBillSerializer(items, many=True)
 
     total_price = 0
