@@ -803,10 +803,9 @@ def save_github_token(request):
 
             # user can't be found thru token, lets try thru the github credentials
             if token is None and user is None:
-                user = User.objects.filter(
-                    Q(credentialsgithub__github_id=github_user['id'])
-                    | Q(email__iexact=github_user['email'])).first()
-                logger.debug(f'Found user {user.id} with email {user.email}, connecting to github account')
+                user = User.objects.filter(credentialsgithub__github_id=github_user['id']).first()
+                if user is None:
+                    user = User.objects.filter(email__iexact=github_user['email'], credentialsgithub__isnull=True).first()
 
             user_does_not_exists = user is None
             if user_does_not_exists:
