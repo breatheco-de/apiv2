@@ -112,5 +112,9 @@ class Command(BaseCommand):
                 instance = Group(name=group['name'])
                 instance.save()
 
+            # the admin have all the permissions
+            if group['name'] == 'Admin':
+                instance.permissions.set(Permission.objects.filter().exclude(content_type=content_type))
+
             for permission in group['permissions']:
                 instance.permissions.add(permission_instances[permission])

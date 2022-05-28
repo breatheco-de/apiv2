@@ -18,8 +18,28 @@ class Database:
         self._parent = parent
 
     @classmethod
-    def _get_model(cls, path: str) -> Model:
-        """Get model class"""
+    def get_model(cls, path: str) -> Model:
+        """
+        Return the model matching the given app_label and model_name.
+
+        As a shortcut, app_label may be in the form <app_label>.<model_name>.
+
+        model_name is case-insensitive.
+
+        Raise LookupError if no application exists with this label, or no
+        model exists with this name in the application. Raise ValueError if
+        called with a single argument that doesn't contain exactly one dot.
+
+        Usage:
+
+        ```py
+        # class breathecode.admissions.models.Cohort
+        Cohort = self.bc.database.get_model('admissions.Cohort')
+        ```
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        """
 
         if path in cls._cache:
             return cls._cache[path]
@@ -49,7 +69,7 @@ class Database:
         - dict(`bool`): if true return dict of values of model else return model instance.
         """
 
-        model = Database._get_model(path)
+        model = Database.get_model(path)
         result = model.objects.filter()
 
         if dict:
@@ -92,7 +112,7 @@ class Database:
 
         lookups = {'pk': pk} if pk else {}
 
-        model = Database._get_model(path)
+        model = Database.get_model(path)
         return model.objects.filter(**lookups).delete()
 
     def get(self, path: str, pk: int or str, dict: bool = True) -> Model | dict[str, Any]:
@@ -115,7 +135,7 @@ class Database:
         - pk(`str | int`): primary key of model.
         - dict(`bool`): if true return dict of values of model else return model instance.
         """
-        model = Database._get_model(path)
+        model = Database.get_model(path)
         result = model.objects.filter(pk=pk).first()
 
         if dict:
@@ -136,7 +156,7 @@ class Database:
         Keywords arguments:
         - path(`str`): path to a model, for example `admissions.CohortUser`.
         """
-        model = Database._get_model(path)
+        model = Database.get_model(path)
         return model.objects.count()
 
     def create(self, *args, **kwargs) -> dict[str, Model | list[Model]]:
