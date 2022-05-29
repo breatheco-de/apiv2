@@ -182,6 +182,23 @@ class AcademySerializer(serpy.Serializer):
     timezone = serpy.Field()
 
 
+class UserInviteSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    academy = serpy.MethodField()
+    cohort = serpy.MethodField()
+    role = serpy.MethodField()
+    created_at = serpy.Field()
+
+    def get_role(self, obj):
+        return obj.role.slug if obj.role else None
+
+    def get_academy(self, obj):
+        return AcademySerializer(obj.academy, many=False).data if obj.academy else None
+
+    def get_cohort(self, obj):
+        return GetSmallCohortSerializer(obj.cohort, many=False).data if obj.cohort else None
+
+
 class ProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
