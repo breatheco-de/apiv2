@@ -82,8 +82,8 @@ class Automation(models.Model):
                               choices=AUTOMATION_STATUS,
                               default=UKNOWN,
                               help_text='2 = inactive, 1=active')
-    entered = models.PositiveSmallIntegerField(help_text='How many contacts have entered')
-    exited = models.PositiveSmallIntegerField(help_text='How many contacts have exited')
+    entered = models.PositiveIntegerField(help_text='How many contacts have entered')
+    exited = models.PositiveIntegerField(help_text='How many contacts have exited')
 
     ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None)
 

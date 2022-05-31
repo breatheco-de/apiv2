@@ -10,9 +10,9 @@ from breathecode.admissions.admin import CohortAdmin
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.utils.admin import change_field
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
-from .tasks import async_sync_with_github, async_test_asset
-from .actions import sync_with_github, get_user_from_github_username, test_asset
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword
+from .tasks import async_pull_from_github, async_test_asset
+from .actions import pull_from_github, get_user_from_github_username, test_asset
 
 logger = logging.getLogger(__name__)
 lang_flags = {
@@ -52,12 +52,12 @@ def make_internal(modeladmin, request, queryset):
 make_internal.short_description = 'Make it an INTERNAL resource (same window)'
 
 
-def pull_from_github(modeladmin, request, queryset):
+def pull_content_from_github(modeladmin, request, queryset):
     queryset.update(sync_status='PENDING', status_text='Starting to sync...')
     assets = queryset.all()
     for a in assets:
-        async_sync_with_github.delay(a.slug, request.user.id)
-        # sync_with_github(a.slug)  # uncomment for testing purposes
+        async_pull_from_github.delay(a.slug, request.user.id)
+        # pull_from_github(a.slug)  # uncomment for testing purposes
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -132,8 +132,8 @@ def test_asset_integrity(modeladmin, request, queryset):
 
     for a in assets:
         try:
-            # async_test_asset.delay(a.slug)
-            test_asset(a)
+            async_test_asset.delay(a.slug)
+            #test_asset(a)
         except Exception as e:
             messages.error(request, a.slug + ': ' + str(e))
 
@@ -205,7 +205,7 @@ class AssetAdmin(admin.ModelAdmin):
         test_asset_integrity,
         add_gitpod,
         remove_gitpod,
-        pull_from_github,
+        pull_content_from_github,
         make_me_author,
         make_me_owner,
         create_assessment_from_asset,
@@ -213,6 +213,13 @@ class AssetAdmin(admin.ModelAdmin):
         generate_spanish_translation,
         remove_dot_from_slug,
     ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['us', 'es'], name='lang')
+
+    def get_form(self, request, obj=None, **kwargs):
+
+        if obj is not None and obj.readme is not None and 'ipynb' in obj.url and len(obj.readme) > 2000:
+            self.exclude = ('readme', 'html')
+        form = super(AssetAdmin, self).get_form(request, obj, **kwargs)
+        return form
 
     def url_path(self, obj):
         return format_html(f"""
@@ -296,6 +303,10 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
 class AssetAliasAdmin(admin.ModelAdmin):
     search_fields = ['slug']
     list_display = ('slug', 'asset', 'created_at')
+    list_filter = [
+        'asset__asset_type', 'asset__status', 'asset__sync_status', 'asset__test_status', 'asset__lang',
+        'asset__external'
+    ]
     raw_id_fields = ['asset']
 
 
@@ -354,10 +365,10 @@ def change_status_IGNORED_including_similar(modeladmin, request, queryset):
 
 @admin.register(AssetErrorLog)
 class AssetErrorLogAdmin(admin.ModelAdmin):
-    search_fields = ['slug', 'user__email', 'user_first_name', 'user_last_name']
+    search_fields = ['slug', 'user__email', 'user__first_name', 'user__last_name']
     list_display = ('slug', 'path', 'current_status', 'user', 'created_at', 'asset')
     raw_id_fields = ['user', 'asset']
-    list_filter = ['status', 'slug']
+    list_filter = ['status', 'slug', 'asset_type']
     actions = [
         make_alias, change_status_FIXED_including_similar, change_status_ERROR_including_similar,
         change_status_IGNORED_including_similar
@@ -376,3 +387,27 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
         return format_html(
             f'<span class="badge {colors[obj.status]}">{obj.slug}</span><small style="display: block;">{message}</small>'
         )
+
+
+@admin.register(AssetCategory)
+class AssetCategoryAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'title']
+    list_display = ('slug', 'title', 'academy')
+    raw_id_fields = ['academy']
+    list_filter = ['academy']
+
+
+@admin.register(AssetKeyword)
+class AssetKeywordAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'title']
+    list_display = ('slug', 'title', 'cluster', 'academy')
+    raw_id_fields = ['academy']
+    list_filter = ['academy']
+
+
+@admin.register(KeywordCluster)
+class KeywordClusterAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'title']
+    list_display = ('slug', 'title', 'academy')
+    raw_id_fields = ['academy']
+    list_filter = ['academy']

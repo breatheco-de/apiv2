@@ -1,5 +1,7 @@
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
+
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins.new_events_tests_case import EventTestCase
 from breathecode.services import datetime_to_iso_format
 from unittest.mock import MagicMock, call, patch
@@ -759,113 +761,127 @@ class AcademyEventIdTestSuite(EventTestCase):
             'ending_at': current_date,
         }])
 
-    """
-    🔽🔽🔽 Cache
-    """
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_academy_event_id__spy_extensions(self):
+        self.headers(academy=1)
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_event',
+                                     role='potato',
+                                     syllabus=True,
+                                     event=True)
+
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+        ])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
-    def test_academy_cohort_with_data_testing_cache_and_remove_in_put(self):
-        """Test /cohort without auth"""
-        cache_keys = [
-            'Event__academy_id=1&event_id=None&city=None&'
-            'country=None&zip_code=None&upcoming=None&past=None&limit=None&offset=None'
-        ]
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_event_id__spy_extension_arguments(self):
+        self.headers(academy=1)
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_event',
+                                     role='potato',
+                                     syllabus=True,
+                                     event=True)
 
-        self.assertEqual(self.cache.keys(), [])
+        self.client.get(url)
 
-        old_model = self.check_all_academy_events()
-        self.assertEqual(self.cache.keys(), cache_keys)
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=EventCache, sort='-starting_at', paginate=True),
+        ])
 
+    """
+    🔽🔽🔽 DELETE
+    """
+
+    def test_academy_event__delete__with_lookups(self):
+        status = 'DRAFT'
         self.headers(academy=1)
 
-        base = old_model[0].copy()
-
-        del base['profile_academy']
-        del base['capability']
-        del base['role']
-        del base['user']
-
+        event = {'status': status}
         model = self.generate_models(authenticate=True,
-                                     organization=True,
-                                     profile_academy=True,
+                                     role=1,
                                      capability='crud_event',
-                                     role='potato2',
-                                     tag=(2, {
-                                         'tag_type': 'DISCOVERY'
-                                     }),
-                                     active_campaign_academy=True,
-                                     models=base)
+                                     profile_academy=1,
+                                     event=(2, event))
 
-        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
-        current_date = self.datetime_now()
-        data = {
-            'id': 1,
-            'tags': ','.join([x.slug for x in model.tag]),
-            'url': 'https://www.google.com/',
-            'banner': 'https://www.google.com/banner',
-            'capacity': 11,
-            'starting_at': self.datetime_to_iso(current_date),
-            'ending_at': self.datetime_to_iso(current_date),
-        }
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1}) + '?id=1,2'
 
-        response = self.client.put(url, data, format='json')
+        response = self.client.delete(url)
         json = response.json()
-
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-
-        del json['created_at']
-        del json['updated_at']
-
-        expected = {
-            'academy': 1,
-            'author': 1,
-            'description': None,
-            'event_type': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'excerpt': None,
-            'tags': ','.join([x.slug for x in model.tag]),
-            'slug': model['event'].slug,
-            'host': model['event'].host,
-            'id': 2,
-            'lang': None,
-            'online_event': False,
-            'organization': 1,
-            'published_at': None,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'venue': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
-            **data,
-        }
+        expected = {'detail': 'lookups-and-event-id-together', 'status_code': 400}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.all_event_dict(), [{
-            **self.model_to_dict(model, 'event'),
-            **data,
-            'starting_at': current_date,
-            'ending_at': current_date,
-        }])
-        self.assertEqual(self.cache.keys(), [])
-        event = old_model[0]['event']
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.bc.database.list_of('events.Event'), self.bc.format.to_dict(model.event))
 
-        for x in data:
-            setattr(event, x, data[x])
+    def test_academy_event__delete__deleting(self):
+        status = 'DRAFT'
+        self.headers(academy=1)
 
-        event.starting_at = current_date
-        event.ending_at = current_date
-        old_model[0]['event'] = event
+        event = {'status': status}
+        model = self.generate_models(authenticate=True,
+                                     role=1,
+                                     capability='crud_event',
+                                     profile_academy=1,
+                                     event=event)
 
-        base = [
-            self.generate_models(authenticate=True, models=old_model[0]),
-        ]
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
 
-        self.check_all_academy_events(base)
-        self.assertEqual(self.cache.keys(), cache_keys)
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
+
+    def test_academy_event__delete__non_draft_event(self):
+        statuses = ['ACTIVE', 'DELETED']
+        for status in statuses:
+
+            event = {'status': status}
+            model = self.generate_models(authenticate=True,
+                                         role=1,
+                                         capability='crud_event',
+                                         profile_academy=1,
+                                         event=event)
+
+            url = reverse_lazy('events:academy_event_id', kwargs={'event_id': model.event.id})
+
+            self.headers(academy=model.academy.id)
+            response = self.client.delete(url)
+            json = response.json()
+            expected = {'detail': 'non-draft-event', 'status_code': 400}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(self.bc.database.list_of('events.Event'), [self.bc.format.to_dict(model.event)])
+            self.bc.database.delete('events.Event')
+
+    def test_academy_event__delete__deleting_from_other_academy(self):
+        status = 'DRAFT'
+        self.headers(academy=1)
+
+        event = {'status': status, 'academy_id': 2}
+        model = self.generate_models(authenticate=True,
+                                     role=1,
+                                     academy=2,
+                                     capability='crud_event',
+                                     profile_academy=1,
+                                     event=event)
+
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
+
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {'detail': 'not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.bc.format.to_dict(model.event)])

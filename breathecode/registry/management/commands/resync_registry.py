@@ -1,7 +1,7 @@
 import os, requests, logging
 from django.core.management.base import BaseCommand, CommandError
-from ...actions import create_asset, sync_with_github
-from ...tasks import async_sync_with_github
+from ...actions import create_asset, pull_from_github
+from ...tasks import async_pull_from_github
 from ...models import Asset
 
 logger = logging.getLogger(__name__)
@@ -36,4 +36,4 @@ class Command(BaseCommand):
     def projects(self, *args, **options):
         projects = Asset.objects.filter(asset_type='PROJECT')
         for p in projects:
-            async_sync_with_github.delay(p.slug)
+            async_pull_from_github.delay(p.slug)

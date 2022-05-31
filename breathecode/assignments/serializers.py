@@ -66,7 +66,15 @@ class PostTaskSerializer(serializers.ModelSerializer):
 
         _task = Task.objects.filter(associated_slug=validated_data['associated_slug'],
                                     task_type=validated_data['task_type'],
-                                    user__id=validated_data['user'].id).first()
+                                    user__id=validated_data['user'].id)
+
+        # optional cohort parameter
+        if 'cohort' not in validated_data:
+            _task = _task.filter(cohort__isnull=True)
+        else:
+            _task = _task.filter(cohort=validated_data['cohort'])
+
+        _task = _task.first()
 
         # avoid creating a task twice, if the user already has it it will be re-used.
         if _task is not None:
@@ -124,7 +132,8 @@ class PUTTaskSerializer(serializers.ModelSerializer):
             staff = ProfileAcademy.objects.filter(academy__id__in=student_academies,
                                                   user__id=self.context['request'].user.id).first()
 
-            if staff is None and teacher is None:
+            # task ownler should only be able to mark revision status to PENDING
+            if data['revision_status'] != 'PENDING' and staff is None and teacher is None:
                 raise ValidationException(
                     'Only staff members or teachers from the same academy as this student can update the '
                     'review status',

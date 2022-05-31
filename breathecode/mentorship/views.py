@@ -11,7 +11,7 @@ from breathecode.authenticate.models import Token
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
-from .actions import close_mentoring_session, get_pending_sessions_or_create, render_session
+from .actions import close_mentoring_session, get_pending_sessions_or_create, render_session, generate_mentor_bills
 from rest_framework import serializers
 from breathecode.notify.actions import get_template_content
 from rest_framework.exceptions import ValidationError, NotFound
@@ -33,6 +33,7 @@ from .serializers import (
     BigBillSerializer,
     GETBillSmallSerializer,
     MentorshipBillPUTSerializer,
+    MentorshipBillPUTListSerializer,
     BillSessionSerializer,
 )
 from rest_framework.response import Response
@@ -466,8 +467,12 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
             lookup['service__slug'] = param
 
         if 'status' in self.request.GET:
-            param = self.request.GET.get('status')
-            lookup['status'] = param
+            param = self.request.GET.get('status', 'ACTIVE')
+            lookup['status__in'] = [s.strip().upper() for s in param.split(',')]
+
+        if 'syllabus' in self.request.GET:
+            param = self.request.GET.get('syllabus')
+            lookup['syllabus__slug'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
 
@@ -646,7 +651,7 @@ class MentorSessionView(APIView, HeaderLimitOffsetPagination):
 
 
 class BillView(APIView, HeaderLimitOffsetPagination):
-    @capable_of('read_mentorship_bills')
+    @capable_of('read_mentorship_bill')
     def get(self, request, bill_id=None, academy_id=None):
 
         if bill_id is not None:
@@ -687,8 +692,54 @@ class BillView(APIView, HeaderLimitOffsetPagination):
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @capable_of('crud_mentorship_bills')
+    @capable_of('read_mentorship_bill')
     def put(self, request, bill_id=None, academy_id=None):
+        many = isinstance(request.data, list)
+        if many:
+            bill = []
+            for obj in request.data:
+                elem = MentorshipBill.objects.filter(id=obj['id']).first()
+                if elem is None:
+                    raise ValidationException(f'Bill {obj["id"]} not found', 404)
+                bill.append(elem)
+
+        else:
+            if bill_id is None:
+                raise ValidationException('Missing bill ID on the URL', 404)
+
+            bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
+            if bill is None:
+                raise ValidationException('This bill does not exist for this academy', 404)
+
+        serializer = MentorshipBillPUTSerializer(bill,
+                                                 data=request.data,
+                                                 many=many,
+                                                 context={
+                                                     'request': request,
+                                                     'academy_id': academy_id
+                                                 })
+        if serializer.is_valid():
+            mentor = serializer.save()
+            _serializer = GETBillSmallSerializer(bill, many=many)
+            return Response(_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('read_mentorship_bill')
+    def post(self, request, academy_id=None, mentor_id=None):
+
+        if mentor_id is None:
+            raise ValidationException('Missing mentor ID on the URL', 404)
+
+        mentor = MentorProfile.objects.filter(id=mentor_id, service__academy__id=academy_id).first()
+        if mentor is None:
+            raise ValidationException('This mentor does not exist for this academy', 404)
+
+        bills = generate_mentor_bills(mentor)
+        serializer = GETBillSmallSerializer(bills, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('read_mentorship_bill')
+    def delete(self, request, bill_id=None, academy_id=None):
 
         if bill_id is None:
             raise ValidationException('Missing bill ID on the URL', 404)
@@ -697,14 +748,8 @@ class BillView(APIView, HeaderLimitOffsetPagination):
         if bill is None:
             raise ValidationException('This bill does not exist for this academy', 404)
 
-        serializer = MentorshipBillPUTSerializer(bill,
-                                                 data=request.data,
-                                                 context={
-                                                     'request': request,
-                                                     'academy_id': academy_id
-                                                 })
-        if serializer.is_valid():
-            mentor = serializer.save()
-            _serializer = GETBillSmallSerializer(bill)
-            return Response(_serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if bill.status == 'PAID':
+            raise ValidationException('Paid bills cannot be deleted', slug='paid-bill')
+
+        bill.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)

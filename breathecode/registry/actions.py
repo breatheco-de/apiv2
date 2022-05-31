@@ -1,4 +1,4 @@
-import logging, json, os, re
+import logging, json, os, re, pathlib
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -12,7 +12,7 @@ from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
 from .serializers import AssetBigSerializer
-from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator
+from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator, ArticleValidator
 from github import Github, GithubException
 
 logger = logging.getLogger(__name__)
@@ -174,7 +174,7 @@ def get_user_from_github_username(username):
     return github_users
 
 
-def sync_with_github(asset_slug, author_id=None):
+def pull_from_github(asset_slug, author_id=None):
 
     logger.debug(f'Sync with github asset {asset_slug}')
 
@@ -212,7 +212,7 @@ def sync_with_github(asset_slug, author_id=None):
                 f'Github credentials for this user {author_id} not found when sync asset {asset_slug}')
 
         g = Github(credentials.token)
-        if asset.asset_type == 'LESSON':
+        if asset.asset_type in ['LESSON', 'ARTICLE']:
             asset = sync_github_lesson(g, asset)
         else:
             asset = sync_learnpack_asset(g, asset)
@@ -223,6 +223,7 @@ def sync_with_github(asset_slug, author_id=None):
         asset.save()
         logger.debug(f'Successfully re-synched asset {asset_slug} with github')
     except Exception as e:
+        # raise e
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -286,26 +287,32 @@ def sync_github_lesson(github, asset):
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
 
-    try:
-        asset.readme = repo.get_contents(file_path).content
-    except GithubException as e:
-        asset.readme = get_blob_content(repo, file_path, branch=branch_name).content
+    asset.readme = get_blob_content(repo, file_path, branch=branch_name).content
 
     readme = asset.get_readme(parse=True)
     asset.html = readme['html']
 
-    # PATCH: Only for lessons coming from the old breathecode repository
-    if readme is not None and org_name == 'breatheco-de' and repo_name == 'content':
-        logger.debug(f'Markdown is coming from breathecode/content, replacing images')
-        base_url = os.path.dirname(asset.readme_url)
-        replaced = re.sub(r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])',
-                          r'\1' + base_url + r'/../../assets/images/\2?raw=true\3', readme['decoded'])
-        asset.set_readme(replaced)
+    base_url = os.path.dirname(asset.readme_url)
+    relative_urls = list(re.finditer(r'((?:\.\.?\/)+[^)"\']+)', readme['decoded']))
+    replaced = readme['decoded']
+    while len(relative_urls) > 0:
+        match = relative_urls.pop(0)
+        found_url = match.group()
+        if found_url.endswith('\\'):
+            found_url = found_url[:-1].strip()
+        extension = pathlib.Path(found_url).suffix
+        if readme['decoded'][match.start() - 1] in ['(', "'", '"'] and extension and extension.strip() in [
+                '.png', '.jpg', '.png', '.jpeg', '.svg', '.gif'
+        ]:
+            logger.debug('Replaced url: ' + base_url + '/' + found_url + '?raw=true')
+            replaced = replaced.replace(found_url, base_url + '/' + found_url + '?raw=true')
 
-        fm = dict(readme['frontmatter'].items())
-        if 'slug' in fm and fm['slug'] != asset.slug:
-            logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
-            asset.slug = fm['slug']
+    asset.set_readme(replaced)
+
+    fm = dict(readme['frontmatter'].items())
+    if 'slug' in fm and fm['slug'] != asset.slug:
+        logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
+        asset.slug = fm['slug']
 
     return asset
 
@@ -379,9 +386,10 @@ def sync_learnpack_asset(github, asset):
         config = json.loads(learn_file.decoded_content.decode('utf-8'))
         asset.config = config
 
-        if 'title' in config:
+        # only replace title and description of English language
+        if 'title' in config and (lang == '' or asset.title == '' or asset.title is None):
             asset.title = config['title']
-        if 'description' in config:
+        if 'description' in config and (lang == '' or asset.description == '' or asset.description is None):
             asset.description = config['description']
 
         if 'preview' in config:
@@ -423,6 +431,8 @@ def test_asset(asset):
             validator = ProjectValidator(asset)
         elif asset.asset_type == 'QUIZ':
             validator = QuizValidator(asset)
+        elif asset.asset_type == 'ARTICLE':
+            validator = ArticleValidator(asset)
 
         validator.validate()
         asset.status_text = 'Test Successfull'

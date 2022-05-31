@@ -1,4 +1,4 @@
-import base64, frontmatter, markdown, pathlib
+import base64, frontmatter, markdown, pathlib, logging
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
@@ -10,6 +10,7 @@ from .signals import asset_slug_modified
 from breathecode.assessment.models import Assessment
 
 __all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
+logger = logging.getLogger(__name__)
 
 
 class AssetTechnology(models.Model):
@@ -18,6 +19,53 @@ class AssetTechnology(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class AssetCategory(models.Model):
+    slug = models.SlugField(max_length=200, unique=True)
+    title = models.CharField(max_length=200)
+    lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
+    description = models.TextField(null=True, blank=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.slug
+
+
+class KeywordCluster(models.Model):
+    slug = models.SlugField(max_length=200, unique=True)
+    title = models.CharField(max_length=200)
+    lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.slug
+
+
+class AssetKeyword(models.Model):
+    slug = models.SlugField(max_length=200, unique=True)
+    title = models.CharField(max_length=200)
+    lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
+
+    cluster = models.ForeignKey(KeywordCluster,
+                                on_delete=models.SET_NULL,
+                                default=None,
+                                blank=True,
+                                null=True)
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.slug
 
 
 PUBLIC = 'PUBLIC'
@@ -79,6 +127,14 @@ class Asset(models.Model):
 
     all_translations = models.ManyToManyField('self', blank=True)
     technologies = models.ManyToManyField(AssetTechnology)
+    seo_keywords = models.ManyToManyField(AssetKeyword,
+                                          blank=True,
+                                          help_text='Optimize for a max of two keywords per asset')
+    category = models.ForeignKey(AssetCategory,
+                                 on_delete=models.SET_NULL,
+                                 default=None,
+                                 blank=True,
+                                 null=True)
 
     url = models.URLField()
     solution_url = models.URLField(null=True, blank=True, default=None)
@@ -184,7 +240,8 @@ class Asset(models.Model):
             super().save(*args, **kwargs)
 
     def get_readme(self, parse=None, raw=False):
-        if self.readme is None:
+
+        if self.readme is None or self.readme == '':
             AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
                           path=self.slug,
                           asset_type=self.asset_type,
@@ -208,8 +265,12 @@ class Asset(models.Model):
             'raw': self.readme,
             'decoded': base64.b64decode(self.readme.encode('utf-8')).decode('utf-8')
         }
-        if parse is not None:
-            extension = pathlib.Path(self.readme_url).suffix
+        if parse:
+            # external assets will have a default markdown readme generated internally
+            extension = '.md'
+            if self.readme_url and self.readme_url != '':
+                extension = pathlib.Path(self.readme_url).suffix if not self.external else '.md'
+
             if extension in ['.md', '.mdx', '.txt']:
                 readme = self.parse(readme, format='markdown')
             elif extension in ['.ipynb']:

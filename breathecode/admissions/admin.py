@@ -15,7 +15,7 @@ from django.db.models import QuerySet
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
 from .models import (Academy, SyllabusSchedule, Cohort, CohortUser, Country, City, SyllabusVersion,
                      UserAdmissions, Syllabus, CohortTimeSlot, SyllabusScheduleTimeSlot)
-from .actions import sync_cohort_timeslots
+from .actions import ImportCohortTimeSlots
 from breathecode.assignments.actions import sync_student_tasks
 from random import choice
 from django.db.models import Q
@@ -165,7 +165,10 @@ def sync_timeslots(modeladmin, request, queryset):
     cohorts = queryset.all()
     count = 0
     for c in cohorts:
-        ids = sync_cohort_timeslots(c.id)
+        x = ImportCohortTimeSlots(c.id)
+        x.clean()
+        ids = x.sync()
+
         logger.info(f'{len(ids)} timeslots created for cohort {str(c.slug)}')
         if len(ids) > 0:
             count += 1
@@ -268,7 +271,7 @@ class CohortAdmin(admin.ModelAdmin):
         return obj.certificate.slug + '.v' + str(obj.version)
 
 
-def sync_with_github(modeladmin, request, queryset):
+def pull_from_github(modeladmin, request, queryset):
     all_syllabus = queryset.all()
 
     credentials = None
@@ -311,14 +314,14 @@ def sync_with_github(modeladmin, request, queryset):
                     'correct access rights to the repository')
 
 
-sync_with_github.short_description = 'Sync from Github'
+pull_from_github.short_description = 'Sync from Github'
 
 
 @admin.register(Syllabus)
 class SyllabusAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'academy_owner', 'private', 'github_url', 'duration_in_hours',
                     'duration_in_days', 'week_hours', 'logo')
-    actions = [sync_with_github]
+    actions = [pull_from_github]
 
 
 @admin.register(SyllabusVersion)

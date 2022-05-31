@@ -13,6 +13,9 @@
             background: #17202A;
             color: white;
         }
+        .dark .notebook-container a{
+          color: #0097CF;
+        }
         .dark div.input_prompt{
             color: #5c6dd9;
         }
@@ -3737,7 +3740,20 @@ ul.typeahead-list  > li > a.pull-right {
 <div class="topbar"><a href="{{ readme_url }}">Open in Github</a></div>
 {% endif %}
 
+
 <div class="notebook-container">
 {{ html|safe }}
 </div>
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']]
+    },
+    svg: {
+      fontCache: 'global'
+    }
+  };
+  </script>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </body>

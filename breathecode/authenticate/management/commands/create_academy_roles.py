@@ -102,8 +102,12 @@ CAPABILITIES = [
         'description': 'Create, update or delete event information'
     },
     {
-        'slug': 'read_cohort',
-        'description': 'List all the cohorts or a single cohort information'
+        'slug': 'read_all_cohort',
+        'description': 'List all the cohorts or single cohort information'
+    },
+    {
+        'slug': 'read_single_cohort',
+        'description': 'single cohort information related to a user'
     },
     {
         'slug': 'crud_cohort',
@@ -263,6 +267,14 @@ CAPABILITIES = [
         'slug': 'crud_tag',
         'description': 'Update, create and delete a marketing tag and its details'
     },
+    {
+        'slug': 'get_gitpod_user',
+        'description': 'List gitpod user the academy is consuming'
+    },
+    {
+        'slug': 'update_gitpod_user',
+        'description': 'Update gitpod user expiration based on available information'
+    },
 ]
 
 ROLES = [
@@ -280,7 +292,7 @@ ROLES = [
             'read_member',
             'read_syllabus',
             'read_student',
-            'read_cohort',
+            'read_all_cohort',
             'read_media',
             'read_my_academy',
             'read_invite',
@@ -305,7 +317,7 @@ ROLES = [
             'read_member',
             'read_syllabus',
             'read_student',
-            'read_cohort',
+            'read_all_cohort',
             'read_media',
             'read_my_academy',
             'read_invite',
@@ -335,8 +347,9 @@ ROLES = [
             'crud_assignment',
             'read_syllabus',
             'read_assignment',
-            'read_cohort',
+            'read_single_cohort',
             'read_my_academy',
+            'read_all_cohort',
             'crud_activity',
             'read_mentorship_service',
             'read_mentorship_mentor',
@@ -410,7 +423,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Admissions Developer',
         'caps':
         extend(roles, ['staff']) + [
-            'crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead', 'read_activity',
+            'crud_lead', 'crud_student', 'crud_cohort', 'read_all_cohort', 'read_lead', 'read_activity',
             'invite_resend'
         ]
     })
@@ -432,7 +445,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_cohort', 'crud_media'
+            'read_all_cohort', 'crud_media'
         ]
     })
     roles.append({
@@ -493,6 +506,8 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_session',
             'crud_mentorship_bill',
             'read_mentorship_bill',
+            'get_gitpod_user',
+            'update_gitpod_user',
         ]
     })
     roles.append({

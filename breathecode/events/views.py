@@ -9,13 +9,17 @@ from breathecode.utils import APIException
 from datetime import datetime, timedelta
 import logging
 import re
+import pytz
 
 from django.http.response import HttpResponse
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.cache import Cache
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+
+from breathecode.utils.multi_status_response import MultiStatusResponse
 from .models import Event, EventType, EventCheckin, Organization, Venue, EventbriteWebhook, Organizer
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
@@ -32,6 +36,7 @@ from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
+from breathecode.utils import response_207
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 import breathecode.events.receivers
 
@@ -129,33 +134,18 @@ class EventView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademyEventView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    cache = EventCache()
+    extensions = APIViewExtensions(cache=EventCache, sort='-starting_at', paginate=True)
 
     @capable_of('read_event')
-    def get(self, request, format=None, academy_id=None, event_id=None):
-        city = self.request.GET.get('city')
-        country = self.request.GET.get('country')
-        zip_code = self.request.GET.get('zip_code')
-        upcoming = self.request.GET.get('upcoming')
-        past = self.request.GET.get('past')
+    def get(self, request, academy_id=None, event_id=None):
+        handler = self.extensions(request)
 
-        cache_kwargs = {
-            'academy_id': academy_id,
-            'event_id': event_id,
-            'city': city,
-            'country': country,
-            'zip_code': zip_code,
-            'upcoming': upcoming,
-            'past': past,
-            **self.pagination_params(request),
-        }
-
-        cache = self.cache.get(**cache_kwargs)
-        if cache:
+        cache = handler.cache.get()
+        if cache is not None:
             return Response(cache, status=status.HTTP_200_OK)
 
         if event_id is not None:
@@ -164,20 +154,25 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
                 raise ValidationException('Event not found', 404)
 
             serializer = EventSmallSerializer(single_event, many=False)
-            self.cache.set(serializer.data, **cache_kwargs)
-            return Response(serializer.data)
+            return handler.response(serializer.data)
 
         items = Event.objects.filter(academy__id=academy_id)
         lookup = {}
 
+        city = self.request.GET.get('city')
         if city:
             lookup['venue__city__iexact'] = city
 
+        country = self.request.GET.get('country')
         if country:
             lookup['venue__country__iexact'] = country
 
+        zip_code = self.request.GET.get('zip_code')
         if zip_code:
             lookup['venue__zip_code'] = zip_code
+
+        upcoming = self.request.GET.get('upcoming')
+        past = self.request.GET.get('past')
 
         if upcoming:
             lookup['starting_at__gte'] = timezone.now()
@@ -187,16 +182,11 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
             if past == 'true':
                 lookup['starting_at__lte'] = timezone.now()
 
-        items = items.filter(**lookup).order_by('-starting_at')
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = EventSmallSerializerNoAcademy(items, many=True)
 
-        page = self.paginate_queryset(items, request)
-        serializer = EventSmallSerializerNoAcademy(page, many=True)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data, cache=self.cache, cache_kwargs=cache_kwargs)
-        else:
-            self.cache.set(serializer.data, **cache_kwargs)
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
 
     @capable_of('crud_event')
     def post(self, request, format=None, academy_id=None):
@@ -221,7 +211,6 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
 
         serializer = EventSerializer(data={**data, 'academy': academy.id}, context={'academy_id': academy_id})
         if serializer.is_valid():
-            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -249,7 +238,6 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
 
         serializer = EventSerializer(already, data=data, context={'academy_id': academy_id})
         if serializer.is_valid():
-            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -258,27 +246,57 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
     def delete(self, request, academy_id=None, event_id=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
+        if not lookups and not event_id:
+            raise ValidationException('provide arguments in the url',
+                                      code=400,
+                                      slug='without-lookups-and-event-id')
+
         if lookups and event_id:
             raise ValidationException(
                 'event_id in url '
-                'in bulk mode request, use querystring style instead', code=400)
+                'in bulk mode request, use querystring style instead',
+                code=400,
+                slug='lookups-and-event-id-together')
 
         if lookups:
-            items = Event.objects.filter(**lookups, academy__id=academy_id, status='DRAFT')
-            for item in items:
-                item.delete()
+            alls = Event.objects.filter(**lookups)
+            valids = alls.filter(academy__id=academy_id, status='DRAFT')
+            from_other_academy = alls.exclude(academy__id=academy_id)
+            not_draft = alls.exclude(status='DRAFT')
 
+            responses = []
+            if valids:
+                responses.append(MultiStatusResponse(code=204, queryset=valids))
+
+            if from_other_academy:
+                responses.append(
+                    MultiStatusResponse('Event doest not exist or does not belong to this academy',
+                                        code=400,
+                                        slug='not-found',
+                                        queryset=from_other_academy))
+
+            if not_draft:
+                responses.append(
+                    MultiStatusResponse('Only draft events can be deleted',
+                                        code=400,
+                                        slug='non-draft-event',
+                                        queryset=not_draft))
+
+            if from_other_academy or not_draft:
+                response = response_207(responses, 'slug')
+                valids.delete()
+                return response
+
+            valids.delete()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-        if academy_id is None or event_id is None:
-            raise ValidationException('Missing event_id or academy_id', code=400)
 
         event = Event.objects.filter(academy__id=academy_id, id=event_id).first()
         if event is None:
-            raise ValidationException('Event doest not exist or does not belong to this academy')
+            raise ValidationException('Event doest not exist or does not belong to this academy',
+                                      slug='not-found')
 
         if event.status != 'DRAFT':
-            raise ValidationException('Only draft events can be deleted')
+            raise ValidationException('Only draft events can be deleted', slug='non-draft-event')
 
         event.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -302,12 +320,16 @@ class EventTypeView(APIView):
         return Response(serializer.data)
 
 
-class EventCheckinView(APIView, HeaderLimitOffsetPagination):
+class EventCheckinView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
     @capable_of('read_eventcheckin')
     def get(self, request, format=None, academy_id=None):
+        handler = self.extensions(request)
 
         items = EventCheckin.objects.filter(event__academy__id=academy_id)
         lookup = {}
@@ -337,15 +359,11 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
             end_date = datetime.strptime(end, '%Y-%m-%d').date()
             items = items.filter(created_at__lte=end_date)
 
-        items = items.filter(**lookup).order_by('-created_at')
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = EventCheckinSerializer(items, many=True)
 
-        page = self.paginate_queryset(items, request)
-        serializer = EventCheckinSerializer(page, many=True)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
 
 
 @api_view(['POST'])
@@ -530,16 +548,15 @@ class ICalStudentView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, user_id):
-        items = Cohort.objects.all()
-
         if not User.objects.filter(id=user_id).count():
             raise ValidationException('Student not exist', 404, slug='student-not-exist')
 
-        cohort_ids = (CohortUser.objects.filter(user_id=user_id).values_list(
-            'cohort_id', flat=True).exclude(cohort__stage='DELETED'))
+        cohort_ids = (CohortUser.objects.filter(user__id=user_id,
+                                                cohort__ending_date__isnull=False,
+                                                cohort__never_ends=False).values_list(
+                                                    'cohort_id', flat=True).exclude(cohort__stage='DELETED'))
 
         items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by('id')
-        items = items
 
         upcoming = request.GET.get('upcoming')
         if upcoming == 'true':
@@ -579,12 +596,20 @@ class ICalStudentView(APIView):
                 until_date = timezone.make_aware(
                     datetime(year=2100, month=12, day=31, hour=12, minute=00, second=00))
 
-            if item.recurrent:
-                event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
-
             ending_at = DatetimeInteger.to_datetime(item.timezone, item.ending_at)
             ending_at = fix_datetime_weekday(item.cohort.kickoff_date, ending_at, next=True)
             event.add('dtend', ending_at)
+
+            if item.recurrent:
+                utc_ending_at = ending_at.astimezone(pytz.UTC)
+
+                # is possible hour of cohort.ending_date are wrong filled, I's assumes the max diff between
+                # summer/winter timezone should have two hours
+                delta = timedelta(hours=utc_ending_at.hour - until_date.hour + 3,
+                                  minutes=utc_ending_at.minute - until_date.minute,
+                                  seconds=utc_ending_at.second - until_date.second)
+
+                event.add('rrule', {'freq': item.recurrency_type, 'until': until_date + delta})
 
             teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()
 
@@ -620,8 +645,6 @@ class ICalCohortsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        items = Cohort.objects.all()
-
         ids = request.GET.get('academy', '')
         slugs = request.GET.get('academy_slug', '')
 
@@ -629,10 +652,13 @@ class ICalCohortsView(APIView):
         slugs = slugs.split(',') if slugs else []
 
         if ids:
-            items = Cohort.objects.filter(academy__id__in=ids).order_by('id')
+            items = Cohort.objects.filter(ending_date__isnull=False, never_ends=False,
+                                          academy__id__in=ids).order_by('id')
 
         elif slugs:
-            items = Cohort.objects.filter(academy__slug__in=slugs).order_by('id')
+            items = Cohort.objects.filter(ending_date__isnull=False,
+                                          never_ends=False,
+                                          academy__slug__in=slugs).order_by('id')
 
         else:
             items = []

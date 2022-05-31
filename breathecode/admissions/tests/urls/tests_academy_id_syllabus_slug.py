@@ -88,7 +88,11 @@ class CertificateTestSuite(AdmissionsTestCase):
         expected = {
             'slug': model.syllabus.slug,
             'name': model.syllabus.name,
-            'academy_owner': model.syllabus.academy_owner.id,
+            'academy_owner': {
+                'id': model.syllabus.academy_owner.id,
+                'name': model.syllabus.academy_owner.name,
+                'slug': model.syllabus.academy_owner.slug
+            },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
             'week_hours': model.syllabus.week_hours,
@@ -98,6 +102,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'private': model.syllabus.private,
             'created_at': self.datetime_to_iso(model.syllabus.created_at),
             'updated_at': self.datetime_to_iso(model.syllabus.updated_at),
+            'main_technologies': None,
         }
 
         self.assertEqual(json, expected)

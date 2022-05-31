@@ -1,9 +1,4 @@
-import re
-from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
-from datetime import datetime
-from breathecode.utils import Cache
-from unittest.mock import patch
 from ..mixins.new_events_tests_case import EventTestCase
 from django.utils import timezone
 
