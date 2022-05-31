@@ -792,4 +792,3 @@ class LeadTestSuite(MarketingTestCase):
             'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
-        self.assertEqual(create_lead.call_args_list, [])

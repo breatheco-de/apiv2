@@ -14,10 +14,10 @@ class DownloadableTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:single_downloadable', kwargs={'slug': 'test'})
         response = self.client.get(url)
         json = response.json()
-        expected = {'detail': 'Document not found', 'status_code': 500}
+        expected = {'detail': 'not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_form_entry_dict(), [])
 
     def test_downloadable_slug_with_data(self):
@@ -42,7 +42,6 @@ class DownloadableTestSuite(MarketingTestCase):
         model = self.generate_models(downloadable=True)
         url = reverse_lazy('marketing:single_downloadable', kwargs={'slug': f'{model["downloadable"].slug}'})
         response = self.client.get(url + '?raw=true')
-        # dir(response) use to see other functions of response
         expected = model['downloadable'].destination_url
 
         self.assertEqual(response.url, expected)
