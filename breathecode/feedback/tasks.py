@@ -6,13 +6,12 @@ from breathecode.utils import getLogger
 from django.db.models import Avg
 from celery import shared_task, Task
 from django.utils import timezone
-from breathecode.notify.actions import send_email_message, send_slack
 import breathecode.notify.actions as actions
 from .utils import strings
 from breathecode.utils import getLogger
 from breathecode.admissions.models import CohortUser, Cohort
 from django.contrib.auth.models import User
-from .models import Survey, Answer, Review, ReviewPlatform
+from .models import Survey, Answer
 from breathecode.mentorship.models import MentorshipSession
 from django.utils import timezone
 
@@ -144,20 +143,23 @@ def send_cohort_survey(self, user_id, survey_id):
         return False
 
     utc_now = timezone.now()
+
     if utc_now > survey.created_at + survey.duration:
         logger.error('This survey has already expired')
         return False
 
     cu = CohortUser.objects.filter(cohort=survey.cohort, role='STUDENT', user=user).first()
     if cu is None:
-        raise ValidationException('This student does not belong to this cohort', 400)
+        logger.error('This student does not belong to this cohort')
+        return False
 
+    #TODO:test function below
     answers = generate_user_cohort_survey_answers(user, survey, status='SENT')
 
     has_slackuser = hasattr(user, 'slackuser')
     if not user.email and not has_slackuser:
         message = f'Author not have email and slack, this survey cannot be send by {str(user.id)}'
-        logger.info(message)
+        logger.debug(message)
         raise Exception(message)
 
     token, created = Token.get_or_create(user, token_type='temporal', hours_length=48)
@@ -170,10 +172,11 @@ def send_cohort_survey(self, user_id, survey_id):
     }
 
     if user.email:
-        send_email_message('nps_survey', user.email, data)
+
+        actions.send_email_message('nps_survey', user.email, data)
 
     if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy, 'slackteam'):
-        send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
+        actions.send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)

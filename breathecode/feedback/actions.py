@@ -1,5 +1,5 @@
 from breathecode.notify.actions import send_email_message, send_slack
-import logging, random, json
+import logging, json
 from django.utils import timezone
 from django.db.models import Avg
 from breathecode.utils import ValidationException
@@ -42,6 +42,7 @@ def send_survey_group(survey=None, cohort=None):
         for uc in ucs:
             if uc.educational_status in ['ACTIVE', 'GRADUATED']:
                 send_cohort_survey.delay(uc.user.id, survey.id)
+
                 logger.debug(f'Survey scheduled to send for {uc.user.email}')
                 result['success'].append(f'Survey scheduled to send for {uc.user.email}')
             else:
@@ -61,6 +62,7 @@ def send_survey_group(survey=None, cohort=None):
         survey.save()
 
     except Exception as e:
+
         survey.status = 'FATAL'
         result['error'].append(f'Error sending survey to group: ' + str(e))
         survey.status_json = json.dumps(result)
