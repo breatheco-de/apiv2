@@ -816,9 +816,10 @@ def save_github_token(request):
 
             # user can't be found thru token, lets try thru the github credentials
             if token is None and user is None:
-                user = User.objects.filter(
-                    Q(credentialsgithub__github_id=github_user['id'])
-                    | Q(email__iexact=github_user['email'])).first()
+                user = User.objects.filter(credentialsgithub__github_id=github_user['id']).first()
+                if user is None:
+                    user = User.objects.filter(email__iexact=github_user['email'],
+                                               credentialsgithub__isnull=True).first()
 
             user_does_not_exists = user is None
             if user_does_not_exists:
@@ -1226,7 +1227,11 @@ def sync_gitpod_users_view(request):
 
         try:
             all_usernames = update_gitpod_users(_dict['html'])
-            return render(request, 'message.html', {'MESSAGE': f'{len(all_usernames)} users found'})
+            return render(
+                request, 'message.html', {
+                    'MESSAGE':
+                    f'{len(all_usernames["active"])} active and {len(all_usernames["inactive"])} inactive users found'
+                })
         except Exception as e:
             return render_message(request, str(e))
 

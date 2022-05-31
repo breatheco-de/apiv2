@@ -170,15 +170,22 @@ def set_gitpod_user_expiration(gitpoduser_id):
 
 
 def update_gitpod_users(html):
-    all_users = []
+    all_active_users = []
+    all_inactive_users = []
     all_usernames = []
-    findings = list(re.finditer(r'<input([^>]+)>', html))
+    findings = list(re.finditer(r'<div\sclass="flex\sflex-grow\sflex-row\sspace-x-2">(.*?)<\/div>', html))
+
     position = 0
     while len(findings) > 0:
         position += 1
         user = {'position': position}
         match = findings.pop(0)
         input_html = html[match.start():match.end()]
+
+        matches = list(re.finditer('>Reactivate<', input_html))
+        if len(matches) > 0:
+            all_inactive_users.append(user)
+            continue
 
         matches = list(re.finditer('"assignee-([\w\-]+)"', input_html))
         if len(matches) > 0:
@@ -190,15 +197,17 @@ def update_gitpod_users(html):
             match = matches.pop(0)
             user['github'] = match.group(1)
 
+            logger.debug('Found active user ' + user['github'])
+
             if user['github'] in all_usernames:
                 render_message(
                     f"Error: user {user['github']} seems to be duplicated on the incoming list from Gitpod")
 
             all_usernames.append(user['github'])
-            all_users.append(user)
+            all_active_users.append(user)
 
     GitpodUser.objects.exclude(github_username__in=all_usernames).delete()
-    for user in all_users:
+    for user in all_active_users:
 
         # create if not exists
         gitpod_user = GitpodUser.objects.filter(github_username=user['github']).first()
@@ -206,10 +215,11 @@ def update_gitpod_users(html):
             gitpod_user = GitpodUser(github_username=user['github'],
                                      position_in_gitpod_team=user['position'],
                                      assignee_id=user['assignee'])
+            gitpod_user.save()
 
         if set_gitpod_user_expiration(gitpod_user.id) is None:
             raise Exception(
                 f'Gitpod user {user["github"]} could not be processed, maybe its duplicated or another user is incorrectly assigned to the Gitpod account'
             )
 
-    return all_users
+    return {'active': all_active_users, 'inactive': all_inactive_users}
