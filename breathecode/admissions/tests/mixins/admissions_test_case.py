@@ -31,7 +31,10 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
             'timezone': timezone,
         }
 
-    def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, update=False):
+    def check_cohort_user_that_not_have_role_student_can_be_teacher(self,
+                                                                    role,
+                                                                    update=False,
+                                                                    additional_data={}):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
 
@@ -92,6 +95,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'created_at': self.datetime_to_iso(model['cohort'].created_at),
                 'updated_at': self.datetime_to_iso(model['cohort'].updated_at),
             },
+            **additional_data,
         }
 
         if update:
@@ -121,7 +125,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'finantial_status': None,
                 'id': 1,
                 'role': 'TEACHER',
-                'user_id': 1
+                'user_id': 1,
+                'watching': False,
             }])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

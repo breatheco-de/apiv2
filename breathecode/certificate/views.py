@@ -1,5 +1,8 @@
 from breathecode.authenticate.models import ProfileAcademy
 import logging
+
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import has_permission
 from .models import Specialty, Badge, UserSpecialty, LayoutDesign
 from breathecode.admissions.models import CohortUser
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
@@ -302,3 +305,17 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 #             serializer.save()
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CertificateMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @has_permission('get_my_certificate')
+    def get(self, request):
+        handler = self.extensions(request)
+
+        items = UserSpecialty.objects.filter(user=request.user)
+        items = handler.queryset(items)
+        serializer = UserSpecialtySerializer(items, many=True)
+
+        return handler.response(serializer.data)

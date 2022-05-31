@@ -10,7 +10,6 @@ from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Academy
 from breathecode.utils.datetime_interger import from_now
 
-
 in_three_days = timezone.now() + datetime.timedelta(days=3)
 
 gitpod_users_to_delete = GitpodUser.objects.filter(

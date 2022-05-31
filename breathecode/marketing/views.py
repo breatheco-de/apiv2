@@ -49,7 +49,7 @@ def get_downloadable(request, slug=None):
     if slug is not None:
         download = Downloadable.objects.filter(slug=slug).first()
         if download is None:
-            raise APIException(f'Document not found', 404)
+            raise ValidationException('Document not found', 404, slug='not-found')
 
         if request.GET.get('raw', None) == 'true':
             return HttpResponseRedirect(redirect_to=download.destination_url)
