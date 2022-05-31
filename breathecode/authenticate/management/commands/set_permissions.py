@@ -16,18 +16,22 @@ CONTENT_TYPE_PROPS = {
 PERMISSIONS = [
     {
         'name': 'Get my profile',
+        'description': 'Get my profile',
         'codename': 'get_my_profile',
     },
     {
         'name': 'Create my profile',
+        'description': 'Create my profile',
         'codename': 'create_my_profile',
     },
     {
         'name': 'Update my profile',
+        'description': 'Update my profile',
         'codename': 'update_my_profile',
     },
     {
         'name': 'Get my certificate',
+        'description': 'Get my certificate',
         'codename': 'get_my_certificate',
     },
 ]
@@ -46,8 +50,12 @@ GROUPS = [
         'permissions': ['get_my_certificate'],
     },
     {
+        'name': 'Teacher',
+        'permissions': [],
+    },
+    {
         'name': 'Mentor',
-        'permissions': ['get_my_certificate'],
+        'permissions': [],
     },
 ]
 
@@ -86,7 +94,9 @@ class Command(BaseCommand):
 
             # it can create their own permissions
             if not instance:
-                instance = Permission(**permission, content_type=content_type)
+                instance = Permission(name=permission['name'],
+                                      codename=permission['codename'],
+                                      content_type=content_type)
                 instance.save()
 
             permission_instances[permission['codename']] = instance
@@ -101,6 +111,10 @@ class Command(BaseCommand):
             else:
                 instance = Group(name=group['name'])
                 instance.save()
+
+            # the admin have all the permissions
+            if group['name'] == 'Admin':
+                instance.permissions.set(Permission.objects.filter().exclude(content_type=content_type))
 
             for permission in group['permissions']:
                 instance.permissions.add(permission_instances[permission])

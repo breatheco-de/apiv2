@@ -10,18 +10,22 @@ CAN_DELETE_JOB_PERMISSION_ID = 447
 PERMISSIONS = [
     {
         'name': 'Can delete job',
+        'description': 'Can delete job',
         'codename': 'delete_job',
     },
     {
         'name': 'Get my profile',
+        'description': 'Get my profile',
         'codename': 'get_my_profile',
     },
     {
         'name': 'Create my profile',
+        'description': 'Create my profile',
         'codename': 'create_my_profile',
     },
     {
         'name': 'Update my profile',
+        'description': 'Update my profile',
         'codename': 'update_my_profile',
     },
 ]
@@ -55,8 +59,9 @@ class TokenTestSuite(AuthTestCase):
 
         for permission in PERMISSIONS:
             self.assertRegex(permission['name'], r'^[a-zA-Z ]+$')
+            self.assertRegex(permission['description'], r'^[a-zA-Z,. _()"]+$')
             self.assertRegex(permission['codename'], r'^[a-z_]+$')
-            self.assertEqual(len(permission), 2)
+            self.assertEqual(len(permission), 3)
 
     """
     🔽🔽🔽 format of GROUPS
@@ -82,6 +87,9 @@ class TokenTestSuite(AuthTestCase):
     @patch('breathecode.authenticate.management.commands.set_permissions.get_groups',
            MagicMock(return_value=GROUPS))
     def test__execute__ends_successfully(self):
+        Permission = self.bc.database.get_model('auth.Permission')
+        permissions = self.bc.format.to_dict(Permission.objects.all())
+
         command = Command()
         command.handle()
 
@@ -136,12 +144,7 @@ class TokenTestSuite(AuthTestCase):
         self.assertEqual(
             sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Admin').first().permissions.all())),
             [
-                {
-                    'codename': 'delete_job',
-                    'content_type_id': JOB_CONTENT_TYPE_ID,
-                    'id': CAN_DELETE_JOB_PERMISSION_ID,
-                    'name': 'Can delete job'
-                },
+                *sort_by_id(permissions),
                 {
                     'codename': 'get_my_profile',
                     'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
@@ -270,6 +273,9 @@ class TokenTestSuite(AuthTestCase):
                 'permissions': permission_ids,
             },
         ]
+
+        Permission = self.bc.database.get_model('auth.Permission')
+        permissions = self.bc.format.to_dict(Permission.objects.all())
         model = self.bc.database.create(permission=permission, content_type=content_type, group=groups)
 
         command = Command()
@@ -326,12 +332,7 @@ class TokenTestSuite(AuthTestCase):
         self.assertEqual(
             sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Admin').first().permissions.all())),
             [
-                {
-                    'codename': 'delete_job',
-                    'content_type_id': JOB_CONTENT_TYPE_ID,
-                    'id': CAN_DELETE_JOB_PERMISSION_ID,
-                    'name': 'Can delete job'
-                },
+                *sort_by_id(permissions),
                 {
                     'codename': 'get_my_profile',
                     'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
