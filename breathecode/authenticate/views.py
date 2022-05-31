@@ -56,6 +56,7 @@ from .serializers import (
     GetProfileAcademySmallSerializer,
     GetProfileSerializer,
     ProfileSerializer,
+    UserInviteSmallSerializer,
     UserInviteWaitingListSerializer,
     UserSerializer,
     AuthSerializer,
@@ -1330,13 +1331,81 @@ class ProfileInviteMeView(APIView):
         })
 
 
+@private_view()
+def render_user_invite(request, token):
+    accepting = request.GET.get('accepting', '')
+    rejecting = request.GET.get('rejecting', '')
+    if accepting.strip() != '':
+        invites = UserInvite.objects.filter(id__in=accepting.split(','),
+                                            email=token.user.email,
+                                            status='PENDING')
+
+        for invite in invites:
+            if invite.academy is not None:
+                profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
+
+                #
+                if profile is None:
+                    role = invite.role
+                    if not role:
+                        role = Role.objects.filter(slug='student').first()
+
+                    # is better generate a role without capability that have a exception in this case
+                    if not role:
+                        role = Role(slug='student', name='Student')
+                        role.save()
+
+                    profile = ProfileAcademy(email=invite.email,
+                                             academy=invite.academy,
+                                             role=role,
+                                             first_name=token.user.first_name,
+                                             last_name=token.user.last_name)
+
+                profile.user = token.user
+                profile.status = 'ACTIVE'
+                profile.save()
+
+            if invite.cohort is not None:
+                role = 'student'
+                if invite.role is not None and invite.role.slug != 'student':
+                    role = invite.role.slug.upper()
+
+                cu = CohortUser.objects.filter(user=token.user, cohort=invite.cohort).first()
+                if cu is None:
+                    cu = CohortUser(user=token.user, cohort=invite.cohort, role=role)
+                    cu.save()
+
+            invite.status = 'ACCEPTED'
+            invite.save()
+
+    if rejecting.strip() != '':
+        UserInvite.objects.filter(id__in=rejecting.split(','), email=token.user.email,
+                                  status='PENDING').update(status='REJECTED')
+
+    pending_invites = UserInvite.objects.filter(email=token.user.email, status='PENDING')
+    if pending_invites.count() == 0:
+        return render_message(request,
+                              f'You don\'t have any more pending invites',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=APP_URL)
+
+    querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token.key})
+    url = os.getenv('API_URL') + '/v1/auth/member/invite?' + querystr
+    return render(
+        request, 'user_invite.html', {
+            'subject': f'Invitation to study at 4Geeks.com',
+            'invites': UserInviteSmallSerializer(pending_invites, many=True).data,
+            'LINK': url,
+            'user': UserTinySerializer(token.user, many=False).data
+        })
+
+
 def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
     _dict['token'] = token
     _dict['callback'] = request.GET.get('callback', '')
 
     if request.method == 'GET':
-
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
             callback_msg = ''
@@ -1345,6 +1414,10 @@ def render_invite(request, token, member_id=None):
                     'callback'] + '</a>'
             return render_message(
                 request, 'Invitation not found with this token or it was already accepted' + callback_msg)
+
+        if invite and User.objects.filter(email=invite.email).exists():
+            redirect = os.getenv('API_URL') + '/v1/auth/member/invite'
+            return HttpResponseRedirect(redirect_to=redirect)
 
         form = InviteForm({
             'callback': [''],
