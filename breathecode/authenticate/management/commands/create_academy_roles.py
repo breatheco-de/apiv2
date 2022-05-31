@@ -36,6 +36,10 @@ CAPABILITIES = [
         'description': 'Read invites from users'
     },
     {
+        'slug': 'crud_invite',
+        'description': 'Create, update or delete invites from users'
+    },
+    {
         'slug': 'invite_resend',
         'description': 'Resent invites for user academies'
     },
@@ -499,6 +503,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_shortlink',
             'invite_resend',
             'crud_mentor',
+            'crud_invite',
             'read_mentor',
             'read_mentorship_service',
             'crud_mentorship_service',
