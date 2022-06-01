@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User, Permission, Group
+from django.contrib.auth.models import User, Group
 from breathecode.mentorship.models import MentorProfile
 from breathecode.authenticate.models import ProfileAcademy
 
@@ -10,6 +9,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         student = Group.objects.filter(name='Student').first()
+        teacher = Group.objects.filter(name='Teacher').first()
         default = Group.objects.filter(name='Default').first()
         mentor = Group.objects.filter(name='Mentor').first()
 
@@ -25,6 +25,10 @@ class Command(BaseCommand):
             student = Group(name='Student')
             student.save()
 
+        if not teacher:
+            teacher = Group(name='Teacher')
+            teacher.save()
+
         users = User.objects.filter()
         default.user_set.set(users)
 
@@ -36,3 +40,8 @@ class Command(BaseCommand):
                                                     role__slug='student').values_list('user__id', flat=True)
         students = User.objects.filter(id__in=profile_ids)
         student.user_set.set(students)
+
+        profile_ids = ProfileAcademy.objects.filter(user__isnull=False,
+                                                    role__slug='teacher').values_list('user__id', flat=True)
+        teachers = User.objects.filter(id__in=profile_ids)
+        teacher.user_set.set(teachers)
