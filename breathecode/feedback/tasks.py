@@ -32,32 +32,32 @@ class BaseTaskWithRetry(Task):
 
 
 def build_question(answer):
-
+    lang = answer.lang.lower()
     question = {'title': '', 'lowest': '', 'highest': ''}
     if answer.mentorship_session is not None:
-        question['title'] = strings[answer.lang]['session']['title'].format(
+        question['title'] = strings[lang]['session']['title'].format(
             f'{answer.mentorship_session.mentor.user.first_name} {answer.mentorship_session.mentor.user.last_name}'
         )
-        question['lowest'] = strings[answer.lang]['session']['lowest']
-        question['highest'] = strings[answer.lang]['session']['highest']
+        question['lowest'] = strings[lang]['session']['lowest']
+        question['highest'] = strings[lang]['session']['highest']
     elif answer.event is not None:
-        question['title'] = strings[answer.lang]['event']['title']
-        question['lowest'] = strings[answer.lang]['event']['lowest']
-        question['highest'] = strings[answer.lang]['event']['highest']
+        question['title'] = strings[lang]['event']['title']
+        question['lowest'] = strings[lang]['event']['lowest']
+        question['highest'] = strings[lang]['event']['highest']
     elif answer.mentor is not None:
-        question['title'] = strings[answer.lang]['mentor']['title'].format(answer.mentor.first_name + ' ' +
+        question['title'] = strings[lang]['mentor']['title'].format(answer.mentor.first_name + ' ' +
                                                                            answer.mentor.last_name)
-        question['lowest'] = strings[answer.lang]['mentor']['lowest']
-        question['highest'] = strings[answer.lang]['mentor']['highest']
+        question['lowest'] = strings[lang]['mentor']['lowest']
+        question['highest'] = strings[lang]['mentor']['highest']
     elif answer.cohort is not None and answer.cohort.syllabus_version:
-        question['title'] = strings[answer.lang]['cohort']['title'].format(
+        question['title'] = strings[lang]['cohort']['title'].format(
             answer.cohort.syllabus_version.syllabus.name)
-        question['lowest'] = strings[answer.lang]['cohort']['lowest']
-        question['highest'] = strings[answer.lang]['cohort']['highest']
+        question['lowest'] = strings[lang]['cohort']['lowest']
+        question['highest'] = strings[lang]['cohort']['highest']
     elif answer.academy is not None:
-        question['title'] = strings[answer.lang]['academy']['title'].format(answer.academy.name)
-        question['lowest'] = strings[answer.lang]['academy']['lowest']
-        question['highest'] = strings[answer.lang]['academy']['highest']
+        question['title'] = strings[lang]['academy']['title'].format(answer.academy.name)
+        question['lowest'] = strings[lang]['academy']['lowest']
+        question['highest'] = strings[lang]['academy']['highest']
 
     return question
 
@@ -313,10 +313,10 @@ def send_mentorship_session_survey(self, session_id):
     # lazyload api url in test environment
     api_url = API_URL if ENV != 'test' else os.getenv('API_URL', '')
     data = {
-        'SUBJECT': strings[answer.lang]['survey_subject'],
+        'SUBJECT': strings[answer.lang.lower()]['survey_subject'],
         'MESSAGE': answer.title,
         'TRACKER_URL': f'{api_url}/v1/feedback/answer/{answer.id}/tracker.png',
-        'BUTTON': strings[answer.lang]['button_label'],
+        'BUTTON': strings[answer.lang.lower()]['button_label'],
         'LINK': f'https://nps.breatheco.de/{answer.id}?token={token.key}',
     }
 
