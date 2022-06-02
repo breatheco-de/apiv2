@@ -9,19 +9,24 @@ import pytz
 __all__ = ['DatetimeInteger', 'duration_to_str', 'from_now']
 
 
-def duration_to_str(duration, include_seconds=False):
+def duration_to_str(duration, include_seconds=False, include_days=False):
     if duration is None:
         return 'none'
 
     total_seconds = duration.seconds
+    day_value = total_seconds // 86400
     sec_value = total_seconds % (24 * 3600)
     hour_value = sec_value // 3600
     sec_value %= 3600
     min = sec_value // 60
     sec_value %= 60
 
+    msg = ''
+    if include_days and duration.days > 0:
+        msg = f'{duration.days} days, '
+
     if hour_value > 0:
-        msg = f'{hour_value} hr'
+        msg += f'{hour_value} hr'
         if min > 0:
             msg += f', {min} min'
         if sec_value > 0 and include_seconds:
@@ -38,8 +43,12 @@ def duration_to_str(duration, include_seconds=False):
         return 'none'
 
 
-def from_now(_date, include_seconds=False):
-    return duration_to_str(timezone.now() - _date, include_seconds)
+def from_now(_date, include_seconds=False, include_days=False):
+    now = timezone.now()
+    if now > _date:
+        return duration_to_str(now - _date, include_seconds, include_days)
+    else:
+        return duration_to_str(_date - now, include_seconds, include_days)
 
 
 class Datetime(datetime):

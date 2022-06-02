@@ -318,9 +318,24 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             if cohorts is not None:
                 items = items.filter(cohort__slug__in=cohorts.split(','))
 
+            watching = request.GET.get('watching', None)
+            if watching is not None:
+                items = items.filter(watching=watching.lower() == 'true')
+
+            syllabus = request.GET.get('syllabus', None)
+            if syllabus is not None:
+                items = items.filter(cohort__syllabus_version__syllabus__slug__in=syllabus.split(','))
+
+            distinct = request.GET.get('distinct', None)
+            if distinct is not None and distinct == 'true':
+                ids = items.distinct('user__id').order_by('user__id').values_list('id', flat=True)
+                items = items.filter(id__in=ids)
+
             users = request.GET.get('users', None)
             if users is not None:
                 items = items.filter(user__id__in=users.split(','))
+
+            items = items.order_by(request.GET.get('order_by', '-role'))
 
         except Exception as e:
             raise ValidationException(str(e), 400)

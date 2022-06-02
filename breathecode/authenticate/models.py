@@ -9,14 +9,15 @@ from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
+from django.contrib.contenttypes.models import ContentType
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
-from .signals import invite_accepted
+from .signals import invite_accepted, profile_academy_saved
 from breathecode.admissions.models import Academy, Cohort
 
 __all__ = [
-    'User', 'Group', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
+    'User', 'Group', 'ContentType', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
     'ProfileAcademy', 'CredentialsGithub', 'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks',
     'CredentialsGoogle', 'DeviceId', 'Token'
 ]
@@ -352,3 +353,24 @@ class Token(rest_framework.authtoken.models.Token):
 class DeviceId(models.Model):
     name = models.CharField(max_length=40)
     key = models.CharField(max_length=64)
+
+
+class GitpodUser(models.Model):
+
+    github_username = models.CharField(max_length=40)
+    assignee_id = models.CharField(max_length=64)
+    position_in_gitpod_team = models.PositiveSmallIntegerField()
+    delete_status = models.TextField(null=True, default=None, blank=True)
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, default=None, blank=True)
+    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
+    target_cohort = models.ForeignKey(Cohort, on_delete=models.SET_NULL, null=True, default=None, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+    expires_at = models.DateTimeField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text=
+        'If a gitpod user is not connected to a real user and academy in the database, it will be deleted ASAP'
+    )

@@ -17,12 +17,12 @@ Including another URLconf
 # from rest_framework.authtoken import views
 from django.urls import path
 from .views import (TokenTemporalView, WaitingListView, get_users, get_user_by_id_or_email, UserMeView,
-                    LoginView, LogoutView, TemporalTokenView, get_github_token, save_github_token,
-                    get_slack_token, save_slack_token, pick_password, get_token_info, get_facebook_token,
-                    save_facebook_token, MemberView, reset_password_view, login_html_view, StudentView,
-                    get_roles, render_invite, AcademyInviteView, MeInviteView, AcademyTokenView,
+                    LoginView, LogoutView, TemporalTokenView, get_github_token, render_user_invite,
+                    save_github_token, get_slack_token, save_slack_token, pick_password, get_token_info,
+                    get_facebook_token, save_facebook_token, MemberView, reset_password_view, login_html_view,
+                    StudentView, get_roles, render_invite, AcademyInviteView, MeInviteView, AcademyTokenView,
                     PasswordResetView, get_google_token, save_google_token, render_academy_invite,
-                    ProfileInviteMeView)
+                    ProfileInviteMeView, sync_gitpod_users_view, GitpodUserView, ProfileMeView, GithubMeView)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -33,7 +33,9 @@ urlpatterns = [
     path('user/<str:id_or_email>', get_user_by_id_or_email),
     path('role', get_roles, name='role'),
     path('role/<str:role_slug>', get_roles, name='role_slug'),
+    path('profile/me', ProfileMeView.as_view(), name='profile_me'),
     path('profile/invite/me', ProfileInviteMeView.as_view(), name='profile_invite_me'),
+    path('member/invite', render_user_invite, name='member_invite'),
     path('member/invite/<str:token>', render_invite, name='member_invite_token'),
     path('member/<int:profile_academy_id>/token',
          TokenTemporalView.as_view(),
@@ -73,6 +75,7 @@ urlpatterns = [
          name='member_password_reset'),
     path('password/<str:token>', pick_password, name='password_token'),
     path('github/', get_github_token, name='github'),
+    path('github/me', GithubMeView.as_view(), name='github_me'),
     path('github/<str:token>', get_github_token, name='github_token'),
     path('github/callback/', save_github_token, name='github_callback'),
     path('slack/', get_slack_token, name='slack'),
@@ -86,4 +89,7 @@ urlpatterns = [
     # google authentication oath2.0
     path('google/<str:token>', get_google_token, name='google_token'),
     path('google/callback/', save_google_token, name='google_callback'),
+    path('gitpod/sync', sync_gitpod_users_view, name='sync_gitpod_users'),
+    path('academy/gitpod/user', GitpodUserView.as_view(), name='gitpod_user'),
+    path('academy/gitpod/user/<int:gitpoduser_id>', GitpodUserView.as_view(), name='gitpod_user_id'),
 ]

@@ -167,6 +167,18 @@ def render_readme(request, asset_slug, extension='raw'):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def get_alias_redirects(request):
+    aliases = AssetAlias.objects.all()
+    redirects = {}
+    for a in aliases:
+        if a.slug != a.asset.slug:
+            redirects[a.slug] = a.asset.slug
+
+    return Response(redirects)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def get_config(request, asset_slug):
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:

@@ -36,6 +36,10 @@ CAPABILITIES = [
         'description': 'Read invites from users'
     },
     {
+        'slug': 'crud_invite',
+        'description': 'Create, update or delete invites from users'
+    },
+    {
         'slug': 'invite_resend',
         'description': 'Resent invites for user academies'
     },
@@ -267,6 +271,14 @@ CAPABILITIES = [
         'slug': 'crud_tag',
         'description': 'Update, create and delete a marketing tag and its details'
     },
+    {
+        'slug': 'get_gitpod_user',
+        'description': 'List gitpod user the academy is consuming'
+    },
+    {
+        'slug': 'update_gitpod_user',
+        'description': 'Update gitpod user expiration based on available information'
+    },
 ]
 
 ROLES = [
@@ -341,6 +353,7 @@ ROLES = [
             'read_assignment',
             'read_single_cohort',
             'read_my_academy',
+            'read_all_cohort',
             'crud_activity',
             'read_mentorship_service',
             'read_mentorship_mentor',
@@ -490,6 +503,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_shortlink',
             'invite_resend',
             'crud_mentor',
+            'crud_invite',
             'read_mentor',
             'read_mentorship_service',
             'crud_mentorship_service',
@@ -497,6 +511,8 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_session',
             'crud_mentorship_bill',
             'read_mentorship_bill',
+            'get_gitpod_user',
+            'update_gitpod_user',
         ]
     })
     roles.append({

@@ -6,9 +6,25 @@ import urllib
 from unittest import mock
 from django.urls.base import reverse_lazy
 from rest_framework import status
+from django.template import loader
 from ..mixins.new_auth_test_case import AuthTestCase
 from ...models import Role
 from ..mocks import GithubRequestsMock
+
+
+def render(message):
+    request = None
+    return loader.render_to_string(
+        'message.html',
+        {
+            'MESSAGE': message,
+            'BUTTON': None,
+            'BUTTON_TARGET': '_blank',
+            'LINK': None
+        },
+        request,
+        using=None,
+    )
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -24,7 +40,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(data, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
@@ -32,65 +48,67 @@ class AuthenticateTestSuite(AuthTestCase):
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
     def test_github_callback__user_not_exist(self):
         """Test /github/callback"""
-        role_kwargs = {'slug': 'student', 'name': 'Student'}
-        model = self.generate_models(role=True, role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
         params = {'url': original_url_callback, 'code': code}
+
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+        content = self.bc.format.from_bytes(response.content)
+        expected = render('We could not find in our records the email associated to this github account, '
+                          'perhaps you want to signup to the platform first? <a href="' +
+                          original_url_callback + '">Back to 4Geeks.com</a>')
 
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(bool(token_pattern.match(response.url)), True)
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
 
-        users = [
-            x for x in self.bc.database.list_of('authenticate.User')
-            if self.assertDatetime(x['date_joined']) and x.pop('date_joined')
-        ]
+            with open('expected.html', 'w') as f:
+                f.write(expected)
 
-        self.assertEqual(users, [{
-            'email': 'jdefreitaspinto@gmail.com',
-            'first_name': '',
-            'id': 1,
-            'is_active': True,
-            'is_staff': False,
-            'is_superuser': False,
-            'last_login': None,
-            'last_name': '',
-            'password': '',
-            'username': 'jdefreitaspinto@gmail.com',
-        }])
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
-            'avatar_url':
-            'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio':
-            'I am an Computer engineer, Full-stack Developer\xa0and React '
-            'Developer, I likes an API good, the clean code, the good programming '
-            'practices',
-            'blog':
-            'https://www.facebook.com/chocoland.framework',
-            'company':
-            '@chocoland ',
-            'email':
-            'jdefreitaspinto@gmail.com',
-            'github_id':
-            3018142,
-            'name':
-            'Jeferson De Freitas',
-            'token':
-            'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username':
-            None,
-            'user_id':
-            1,
-            'username':
-            'jefer94'
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
+
+    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
+    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    def test_github_callback__user_not_exist_but_waiting_list(self):
+        """Test /github/callback"""
+
+        user_invite = {'status': 'WAITING_LIST', 'email': 'jdefreitaspinto@gmail.com'}
+        self.bc.database.create(user_invite=user_invite)
+
+        original_url_callback = 'https://google.co.ve'
+        code = 'Konan'
+
+        url = reverse_lazy('authenticate:github_callback')
+        params = {'url': original_url_callback, 'code': code}
+
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+        content = self.bc.format.from_bytes(response.content)
+        expected = render(
+            'You are still number 1 on the waiting list, we will email you once you are given access '
+            f'<a href="{original_url_callback}">Back to 4Geeks.com</a>')
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
@@ -113,9 +131,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -167,9 +183,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -223,9 +237,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
@@ -258,9 +270,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -315,9 +325,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -371,9 +379,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -434,7 +440,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), self.bc.format.to_dict(model.user))
+        self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
@@ -496,7 +502,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), self.bc.format.to_dict(model.user))
+        self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))
 
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
             'avatar_url':
