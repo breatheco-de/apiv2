@@ -243,7 +243,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 Auth
     """
     def test__get__without_auth(self):
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1})
         response = self.client.get(url)
 
         json = response.json()
@@ -260,7 +260,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1})
         response = self.client.get(url)
 
         json = response.json()
@@ -282,7 +282,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1})
         response = self.client.get(url)
 
         json = response.json()
@@ -307,7 +307,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1})
         response = self.client.get(url)
 
         json = response.json()
@@ -332,7 +332,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1})
         response = self.client.get(url)
 
         json = response.json()
@@ -367,7 +367,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1})
         response = self.client.get(url)
 
         json = response.json()
@@ -414,7 +414,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.request.set_headers(academy=model.academy.id)
             self.bc.request.authenticate(model.user)
 
-            url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+            url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                    f'?status={bad_statuses}'
             response = self.client.get(url)
 
@@ -452,8 +452,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.request.set_headers(academy=model.academy.id)
             self.bc.request.authenticate(model.user)
 
-            url = (reverse_lazy('mentorship:academy_mentor_id_session',
-                                kwargs={'mentor_id': model.mentor_profile.id}) +
+            url = (reverse_lazy('mentorship:academy_service_id_session',
+                                kwargs={'service_id': model.mentor_profile.id}) +
                    f'?status={first_status},{second_status}')
             response = self.client.get(url)
 
@@ -503,7 +503,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                 f'?billed=true'
         response = self.client.get(url)
 
@@ -530,7 +530,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                 f'?billed=true'
         response = self.client.get(url)
 
@@ -564,7 +564,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                 f'?billed=false'
         response = self.client.get(url)
 
@@ -590,7 +590,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                 f'?billed=false'
         response = self.client.get(url)
 
@@ -629,7 +629,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                 f'?started_after={self.bc.datetime.to_iso_string(utc_now + timedelta(seconds=1))}'
         response = self.client.get(url)
 
@@ -657,7 +657,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                 f'?started_after={self.bc.datetime.to_iso_string(utc_now - timedelta(seconds=1))}'
         response = self.client.get(url)
 
@@ -696,7 +696,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.datetime.to_iso_string(utc_now + timedelta(seconds=1)),
         ]
         for case in cases:
-            url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+            url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                     f'?started_after={case}'
             response = self.client.get(url)
 
@@ -735,7 +735,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                 f'?ended_before={self.bc.datetime.to_iso_string(utc_now - timedelta(seconds=1))}'
         response = self.client.get(url)
 
@@ -763,7 +763,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                 f'?ended_before={self.bc.datetime.to_iso_string(utc_now + timedelta(seconds=1))}'
         response = self.client.get(url)
 
@@ -803,7 +803,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         ]
 
         for case in cases:
-            url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+            url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + \
                     f'?ended_before={case}'
             response = self.client.get(url)
 
@@ -824,6 +824,77 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             ])
 
     """
+    🔽🔽🔽 GET with four MentorshipSession, MentorProfile and MentorshipService, passing mentor
+    """
+
+    def test__get__with_four_elements__padding_bad_mentor(self):
+        mentorship_sessions = [{'mentee_id': x, 'mentor_id': x} for x in range(1, 5)]
+        mentor_profiles = [{'user_id': x} for x in range(1, 5)]
+        model = self.bc.database.create(user=4,
+                                        role=1,
+                                        capability='read_mentorship_session',
+                                        mentorship_session=mentorship_sessions,
+                                        mentor_profile=mentor_profiles,
+                                        mentorship_service=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + f'?mentor=5,6'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of('mentorship.MentorshipSession'),
+            self.bc.format.to_dict(model.mentorship_session),
+        )
+
+    def test__get__with_four_elements__padding_mentor(self):
+        mentorship_sessions = [{'mentee_id': x, 'mentor_id': x} for x in range(1, 5)]
+        mentor_profiles = [{'user_id': x} for x in range(1, 5)]
+        model = self.bc.database.create(user=4,
+                                        role=1,
+                                        capability='read_mentorship_session',
+                                        mentorship_session=mentorship_sessions,
+                                        mentor_profile=mentor_profiles,
+                                        mentorship_service=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1}) + f'?mentor=1,3'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [
+            get_serializer(self,
+                           model.mentorship_session[2],
+                           model.mentor_profile[2],
+                           model.mentorship_service,
+                           model.user[2],
+                           data={}),
+            get_serializer(self,
+                           model.mentorship_session[0],
+                           model.mentor_profile[0],
+                           model.mentorship_service,
+                           model.user[0],
+                           data={}),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of('mentorship.MentorshipSession'),
+            self.bc.format.to_dict(model.mentorship_session),
+        )
+
+    """
     🔽🔽🔽 Spy the extensions
     """
 
@@ -839,7 +910,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1})
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [

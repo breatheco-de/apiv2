@@ -209,6 +209,7 @@ def forward_meet_url(request, mentor_slug, token):
         if ((session.mentor.user.id == token.user.id and service.allow_mentors_to_extend)
                 or (session.mentor.user.id != token.user.id and service.allow_mentee_to_extend)):
             if extend is True:
+                #FIXME
                 session = extend_session(session)
             extend_url = set_query_parameter(request.get_full_path(), 'extend', 'true')
             return render_message(
@@ -496,30 +497,19 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
 
 
 class SessionView(APIView, HeaderLimitOffsetPagination):
-    """
-    List all snippets, or create a new snippet.
-    """
-    @capable_of('crud_mentorship_session')
-    def post(self, request, academy_id=None):
-
-        serializer = SessionSerializer(data=request.data,
-                                       context={
-                                           'request': request,
-                                           'academy_id': academy_id
-                                       })
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_mentorship_session')
     def get(self, request, session_id=None, academy_id=None):
+        handler = self.extensions(request)
 
         if session_id is not None:
             session = MentorshipSession.objects.filter(id=session_id,
                                                        mentor__service__academy__id=academy_id).first()
             if session is None:
-                raise ValidationException('This session does not exist on this academy', code=404)
+                raise ValidationException('This session does not exist on this academy',
+                                          code=404,
+                                          slug='not-found')
 
             serializer = SessionSerializer(session)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -551,23 +541,32 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         if mentor is not None:
             lookup['mentor__id__in'] = mentor.split(',')
 
-        items = items.filter(**lookup).order_by('-created_at')
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = GETSessionSmallSerializer(items, many=True)
 
-        page = self.paginate_queryset(items, request)
-        serializer = GETSessionSmallSerializer(page, many=True)
+        return handler.response(serializer.data)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+    @capable_of('crud_mentorship_session')
+    def post(self, request, academy_id=None):
+
+        serializer = SessionSerializer(data=request.data,
+                                       context={
+                                           'request': request,
+                                           'academy_id': academy_id
+                                       })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ServiceSessionView(APIView, HeaderLimitOffsetPagination):
-    """
-    List all snippets, or create a new snippet.
-    """
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
     @capable_of('read_mentorship_session')
     def get(self, request, service_id, academy_id=None):
+        handler = self.extensions(request)
 
         if service_id is None:
             raise ValidationException('Missing service id', code=404)
@@ -600,15 +599,11 @@ class ServiceSessionView(APIView, HeaderLimitOffsetPagination):
         if mentor is not None:
             lookup['mentor__id__in'] = mentor.split(',')
 
-        items = items.filter(**lookup).order_by('-created_at')
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = BillSessionSerializer(items, many=True)
 
-        page = self.paginate_queryset(items, request)
-        serializer = BillSessionSerializer(page, many=True)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
 
 class MentorSessionView(APIView, HeaderLimitOffsetPagination):
@@ -645,10 +640,6 @@ class MentorSessionView(APIView, HeaderLimitOffsetPagination):
         if ended_before != '':
             items = items.filter(Q(ended_at__lte=ended_before) | Q(ended_at__isnull=True))
 
-        mentor = request.GET.get('mentor', None)
-        if mentor is not None:
-            lookup['mentor__id__in'] = mentor.split(',')
-
         items = items.filter(**lookup)
         items = handler.queryset(items)
         serializer = BillSessionSerializer(items, many=True)
@@ -657,13 +648,18 @@ class MentorSessionView(APIView, HeaderLimitOffsetPagination):
 
 
 class BillView(APIView, HeaderLimitOffsetPagination):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
     @capable_of('read_mentorship_bill')
     def get(self, request, bill_id=None, academy_id=None):
+        handler = self.extensions(request)
 
         if bill_id is not None:
             bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
             if bill is None:
-                raise ValidationException('This mentorhip bill does not exist on this academy', code=404)
+                raise ValidationException('This mentorship bill does not exist on this academy',
+                                          code=404,
+                                          slug='not-found')
 
             serializer = BigBillSerializer(bill)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -689,16 +685,29 @@ class BillView(APIView, HeaderLimitOffsetPagination):
         if mentor is not None:
             lookup['mentor__id__in'] = mentor.split(',')
 
-        items = items.filter(**lookup).order_by('-created_at')
-        page = self.paginate_queryset(items, request)
-        serializer = GETBillSmallSerializer(page, many=True)
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = GETBillSmallSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
-    @capable_of('read_mentorship_bill')
+    @capable_of('crud_mentorship_bill')
+    def post(self, request, academy_id=None, mentor_id=None):
+
+        if mentor_id is None:
+            raise ValidationException('Missing mentor ID on the URL', code=404, slug='argument-not-provided')
+
+        mentor = MentorProfile.objects.filter(id=mentor_id, service__academy__id=academy_id).first()
+        if mentor is None:
+            raise ValidationException('This mentor does not exist for this academy',
+                                      code=404,
+                                      slug='not-found')
+
+        bills = generate_mentor_bills(mentor)
+        serializer = GETBillSmallSerializer(bills, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_mentorship_bill')
     def put(self, request, bill_id=None, academy_id=None):
         many = isinstance(request.data, list)
         if many:
@@ -730,21 +739,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('read_mentorship_bill')
-    def post(self, request, academy_id=None, mentor_id=None):
-
-        if mentor_id is None:
-            raise ValidationException('Missing mentor ID on the URL', 404)
-
-        mentor = MentorProfile.objects.filter(id=mentor_id, service__academy__id=academy_id).first()
-        if mentor is None:
-            raise ValidationException('This mentor does not exist for this academy', 404)
-
-        bills = generate_mentor_bills(mentor)
-        serializer = GETBillSmallSerializer(bills, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @capable_of('read_mentorship_bill')
+    @capable_of('crud_mentorship_bill')
     def delete(self, request, bill_id=None, academy_id=None):
 
         if bill_id is None:

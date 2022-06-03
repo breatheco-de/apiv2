@@ -2,11 +2,10 @@
 This file just can contains duck tests refert to AcademyInviteView
 """
 from datetime import timedelta
-import hashlib
+import random
 from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.utils.datetime_interger import duration_to_str
 
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import MentorshipTestCase
@@ -15,159 +14,40 @@ from django.utils import timezone
 UTC_NOW = timezone.now()
 
 
-def get_tooltip(obj):
-
-    message = f'This mentorship should last no longer than {int(obj.mentor.service.duration.seconds/60)} min. <br />'
-    if obj.started_at is None:
-        message += 'The mentee never joined the session. <br />'
-    else:
-        message += f'Started on {obj.started_at.strftime("%m/%d/%Y at %H:%M:%S")}. <br />'
-        if obj.mentor_joined_at is None:
-            message += f'The mentor never joined'
-        elif obj.mentor_joined_at > obj.started_at:
-            message += f'The mentor joined {duration_to_str(obj.mentor_joined_at - obj.started_at)} before. <br />'
-        elif obj.started_at > obj.mentor_joined_at:
-            message += f'The mentor joined {duration_to_str(obj.started_at - obj.mentor_joined_at)} after. <br />'
-
-        if obj.ended_at is not None:
-            message += f'The mentorship lasted {duration_to_str(obj.ended_at - obj.started_at)}. <br />'
-            if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
-                extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
-                message += f'With extra time of {duration_to_str(extra_time)}. <br />'
-            else:
-                message += f'No extra time detected <br />'
-        else:
-            message += f'The mentorship has not ended yet. <br />'
-            if obj.ends_at is not None:
-                message += f'But it was supposed to end after {duration_to_str(obj.ends_at - obj.started_at)} <br />'
-
-    return message
-
-
-def get_duration_string(obj):
-
-    if obj.started_at is None:
-        return 'Never started'
-
-    end_date = obj.ended_at
-    if end_date is None:
-        return 'Never ended'
-
-    if obj.started_at > end_date:
-        return 'Ended before it started'
-
-    if (end_date - obj.started_at).days > 1:
-        return f'Many days'
-
-    return duration_to_str(obj.ended_at - obj.started_at)
-
-
-def get_billed_str(obj):
-    return duration_to_str(obj.accounted_duration)
-
-
-def get_accounted_duration_string(obj):
-    return duration_to_str(obj.accounted_duration)
-
-
-def get_extra_time(obj):
-
-    if obj.started_at is None or obj.ended_at is None:
+def format_datetime(self, date):
+    if date is None:
         return None
 
-    if (obj.ended_at - obj.started_at).days > 1:
-        return f'Many days of extra time, probably it was never closed'
-
-    if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
-        extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
-        return f'Extra time of {duration_to_str(extra_time)}, the expected duration was {duration_to_str(obj.mentor.service.duration)}'
-    else:
-        return None
-
-
-def get_mentor_late(obj):
-
-    if obj.started_at is None or obj.mentor_joined_at is None:
-        return None
-
-    if obj.started_at > obj.mentor_joined_at and (obj.started_at - obj.mentor_joined_at).seconds > (60 * 4):
-        return f'The mentor joined {duration_to_str(obj.started_at - obj.mentor_joined_at)} after. <br />'
-    else:
-        return None
-
-
-def get_mente_joined(obj):
-
-    if obj.started_at is None:
-        return 'Session did not start because mentee never joined'
-    else:
-        return None
-
-
-def get_rating(obj):
-
-    answer = obj.answer_set.first()
-    if answer is None:
-        return None
-
-    # build it if is necessary
-    # else:
-    #     return AnswerSmallSerializer(answer).data
+    return self.bc.datetime.to_iso_string(date)
 
 
 def get_serializer(self, mentorship_session, mentor_profile, mentorship_service, user, data={}):
     return {
-        'accounted_duration':
-        mentorship_session.accounted_duration,
-        'billed_str':
-        get_billed_str(mentorship_session),
-        'duration_string':
-        get_duration_string(mentorship_session),
-        'ended_at':
-        self.bc.datetime.to_iso_string(mentorship_session.ended_at) if mentorship_session.ended_at else None,
-        'extra_time':
-        get_extra_time(mentorship_session),
-        'id':
-        mentorship_session.id,
-        'mente_joined':
-        get_mente_joined(mentorship_session),
+        'accounted_duration': mentorship_session.accounted_duration,
+        'allow_billing': mentorship_session.allow_billing,
+        'ended_at': format_datetime(self, mentorship_session.ended_at),
+        'id': mentorship_session.id,
         'mentee': {
             'email': user.email,
             'first_name': user.first_name,
             'id': user.id,
             'last_name': user.last_name,
         },
-        'mentee_left_at':
-        mentorship_session.mentee_left_at,
+        'mentee_left_at': mentorship_session.mentee_left_at,
         'mentor': {
             'booking_url': mentor_profile.booking_url,
-            'created_at': self.bc.datetime.to_iso_string(mentor_profile.created_at),
-            'email': mentor_profile.email,
             'id': mentor_profile.id,
-            'online_meeting_url': mentor_profile.online_meeting_url,
-            'price_per_hour': mentor_profile.price_per_hour,
             'service': {
-                'academy': {
-                    'icon_url': mentorship_service.academy.icon_url,
-                    'id': mentorship_service.academy.id,
-                    'logo_url': mentorship_service.academy.logo_url,
-                    'name': mentorship_service.academy.name,
-                    'slug': mentorship_service.academy.slug,
-                },
                 'allow_mentee_to_extend':
                 mentorship_service.allow_mentee_to_extend,
                 'allow_mentors_to_extend':
                 mentorship_service.allow_mentors_to_extend,
-                'created_at':
-                self.bc.datetime.to_iso_string(mentorship_service.created_at),
                 'duration':
                 self.bc.datetime.from_timedelta(mentorship_service.duration),
                 'id':
                 mentorship_service.id,
                 'language':
                 mentorship_service.language,
-                'logo_url':
-                mentorship_service.logo_url,
                 'max_duration':
                 self.bc.datetime.from_timedelta(mentorship_service.max_duration),
                 'missed_meeting_duration':
@@ -178,13 +58,9 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
                 mentorship_service.slug,
                 'status':
                 mentorship_service.status,
-                'updated_at':
-                self.bc.datetime.to_iso_string(mentorship_service.updated_at),
             },
             'slug': mentor_profile.slug,
             'status': mentor_profile.status,
-            'timezone': mentor_profile.timezone,
-            'updated_at': self.bc.datetime.to_iso_string(mentor_profile.updated_at),
             'user': {
                 'email': user.email,
                 'first_name': user.first_name,
@@ -192,50 +68,79 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
                 'last_name': user.last_name,
             }
         },
-        'mentor_joined_at':
-        mentorship_session.mentor_joined_at,
-        'mentor_late':
-        get_mentor_late(mentorship_session),
-        'mentor_left_at':
-        mentorship_session.mentor_left_at,
-        'rating':
-        get_rating(mentorship_session),
-        'started_at':
-        self.bc.datetime.to_iso_string(mentorship_session.started_at)
-        if mentorship_session.started_at else None,
-        'status':
-        mentorship_session.status,
-        'status_message':
-        mentorship_session.status_message,
-        'suggested_accounted_duration':
-        mentorship_session.suggested_accounted_duration,
-        'summary':
-        mentorship_session.summary,
-        'tooltip':
-        get_tooltip(mentorship_session),
+        'mentor_joined_at': mentorship_session.mentor_joined_at,
+        'mentor_left_at': mentorship_session.mentor_left_at,
+        'started_at': format_datetime(self, mentorship_session.started_at),
+        'status': mentorship_session.status,
+        'summary': mentorship_session.summary,
         **data,
     }
 
 
-def mentor_profile_columns(data={}):
-    token = hashlib.sha1(
-        (str(data['slug'] if 'slug' in data else '') + str(UTC_NOW)).encode('UTF-8')).hexdigest()
+def post_serializer(data={}):
     return {
-        'bio': None,
-        'booking_url': None,
-        'email': None,
-        'id': 0,
-        'name': '',
+        'accounted_duration': None,
+        'agenda': None,
+        'allow_billing': False,
+        'bill': None,
+        'ended_at': None,
+        'ends_at': None,
+        'id': 1,
+        'is_online': False,
+        'latitude': None,
+        'longitude': None,
+        'mentee': None,
+        'mentee_left_at': None,
+        'mentor': 1,
+        'mentor_joined_at': None,
+        'mentor_left_at': None,
+        'name': None,
         'online_meeting_url': None,
-        'price_per_hour': 0,
-        'service_id': 0,
-        'slug': 'mirai-nikki',
-        'status': 'INVITED',
-        'timezone': None,
-        'token': token,
-        'user_id': 0,
+        'online_recording_url': None,
+        'started_at': None,
+        'starts_at': None,
+        'status': 'PENDING',
+        'summary': None,
         **data,
     }
+
+
+def mentorship_session_columns(data={}):
+    return {
+        'accounted_duration': None,
+        'agenda': None,
+        'allow_billing': False,
+        'bill_id': None,
+        'ended_at': None,
+        'ends_at': None,
+        'id': 1,
+        'is_online': False,
+        'latitude': None,
+        'longitude': None,
+        'mentee_id': None,
+        'mentee_left_at': None,
+        'mentor_id': 1,
+        'mentor_joined_at': None,
+        'mentor_left_at': None,
+        'name': None,
+        'online_meeting_url': None,
+        'online_recording_url': None,
+        'started_at': None,
+        'starts_at': None,
+        'status': 'PENDING',
+        'status_message': None,
+        'suggested_accounted_duration': None,
+        'summary': None,
+        **data,
+    }
+
+
+def get_base_number() -> int:
+    return 1 if random.random() < 0.5 else -1
+
+
+def append_delta_to_datetime(date):
+    return date + timedelta(minutes=random.randint(0, 180))
 
 
 class AcademyServiceTestSuite(MentorshipTestCase):
@@ -243,7 +148,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 Auth
     """
     def test__get__without_auth(self):
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_session')
         response = self.client.get(url)
 
         json = response.json()
@@ -260,7 +165,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_session')
         response = self.client.get(url)
 
         json = response.json()
@@ -282,7 +187,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_session')
         response = self.client.get(url)
 
         json = response.json()
@@ -307,7 +212,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_session')
         response = self.client.get(url)
 
         json = response.json()
@@ -332,7 +237,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_session')
         response = self.client.get(url)
 
         json = response.json()
@@ -367,7 +272,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_session')
         response = self.client.get(url)
 
         json = response.json()
@@ -414,7 +319,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.request.set_headers(academy=model.academy.id)
             self.bc.request.authenticate(model.user)
 
-            url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+            url = reverse_lazy('mentorship:academy_session') + \
                    f'?status={bad_statuses}'
             response = self.client.get(url)
 
@@ -452,9 +357,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.request.set_headers(academy=model.academy.id)
             self.bc.request.authenticate(model.user)
 
-            url = (reverse_lazy('mentorship:academy_mentor_id_session',
-                                kwargs={'mentor_id': model.mentor_profile.id}) +
-                   f'?status={first_status},{second_status}')
+            url = reverse_lazy('mentorship:academy_session') + f'?status={first_status},{second_status}'
             response = self.client.get(url)
 
             json = response.json()
@@ -503,7 +406,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_session') + \
                 f'?billed=true'
         response = self.client.get(url)
 
@@ -530,7 +433,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_session') + \
                 f'?billed=true'
         response = self.client.get(url)
 
@@ -564,7 +467,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_session') + \
                 f'?billed=false'
         response = self.client.get(url)
 
@@ -590,7 +493,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_session') + \
                 f'?billed=false'
         response = self.client.get(url)
 
@@ -629,7 +532,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_session') + \
                 f'?started_after={self.bc.datetime.to_iso_string(utc_now + timedelta(seconds=1))}'
         response = self.client.get(url)
 
@@ -657,7 +560,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_session') + \
                 f'?started_after={self.bc.datetime.to_iso_string(utc_now - timedelta(seconds=1))}'
         response = self.client.get(url)
 
@@ -696,7 +599,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.datetime.to_iso_string(utc_now + timedelta(seconds=1)),
         ]
         for case in cases:
-            url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+            url = reverse_lazy('mentorship:academy_session') + \
                     f'?started_after={case}'
             response = self.client.get(url)
 
@@ -735,7 +638,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_session') + \
                 f'?ended_before={self.bc.datetime.to_iso_string(utc_now - timedelta(seconds=1))}'
         response = self.client.get(url)
 
@@ -763,7 +666,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+        url = reverse_lazy('mentorship:academy_session') + \
                 f'?ended_before={self.bc.datetime.to_iso_string(utc_now + timedelta(seconds=1))}'
         response = self.client.get(url)
 
@@ -803,7 +706,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         ]
 
         for case in cases:
-            url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1}) + \
+            url = reverse_lazy('mentorship:academy_session') + \
                     f'?ended_before={case}'
             response = self.client.get(url)
 
@@ -824,6 +727,77 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             ])
 
     """
+    🔽🔽🔽 GET with four MentorshipSession, MentorProfile and MentorshipService, passing mentor
+    """
+
+    def test__get__with_four_elements__padding_bad_mentor(self):
+        mentorship_sessions = [{'mentee_id': x, 'mentor_id': x} for x in range(1, 5)]
+        mentor_profiles = [{'user_id': x, 'service_id': x} for x in range(1, 5)]
+        model = self.bc.database.create(user=4,
+                                        role=1,
+                                        capability='read_mentorship_session',
+                                        mentorship_session=mentorship_sessions,
+                                        mentor_profile=mentor_profiles,
+                                        mentorship_service=4,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy('mentorship:academy_session') + f'?mentor=5,6'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of('mentorship.MentorshipSession'),
+            self.bc.format.to_dict(model.mentorship_session),
+        )
+
+    def test__get__with_four_elements__padding_mentor(self):
+        mentorship_sessions = [{'mentee_id': x, 'mentor_id': x} for x in range(1, 5)]
+        mentor_profiles = [{'user_id': x, 'service_id': x} for x in range(1, 5)]
+        model = self.bc.database.create(user=4,
+                                        role=1,
+                                        capability='read_mentorship_session',
+                                        mentorship_session=mentorship_sessions,
+                                        mentor_profile=mentor_profiles,
+                                        mentorship_service=4,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy('mentorship:academy_session') + f'?mentor=1,3'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [
+            get_serializer(self,
+                           model.mentorship_session[2],
+                           model.mentor_profile[2],
+                           model.mentorship_service[2],
+                           model.user[2],
+                           data={}),
+            get_serializer(self,
+                           model.mentorship_session[0],
+                           model.mentor_profile[0],
+                           model.mentorship_service[0],
+                           model.user[0],
+                           data={}),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of('mentorship.MentorshipSession'),
+            self.bc.format.to_dict(model.mentorship_session),
+        )
+
+    """
     🔽🔽🔽 Spy the extensions
     """
 
@@ -839,7 +813,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
+        url = reverse_lazy('mentorship:academy_session')
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
@@ -848,4 +822,252 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(sort='-created_at', paginate=True),
+        ])
+
+    """
+    🔽🔽🔽 POST capability
+    """
+
+    def test__post__without_capabilities(self):
+        model = self.bc.database.create(user=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_session')
+        response = self.client.post(url)
+
+        json = response.json()
+        expected = {
+            'detail': "You (user: 1) don't have this capability: crud_mentorship_session for academy 1",
+            'status_code': 403,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    """
+    🔽🔽🔽 POST with one MentorshipSession, MentorProfile and MentorshipService
+    """
+
+    def test__post__missing_fields(self):
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_session',
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_session')
+        response = self.client.post(url)
+
+        json = response.json()
+        expected = {'mentor': ['This field is required.']}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [])
+
+    """
+    🔽🔽🔽 POST creating a element
+    """
+
+    def test__post__creating_a_element(self):
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_session',
+                                        mentor_profile=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_session')
+        data = {'mentor': 1}
+        response = self.client.post(url, data)
+
+        json = response.json()
+        expected = post_serializer()
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            mentorship_session_columns(),
+        ])
+
+    """
+    🔽🔽🔽 POST creating a element, passing the forbidden fields
+    """
+
+    def test__post__creating_a_element__passing_the_forbidden_fields(self):
+        utc_now = timezone.now()
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_session',
+                                        mentor_profile=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        data = {
+            'mentor': 1,
+            # readonly fields
+            'created_at': utc_now,
+            'updated_at': utc_now,
+            'suggested_accounted_duration': '20',
+            'status_message': '101010101010101010101',
+        }
+
+        url = reverse_lazy('mentorship:academy_session')
+        response = self.client.post(url, data)
+
+        json = response.json()
+        expected = post_serializer()
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            mentorship_session_columns(),
+        ])
+
+    """
+    🔽🔽🔽 POST creating a element, passing readonly fields
+    """
+
+    def test__post__creating_a_element__passing_readonly_fields__is_online_as_true(self):
+        utc_now = timezone.now()
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_session',
+                                        mentor_profile=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        fields = ['mentor_joined_at', 'mentor_left_at', 'mentee_left_at', 'started_at', 'ended_at']
+        for field in fields:
+            data = {
+                'mentor': 1,
+                'is_online': True,
+                # readonly fields
+                field: self.bc.datetime.to_iso_string(append_delta_to_datetime(utc_now)),
+            }
+
+            url = reverse_lazy('mentorship:academy_session')
+            response = self.client.post(url, data)
+
+            json = response.json()
+            expected = {'detail': 'read-only-field-online', 'status_code': 400}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [])
+
+    def test__post__creating_a_element__passing_readonly_fields__is_online_as_false(self):
+        utc_now = timezone.now()
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_session',
+                                        mentor_profile=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        fields = ['mentor_joined_at', 'mentor_left_at', 'mentee_left_at', 'started_at', 'ended_at']
+        id = 0
+        for field in fields:
+            id += 1
+            date = append_delta_to_datetime(utc_now)
+            data = {
+                'mentor': 1,
+                'is_online': False,
+                # readonly fields
+                field: self.bc.datetime.to_iso_string(date),
+            }
+
+            url = reverse_lazy('mentorship:academy_session')
+            response = self.client.post(url, data)
+
+            json = response.json()
+            expected = post_serializer({
+                'id': id,
+                field: self.bc.datetime.to_iso_string(date),
+            })
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+                mentorship_session_columns({
+                    'id': id,
+                    field: date,
+                }),
+            ])
+
+            # teardown
+            self.bc.database.delete('mentorship.MentorshipSession')
+
+    """
+    🔽🔽🔽 POST creating a element, passing all the fields
+    """
+
+    def test__post__creating_a_element__passing_all_the_fields(self):
+        utc_now = timezone.now()
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_session',
+                                        mentor_profile=1,
+                                        mentorship_bill=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        accounted_duration = timedelta(minutes=random.randint(1, 180))
+        starts_at = append_delta_to_datetime(utc_now)
+        ends_at = append_delta_to_datetime(utc_now)
+        data = {
+            'mentor': 1,
+            'mentee': 1,
+            'bill': 1,
+            'name': self.bc.fake.name(),
+            'is_online': bool(random.getrandbits(1)),
+            'latitude': get_base_number() * random.random() * 1000,
+            'longitude': get_base_number() * random.random() * 1000,
+            'online_meeting_url': self.bc.fake.url(),
+            'online_recording_url': self.bc.fake.url(),
+            'status': random.choice(['PENDING', 'STARTED', 'COMPLETED', 'FAILED', 'IGNORED']),
+            'online_recording_url': self.bc.fake.url(),
+            'allow_billing': bool(random.getrandbits(1)),
+            'accounted_duration': '0' + str(accounted_duration),
+            'agenda': self.bc.fake.text(),
+            'summary': self.bc.fake.text(),
+            'starts_at': self.bc.datetime.to_iso_string(starts_at),
+            'ends_at': self.bc.datetime.to_iso_string(ends_at),
+        }
+
+        url = reverse_lazy('mentorship:academy_session')
+        response = self.client.post(url, data)
+
+        json = response.json()
+        expected = post_serializer(data)
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        fields = ['bill', 'mentee', 'mentor']
+        for field in fields:
+            data[f'{field}_id'] = data[field]
+            del data[field]
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            mentorship_session_columns({
+                **data,
+                'accounted_duration': accounted_duration,
+                'starts_at': starts_at,
+                'ends_at': ends_at,
+            }),
         ])

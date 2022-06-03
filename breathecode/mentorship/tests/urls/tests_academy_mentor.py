@@ -332,16 +332,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     def test__get__with_two_mentor_profile__passing_bad_status(self):
         statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
 
-        for n in range(0, 3):
-            # 0, 1, 10, 11, 0
-            current_bin_key = bin(n).replace('0b', '')[-2:]
-            current_key = int(current_bin_key, 2)
-            current_status = statuses[current_key]
-
-            # 0, 1, 10, 11, 0
-            bad_bin_key = bin(n + 1).replace('0b', '')[-2:]
-            bad_key = int(bad_bin_key, 2)
-            bad_status = statuses[bad_key]
+        for current_status in range(0, 3):
+            bad_statuses = ','.join([x for x in statuses if x != current_status])
 
             mentor_profile = {'status': current_status}
             model = self.bc.database.create(user=1,
@@ -353,7 +345,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.request.set_headers(academy=model.academy.id)
             self.bc.request.authenticate(model.user)
 
-            url = reverse_lazy('mentorship:academy_mentor') + f'?status={bad_status}'
+            url = reverse_lazy('mentorship:academy_mentor') + f'?status={bad_statuses}'
             response = self.client.get(url)
 
             json = response.json()
@@ -371,18 +363,28 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     def test__get__with_two_mentor_profile__passing_status(self):
         statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
 
-        for current_status in statuses:
-            mentor_profile = {'status': current_status}
+        for n in range(0, 4):
+            # 0, 1, 10, 11, 0
+            first_bin_key = bin(n).replace('0b', '')[-2:]
+            first_key = int(first_bin_key, 2)
+            first_status = statuses[first_key]
+
+            # 0, 1, 10, 11, 0
+            second_bin_key = bin(n + 1).replace('0b', '')[-2:]
+            second_key = int(second_bin_key, 2)
+            second_status = statuses[second_key]
+
+            mentor_profiles = [{'status': x} for x in [first_status, second_status]]
             model = self.bc.database.create(user=1,
                                             role=1,
                                             capability='read_mentorship_mentor',
-                                            mentor_profile=(2, mentor_profile),
+                                            mentor_profile=mentor_profiles,
                                             profile_academy=1)
 
             self.bc.request.set_headers(academy=model.academy.id)
             self.bc.request.authenticate(model.user)
 
-            url = reverse_lazy('mentorship:academy_mentor') + f'?status{current_status}'
+            url = reverse_lazy('mentorship:academy_mentor') + f'?status={first_status},{second_status}'
             response = self.client.get(url)
 
             json = response.json()
@@ -392,12 +394,12 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                mentor_profile[0],
                                model.mentorship_service,
                                model.user,
-                               data={'status': current_status}),
+                               data={'status': second_status}),
                 get_serializer(self,
                                mentor_profile[1],
                                model.mentorship_service,
                                model.user,
-                               data={'status': current_status}),
+                               data={'status': first_status}),
             ]
 
             self.assertEqual(json, expected)
@@ -408,6 +410,65 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             )
 
             self.bc.database.delete('mentorship.MentorProfile')
+
+    """
+    🔽🔽🔽 GET with two MentorProfile passing syllabus in querystring
+    """
+
+    def test__get__with_two_mentor_profile__passing_bad_syllabus(self):
+        slug = self.bc.fake.slug()
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        mentor_profile=1,
+                                        syllabus=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=model.academy.id)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor') + f'?syllabus={slug}'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+            self.bc.format.to_dict(model.mentor_profile),
+        ])
+
+        self.bc.database.delete('mentorship.MentorProfile')
+
+    def test__get__with_two_mentor_profile__passing_syllabus(self):
+        slug = self.bc.fake.slug()
+        syllabus = {'slug': slug}
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        mentor_profile=1,
+                                        syllabus=syllabus,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=model.academy.id)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor') + f'?syllabus={slug}'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [
+            get_serializer(self, model.mentor_profile, model.mentorship_service, model.user),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+            self.bc.format.to_dict(model.mentor_profile),
+        ])
+
+        self.bc.database.delete('mentorship.MentorProfile')
 
     """
     🔽🔽🔽 Spy the extensions
