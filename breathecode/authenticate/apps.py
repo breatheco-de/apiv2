@@ -1,8 +1,8 @@
 from django.apps import AppConfig
 
 
-class MediaConfig(AppConfig):
-    name = 'breathecode.mentorship'
+class AcademyConfig(AppConfig):
+    name = 'breathecode.authenticate'
 
     def ready(self):
         from . import receivers

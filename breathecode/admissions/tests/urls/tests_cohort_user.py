@@ -73,6 +73,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'profile_academy': None,
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -130,6 +131,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'profile_academy': None,
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -171,6 +173,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
             'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -230,6 +233,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'profile_academy': None,
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -272,6 +276,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -331,6 +336,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -374,6 +380,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -433,6 +440,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -486,6 +494,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -528,6 +537,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -587,6 +597,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -661,7 +672,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': None,
-            'educational_status': None
+            'educational_status': None,
+            'watching': False,
         }])
 
     def test_cohort_user_put_in_bulk_with_stage_delete(self):
@@ -685,7 +697,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': None,
-            'educational_status': None
+            'educational_status': None,
+            'watching': False,
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -698,7 +711,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         data = [{'id': model['cohort_user'].id}]
         response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = [{'id': 1, 'role': 'STUDENT', 'educational_status': None, 'finantial_status': None}]
+        expected = [{
+            'id': 1,
+            'role': 'STUDENT',
+            'educational_status': None,
+            'finantial_status': None,
+            'watching': False,
+        }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -708,7 +727,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': None,
-            'educational_status': None
+            'educational_status': None,
+            'watching': False,
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -742,11 +762,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'role': 'STUDENT',
             'educational_status': None,
             'finantial_status': 'LATE',
+            'watching': False,
         }, {
             'id': 2,
             'role': 'STUDENT',
             'educational_status': 'GRADUATED',
-            'finantial_status': None
+            'finantial_status': None,
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -757,14 +779,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': 'LATE',
-            'educational_status': None
+            'educational_status': None,
+            'watching': False,
         }, {
             'id': 2,
             'user_id': 2,
             'cohort_id': 2,
             'role': 'STUDENT',
             'finantial_status': None,
-            'educational_status': 'GRADUATED'
+            'educational_status': 'GRADUATED',
+            'watching': False,
         }])
 
     # that's methods name is irrelevant because it's depcrecated

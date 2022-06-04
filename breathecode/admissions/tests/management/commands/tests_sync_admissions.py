@@ -105,6 +105,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         'educational_status': educational_status[student['status']],
                         'finantial_status': financial_status[student['financial_status']],
                         'role': 'STUDENT',
+                        'watching': False,
                     })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
@@ -171,6 +172,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         'educational_status': educational_status[student['status']],
                         'finantial_status': financial_status[student['financial_status']],
                         'role': 'STUDENT',
+                        'watching': False,
                     })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
@@ -236,6 +238,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         'educational_status': None,
                         'finantial_status': None,
                         'role': 'TEACHER',
+                        'watching': False,
                     })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
@@ -302,6 +305,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         'educational_status': None,
                         'finantial_status': None,
                         'role': 'TEACHER',
+                        'watching': False,
                     })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
