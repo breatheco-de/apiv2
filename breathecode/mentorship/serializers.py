@@ -435,7 +435,7 @@ class SessionSerializer(serializers.ModelSerializer):
                         f'The field {field} is automatically set by the system during online mentorships',
                         slug='read-only-field-online')
 
-        return supper().validate(data)
+        return super().validate(data)
 
     def update(self, instance, validated_data):
 

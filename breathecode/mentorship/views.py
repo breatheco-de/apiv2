@@ -551,7 +551,12 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @capable_of('read_mentorship_session')
     def put(self, request, academy_id=None, session_id=None):
+        print('academy_id')
+        print(academy_id)
+        print('session_id')
+        print(session_id)
         session = MentorshipSession.objects.filter(id=session_id,
                                                    mentor__service__academy__id=academy_id).first()
         if session is None:
@@ -561,7 +566,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         for key in request.data.keys():
             data[key] = request.data.get(key)
 
-        serializer = SessionSerializer(already,
+        serializer = SessionSerializer(session,
                                        data=data,
                                        context={
                                            'request': request,
