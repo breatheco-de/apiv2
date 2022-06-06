@@ -553,10 +553,6 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('read_mentorship_session')
     def put(self, request, academy_id=None, session_id=None):
-        print('academy_id')
-        print(academy_id)
-        print('session_id')
-        print(session_id)
         session = MentorshipSession.objects.filter(id=session_id,
                                                    mentor__service__academy__id=academy_id).first()
         if session is None:
