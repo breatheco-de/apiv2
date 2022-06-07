@@ -551,6 +551,28 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @capable_of('read_mentorship_session')
+    def put(self, request, academy_id=None, session_id=None):
+        session = MentorshipSession.objects.filter(id=session_id,
+                                                   mentor__service__academy__id=academy_id).first()
+        if session is None:
+            raise ValidationException('This session does not exist on this academy', code=404)
+
+        data = {}
+        for key in request.data.keys():
+            data[key] = request.data.get(key)
+
+        serializer = SessionSerializer(session,
+                                       data=data,
+                                       context={
+                                           'request': request,
+                                           'academy_id': academy_id
+                                       })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ServiceSessionView(APIView, HeaderLimitOffsetPagination):
     """
