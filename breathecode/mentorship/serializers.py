@@ -430,6 +430,10 @@ class SessionSerializer(serializers.ModelSerializer):
 
         return super().validate(data)
 
+    def update(self, instance, validated_data):
+
+        return super().update(instance, validated_data)
+
 
 class MentorshipBillPUTListSerializer(serializers.ListSerializer):
     def update(self, instances, validated_data):
