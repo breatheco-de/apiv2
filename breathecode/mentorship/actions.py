@@ -211,9 +211,9 @@ def get_accounted_time(_session):
 
     _duration = get_duration(_session)
     if _duration['accounted_duration'] > _session.mentor.service.max_duration:
-        _duration['accounted_duration'] = session.mentor.service.max_duration
-        _duration[
-            'status_message'] += f' The session accounted duration was limited to the maximum allowed {duration_to_str(_duration["accounted_duration"])}'
+        _duration['accounted_duration'] = _session.mentor.service.max_duration
+        _duration['status_message'] += (' The session accounted duration was limited to the maximum allowed '
+                                        f'{duration_to_str(_duration["accounted_duration"])}')
     return _duration
 
 
@@ -221,7 +221,9 @@ def last_month_date(current_date):
     # getting next month
     # using replace to get to last day + offset
     # to reach next month
-    nxt_mnth = current_date.replace(day=28, hour=23, minute=59, second=59) + datetime.timedelta(days=4)
+    datetime.datetime.now().replace
+    nxt_mnth = current_date.replace(day=28, hour=23, minute=59, second=59,
+                                    microsecond=999999) + datetime.timedelta(days=4)
 
     # subtracting the days from next month date to
     # get last date of current Month
@@ -238,27 +240,29 @@ def generate_mentor_bills(mentor, reset=False):
 
     def get_unpaid_sessions():
         return MentorshipSession.objects.filter(
-            allow_billing=True, mentor__id=mentor.id,
-            status__in=['COMPLETED', 'FAILED']).filter(started_at__isnull=False).filter(
-                Q(bill__isnull=True)
-                | Q(bill__status='DUE', bill__academy=mentor.service.academy)).order_by('started_at')
+            Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.service.academy),
+            allow_billing=True,
+            mentor__id=mentor.id,
+            status__in=['COMPLETED', 'FAILED'],
+            started_at__isnull=False,
+        ).order_by('started_at')
 
     previous_bill = MentorshipBill.objects.filter(mentor__id=mentor.id,
                                                   academy__id=mentor.service.academy.id,
                                                   status='DUE').order_by('-started_at').first()
 
-    if previous_bill is not None and previous_bill.ended_at > timezone.now():
+    if (previous_bill is not None and previous_bill.started_at and previous_bill.ended_at
+            and previous_bill.ended_at > timezone.now()):
         return generated_bills
 
     monthly_unpaid_sessions = None
     while end_at is None or end_at < timezone.now():
 
         unpaid_sessions = get_unpaid_sessions()
-        #print("Sessions: " + "".join([str(s.started_at) for s in unpaid_sessions]))
         if unpaid_sessions.count() == 0:
             return generated_bills
 
-        if previous_bill is None:
+        if previous_bill is None or not previous_bill.started_at or not previous_bill.ended_at:
             start_at = unpaid_sessions.first().started_at
             end_at = last_month_date(start_at)
         else:
@@ -273,8 +277,6 @@ def generate_mentor_bills(mentor, reset=False):
         open_bill.save()
 
         monthly_unpaid_sessions = unpaid_sessions.filter(started_at__gte=start_at, started_at__lte=end_at)
-        print(
-            f'There are {len(monthly_unpaid_sessions)} unpaid sessions starting from {start_at} to {end_at}')
         total = {'minutes': 0, 'overtime_minutes': 0}
 
         for session in monthly_unpaid_sessions:
@@ -306,11 +308,9 @@ def generate_mentor_bills(mentor, reset=False):
         open_bill.save()
 
         generated_bills.append(open_bill)
-        print(f'Added bill with total ammount {open_bill.total_duration_in_hours}')
 
         # the recently created bill is not the previous because we moving on to the next cycle
         previous_bill = open_bill
-        print(f'Billing until {end_at} vs {timezone.now()}')
 
     return generated_bills
 
