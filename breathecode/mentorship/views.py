@@ -53,17 +53,19 @@ def render_html_bill(request, token, id=None):
     item = MentorshipBill.objects.filter(id=id).first()
     if item is None:
         return render_message(request, 'Bill not found')
-    else:
-        serializer = BigBillSerializer(item, many=False)
-        status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
-        data = {
-            **serializer.data, 'status':
-            status_map[serializer.data['status']],
-            'title':
-            f'Mentor { serializer.data["mentor"]["user"]["first_name"] } { serializer.data["mentor"]["user"]["last_name"] } - Invoice { item.id }'
-        }
-        template = get_template_content('mentorship_invoice', data)
-        return HttpResponse(template['html'])
+
+    serializer = BigBillSerializer(item, many=False)
+    status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
+    data = {
+        **serializer.data,
+        'status':
+        status_map[serializer.data['status']],
+        'title':
+        f'Mentor { serializer.data["mentor"]["user"]["first_name"] } '
+        f'{ serializer.data["mentor"]["user"]["last_name"] } - Invoice { item.id }',
+    }
+    template = get_template_content('mentorship_invoice', data)
+    return HttpResponse(template['html'])
 
 
 @private_view()
@@ -710,21 +712,34 @@ class BillView(APIView, HeaderLimitOffsetPagination):
     @capable_of('crud_mentorship_bill')
     def put(self, request, bill_id=None, academy_id=None):
         many = isinstance(request.data, list)
+        if many and bill_id:
+            raise ValidationException(f'Avoid using bulk mode passing id in the url',
+                                      code=404,
+                                      slug='bulk-mode-and-bill-id')
+
         if many:
             bill = []
             for obj in request.data:
-                elem = MentorshipBill.objects.filter(id=obj['id']).first()
-                if elem is None:
-                    raise ValidationException(f'Bill {obj["id"]} not found', 404)
+                if 'id' not in obj:
+                    raise ValidationException('Bill id must be provided in bulk mode',
+                                              code=404,
+                                              slug='missing-some-id-in-body')
+
+                if not (elem := MentorshipBill.objects.filter(id=obj['id']).first()):
+                    raise ValidationException(f'Bill {obj["id"]} not found', code=404, slug='some-not-found')
                 bill.append(elem)
 
         else:
             if bill_id is None:
-                raise ValidationException('Missing bill ID on the URL', 404)
+                raise ValidationException('Missing bill ID on the URL',
+                                          code=404,
+                                          slug='without-bulk-mode-and-bill-id')
 
             bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
             if bill is None:
-                raise ValidationException('This bill does not exist for this academy', 404)
+                raise ValidationException('This bill does not exist for this academy',
+                                          code=404,
+                                          slug='not-found')
 
         serializer = MentorshipBillPUTSerializer(bill,
                                                  data=request.data,
@@ -747,7 +762,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
 
         bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
         if bill is None:
-            raise ValidationException('This bill does not exist for this academy', 404)
+            raise ValidationException('This bill does not exist for this academy', code=404, slug='not-found')
 
         if bill.status == 'PAID':
             raise ValidationException('Paid bills cannot be deleted', slug='paid-bill')

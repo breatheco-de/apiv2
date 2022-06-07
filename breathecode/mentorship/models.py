@@ -163,6 +163,7 @@ BILL_STATUS = (
 class MentorshipBill(models.Model):
 
     status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
+    #FIXME: it's right?
     status_mesage = models.TextField(blank=True,
                                      null=True,
                                      default=None,

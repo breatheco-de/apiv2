@@ -107,6 +107,62 @@ def post_serializer(data={}):
     }
 
 
+def put_serializer(self, mentorship_bill, mentor_profile, mentorship_service, user, academy, data={}):
+    return {
+        'created_at': format_datetime(self, mentorship_bill.created_at),
+        'ended_at': format_datetime(self, mentorship_bill.ended_at),
+        'id': mentorship_bill.id,
+        'mentor': {
+            'booking_url': mentor_profile.booking_url,
+            'id': mentor_profile.id,
+            'service': {
+                'allow_mentee_to_extend':
+                mentorship_service.allow_mentee_to_extend,
+                'allow_mentors_to_extend':
+                mentorship_service.allow_mentors_to_extend,
+                'duration':
+                self.bc.datetime.from_timedelta(mentorship_service.duration),
+                'id':
+                mentorship_service.id,
+                'language':
+                mentorship_service.language,
+                'max_duration':
+                self.bc.datetime.from_timedelta(mentorship_service.max_duration),
+                'missed_meeting_duration':
+                self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
+                'name':
+                mentorship_service.name,
+                'slug':
+                mentorship_service.slug,
+                'status':
+                mentorship_service.status,
+            },
+            'slug': mentor_profile.slug,
+            'status': mentor_profile.status,
+            'user': {
+                'email': user.email,
+                'first_name': user.first_name,
+                'id': user.id,
+                'last_name': user.last_name,
+            },
+        },
+        'overtime_minutes': float(mentorship_bill.overtime_minutes),
+        'paid_at': format_datetime(self, mentorship_bill.ended_at),
+        'reviewer': {
+            'email': user.email,
+            'first_name': user.first_name,
+            'id': user.id,
+            'last_name': user.last_name,
+        },
+        'started_at': format_datetime(self, mentorship_bill.ended_at),
+        'status': mentorship_bill.status,
+        'total_duration_in_hours': float(mentorship_bill.total_duration_in_hours),
+        'total_duration_in_minutes': float(mentorship_bill.total_duration_in_minutes),
+        'total_price': float(mentorship_bill.total_price),
+        **data,
+    }
+
+
 def mentorship_session_columns(data={}):
     return {
         'accounted_duration': None,
@@ -667,3 +723,197 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [])
+
+    """
+    🔽🔽🔽 PUT capability
+    """
+
+    def test__put__without_capabilities(self):
+        model = self.bc.database.create(user=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_bill')
+        response = self.client.put(url)
+
+        json = response.json()
+        expected = {
+            'detail': "You (user: 1) don't have this capability: crud_mentorship_bill for academy 1",
+            'status_code': 403,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    """
+    🔽🔽🔽 PUT without data
+    """
+
+    def test__put__without_data__without_bulk(self):
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_bill', profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_bill')
+        response = self.client.put(url)
+
+        json = response.json()
+        expected = {'detail': 'without-bulk-mode-and-bill-id', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test__put__without_data__with_bulk(self):
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_bill', profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_bill')
+        data = [{'id': 1}, {'id': 2}]
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'some-not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    """
+    🔽🔽🔽 PUT bulk without ids
+    """
+
+    def test__put__without_data__bulk_without_ids(self):
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_bill', profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_bill')
+        data = [{'slug': self.bc.fake.slug()}, {'slug': self.bc.fake.slug()}]
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'missing-some-id-in-body', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    """
+    🔽🔽🔽 PUT with two MentorshipSession, MentorProfile and MentorshipService, passing forbidden fields
+    """
+
+    def test__put__with_two_mentor_profile__passing_all_forbidden_fields(self):
+        mentorship_sessions = [{'mentor_id': n, 'bill_id': n} for n in range(1, 3)]
+        mentor_profiles = [{'service_id': n} for n in range(1, 3)]
+        mentorship_bills = [{'mentor_id': n} for n in range(1, 3)]
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_bill',
+                                        mentorship_session=mentorship_sessions,
+                                        mentor_profile=mentor_profiles,
+                                        mentorship_service=2,
+                                        mentorship_bill=mentorship_bills,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        created_at = timezone.now()
+        updated_at = timezone.now()
+        data = [{
+            'id': n,
+            'created_at': self.bc.datetime.to_iso_string(created_at),
+            'updated_at': self.bc.datetime.to_iso_string(updated_at),
+            'academy': 2,
+            'reviewer': 2,
+            'total_duration_in_minutes': random.random() * 100,
+            'total_duration_in_hours': random.random() * 100,
+            'total_price': random.random() * 100,
+            'overtime_minutes': random.random() * 100,
+        } for n in range(1, 3)]
+
+        url = reverse_lazy('mentorship:academy_bill')
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = [
+            put_serializer(self,
+                           model.mentorship_bill[index],
+                           model.mentor_profile[index],
+                           model.mentorship_service[index],
+                           model.user,
+                           model.academy,
+                           data={}) for index in range(0, 2)
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'),
+                         self.bc.format.to_dict(model.mentorship_bill))
+
+    """
+    🔽🔽🔽 PUT with two MentorshipSession, MentorProfile and MentorshipService, passing all valid fields
+    """
+
+    def test__put__with_two_mentor_profile__passing_all_fields(self):
+        mentorship_sessions = [{'mentor_id': n, 'bill_id': n} for n in range(1, 3)]
+        mentor_profiles = [{'service_id': n} for n in range(1, 3)]
+        mentorship_bills = [{'mentor_id': n} for n in range(1, 3)]
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_bill',
+                                        mentorship_session=mentorship_sessions,
+                                        mentor_profile=mentor_profiles,
+                                        mentorship_service=2,
+                                        mentorship_bill=mentorship_bills,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        started_at = timezone.now()
+        ended_at = timezone.now()
+        paid_at = timezone.now()
+        data = [{
+            'id': n,
+            'status': random.choice(['DUE', 'APPROVED', 'PAID', 'IGNORED']),
+            'status_mesage': self.bc.fake.text(),
+            'started_at': self.bc.datetime.to_iso_string(started_at),
+            'ended_at': self.bc.datetime.to_iso_string(ended_at),
+            'paid_at': self.bc.datetime.to_iso_string(paid_at),
+        } for n in range(1, 3)]
+
+        url = reverse_lazy('mentorship:academy_bill')
+        response = self.client.put(url, data, format='json')
+
+        data_fixed_first_element = data[0].copy()
+        del data_fixed_first_element['status_mesage']
+
+        data_fixed_second_element = data[1].copy()
+        del data_fixed_second_element['status_mesage']
+
+        json = response.json()
+        elements = [(0, data_fixed_first_element), (1, data_fixed_second_element)]
+        expected = [
+            put_serializer(self,
+                           model.mentorship_bill[index],
+                           model.mentor_profile[index],
+                           model.mentorship_service[index],
+                           model.user,
+                           model.academy,
+                           data=current_data) for index, current_data in elements
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'),
+                         [{
+                             **self.bc.format.to_dict(model.mentorship_bill[i]),
+                             **data[i],
+                             'started_at': started_at,
+                             'ended_at': ended_at,
+                             'paid_at': paid_at,
+                         } for i in range(0, 2)])
