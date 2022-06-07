@@ -1667,7 +1667,7 @@ class MemberPostTestSuite(AuthTestCase):
             }),
         ])
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call('welcome_academy', 'dude@dude.dude', {
+            call('welcome', 'dude@dude.dude', {
                 'email': 'dude@dude.dude',
                 'subject': 'Welcome to 4Geeks',
                 'LINK': url,
@@ -1860,7 +1860,7 @@ class MemberPostTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call('welcome_academy', 'dude2@dude.dude', {
+            call('welcome', 'dude2@dude.dude', {
                 'email': 'dude2@dude.dude',
                 'subject': 'Welcome to 4Geeks',
                 'LINK': url,
