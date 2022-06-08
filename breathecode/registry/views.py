@@ -303,6 +303,12 @@ class AssetView(APIView):
             if param == 'true':
                 lookup['graded'] = True
 
+        lookup['external'] = False
+        if 'external' in self.request.GET:
+            param = self.request.GET.get('external')
+            if param == 'true':
+                lookup['external'] = True
+
         need_translation = self.request.GET.get('need_translation', False)
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
