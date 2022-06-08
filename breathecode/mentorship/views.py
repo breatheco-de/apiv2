@@ -12,7 +12,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
-from .actions import close_mentoring_session, get_pending_sessions_or_create, render_session, generate_mentor_bills
+from .actions import close_mentoring_session, extend_session, get_pending_sessions_or_create, render_session, generate_mentor_bills
 from rest_framework import serializers
 from breathecode.notify.actions import get_template_content
 from rest_framework.exceptions import ValidationError, NotFound
@@ -211,7 +211,6 @@ def forward_meet_url(request, mentor_slug, token):
         if ((session.mentor.user.id == token.user.id and service.allow_mentors_to_extend)
                 or (session.mentor.user.id != token.user.id and service.allow_mentee_to_extend)):
             if extend is True:
-                #FIXME
                 session = extend_session(session)
             extend_url = set_query_parameter(request.get_full_path(), 'extend', 'true')
             return render_message(
