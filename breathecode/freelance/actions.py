@@ -3,6 +3,7 @@ from itertools import chain
 from django.db.models import Q
 from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook
 from breathecode.authenticate.models import CredentialsGithub
+from breathecode.admissions.models import Academy
 from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from github import Github
@@ -49,7 +50,7 @@ def update_status_based_on_github_action(github_action, issue):
     return issue.status
 
 
-def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_action=None):
+def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_action=None, academy_slug=None):
 
     if isinstance(issue, dict) == False:
         issue = {
@@ -90,7 +91,8 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
         logger.debug(
             f'Ignoring changes to this issue {node_id} ({issue_number}) because status is {_issue.status} and its not being reponened: {_issue.title}'
         )
-        return _issue
+
+    _issue.academy = Academy.objects.filter(slug=academy_slug).first()
 
     if issue_number is not None:
         _issue.github_number = issue_number
@@ -141,7 +143,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     return _issue
 
 
-def sync_user_issues(freelancer):
+def sync_user_issues(freelancer, academy_slug=None):
 
     if freelancer.github_user is None:
         raise ValueError(f'Freelancer has not github user')
@@ -158,7 +160,7 @@ def sync_user_issues(freelancer):
     count = 0
     for issue in open_issues:
         count += 1
-        sync_single_issue(issue, freelancer=freelancer)
+        sync_single_issue(issue, freelancer=freelancer, academy_slug=academy_slug)
     logger.debug(f'{str(count)} issues where synched for this Github user credentials {str(credentials)}')
 
     return None
@@ -175,18 +177,26 @@ def generate_freelancer_bill(freelancer):
     Issue.objects.filter(bill__isnull=False,
                          freelancer__id=freelancer.id).exclude(status='DONE').update(bill=None)
 
-    open_bill = Bill.objects.filter(freelancer__id=freelancer.id, status='DUE').first()
-    if open_bill is None:
-        open_bill = Bill(freelancer=freelancer, )
-        open_bill.save()
+    def get_bill(academy):
+        open_bill = Bill.objects.filter(freelancer__id=freelancer.id,
+                                        status='DUE',
+                                        academy__slug=academy.slug,
+                                        academy__isnull=False).first()
+        if open_bill is None:
+            open_bill = Bill(freelancer=freelancer, academy=academy)
+            open_bill.save()
+        return open_bill
 
     done_issues = Issue.objects.filter(freelancer__id=freelancer.id,
                                        status='DONE').filter(Q(bill__isnull=True) | Q(bill__status='DUE'))
-    total = {'minutes': 0, 'hours': 0, 'price': 0}
+    bills = {}
 
     for issue in done_issues:
-        issue.bill = open_bill
+        issue.bill = get_bill(issue.academy)
         issue.status_message = ''
+
+        if str(issue.bill.id) not in bills:
+            bills[str(issue.bill.id)] = {'minutes': 0, 'hours': 0, 'price': 0, 'instance': issue.bill}
 
         if issue.status != 'DONE':
             issue.status_message += 'Issue is still ' + issue.status
@@ -194,19 +204,19 @@ def generate_freelancer_bill(freelancer):
             issue.status_message += 'Github node id not found'
 
         if issue.status_message == '':
-            total['hours'] = total['hours'] + issue.duration_in_hours
-            total['minutes'] = total['minutes'] + issue.duration_in_minutes
+            bills[str(issue.bill.id)]['hours'] = bills[str(issue.bill.id)]['hours'] + issue.duration_in_hours
+            bills[str(
+                issue.bill.id)]['minutes'] = bills[str(issue.bill.id)]['minutes'] + issue.duration_in_minutes
 
         issue.save()
 
-    total['price'] = total['hours'] * freelancer.price_per_hour
+    for bill_id in bills:
+        bills[bill_id]['instance'].total_duration_in_hours = bills[bill_id]['hours']
+        bills[bill_id]['instance'].total_duration_in_minutes = bills[bill_id]['minutes']
+        bills[bill_id]['instance'].total_price = bills[bill_id]['hours'] * freelancer.price_per_hour
+        bills[bill_id]['instance'].save()
 
-    open_bill.total_duration_in_hours = total['hours']
-    open_bill.total_duration_in_minutes = total['minutes']
-    open_bill.total_price = total['price']
-    open_bill.save()
-
-    return open_bill
+    return [bills[bill_id]['instance'] for bill_id in bills]
 
 
 def run_hook(modeladmin, request, queryset):
@@ -223,7 +233,7 @@ run_hook.short_description = 'Process Hook'
 def add_webhook(context: dict, academy_slug: str):
     """Add one incoming webhook request to log"""
 
-    if not context or not len(context):
+    if not context or not len(context) or 'action' not in context:
         return None
 
     webhook = RepositoryIssueWebhook(webhook_action=context['action'], academy_slug=academy_slug)

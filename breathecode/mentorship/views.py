@@ -156,10 +156,11 @@ def forward_meet_url(request, mentor_slug, token):
     if session_id is not None:
         session = sessions.filter(id=session_id).first()
     else:
-        session = sessions.filter(mentee=mentee).first()
+        session = sessions.filter(Q(mentee=mentee) | Q(mentee__isnull=True)).first()
 
     if session is None:
-        return render_message(request, 'Impossible to create or retrive mentoring session')
+        return render_message(
+            request, f'Impossible to create or retrive mentoring session with {mentor.user.first_name}')
 
     if session.mentee is None:
         if mentee_id is not None and mentee_id != 'undefined':

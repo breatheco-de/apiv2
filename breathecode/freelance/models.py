@@ -34,7 +34,12 @@ class Bill(models.Model):
     total_duration_in_hours = models.FloatField(default=0)
     total_price = models.FloatField(default=0)
 
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
+    academy = models.ForeignKey(Academy,
+                                on_delete=models.CASCADE,
+                                null=True,
+                                default=None,
+                                blank=True,
+                                help_text='Will help catalog billing grouped by academy')
 
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
@@ -88,6 +93,13 @@ class Issue(models.Model):
 
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None, blank=True)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
+
+    academy = models.ForeignKey(Academy,
+                                on_delete=models.CASCADE,
+                                null=True,
+                                default=None,
+                                blank=True,
+                                help_text='Will help catalog billing grouped by academy')
     bill = models.ForeignKey(Bill, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
