@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from ...actions import sync_tags, sync_automations
+from breathecode.admissions.models import Academy
 from ...models import Issue
 
 
