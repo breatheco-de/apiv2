@@ -310,6 +310,13 @@ class UserSerializer(serpy.Serializer):
     last_name = serpy.Field()
     github = serpy.MethodField()
     roles = serpy.MethodField()
+    profile = serpy.MethodField()
+
+    def get_profile(self, obj):
+        if not hasattr(obj, 'profile'):
+            return None
+
+        return GetProfileSmallSerializer(obj.profile).data
 
     def get_github(self, obj):
         github = CredentialsGithub.objects.filter(user=obj.id).first()
