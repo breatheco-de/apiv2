@@ -1083,3 +1083,173 @@ class AcademyCohortTestSuite(EventTestCase):
 
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_ical_cohorts__with_two__first_day__last_day__two_timeslots__cohort_with_meeting_url(self):
+        """Test /academy/cohort without auth"""
+        device_id_kwargs = {'name': 'server'}
+        cohort_kwargs = [{
+            'online_meeting_url': self.bc.fake.url(),
+            'kickoff_date': datetime(year=2020, month=10, day=10),
+            'ending_date': datetime(year=2030, month=10, day=10),
+        } for _ in range(0, 2)]
+
+        first_cohort_time_slot_kwargs = {
+            'timezone': 'Europe/Madrid',
+            'starting_at': 202110080030,
+            'ending_at': 202110080630,
+        }
+
+        last_cohort_time_slot_kwargs = {
+            'timezone': 'Europe/Madrid',
+            'starting_at': 202810080030,
+            'ending_at': 202810080630,
+        }
+
+        cohort_time_slots = [
+            {
+                **first_cohort_time_slot_kwargs,
+                'cohort_id': 1,
+            },
+            {
+                **last_cohort_time_slot_kwargs,
+                'cohort_id': 1,
+            },
+            {
+                **first_cohort_time_slot_kwargs,
+                'cohort_id': 2,
+            },
+            {
+                **last_cohort_time_slot_kwargs,
+                'cohort_id': 2,
+            },
+        ]
+        model = self.generate_models(academy=True,
+                                     cohort=cohort_kwargs,
+                                     device_id=device_id_kwargs,
+                                     cohort_time_slot=cohort_time_slots)
+
+        url = reverse_lazy('events:academy_id_ical_cohorts')
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
+
+        cohort1 = model.cohort[0]
+        cohort2 = model.cohort[1]
+
+        timeslot1 = model.cohort_time_slot[0]
+        timeslot2 = model.cohort_time_slot[1]
+        key = model.device_id.key
+
+        starting_at1 = self.datetime_to_ical(model.cohort[0].kickoff_date)
+        starting_at2 = self.datetime_to_ical(model.cohort[1].kickoff_date)
+
+        starting_at_utc1 = self.datetime_to_ical(model.cohort[0].created_at)
+        starting_at_utc2 = self.datetime_to_ical(model.cohort[1].created_at)
+
+        ending_at1 = self.datetime_to_ical(model.cohort[0].ending_date)
+        ending_at2 = self.datetime_to_ical(model.cohort[1].ending_date)
+
+        first_timeslot_starting_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[0].kickoff_date,
+            DatetimeInteger.to_datetime(timeslot1.timezone, first_cohort_time_slot_kwargs['starting_at']),
+            next=True),
+                                                           utc=False)
+
+        first_timeslot_starting_at_utc = self.datetime_to_ical(timeslot1.created_at, utc=True)
+
+        first_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[0].kickoff_date,
+            DatetimeInteger.to_datetime(timeslot1.timezone, first_cohort_time_slot_kwargs['ending_at']),
+            next=True),
+                                                         utc=False)
+
+        last_timeslot_starting_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[0].ending_date,
+            DatetimeInteger.to_datetime(timeslot2.timezone, last_cohort_time_slot_kwargs['starting_at']),
+            prev=True),
+                                                          utc=False)
+
+        last_timeslot_starting_at_utc = self.datetime_to_ical(timeslot2.created_at, utc=True)
+
+        last_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[1].ending_date,
+            DatetimeInteger.to_datetime(timeslot2.timezone, last_cohort_time_slot_kwargs['ending_at']),
+            prev=True),
+                                                        utc=False)
+
+        expected = '\r\n'.join([
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            f'PRODID:-//BreatheCode//Academy Cohorts (1) {key}//EN',
+            'METHOD:PUBLISH',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:Academy - Cohorts',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - First day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
+            f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # Event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name}',
+            f'DTSTART;VALUE=DATE-TIME:{starting_at1}',
+            f'DTEND;VALUE=DATE-TIME:{ending_at1}',
+            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc1}',
+            f'UID:breathecode_cohort_{cohort1.id}_{key}',
+            f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - Last day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort1.id}_last_{key}',
+            f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - First day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
+            f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # Event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name}',
+            f'DTSTART;VALUE=DATE-TIME:{starting_at2}',
+            f'DTEND;VALUE=DATE-TIME:{ending_at2}',
+            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc2}',
+            f'UID:breathecode_cohort_{cohort2.id}_{key}',
+            f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - Last day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort2.id}_last_{key}',
+            f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
+            'END:VEVENT',
+            'END:VCALENDAR',
+            '',
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
