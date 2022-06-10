@@ -528,7 +528,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     str(invite.token) + '?' + querystr
 
                 notify_actions.send_email_message(
-                    'welcome', email, {
+                    'welcome_academy', email, {
                         'email': email,
                         'subject': 'Welcome to 4Geeks',
                         'LINK': url,
@@ -715,7 +715,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     str(invite.token) + '?' + querystr
 
                 notify_actions.send_email_message(
-                    'welcome', email, {
+                    'welcome_academy', email, {
                         'email': email,
                         'subject': 'Welcome to 4Geeks.com',
                         'LINK': url,
