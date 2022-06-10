@@ -156,10 +156,15 @@ def forward_meet_url(request, mentor_slug, token):
     if session_id is not None:
         session = sessions.filter(id=session_id).first()
     else:
-        session = sessions.filter(mentee=mentee).first()
+        session = sessions.filter(Q(mentee=mentee) | Q(mentee__isnull=True)).first()
+        # if the session.mentee is None it means the mentor had some pending unstarted session
+        # if the current user is a mentee, we are going to assign that meeting to it
+        if session.mentee is None and mentee is not None:
+            session.mentee = mentee
 
     if session is None:
-        return render_message(request, 'Impossible to create or retrive mentoring session')
+        return render_message(
+            request, f'Impossible to create or retrieve mentoring session with {mentor.user.first_name}')
 
     if session.mentee is None:
         if mentee_id is not None and mentee_id != 'undefined':
@@ -202,7 +207,7 @@ def forward_meet_url(request, mentor_slug, token):
         if (now - session.ends_at).total_seconds() > (service.duration.seconds / 2):
             return HttpResponseRedirect(
                 redirect_to=
-                f'/mentor/session/{str(session.id)}?token={token.key}&message=Your have a session that expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
+                f'/mentor/session/{str(session.id)}?token={token.key}&message=You have a session that expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
             )
 
         if ((session.mentor.user.id == token.user.id and service.allow_mentors_to_extend)
@@ -306,7 +311,7 @@ def end_mentoring_session(request, session_id, token):
                 request, 'close_session.html', {
                     'token': token.key,
                     'message':
-                    'This session expired without assigned mentee, it probably means the mentee never came. It was marked as failed.',
+                    'Previous session expired without assigned mentee, it probably means the mentee never came. It was marked as failed. Try the mentor meeting URL again.',
                     'mentor': GETMentorBigSerializer(session.mentor, many=False).data,
                     'SUBJECT': 'Close Mentoring Session',
                     'sessions': GETSessionReportSerializer(pending_sessions, many=True).data,

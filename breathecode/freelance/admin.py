@@ -105,7 +105,7 @@ class BillAdmin(admin.ModelAdmin):
 def run_hook(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for hook in queryset.all():
-        actions.sync_single_issue(json.loads(hook.payload))
+        actions.sync_single_issue(json.loads(hook.payload), academy_slug=hook.academy_slug)
 
 
 run_hook.short_description = 'Process IssueHook'
