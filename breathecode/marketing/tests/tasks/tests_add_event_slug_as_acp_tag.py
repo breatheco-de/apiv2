@@ -127,9 +127,77 @@ class AnswerIdTestSuite(MarketingTestCase):
         add_event_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.bc.format.to_dict(model.tag)])
+        self.assertEqual(logging.Logger.warn.call_args_list, [
+            call(TASK_STARTED_MESSAGE),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Tag for event `event-they-killed-kenny` already exists'),
         ])
+
+    """
+    🔽🔽🔽 Event slug already exists, with force false
+    """
+
+    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
+    def test_add_event_slug_as_acp_tag__event_slug_already_exists__with_force_false(self):
+        import logging
+
+        active_campaign_academy = {'ac_url': AC_HOST}
+        event = {'slug': 'event-they-killed-kenny'}
+        tag = {'slug': 'event-they-killed-kenny', 'tag_type': 'EVENT'}
+
+        model = self.bc.database.create(academy=1,
+                                        tag=tag,
+                                        active_campaign_academy=active_campaign_academy,
+                                        event=event)
+
+        add_event_slug_as_acp_tag.delay(1, 1, force=False)
+
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.bc.format.to_dict(model.tag)])
+        self.assertEqual(logging.Logger.warn.call_args_list, [
+            call(TASK_STARTED_MESSAGE),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Tag for event `event-they-killed-kenny` already exists'),
+        ])
+
+    """
+    🔽🔽🔽 Event slug already exists, with force true
+    """
+
+    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
+    def test_add_event_slug_as_acp_tag__event_slug_already_exists__with_force_true(self):
+        import logging
+
+        active_campaign_academy = {'ac_url': AC_HOST}
+        event = {'slug': 'event-they-killed-kenny'}
+        tag = {'slug': 'event-they-killed-kenny', 'tag_type': 'EVENT'}
+
+        model = self.bc.database.create(academy=1,
+                                        tag=tag,
+                                        active_campaign_academy=active_campaign_academy,
+                                        event=event)
+
+        add_event_slug_as_acp_tag.delay(1, 1, force=True)
+
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [
+            {
+                **self.bc.format.to_dict(model.tag),
+                'acp_id': 1,
+            },
+        ])
+        self.assertEqual(logging.Logger.warn.call_args_list, [
+            call(TASK_STARTED_MESSAGE),
+            call(f'Creating tag `{model.event.slug}` on active campaign'),
+            call('Tag created successfully'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
     """
     🔽🔽🔽 Create tag in Active Campaign
