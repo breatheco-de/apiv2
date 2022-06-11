@@ -352,7 +352,7 @@ def sync_learnpack_asset(github, asset):
 
     lang = asset.lang
     if lang is None or lang == '':
-        raise Exception('Language for this asset is not defined, imposible to retrieve readme')
+        raise Exception('Language for this asset is not defined, impossible to retrieve readme')
     elif lang in ['us', 'en']:
         lang = ''
     else:
