@@ -49,7 +49,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Imposible to determine the user email'),
+            call('Impossible to determine the user email'),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
@@ -155,7 +155,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Imposible to determine the academy'),
+            call('Impossible to determine the academy'),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
@@ -175,7 +175,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Imposible to determine the academy'),
+            call('Impossible to determine the academy'),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])

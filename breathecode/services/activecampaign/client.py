@@ -46,7 +46,7 @@ class ActiveCampaign:
             raise Exception('Invalid webhook')
 
         if not webhook.webhook_type:
-            raise Exception('Imposible to webhook_type')
+            raise Exception('Impossible to webhook_type')
 
         action = webhook.webhook_type
         logger.debug(f'Executing ActiveCampaign Webhook => {action}')
@@ -120,8 +120,9 @@ class ActiveCampaign:
         resp = requests.get(f'{self.host}/api/3/contacts',
                             headers={'Api-Token': self.token},
                             params={'email': email})
-        logger.debug(f'Get contact by email {self.host}/api/3/contacts', resp.status_code)
+        logger.debug(f'Get contact by email {self.host}/api/3/contacts {resp.status_code}')
         data = resp.json()
+        print('client.py', 125, 'data', data)
         if data and 'contacts' in data and len(data['contacts']) == 1:
             return data['contacts'][0]
         else:
@@ -156,6 +157,7 @@ class ActiveCampaign:
 
         if resp.status_code == 201:
             data = resp.json()
+            print('client.py', 160, 'data', data)
             if data and 'contactTag' in data:
                 return data['contactTag']
             else:

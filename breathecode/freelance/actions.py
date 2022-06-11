@@ -7,6 +7,8 @@ from breathecode.admissions.models import Academy
 from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from github import Github
+from breathecode.services.activecampaign import ActiveCampaign
+from breathecode.marketing.actions import acp_ids
 
 logger = logging.getLogger(__name__)
 
@@ -220,7 +222,6 @@ def generate_freelancer_bill(freelancer):
 
 
 def run_hook(modeladmin, request, queryset):
-    # TODO: ActiveCampaign and acp_ids is not defined
     for hook in queryset.all():
         ac_academy = hook.ac_academy
         client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
