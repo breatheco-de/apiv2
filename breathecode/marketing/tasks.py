@@ -147,7 +147,7 @@ def add_event_tags_to_student(self,
     logger.warn('Task add_event_tags_to_student started')
 
     if not user_id and not email:
-        logger.error('Imposible to determine the user email')
+        logger.error('Impossible to determine the user email')
         return
 
     if user_id and email:
@@ -167,7 +167,7 @@ def add_event_tags_to_student(self,
         return
 
     if not event.academy:
-        logger.error(f'Imposible to determine the academy')
+        logger.error(f'Impossible to determine the academy')
         return
 
     academy = event.academy
@@ -190,6 +190,10 @@ def add_event_tags_to_student(self,
 
     try:
         contact = client.get_contact_by_email(email)
+        print('-----------------------------')
+        print('-----------------------------')
+        print('-----------------------------')
+        print('tasks.py', 193, 'contact', contact)
         for tag in tags:
             logger.warn(f'Adding tag {tag.id} to acp contact {contact["id"]}')
             client.add_tag_to_contact(contact['id'], tag.acp_id)
