@@ -155,7 +155,8 @@ class ActiveCampaign:
         resp = requests.post(f'{self.host}/api/3/contactTags', headers={'Api-Token': self.token}, json=body)
         logger.debug(f'Add tag to contact')
 
-        if resp.status_code == 201:
+        # can return status 200 if the contact have has been tagged, this case is not a error
+        if resp.status_code < 400:
             data = resp.json()
             print('client.py', 160, 'data', data)
             if data and 'contactTag' in data:
