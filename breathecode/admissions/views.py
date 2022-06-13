@@ -33,6 +33,7 @@ from breathecode.utils import (localize_query, capable_of, ValidationException, 
                                GenerateLookupsMixin)
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
 from breathecode.utils import DatetimeInteger
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 logger = logging.getLogger(__name__)
 
@@ -322,6 +323,14 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             if watching is not None:
                 items = items.filter(watching=watching.lower() == 'true')
 
+            if 'cohort' in self.request.GET:
+                param = self.request.GET.get('cohort')
+                items = items.filter(cohort__name__icontains=param)
+
+            like = request.GET.get('like', None)
+            if like is not None:
+                items = query_like_by_full_name(like=like, items=items, prefix='user__')
+
             syllabus = request.GET.get('syllabus', None)
             if syllabus is not None:
                 items = items.filter(cohort__syllabus_version__syllabus__slug__in=syllabus.split(','))
@@ -335,7 +344,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             if users is not None:
                 items = items.filter(user__id__in=users.split(','))
 
-            items = items.order_by(request.GET.get('order_by', '-role'))
+            items = items.order_by(request.GET.get('sort', '-role'))
 
         except Exception as e:
             raise ValidationException(str(e), 400)

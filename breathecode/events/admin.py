@@ -4,6 +4,7 @@ from django.contrib import messages
 from .models import Event, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
 from .actions import sync_org_venues, sync_org_events
 from breathecode.utils import AdminExportCsvMixin
+import breathecode.marketing.tasks as marketing_tasks
 
 
 def pull_eventbrite_venues(modeladmin, request, queryset):
@@ -40,6 +41,15 @@ class OrganizerAdmin(admin.ModelAdmin):
     actions = []
 
 
+def reattempt_add_event_slug_as_acp_tag(modeladmin, request, queryset):
+    for instance in queryset:
+        if instance.academy:
+            marketing_tasks.add_event_slug_as_acp_tag.delay(instance.id, instance.academy.id, force=True)
+
+
+reattempt_add_event_slug_as_acp_tag.short_description = 'Reattempt add event slug to Active Campaign'
+
+
 # Register your models here.
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
@@ -50,7 +60,7 @@ class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'organization', 'online_event', 'event_type', 'status'
     ]
     search_fields = ['slug', 'title', 'eventbrite_id', 'eventbrite_organizer_id']
-    actions = ['export_as_csv']
+    actions = ['export_as_csv', reattempt_add_event_slug_as_acp_tag]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'author':
