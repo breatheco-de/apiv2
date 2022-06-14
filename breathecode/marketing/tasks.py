@@ -180,10 +180,10 @@ def add_event_tags_to_student(self,
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
     tag_slugs = [x for x in event.tags.split(',') if x]  # prevent a tag with the slug ''
     if event.slug:
-        tag_slugs.append(event.slug)
+        tag_slugs.append(f'event-{event.slug}' if not event.slug.startswith('event-') else event.slug)
 
     tags = Tag.objects.filter(slug__in=tag_slugs, ac_academy__id=ac_academy.id)
-
+    print('tasks.py', 186, tag_slugs, tags)
     if not tags:
         logger.warn('Tags not found')
         return
@@ -193,7 +193,7 @@ def add_event_tags_to_student(self,
         print('-----------------------------')
         print('-----------------------------')
         print('-----------------------------')
-        print('tasks.py', 193, 'contact', contact)
+        print('tasks.py', 196, 'contact', contact)
         for tag in tags:
             logger.warn(f'Adding tag {tag.id} to acp contact {contact["id"]}')
             client.add_tag_to_contact(contact['id'], tag.acp_id)

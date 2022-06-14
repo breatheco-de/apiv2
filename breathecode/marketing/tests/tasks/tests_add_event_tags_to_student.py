@@ -667,7 +667,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                     event_kwargs=event_kwargs,
                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        tag_kwargs = {'slug': 'they-killed-kenny1'}
+        tag_kwargs = {'slug': 'event-they-killed-kenny1'}
         model1 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
         tag_kwargs = {'slug': 'they-killed-kenny2'}
         model2 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
@@ -731,7 +731,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                     event_kwargs=event_kwargs,
                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        tag_kwargs = {'slug': 'they-killed-kenny1'}
+        tag_kwargs = {'slug': 'event-they-killed-kenny1'}
         model1 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
         tag_kwargs = {'slug': 'they-killed-kenny2'}
         model2 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
@@ -800,7 +800,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                     event_kwargs=event_kwargs,
                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        tag_kwargs = {'slug': 'they-killed-kenny1'}
+        tag_kwargs = {'slug': 'event-they-killed-kenny1'}
         model1 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
         tag_kwargs = {'slug': 'they-killed-kenny2'}
@@ -879,7 +879,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                     event_kwargs=event_kwargs,
                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        tag_kwargs = {'slug': 'they-killed-kenny1'}
+        tag_kwargs = {'slug': 'event-they-killed-kenny1'}
         model1 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
         tag_kwargs = {'slug': 'they-killed-kenny2'}
