@@ -46,7 +46,7 @@ def build_question(answer):
         question['highest'] = strings[lang]['event']['highest']
     elif answer.mentor is not None:
         question['title'] = strings[lang]['mentor']['title'].format(answer.mentor.first_name + ' ' +
-                                                                           answer.mentor.last_name)
+                                                                    answer.mentor.last_name)
         question['lowest'] = strings[lang]['mentor']['lowest']
         question['highest'] = strings[lang]['mentor']['highest']
     elif answer.cohort is not None and answer.cohort.syllabus_version:

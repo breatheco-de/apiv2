@@ -243,7 +243,7 @@ def add_cohort_slug_as_acp_tag(self, cohort_id: int, academy_id: int) -> None:
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
+def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int, force=False) -> None:
     logger.warn('Task add_event_slug_as_acp_tag started')
 
     if not Academy.objects.filter(id=academy_id).exists():
@@ -271,15 +271,26 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
     else:
         new_tag_slug = f'event-{event.slug}'
 
-    tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
-    if tag:
+    if (tag := Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()) and not force:
         logger.error(f'Tag for event `{event.slug}` already exists')
         return
 
     try:
         data = client.create_tag(new_tag_slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
 
-        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='EVENT', ac_academy=ac_academy, subscribers=0)
+        # retry create the tag in Active Campaign
+        if tag:
+            tag.slug = data['tag']
+            tag.acp_id = data['id']
+            tag.tag_type = 'EVENT'
+            tag.ac_academy = ac_academy
+
+        else:
+            tag = Tag(slug=data['tag'],
+                      acp_id=data['id'],
+                      tag_type='EVENT',
+                      ac_academy=ac_academy,
+                      subscribers=0)
 
         tag.save()
 
