@@ -418,7 +418,7 @@ def extend_roles(roles: list[RoleType]) -> None:
     roles.append({
         'slug': 'career_support',
         'name': 'Career Support Specialist',
-        'caps': extend(roles, ['staff']) + ['read_certificate', 'crud_certificate', 'crud_shortlink', 'crud_mentor', 'read_mentor']
+        'caps': extend(roles, ['staff']) + ['read_certificate', 'crud_certificate', 'crud_shortlink', 'crud_mentor', 'read_mentor', 'crud_mentorship_service', 'crud_mentorship_session']
     })
     roles.append({
         'slug':
