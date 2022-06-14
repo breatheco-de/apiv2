@@ -456,7 +456,11 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model.tag.acp_id
@@ -499,7 +503,11 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model.tag.acp_id
@@ -551,13 +559,21 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
@@ -604,13 +620,21 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
@@ -665,13 +689,21 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
@@ -721,13 +753,21 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
@@ -787,19 +827,31 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model3.tag.acp_id
@@ -854,19 +906,31 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model3.tag.acp_id
