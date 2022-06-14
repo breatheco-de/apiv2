@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
+
+import breathecode.events.tasks as tasks
 from .models import Event, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
 from .actions import sync_org_venues, sync_org_events
 from breathecode.utils import AdminExportCsvMixin
@@ -95,12 +97,20 @@ class EventCheckinAdmin(admin.ModelAdmin):
     search_fields = ['email', 'event__title', 'event__slug']
 
 
+def reattempt_eventbrite_webhook(modeladmin, request, queryset):
+    entries = queryset.all()
+
+    for entry in entries:
+        tasks.async_eventbrite_webhook.delay(entry.id)
+
+
 @admin.register(EventbriteWebhook)
 class EventbriteWebhookAdmin(admin.ModelAdmin):
     list_display = ('api_url', 'user_id', 'action', 'webhook_id', 'organization', 'endpoint_url', 'status',
                     'status_text', 'created_at')
     list_filter = ['organization_id', 'status', 'action']
     search_fields = ['organization_id', 'status']
+    actions = [reattempt_eventbrite_webhook]
 
     def organization(self, obj):
         return Organization.objects.filter(eventbrite_id=obj.organization_id).first()
