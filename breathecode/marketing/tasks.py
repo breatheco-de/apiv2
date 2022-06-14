@@ -183,17 +183,12 @@ def add_event_tags_to_student(self,
         tag_slugs.append(f'event-{event.slug}' if not event.slug.startswith('event-') else event.slug)
 
     tags = Tag.objects.filter(slug__in=tag_slugs, ac_academy__id=ac_academy.id)
-    print('tasks.py', 186, tag_slugs, tags)
     if not tags:
         logger.warn('Tags not found')
         return
 
     try:
         contact = client.get_contact_by_email(email)
-        print('-----------------------------')
-        print('-----------------------------')
-        print('-----------------------------')
-        print('tasks.py', 196, 'contact', contact)
         for tag in tags:
             logger.warn(f'Adding tag {tag.id} to acp contact {contact["id"]}')
             client.add_tag_to_contact(contact['id'], tag.acp_id)
