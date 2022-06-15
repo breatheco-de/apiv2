@@ -872,6 +872,10 @@ def save_github_token(request):
                                   twitter_username=github_user['twitter_username'])
                 profile.save()
 
+            if not profile.avatar_url:
+                profile.avatar_url = github_user['avatar_url']
+                profile.save()
+
             student_role = Role.objects.get(slug='student')
             cus = CohortUser.objects.filter(user=user, role='STUDENT')
             for cu in cus:

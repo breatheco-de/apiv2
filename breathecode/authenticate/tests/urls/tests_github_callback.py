@@ -27,6 +27,44 @@ def render(message):
     )
 
 
+def get_profile_fields(data={}):
+    return {
+        'id': 1,
+        'user_id': 1,
+        'avatar_url': 'https://avatars2.githubusercontent.com/u/3018142?v=4',
+        'bio':
+        'I am an Computer engineer, Full-stack Developer\xa0and React Developer, I likes an API good, the clean code, the good programming practices',
+        'phone': '',
+        'show_tutorial': True,
+        'twitter_username': None,
+        'github_username': None,
+        'portfolio_url': None,
+        'linkedin_url': None,
+        'blog': 'https://www.facebook.com/chocoland.framework',
+        **data,
+    }
+
+
+def get_credentials_github_fields(data={}):
+    bio = ('I am an Computer engineer, Full-stack Developer\xa0and React '
+           'Developer, I likes an API good, the clean code, the good programming '
+           'practices')
+    return {
+        'avatar_url': 'https://avatars2.githubusercontent.com/u/3018142?v=4',
+        'bio': bio,
+        'blog': 'https://www.facebook.com/chocoland.framework',
+        'company': '@chocoland ',
+        'email': 'jdefreitaspinto@gmail.com',
+        'github_id': 3018142,
+        'name': 'Jeferson De Freitas',
+        'token': 'e72e16c7e42f292c6912e7710c838347ae178b4a',
+        'twitter_username': None,
+        'user_id': 1,
+        'username': 'jefer94',
+        **data,
+    }
+
+
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
     def test_github_callback__without_code(self):
@@ -41,6 +79,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(data, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
@@ -73,6 +112,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
@@ -108,6 +148,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
@@ -133,32 +174,10 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
-            'avatar_url':
-            'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio':
-            'I am an Computer engineer, Full-stack Developer\xa0and React '
-            'Developer, I likes an API good, the clean code, the good programming '
-            'practices',
-            'blog':
-            'https://www.facebook.com/chocoland.framework',
-            'company':
-            '@chocoland ',
-            'email':
-            'jdefreitaspinto@gmail.com',
-            'github_id':
-            3018142,
-            'name':
-            'Jeferson De Freitas',
-            'token':
-            'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username':
-            None,
-            'user_id':
-            1,
-            'username':
-            'jefer94'
-        }])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [
+            get_credentials_github_fields(),
+        ])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
         ])
@@ -185,32 +204,10 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
-            'avatar_url':
-            'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio':
-            'I am an Computer engineer, Full-stack Developer\xa0and React '
-            'Developer, I likes an API good, the clean code, the good programming '
-            'practices',
-            'blog':
-            'https://www.facebook.com/chocoland.framework',
-            'company':
-            '@chocoland ',
-            'email':
-            'jdefreitaspinto@gmail.com',
-            'github_id':
-            3018142,
-            'name':
-            'Jeferson De Freitas',
-            'token':
-            'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username':
-            None,
-            'user_id':
-            1,
-            'username':
-            'jefer94'
-        }])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [get_profile_fields(data={})])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [
+            get_credentials_github_fields(),
+        ])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
@@ -238,6 +235,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
@@ -272,32 +270,99 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
-            'avatar_url':
-            'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio':
-            'I am an Computer engineer, Full-stack Developer\xa0and React '
-            'Developer, I likes an API good, the clean code, the good programming '
-            'practices',
-            'blog':
-            'https://www.facebook.com/chocoland.framework',
-            'company':
-            '@chocoland ',
-            'email':
-            'jdefreitaspinto@gmail.com',
-            'github_id':
-            3018142,
-            'name':
-            'Jeferson De Freitas',
-            'token':
-            'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username':
-            None,
-            'user_id':
-            1,
-            'username':
-            'jefer94'
-        }])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [get_profile_fields(data={})])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [
+            get_credentials_github_fields(),
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
+    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    def test_github_callback__with_user__profile_without_avatar_url(self):
+        """Test /github/callback"""
+        user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
+        role_kwargs = {'slug': 'student', 'name': 'Student'}
+        model = self.generate_models(role=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     user_kwargs=user_kwargs,
+                                     role_kwargs=role_kwargs,
+                                     profile=1,
+                                     token=True)
+
+        original_url_callback = 'https://google.co.ve'
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
+                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        code = 'Konan'
+
+        token = self.get_token(1)
+
+        url = reverse_lazy('authenticate:github_callback')
+        params = {'url': original_url_callback, 'code': code, 'user': token}
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertEqual(bool(token_pattern.match(response.url)), True)
+
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
+            get_profile_fields(data={
+                'bio': None,
+                'blog': None
+            }),
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [
+            get_credentials_github_fields(),
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
+    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    def test_github_callback__with_user__profile_with_avatar_url(self):
+        """Test /github/callback"""
+        user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
+        role_kwargs = {'slug': 'student', 'name': 'Student'}
+        profile = {'avatar_url': self.bc.fake.url()}
+        model = self.generate_models(role=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     user_kwargs=user_kwargs,
+                                     role_kwargs=role_kwargs,
+                                     profile=profile,
+                                     token=True)
+
+        original_url_callback = 'https://google.co.ve'
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
+                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        code = 'Konan'
+
+        token = self.get_token(1)
+
+        url = reverse_lazy('authenticate:github_callback')
+        params = {'url': original_url_callback, 'code': code, 'user': token}
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertEqual(bool(token_pattern.match(response.url)), True)
+
+        self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
+            get_profile_fields(data={
+                'bio': None,
+                'blog': None,
+                **profile
+            }),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [
+            get_credentials_github_fields(),
+        ])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
         ])
@@ -327,32 +392,10 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
-            'avatar_url':
-            'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio':
-            'I am an Computer engineer, Full-stack Developer\xa0and React '
-            'Developer, I likes an API good, the clean code, the good programming '
-            'practices',
-            'blog':
-            'https://www.facebook.com/chocoland.framework',
-            'company':
-            '@chocoland ',
-            'email':
-            'jdefreitaspinto@gmail.com',
-            'github_id':
-            3018142,
-            'name':
-            'Jeferson De Freitas',
-            'token':
-            'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username':
-            None,
-            'user_id':
-            1,
-            'username':
-            'jefer94',
-        }])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [get_profile_fields(data={})])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [
+            get_credentials_github_fields(),
+        ])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
         ])
@@ -381,32 +424,10 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [{**self.model_to_dict(model, 'user')}])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
-            'avatar_url':
-            'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio':
-            'I am an Computer engineer, Full-stack Developer\xa0and React '
-            'Developer, I likes an API good, the clean code, the good programming '
-            'practices',
-            'blog':
-            'https://www.facebook.com/chocoland.framework',
-            'company':
-            '@chocoland ',
-            'email':
-            'jdefreitaspinto@gmail.com',
-            'github_id':
-            3018142,
-            'name':
-            'Jeferson De Freitas',
-            'token':
-            'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username':
-            None,
-            'user_id':
-            1,
-            'username':
-            'jefer94',
-        }])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [get_profile_fields(data={})])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [
+            get_credentials_github_fields(),
+        ])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
         ])
@@ -442,32 +463,12 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))
 
-        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
-            'avatar_url':
-            'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio':
-            'I am an Computer engineer, Full-stack Developer\xa0and React '
-            'Developer, I likes an API good, the clean code, the good programming '
-            'practices',
-            'blog':
-            'https://www.facebook.com/chocoland.framework',
-            'company':
-            '@chocoland ',
-            'email':
-            'jdefreitaspinto@gmail.com',
-            'github_id':
-            3018142,
-            'name':
-            'Jeferson De Freitas',
-            'token':
-            'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username':
-            None,
-            'user_id':
-            2,
-            'username':
-            'jefer94',
-        }])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
+            get_profile_fields(data={'user_id': 2}),
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [
+            get_credentials_github_fields(data={'user_id': 2}),
+        ])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
         ])
@@ -504,32 +505,12 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))
 
-        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [{
-            'avatar_url':
-            'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio':
-            'I am an Computer engineer, Full-stack Developer\xa0and React '
-            'Developer, I likes an API good, the clean code, the good programming '
-            'practices',
-            'blog':
-            'https://www.facebook.com/chocoland.framework',
-            'company':
-            '@chocoland ',
-            'email':
-            'jdefreitaspinto@gmail.com',
-            'github_id':
-            3018142,
-            'name':
-            'Jeferson De Freitas',
-            'token':
-            'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username':
-            None,
-            'user_id':
-            2,
-            'username':
-            'jefer94',
-        }])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
+            get_profile_fields(data={'user_id': 2}),
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [
+            get_credentials_github_fields(data={'user_id': 2}),
+        ])
 
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy), {
