@@ -1,5 +1,4 @@
 from unittest.mock import MagicMock, call, patch
-from breathecode.events.admin import reattempt_eventbrite_webhook
 from ...mixins import EventTestCase
 import breathecode.events.tasks as tasks
 from breathecode.events.management.commands.rerun_eventbrinte_order_placed import Command

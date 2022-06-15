@@ -630,7 +630,7 @@ class ICalStudentView(APIView):
 
             if item.cohort.academy.website_url:
                 location = f'{location} ({item.cohort.academy.website_url})'
-            event['location'] = vText(item.cohort.academy.name)
+            event['location'] = vText(item.cohort.online_meeting_url or item.cohort.academy.name)
 
             calendar.add_component(event)
 
