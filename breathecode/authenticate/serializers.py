@@ -310,6 +310,13 @@ class UserSerializer(serpy.Serializer):
     last_name = serpy.Field()
     github = serpy.MethodField()
     roles = serpy.MethodField()
+    profile = serpy.MethodField()
+
+    def get_profile(self, obj):
+        if not hasattr(obj, 'profile'):
+            return None
+
+        return GetProfileSmallSerializer(obj.profile).data
 
     def get_github(self, obj):
         github = CredentialsGithub.objects.filter(user=obj.id).first()
@@ -528,7 +535,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     str(invite.token) + '?' + querystr
 
                 notify_actions.send_email_message(
-                    'welcome', email, {
+                    'welcome_academy', email, {
                         'email': email,
                         'subject': 'Welcome to 4Geeks',
                         'LINK': url,
@@ -715,7 +722,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     str(invite.token) + '?' + querystr
 
                 notify_actions.send_email_message(
-                    'welcome', email, {
+                    'welcome_academy', email, {
                         'email': email,
                         'subject': 'Welcome to 4Geeks.com',
                         'LINK': url,

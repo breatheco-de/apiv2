@@ -39,6 +39,7 @@ class AssetSerializer(serpy.Serializer):
     readme_url = serpy.Field()
     difficulty = serpy.Field()
     duration = serpy.Field()
+    description = serpy.Field()
     status = serpy.Field()
     graded = serpy.Field()
     gitpod = serpy.Field()

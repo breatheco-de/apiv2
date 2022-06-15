@@ -439,7 +439,7 @@ def get_facebook_lead_info(lead_id, academy_id=None):
         else:
             logger.fatal('No information about the lead')
     else:
-        logger.fatal('Imposible to connect to facebook API and retrieve lead information')
+        logger.fatal('Impossible to connect to facebook API and retrieve lead information')
 
 
 STARTS_WITH_COMMA_PATTERN = re.compile(r'^,')

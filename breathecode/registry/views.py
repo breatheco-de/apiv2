@@ -308,6 +308,8 @@ class AssetView(APIView):
             param = self.request.GET.get('external')
             if param == 'true':
                 lookup['external'] = True
+            elif param == 'both':
+                lookup.pop('external', None)
 
         need_translation = self.request.GET.get('need_translation', False)
         if need_translation == 'true':
