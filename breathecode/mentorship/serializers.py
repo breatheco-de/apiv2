@@ -438,8 +438,33 @@ class SessionSerializer(serializers.ModelSerializer):
         return super().validate(data)
 
     def update(self, instance, validated_data):
+        result = super().update(instance, validated_data)
 
-        return super().update(instance, validated_data)
+        bill = MentorshipBill.objects.filter(id=instance.bill_id).first()
+        if bill is None:
+            return result
+
+        unpaid_sessions = MentorshipSession.objects.filter(bill=instance.bill_id)
+        mentor = MentorProfile.objects.filter(id=instance.mentor_id).first()
+        total = {'minutes': 0, 'overtime_minutes': 0}
+
+        for session in unpaid_sessions:
+            extra_minutes = 0
+            if session.accounted_duration > session.mentor.service.duration:
+                extra_minutes = (session.accounted_duration - session.mentor.service.duration).seconds / 60
+
+            total['minutes'] = total['minutes'] + (session.accounted_duration.seconds / 60)
+            total['overtime_minutes'] = total['overtime_minutes'] + extra_minutes
+        total['hours'] = round(total['minutes'] / 60, 2)
+        total['price'] = total['hours'] * mentor.price_per_hour
+
+        bill.total_duration_in_hours = total['hours']
+        bill.total_duration_in_minutes = total['minutes']
+        bill.overtime_minutes = total['overtime_minutes']
+        bill.total_price = total['price']
+        bill.save()
+
+        return result
 
 
 class MentorshipBillPUTListSerializer(serializers.ListSerializer):
