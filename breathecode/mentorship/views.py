@@ -8,11 +8,13 @@ from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import Token
+from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
 from .actions import close_mentoring_session, extend_session, get_pending_sessions_or_create, render_session, generate_mentor_bills
+from breathecode.mentorship import actions
 from rest_framework import serializers
 from breathecode.notify.actions import get_template_content
 from rest_framework.exceptions import ValidationError, NotFound
@@ -70,7 +72,7 @@ def render_html_bill(request, token, id=None):
 
 @private_view()
 def forward_booking_url(request, mentor_slug, token):
-    now = timezone.now()
+    # now = timezone.now()
     if isinstance(token, HttpResponseRedirect):
         return token
 
@@ -83,6 +85,12 @@ def forward_booking_url(request, mentor_slug, token):
 
     if mentor.status not in ['ACTIVE', 'UNLISTED']:
         return render_message(request, f'This mentor is not active')
+
+    try:
+        actions.mentor_is_ready(mentor)
+
+    except:
+        return render_message(request, f'This mentor is not ready too')
 
     booking_url = mentor.booking_url
     if '?' not in booking_url:
@@ -216,7 +224,18 @@ def forward_meet_url(request, mentor_slug, token):
         if ((session.mentor.user.id == token.user.id and service.allow_mentors_to_extend)
                 or (session.mentor.user.id != token.user.id and service.allow_mentee_to_extend)):
             if extend is True:
-                session = extend_session(session)
+                try:
+                    session = extend_session(session)
+
+                except ExtendSessionException as e:
+                    return render_message(
+                        request,
+                        str(e),
+                        btn_label='End Session',
+                        btn_url=f'/mentor/session/{str(session.id)}?token={token.key}',
+                        btn_target='_self',
+                    )
+
             extend_url = set_query_parameter(request.get_full_path(), 'extend', 'true')
             return render_message(
                 request,

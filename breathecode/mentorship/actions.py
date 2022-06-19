@@ -1,9 +1,11 @@
 import os, re, json, logging, time, datetime, requests
+import pytz
 from itertools import chain
 from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
 from django.shortcuts import render
+from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from .models import MentorshipSession, MentorshipBill
@@ -77,21 +79,24 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
     return MentorshipSession.objects.filter(id=session.id)
 
 
-def extend_session(session, duration_in_minutes=None, exp_in_epoch=None):
+def extend_session(session: MentorshipSession, duration_in_minutes=None, exp_in_epoch=None, tz=pytz.UTC):
+
+    if not session.name:
+        raise ExtendSessionException("Can't extend sessions not have a name")
 
     # make 30min default for both
     if duration_in_minutes is None and exp_in_epoch is None:
         duration_in_minutes = 30
 
-    # default duration can be ovveriden by service
+    # default duration can be overridden by service
     daily = DailyClient()
 
-    if duration_in_minutes is not None:
+    if duration_in_minutes is not None and session.ends_at:
         room = daily.extend_room(name=session.name, exp_in_seconds=duration_in_minutes * 3600)
         session.ends_at = session.ends_at + timedelta(minutes=duration_in_minutes)
     elif exp_in_epoch is not None:
         room = daily.extend_room(name=session.name, exp_in_epoch=exp_in_epoch)
-        session.ends_at = datetime.datetime.fromtimestamp(exp_in_epoch)
+        session.ends_at = datetime.datetime.fromtimestamp(exp_in_epoch, tz)
 
     session.save()
     return MentorshipSession.objects.filter(id=session.id)
@@ -133,8 +138,8 @@ def get_accounted_time(_session):
             response['status_message'] = 'Mentor joined but mentee never did, '
             if session.mentor.service.missed_meeting_duration.seconds > 0:
                 response['accounted_duration'] = session.mentor.service.missed_meeting_duration
-                response[
-                    'status_message'] += f'{duration_to_str(response["accounted_duration"])} will be accounted for the bill.'
+                response['status_message'] += (f'{duration_to_str(response["accounted_duration"])} will be '
+                                               'accounted for the bill.')
             else:
                 response['accounted_duration'] = timedelta(seconds=0)
                 response['status_message'] += f'No time will be included on the bill.'
@@ -144,61 +149,70 @@ def get_accounted_time(_session):
 
             if session.mentor_joined_at is None:
                 response['accounted_duration'] = timedelta(seconds=0)
-                response[
-                    'status_message'] = 'The mentor never joined the meeting, no time will be accounted for.'
+                response['status_message'] = ('The mentor never joined the meeting, no time will '
+                                              'be accounted for.')
                 return response
 
             if session.ended_at is None:
                 if session.ends_at is not None and session.ends_at > session.started_at:
                     response['accounted_duration'] = session.ends_at - session.started_at
-                    response[
-                        'status_message'] = f'The session never ended, accounting for the expected meeting duration that was {duration_to_str(response["accounted_duration"])}.'
+                    response['status_message'] = (
+                        'The session never ended, accounting for the expected meeting duration '
+                        f'that was {duration_to_str(response["accounted_duration"])}.')
                     return response
                 elif session.mentee_left_at is not None:
                     response['accounted_duration'] = session.mentee_left_at - session.started_at
-                    response[
-                        'status_message'] = f'The session never ended, accounting duration based on the time where the mentee left the meeting {duration_to_str(response["accounted_duration"])}.'
+                    response['status_message'] = (
+                        'The session never ended, accounting duration based on the time where '
+                        f'the mentee left the meeting {duration_to_str(response["accounted_duration"])}.')
                     return response
                 elif session.mentor_left_at is not None:
                     response['accounted_duration'] = session.mentor_left_at - session.started_at
-                    response[
-                        'status_message'] = f'The session never ended, accounting duration based on the time where the mentor left the meeting {duration_to_str(response["accounted_duration"])}.'
+                    response['status_message'] = (
+                        'The session never ended, accounting duration based on the time where the mentor '
+                        f'left the meeting {duration_to_str(response["accounted_duration"])}.')
                     return response
                 else:
                     response['accounted_duration'] = session.mentor.service.duration
-                    response[
-                        'status_message'] = f'The session never ended, accounting for the standard duration {duration_to_str(response["accounted_duration"])}.'
+                    response['status_message'] = (
+                        'The session never ended, accounting for the standard duration '
+                        f'{duration_to_str(response["accounted_duration"])}.')
                     return response
 
             if session.started_at > session.ended_at:
                 response['accounted_duration'] = timedelta(seconds=0)
-                response[
-                    'status_message'] = 'Meeting started before it ended? No duration will be accounted for.'
+                response['status_message'] = ('Meeting started before it ended? No duration '
+                                              'will be accounted for.')
                 return response
 
-            if (session.ended_at - session.started_at).days > 1:
+            if (session.ended_at - session.started_at).days >= 1:
                 if session.mentee_left_at is not None:
                     response['accounted_duration'] = session.mentee_left_at - session.started_at
-                    response[
-                        'status_message'] = f'The lasted way more than it should, accounting duration based on the time where the mentee left the meeting {duration_to_str(response["accounted_duration"])}.'
+                    response['status_message'] = (
+                        'The lasted way more than it should, accounting duration based on the time where '
+                        f'the mentee left the meeting {duration_to_str(response["accounted_duration"])}.')
                     return response
                 else:
                     response['accounted_duration'] = session.mentor.service.duration
-                    response[
-                        'status_message'] = f'This session lasted more than a day, no one ever left, was probably never closed, accounting for standard duration {duration_to_str(response["accounted_duration"])}.'
+                    response['status_message'] = (
+                        'This session lasted more than a day, no one ever left, was probably never closed, '
+                        f'accounting for standard duration {duration_to_str(response["accounted_duration"])}'
+                        '.')
                     return response
 
             response['accounted_duration'] = session.ended_at - session.started_at
             if response['accounted_duration'] > session.mentor.service.max_duration:
                 if session.mentor.service.max_duration.seconds == 0:
                     response['accounted_duration'] = session.mentor.service.duration
-                    response[
-                        'status_message'] = f'No extra time is allowed for session, accounting for stantard duration of {duration_to_str(response["accounted_duration"])}.'
+                    response['status_message'] = (
+                        'No extra time is allowed for session, accounting for standard duration '
+                        f'of {duration_to_str(response["accounted_duration"])}.')
                     return response
                 else:
                     response['accounted_duration'] = session.mentor.service.max_duration
-                    response[
-                        'status_message'] = f'The duration of the session is bigger than the maximun allowed, accounting for max duration of {duration_to_str(response["accounted_duration"])}.'
+                    response['status_message'] = (
+                        'The duration of the session is bigger than the maximum allowed, accounting '
+                        f'for max duration of {duration_to_str(response["accounted_duration"])}.')
                     return response
             else:
                 # everything perfect, we account for the expected
@@ -213,7 +227,7 @@ def get_accounted_time(_session):
     if _duration['accounted_duration'] > _session.mentor.service.max_duration:
         _duration['accounted_duration'] = _session.mentor.service.max_duration
         _duration['status_message'] += (' The session accounted duration was limited to the maximum allowed '
-                                        f'{duration_to_str(_duration["accounted_duration"])}')
+                                        f'{duration_to_str(_duration["accounted_duration"])}.')
     return _duration
 
 
@@ -331,10 +345,10 @@ def mentor_is_ready(mentor):
         response = requests.head(mentor.booking_url)
         if response.status_code > 399:
             raise Exception(
-                f'Mentor {mentor.name} booking URL is failing with code {str(response.status_code)}')
+                f'Mentor {mentor.name} booking URL is failing with code {str(response.status_code)}.')
         response = requests.head(mentor.online_meeting_url)
         if response.status_code > 399:
             raise Exception(
-                f'Mentor {mentor.name} online_meeting_url is failing with code {str(response.status_code)}')
+                f'Mentor {mentor.name} online_meeting_url is failing with code {str(response.status_code)}.')
 
     return True
