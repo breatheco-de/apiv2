@@ -21,6 +21,8 @@ ROOM_NAME = 'carlos-two'
 ROOM_URL = ''
 API_KEY = random.randint(1, 1000000000)
 
+#FIXME: ends this tests
+
 
 def apply_get_env(configuration={}):
     def get_env(key, value=None):
