@@ -20,11 +20,9 @@ urlpatterns = [
     path('academy/organization/eventbrite/webhook',
          OrganizationWebhookView.as_view(),
          name='academy_organizarion_eventbrite_webhook'),
-    path('ical/cohorts', ICalCohortsView.as_view(),
-         name='academy_id_ical_cohorts'),  # don't correct that name
-    path('ical/events', ICalEventView.as_view(), name='academy_id_ical_events'),  # don't correct that name
-    path('ical/student/<int:user_id>', ICalStudentView.as_view(),
-         name='ical_student_id'),  # don't correct that name
+    path('ical/cohorts', ICalCohortsView.as_view(), name='ical_cohorts'),
+    path('ical/events', ICalEventView.as_view(), name='ical_events'),
+    path('ical/student/<int:user_id>', ICalStudentView.as_view(), name='ical_student_id'),
     path('academy/venues', AcademyVenueView.as_view(), name='academy_venues'),
     path('academy/event/<int:event_id>', AcademyEventView.as_view(), name='academy_event_id'),
     path('academy/eventype', EventTypeView.as_view(), name='type'),
