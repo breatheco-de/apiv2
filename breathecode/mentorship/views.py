@@ -106,7 +106,7 @@ def forward_booking_url(request, mentor_slug, token):
 
 @private_view()
 def forward_meet_url(request, mentor_slug, token):
-    # If the ? is added at the end, everyone can asume the querystring already started
+    # If the ? is added at the end, everyone can assume the querystring already started
     # and its a lot easier to append variables to it
     baseUrl = request.get_full_path()
     if '?' not in baseUrl:
@@ -132,6 +132,12 @@ def forward_meet_url(request, mentor_slug, token):
 
     if mentor.status not in ['ACTIVE', 'UNLISTED']:
         return render_message(request, f'This mentor is not active at the moment')
+
+    try:
+        actions.mentor_is_ready(mentor)
+
+    except:
+        return render_message(request, f'This mentor is not ready too')
 
     # if the mentor is not the user, then we assume is the mentee
     if mentor.user.id != token.user.id:

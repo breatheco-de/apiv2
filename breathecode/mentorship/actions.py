@@ -57,10 +57,10 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
     if len(pending_sessions) > 0:
         return MentorshipSession.objects.filter(id__in=pending_sessions)
 
-    # if force_create == True we will try getting from the available unnused sessions
+    # if force_create == True we will try getting from the available unused sessions
     # if I'm here its because there was no previous pending sessions so we will create one
 
-    # default duration can be overriden by service
+    # default duration can be overridden by service
     duration = timedelta(seconds=3600)
     if mentor.service.duration is not None:
         duration = mentor.service.duration

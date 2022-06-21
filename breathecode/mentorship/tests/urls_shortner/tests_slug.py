@@ -123,7 +123,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [])
 
     """
     🔽🔽🔽 GET without MentorProfile
