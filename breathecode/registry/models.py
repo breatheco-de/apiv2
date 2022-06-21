@@ -242,11 +242,12 @@ class Asset(models.Model):
     def get_readme(self, parse=None, raw=False):
 
         if self.readme is None or self.readme == '':
-            AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
-                          path=self.slug,
-                          asset_type=self.asset_type,
-                          asset=self,
-                          status_text='Readme file was not found').save()
+            if self.asset_type != 'QUIZ':
+                AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
+                              path=self.slug,
+                              asset_type=self.asset_type,
+                              asset=self,
+                              status_text='Readme file was not found').save()
             self.set_readme(
                 get_template('empty.md').render({
                     'title': self.title,

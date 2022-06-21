@@ -59,3 +59,53 @@ class UserProxy(User):
 class CohortProxy(Cohort):
     class Meta:
         proxy = True
+
+
+PRIVATE = 'PRIVATE'
+UNLISTED = 'UNLISTED'
+PUBLIC = 'PUBLIC'
+VISIBILITY_STATUS = (
+    (PRIVATE, 'Private'),
+    (UNLISTED, 'Unlisted'),
+    (PUBLIC, 'Public'),
+)
+
+
+class FinalProject(models.Model):
+    repo_owner = models.ForeignKey(User,
+                                   on_delete=models.SET_NULL,
+                                   blank=True,
+                                   null=True,
+                                   related_name='projects_owned')
+    name = models.CharField(max_length=150)
+    one_line_desc = models.CharField(max_length=150)
+    description = models.TextField()
+
+    members = models.ManyToManyField(User, related_name='final_projects')
+
+    project_status = models.CharField(max_length=15,
+                                      choices=TASK_STATUS,
+                                      default=PENDING,
+                                      help_text='Done projects will be reviewed for publication')
+    revision_status = models.CharField(
+        max_length=15,
+        choices=REVISION_STATUS,
+        default=PENDING,
+        help_text='Only approved projects will display on the feature projects list')
+    revision_message = models.TextField(null=True, blank=True, default=None)
+
+    visibility_status = models.CharField(max_length=15,
+                                         choices=VISIBILITY_STATUS,
+                                         default=PRIVATE,
+                                         help_text='Public project will be visible to other users')
+
+    repo_url = models.URLField(blank=True, null=True, default=None)
+    public_url = models.URLField(blank=True, null=True, default=None)
+    logo_url = models.URLField(blank=True, null=True, default=None)
+    slides_url = models.URLField(blank=True, null=True, default=None)
+    video_demo_url = models.URLField(blank=True, null=True, default=None)
+
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)

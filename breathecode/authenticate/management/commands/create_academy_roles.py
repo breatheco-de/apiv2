@@ -426,6 +426,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_certificate',
             'crud_shortlink',
             'read_mentor',
+            'crud_mentor',
             'read_mentorship_service',
             'crud_mentorship_service',
             'read_mentorship_session',
