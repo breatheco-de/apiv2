@@ -198,8 +198,15 @@ class PostFinalProjectSerializer(serializers.ModelSerializer):
                 and data['revision_status'] == 'APPROVED'):
             raise ValidationException('Only projects that are DONE should be approved')
 
-        if 'cohort' not in data:
+        if 'cohort' not in data or data['cohort'] is None:
             raise ValidationException('Missing cohort id for this project')
+        else:
+            total_students = CohortUser.objects.filter(user__id__in=[m.id for m in data['members']],
+                                                       cohort__id=data['cohort'].id,
+                                                       role='STUDENT').count()
+            if 'members' in data and len(data['members']) != total_students:
+                raise ValidationException(
+                    f'All members of this project must belong to the cohort {data["cohort"].name}')
 
         if 'repo_url' not in data:
             raise ValidationException('Missing repository URL')
@@ -242,6 +249,14 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
                 if field_name in data and data[field_name] != getattr(self.instance, field_name):
                     raise ValidationException(f'Only the project members can modify its {field_name}',
                                               slug='put-project-property-from-none-members')
+
+        if 'members' in data:
+            total_students = CohortUser.objects.filter(user__id__in=[m.id for m in data['members']],
+                                                       cohort__id=data['cohort'].id,
+                                                       role='STUDENT').count()
+            if len(data['members']) != total_students:
+                raise ValidationException(
+                    f'All members of this project must belong to the cohort {data["cohort"].name}')
 
         # the teacher shouldn't be allowed to approve a project that isn't done
         if ('project_status' in data and 'revision_status' in data and data['project_status'] == 'PENDING'
