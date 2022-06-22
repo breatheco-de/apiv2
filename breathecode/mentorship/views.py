@@ -411,7 +411,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
     # """
     # List all snippets, or create a new snippet.
     # """
-    @capable_of('crud_mentor')
+    @capable_of('crud_mentorship_mentor')
     def post(self, request, academy_id=None):
 
         utc_now = timezone.now()
@@ -432,7 +432,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('crud_mentor')
+    @capable_of('crud_mentorship_mentor')
     def put(self, request, mentor_id=None, academy_id=None):
 
         if mentor_id is None:
