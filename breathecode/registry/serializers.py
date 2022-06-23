@@ -59,11 +59,11 @@ class AssetSerializer(serpy.Serializer):
         return result
 
     def get_technologies(self, obj):
-        _s = map(lambda t: t.slug, obj.technologies.all())
+        _s = list(map(lambda t: t.slug, obj.technologies.all()))
         return _s
 
     def get_seo_keywords(self, obj):
-        _s = map(lambda t: t.slug, obj.seo_keywords.all())
+        _s = list(map(lambda t: t.slug, obj.seo_keywords.all()))
         return _s
 
 

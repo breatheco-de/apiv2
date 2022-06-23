@@ -7,14 +7,16 @@ from django.http import HttpResponse
 from django.core.validators import URLValidator
 from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword
 from .actions import test_syllabus, test_asset
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
+from .caches import AssetCache
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
                           KeywordClusterSerializer)
-from breathecode.utils import ValidationException, capable_of
+from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -218,13 +220,18 @@ def get_config(request, asset_slug):
 
 
 # Create your views here.
-class AssetView(APIView):
+class AssetView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
     permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=AssetCache, sort='-created_at', paginate=True)
 
     def get(self, request, asset_slug=None):
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
 
         if asset_slug is not None:
             asset = Asset.get_by_slug(asset_slug, request)
@@ -232,7 +239,7 @@ class AssetView(APIView):
                 raise ValidationException(f'Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
             serializer = AssetBigSerializer(asset)
-            return Response(serializer.data)
+            return handler.response(serializer.data)
 
         items = Asset.objects.all()
         lookup = {}
@@ -315,13 +322,15 @@ class AssetView(APIView):
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
 
-        items = items.filter(**lookup).order_by('-created_at')
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
 
         if 'big' in self.request.GET:
             serializer = AssetMidSerializer(items, many=True)
         else:
             serializer = AssetSerializer(items, many=True)
-        return Response(serializer.data)
+        print(serializer.data)
+        return handler.response(serializer.data)
 
     @capable_of('crud_asset')
     def post(self, request, academy_id=None):
