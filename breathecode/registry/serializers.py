@@ -6,10 +6,18 @@ from breathecode.utils.validation_exception import ValidationException
 from django.utils import timezone
 
 
+class ProfileSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+    github_username = serpy.Field()
+
+
 class UserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    profile = ProfileSerializer(required=False)
 
 
 class AcademySmallSerializer(serpy.Serializer):
@@ -65,6 +73,17 @@ class AssetSerializer(serpy.Serializer):
     def get_seo_keywords(self, obj):
         _s = list(map(lambda t: t.slug, obj.seo_keywords.all()))
         return _s
+
+
+class AcademyAssetSerializer(AssetSerializer):
+    test_status = serpy.Field()
+    last_test_at = serpy.Field()
+    sync_status = serpy.Field()
+    last_synch_at = serpy.Field()
+    status_text = serpy.Field()
+    published_at = serpy.Field()
+
+    author = UserSerializer(required=False)
 
 
 class AssetMidSerializer(AssetSerializer):
