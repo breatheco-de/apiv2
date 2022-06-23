@@ -14,6 +14,7 @@ urlpatterns = [
     path('asset/<str:asset_slug>.<str:extension>', render_readme),
     path('asset/<str:asset_slug>/github/config', get_config),
     path('academy/asset', AcademyAssetView.as_view()),
+    path('academy/asset/<str:asset_slug>', AcademyAssetView.as_view()),
     path('keyword', get_keywords),
     path('keywordcluster', get_clusters),
     path('category', get_categories),

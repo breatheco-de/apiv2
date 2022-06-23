@@ -9,13 +9,14 @@ from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCl
 from .actions import test_syllabus, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
+from breathecode.authenticate.models import ProfileAcademy
 from .caches import AssetCache
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
-                          KeywordClusterSerializer, AcademyAssetSerializer)
+                          KeywordClusterSerializer, AcademyAssetSerializer, AssetPUTSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
@@ -342,6 +343,11 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
     @capable_of('read_asset')
     def get(self, request, asset_slug=None, academy_id=None):
+
+        member = ProfileAcademy.objects.filter(user=request.user, academy__id=academy_id).first()
+        if member is None:
+            raise ValidationException(f"You don't belong to this academy", status.HTTP_400_BAD_REQUEST)
+
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
@@ -357,13 +363,16 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             return handler.response(serializer.data)
 
         items = Asset.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+
         lookup = {}
 
         if 'author' in self.request.GET:
             param = self.request.GET.get('author')
             lookup['author__id'] = param
 
-        if 'owner' in self.request.GET:
+        if member.role.slug == 'content_writer':
+            items = items.filter(owner__id=request.user.id)
+        elif 'owner' in self.request.GET:
             param = self.request.GET.get('owner')
             lookup['owner__id'] = param
 
@@ -437,6 +446,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             elif param == 'both':
                 lookup.pop('external', None)
 
+        published_before = request.GET.get('published_before', '')
+        if published_before != '':
+            items = items.filter(Q(published_at__lte=published_before) | Q(published_at__isnull=True))
+
         need_translation = self.request.GET.get('need_translation', False)
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
@@ -447,6 +460,27 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         serializer = AcademyAssetSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    @capable_of('crud_asset')
+    def put(self, request, asset_slug=None, academy_id=None):
+        if asset_slug is None:
+            raise ValidationException('Missing asset_slug')
+
+        asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
+        if asset is None:
+            raise NotFound('This asset does not exist for this academy')
+
+        serializer = AssetPUTSerializer(asset,
+                                        data=request.data,
+                                        context={
+                                            'request': request,
+                                            'academy_id': academy_id
+                                        })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = AcademyAssetSerializer(asset, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_asset')
     def post(self, request, academy_id=None):

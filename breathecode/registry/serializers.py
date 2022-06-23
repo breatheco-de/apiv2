@@ -1,5 +1,7 @@
 from .models import Asset, AssetAlias
+from breathecode.authenticate.models import ProfileAcademy
 from rest_framework import serializers
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
 import serpy
 from breathecode.utils.validation_exception import ValidationException
@@ -84,6 +86,7 @@ class AcademyAssetSerializer(AssetSerializer):
     published_at = serpy.Field()
 
     author = UserSerializer(required=False)
+    owner = UserSerializer(required=False)
 
 
 class AssetMidSerializer(AssetSerializer):
@@ -144,4 +147,45 @@ class PostAssetSerializer(serializers.ModelSerializer):
         if alias is not None:
             raise ValidationException('Asset alias already exists with this slug')
 
+        return validated_data
+
+
+class AssetPUTSerializer(serializers.ModelSerializer):
+    url = serializers.CharField(required=False)
+    asset_type = serializers.CharField(required=False)
+
+    # url = serializers.CharField(required=False)
+    # url = serializers.CharField(required=False)
+
+    class Meta:
+        model = Asset
+        exclude = ('technologies', )
+
+    def validate(self, data):
+
+        academy_id = self.context.get('academy_id')
+        session_user = self.context.get('request').user
+        member = ProfileAcademy.objects.filter(user=session_user, academy__id=academy_id).first()
+        if member is None:
+            raise ValidationException(f"You don't belong to the academy {academy_id} owner of this asset",
+                                      status.HTTP_400_BAD_REQUEST)
+
+        if member.role.slug == 'content_writer':
+            for key in data:
+                if key != 'status' and data[key] != getattr(self.instance, key):
+                    raise ValidationException(f'You are only allowed to change the status of this asset',
+                                              status.HTTP_400_BAD_REQUEST)
+            if 'status' in data and data['status'] not in ['DRAFT', 'WRITING', 'UNASSIGNED']:
+                raise ValidationException(f'You can only set the status to draft, writing or unassigned',
+                                          status.HTTP_400_BAD_REQUEST)
+
+            if self.instance.author is None and data['status'] != 'UNASSIGNED':
+                data['author'] = session_user
+            elif self.instance.author.id != session_user.id:
+                raise ValidationException(f'You can only update card assigned to yourself',
+                                          status.HTTP_400_BAD_REQUEST)
+            elif data['status'] == 'UNASSIGNED':
+                data['author'] = None
+
+        validated_data = super().validate(data)
         return validated_data

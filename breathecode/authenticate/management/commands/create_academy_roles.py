@@ -346,6 +346,7 @@ ROLES = [
         'slug': 'content_writer',
         'name': 'Content Writer (Base)',
         'caps': [
+            'read_member',
             'read_media',
             'read_my_academy',
             'read_asset',
