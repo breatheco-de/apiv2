@@ -184,8 +184,14 @@ class AssetPUTSerializer(serializers.ModelSerializer):
             elif self.instance.author.id != session_user.id:
                 raise ValidationException(f'You can only update card assigned to yourself',
                                           status.HTTP_400_BAD_REQUEST)
-            elif data['status'] == 'UNASSIGNED':
-                data['author'] = None
+
+        if data['status'] == 'UNASSIGNED':
+            data['author'] = None
+
+        if data['status'] == 'PUBLISHED':
+            if self.instance.test_status != 'Ok':
+                raise ValidationException(f'This asset has to pass tests successfully before publishing',
+                                          status.HTTP_400_BAD_REQUEST)
 
         validated_data = super().validate(data)
         return validated_data
