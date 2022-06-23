@@ -193,13 +193,60 @@ class AssetForm(forms.ModelForm):
             'slug')  # or something else
 
 
+class WithDescription(admin.SimpleListFilter):
+
+    title = 'With description'
+
+    parameter_name = 'has_description'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Has description'),
+            ('no', 'No description'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(description__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(description__isnull=True)
+
+
+class WithKeywordFilter(admin.SimpleListFilter):
+
+    title = 'With Keyword'
+
+    parameter_name = 'has_keyword'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Has keyword'),
+            ('no', 'No keyword'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(seo_keywords__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(seo_keywords__isnull=True)
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
     form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('main', 'current_status', 'alias', 'techs', 'url_path')
-    list_filter = ['asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter]
+    list_filter = [
+        'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter,
+        WithKeywordFilter, WithDescription
+    ]
     raw_id_fields = ['author', 'owner']
     actions = [
         test_asset_integrity,
@@ -397,12 +444,34 @@ class AssetCategoryAdmin(admin.ModelAdmin):
     list_filter = ['academy']
 
 
+class KeywordAssignedFilter(admin.SimpleListFilter):
+
+    title = 'With Article'
+
+    parameter_name = 'has_article'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Has article'),
+            ('no', 'No article'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(asset__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(asset__isnull=True)
+
+
 @admin.register(AssetKeyword)
 class AssetKeywordAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'title']
     list_display = ('slug', 'title', 'cluster', 'academy')
     raw_id_fields = ['academy']
-    list_filter = ['academy']
+    list_filter = ['academy', KeywordAssignedFilter]
 
 
 @admin.register(KeywordCluster)

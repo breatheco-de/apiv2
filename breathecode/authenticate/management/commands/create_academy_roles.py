@@ -228,6 +228,10 @@ CAPABILITIES = [
         'description': 'Get all mentorship mentors from one academy'
     },
     {
+        'slug': 'crud_mentorship_mentor',
+        'description': 'Create, delete or update all mentorship mentors from one academy'
+    },
+    {
         'slug': 'read_mentorship_session',
         'description': 'Get all session from one academy'
     },
@@ -250,14 +254,6 @@ CAPABILITIES = [
     {
         'slug': 'read_mentorship_bill',
         'description': 'Read all mentroship bills from one academy'
-    },
-    {
-        'slug': 'read_mentor',
-        'description': 'Get update academy mentors'
-    },
-    {
-        'slug': 'crud_mentor',
-        'description': 'Update, create and delete academy mentors'
     },
     {
         'slug': 'crud_asset',
@@ -425,8 +421,8 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_certificate',
             'crud_certificate',
             'crud_shortlink',
-            'read_mentor',
-            'crud_mentor',
+            'read_mentorship_mentor',
+            'crud_mentorship_mentor',
             'read_mentorship_service',
             'crud_mentorship_service',
             'read_mentorship_session',
@@ -517,9 +513,9 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_assignment_sensitive_details',
             'crud_shortlink',
             'invite_resend',
-            'crud_mentor',
             'crud_invite',
-            'read_mentor',
+            'crud_mentorship_mentor',
+            'read_mentorship_mentor',
             'read_mentorship_service',
             'crud_mentorship_service',
             'read_mentorship_session',
