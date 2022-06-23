@@ -259,7 +259,8 @@ class AssetAdmin(admin.ModelAdmin):
         get_author_grom_github_usernames,
         generate_spanish_translation,
         remove_dot_from_slug,
-    ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['us', 'es'], name='lang')
+    ] + change_field(['DRAFT', 'UNASSIGNED', 'PUBLISHED'], name='status') + change_field(['us', 'es'],
+                                                                                         name='lang')
 
     def get_form(self, request, obj=None, **kwargs):
 

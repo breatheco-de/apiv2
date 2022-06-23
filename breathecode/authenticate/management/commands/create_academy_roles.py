@@ -256,6 +256,10 @@ CAPABILITIES = [
         'description': 'Read all mentroship bills from one academy'
     },
     {
+        'slug': 'read_asset',
+        'description': 'Read all academy registry assets'
+    },
+    {
         'slug': 'crud_asset',
         'description': 'Update, create and delete registry assets'
     },
@@ -336,6 +340,16 @@ ROLES = [
             'read_shortlink',
             'read_mentorship_service',
             'read_mentorship_mentor',
+        ],
+    },
+    {
+        'slug': 'content_writer',
+        'name': 'Content Writer (Base)',
+        'caps': [
+            'read_media',
+            'read_my_academy',
+            'read_asset',
+            'crud_asset',
         ],
     },
     {
@@ -443,9 +457,12 @@ def extend_roles(roles: list[RoleType]) -> None:
         ]
     })
     roles.append({
-        'slug': 'syllabus_coordinator',
-        'name': 'Syllabus Coordinator',
-        'caps': extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
+        'slug':
+        'syllabus_coordinator',
+        'name':
+        'Syllabus Coordinator',
+        'caps':
+        extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset', 'read_asset']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
@@ -460,7 +477,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_all_cohort', 'crud_media'
+            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset'
         ]
     })
     roles.append({
