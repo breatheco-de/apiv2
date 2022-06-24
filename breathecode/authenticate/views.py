@@ -23,9 +23,12 @@ from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import datetime
+from django.db.models.functions import Now
 
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
+from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils import response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from .authentication import ExpiringTokenAuthentication
@@ -540,6 +543,8 @@ class StudentView(APIView, GenerateLookupsMixin):
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
+        force = request.GET.get('force', 'false')
+        not_recent = []
 
         if lookups and user_id_or_email:
             raise ValidationException(
@@ -550,11 +555,25 @@ class StudentView(APIView, GenerateLookupsMixin):
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
+            if force != 'true':
+                responses = []
+                not_recent = items.filter(created_at__lt=Now() - timedelta(minutes=30))
+                responses.append(
+                    MultiStatusResponse('Only recently created students can be deleted',
+                                        code=400,
+                                        slug='non-recently-created',
+                                        queryset=not_recent))
+                items = items.filter(created_at__gt=Now() - timedelta(minutes=30))
+                if items:
+                    responses.append(MultiStatusResponse(code=204, queryset=items))
 
             for item in items:
 
                 item.delete()
 
+            if not_recent:
+                response = response_207(responses, 'first_name')
+                return response
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or user_id_or_email is None:
