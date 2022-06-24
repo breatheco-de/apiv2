@@ -543,7 +543,7 @@ class StudentView(APIView, GenerateLookupsMixin):
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
-        recent_only = request.GET.get('recent_only', 'False')
+        force = request.GET.get('force', 'false')
         not_recent = []
 
         if lookups and user_id_or_email:
@@ -555,7 +555,7 @@ class StudentView(APIView, GenerateLookupsMixin):
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
-            if recent_only == 'True':
+            if force != 'true':
                 responses = []
                 not_recent = items.filter(created_at__lt=Now() - timedelta(minutes=30))
                 responses.append(
@@ -564,14 +564,15 @@ class StudentView(APIView, GenerateLookupsMixin):
                                         slug='non-recently-created',
                                         queryset=not_recent))
                 items = items.filter(created_at__gt=Now() - timedelta(minutes=30))
-                responses.append(MultiStatusResponse(code=204, queryset=items))
+                if items:
+                    responses.append(MultiStatusResponse(code=204, queryset=items))
 
             for item in items:
 
                 item.delete()
 
             if not_recent:
-                response = response_207(responses, 'id')
+                response = response_207(responses, 'first_name')
                 return response
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 

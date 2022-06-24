@@ -1,7 +1,7 @@
 import serpy, re, math, requests
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
-from .actions import mentor_is_ready
+from .actions import mentor_is_ready, generate_mentor_bills
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -444,25 +444,9 @@ class SessionSerializer(serializers.ModelSerializer):
         if bill is None:
             return result
 
-        unpaid_sessions = MentorshipSession.objects.filter(bill=instance.bill_id)
         mentor = MentorProfile.objects.filter(id=instance.mentor_id).first()
-        total = {'minutes': 0, 'overtime_minutes': 0}
 
-        for session in unpaid_sessions:
-            extra_minutes = 0
-            if session.accounted_duration > session.mentor.service.duration:
-                extra_minutes = (session.accounted_duration - session.mentor.service.duration).seconds / 60
-
-            total['minutes'] = total['minutes'] + (session.accounted_duration.seconds / 60)
-            total['overtime_minutes'] = total['overtime_minutes'] + extra_minutes
-        total['hours'] = round(total['minutes'] / 60, 2)
-        total['price'] = total['hours'] * mentor.price_per_hour
-
-        bill.total_duration_in_hours = total['hours']
-        bill.total_duration_in_minutes = total['minutes']
-        bill.overtime_minutes = total['overtime_minutes']
-        bill.total_price = total['price']
-        bill.save()
+        generate_mentor_bills(mentor, recalculate_bill=bill)
 
         return result
 
