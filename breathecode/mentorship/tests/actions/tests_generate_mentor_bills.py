@@ -9,9 +9,10 @@ from unittest.mock import MagicMock, patch
 from ..mixins import MentorshipTestCase
 from ...actions import generate_mentor_bills
 
-NOW = timezone.now()
+NOW = timezone.now().replace(year=2022, month=1, day=10)
 
 
+#FIXME: improve this tests
 class GenerateMentorBillsTestCase(MentorshipTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=NOW))
     def test_generate_bills_with_no_previous_bills_no_unpaid_sessions(self):
