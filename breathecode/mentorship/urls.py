@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (ServiceView, MentorView, SessionView, render_html_bill, BillView, ServiceSessionView,
-                    MentorSessionView)
+                    MentorSessionView, UserMeSessionView, UserMeBillView)
 
 app_name = 'mentorship'
 urlpatterns = [
@@ -18,6 +18,8 @@ urlpatterns = [
          name='academy_service_id_session'),
     path('academy/bill', BillView.as_view(), name='academy_bill'),
     path('academy/bill/<int:bill_id>', BillView.as_view(), name='academy_bill_id'),
-    path('academy/mentor/<int:mentor_id>/bill', BillView.as_view(), name='academy_mentor_id_bill'),
     path('academy/bill/<int:id>/html', render_html_bill, name='academy_bill_id_html'),
+    path('academy/mentor/<int:mentor_id>/bill', BillView.as_view(), name='academy_mentor_id_bill'),
+    path('user/me/session', UserMeSessionView.as_view(), name='user_session'),
+    path('user/me/bill', UserMeBillView.as_view(), name='user_bill'),
 ]
