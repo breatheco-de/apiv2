@@ -282,7 +282,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         json = response.json()
         expected = {
-            'detail': "You (user: 1) don't have this capability: crud_mentor for academy 1",
+            'detail': "You (user: 1) don't have this capability: crud_mentorship_mentor for academy 1",
             'status_code': 403,
         }
 
@@ -296,7 +296,10 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
     def test__post__not_found(self):
-        model = self.bc.database.create(user=1, role=1, capability='crud_mentor', profile_academy=1)
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_mentor',
+                                        profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
@@ -318,7 +321,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1,
                                         role=1,
                                         academy=2,
-                                        capability='crud_mentor',
+                                        capability='crud_mentorship_mentor',
                                         mentorship_service=mentorship_service,
                                         profile_academy=1,
                                         mentor_profile=1)
@@ -348,7 +351,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1,
                                         role=1,
                                         academy=1,
-                                        capability='crud_mentor',
+                                        capability='crud_mentorship_mentor',
                                         mentorship_service=1,
                                         profile_academy=1,
                                         mentor_profile=1)
@@ -378,7 +381,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1,
                                         role=1,
                                         academy=1,
-                                        capability='crud_mentor',
+                                        capability='crud_mentorship_mentor',
                                         mentorship_service=1,
                                         profile_academy=1,
                                         mentor_profile=1)
@@ -416,7 +419,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             model = self.bc.database.create(user=1,
                                             role=1,
                                             academy=1,
-                                            capability='crud_mentor',
+                                            capability='crud_mentorship_mentor',
                                             mentorship_service=1,
                                             profile_academy=1,
                                             mentor_profile=mentor_profile)
@@ -463,7 +466,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             model = self.bc.database.create(user=1,
                                             role=1,
                                             academy=1,
-                                            capability='crud_mentor',
+                                            capability='crud_mentorship_mentor',
                                             mentorship_service=1,
                                             profile_academy=1,
                                             mentor_profile=mentor_profile)
@@ -510,7 +513,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             model = self.bc.database.create(user=1,
                                             role=1,
                                             academy=1,
-                                            capability='crud_mentor',
+                                            capability='crud_mentorship_mentor',
                                             mentorship_service=1,
                                             profile_academy=1,
                                             mentor_profile=mentor_profile)
@@ -561,7 +564,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1,
                                         role=1,
                                         academy=1,
-                                        capability='crud_mentor',
+                                        capability='crud_mentorship_mentor',
                                         mentorship_service=2,
                                         syllabus=2,
                                         profile_academy=1,

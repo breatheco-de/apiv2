@@ -155,3 +155,29 @@ class Check:
             self._parent.fail('The first argument is not a QuerySet')
 
         self._parent.assertEqual([x.pk for x in query], pks)
+
+    def list_with_pks(self, query: Any, pks: list[int]) -> None:
+        """
+        Check if the list have the following primary keys.
+
+        Usage:
+
+        ```py
+        from breathecode.admissions.models import Cohort, Academy
+
+        model = self.bc.database.create(cohort=1)
+
+        collection = [model.cohort]
+
+        # pass because the QuerySet has the primary keys 1
+        self.bc.check.list_with_pks(collection, [1])  # 🟢
+
+        # fail because the QuerySet has the primary keys 1 but the second argument is empty
+        self.bc.check.list_with_pks(collection, [])  # 🔴
+        ```
+        """
+
+        if not isinstance(query, list):
+            self._parent.fail('The first argument is not a list')
+
+        self._parent.assertEqual([x.pk for x in query], pks)

@@ -512,7 +512,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         json = response.json()
         expected = {
-            'detail': "You (user: 1) don't have this capability: crud_mentor for academy 1",
+            'detail': "You (user: 1) don't have this capability: crud_mentorship_mentor for academy 1",
             'status_code': 403,
         }
 
@@ -524,7 +524,10 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__post__without_slug_fields_in_body(self):
-        model = self.bc.database.create(user=1, role=1, capability='crud_mentor', profile_academy=1)
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_mentor',
+                                        profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
@@ -543,7 +546,10 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__post__without_required_fields_in_body(self):
-        model = self.bc.database.create(user=1, role=1, capability='crud_mentor', profile_academy=1)
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_mentor',
+                                        profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
@@ -571,7 +577,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     def test__post__creating_a_element(self):
         model = self.bc.database.create(user=1,
                                         role=1,
-                                        capability='crud_mentor',
+                                        capability='crud_mentorship_mentor',
                                         profile_academy=1,
                                         mentorship_service=1)
 

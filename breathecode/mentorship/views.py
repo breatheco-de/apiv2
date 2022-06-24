@@ -1,12 +1,10 @@
-import os, hashlib, timeago, logging
+import hashlib, timeago, logging
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
 from django.contrib.auth.models import User
-from datetime import timedelta
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
-from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import Token
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -14,12 +12,10 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
-from .actions import close_mentoring_session, extend_session, get_pending_sessions_or_create, render_session, generate_mentor_bills
+from .actions import (close_mentoring_session, extend_session, get_pending_sessions_or_create, render_session,
+                      generate_mentor_bills)
 from breathecode.mentorship import actions
-from rest_framework import serializers
 from breathecode.notify.actions import get_template_content
-from rest_framework.exceptions import ValidationError, NotFound
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (
     GetAcademySmallSerializer,
     GETServiceSmallSerializer,
@@ -31,20 +27,17 @@ from .serializers import (
     ServicePOSTSerializer,
     GETMentorBigSerializer,
     GETServiceBigSerializer,
-    GETSessionBigSerializer,
     GETSessionReportSerializer,
     ServicePUTSerializer,
     BigBillSerializer,
     GETBillSmallSerializer,
     MentorshipBillPUTSerializer,
-    MentorshipBillPUTListSerializer,
     BillSessionSerializer,
 )
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
+from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
 from django.db.models import Q
 
 logger = logging.getLogger(__name__)
@@ -510,6 +503,13 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
             raise ValidationException('This mentor does not exist for this academy',
                                       code=404,
                                       slug='not-found')
+
+        if 'user' in request.data:
+            raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',
+                                      slug='user-read-only')
+
+        if 'token' in request.data:
+            raise ValidationException('Mentor token cannot be updated', slug='token-read-only')
 
         serializer = MentorUpdateSerializer(mentor,
                                             data=request.data,

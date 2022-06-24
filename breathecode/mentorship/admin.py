@@ -2,7 +2,6 @@ import pytz, logging, requests, re
 from django.contrib import admin, messages
 from django import forms
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
-from .actions import generate_mentor_bills, mentor_is_ready
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
