@@ -48,9 +48,11 @@ def build_question(answer):
                                                                            answer.mentor.last_name)
         question['lowest'] = strings[answer.lang]['mentor']['lowest']
         question['highest'] = strings[answer.lang]['mentor']['highest']
-    elif answer.cohort is not None and answer.cohort.syllabus_version:
-        question['title'] = strings[answer.lang]['cohort']['title'].format(
-            answer.cohort.syllabus_version.syllabus.name)
+    elif answer.cohort is not None:
+        title = answer.cohort.syllabus_version.syllabus.name if answer.cohort.syllabus_version \
+            and answer.cohort.syllabus_version.syllabus.name else answer.cohort.name
+
+        question['title'] = strings[answer.lang]['cohort']['title'].format(title)
         question['lowest'] = strings[answer.lang]['cohort']['lowest']
         question['highest'] = strings[answer.lang]['cohort']['highest']
     elif answer.academy is not None:

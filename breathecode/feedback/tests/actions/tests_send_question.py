@@ -326,7 +326,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      slack_team_owner=True,
                                      syllabus_version=True,
                                      syllabus_schedule=True,
-                                     cohort_kwargs=cohort_kwargs)
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus={'name': self.bc.fake})
 
         certificate = model.syllabus.name
         send_question(model['user'])

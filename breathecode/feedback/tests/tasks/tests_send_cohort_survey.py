@@ -7,11 +7,13 @@ from unittest.mock import patch, MagicMock, call
 import logging
 
 from ..mixins import FeedbackTestCase
-from breathecode.feedback.tasks import send_cohort_survey
+from breathecode.feedback.tasks import send_cohort_survey, generate_user_cohort_survey_answers
 import breathecode.feedback.tasks as tasks
+from breathecode.feedback.models import Answer
 from django.utils import timezone
 from datetime import timedelta
 import breathecode.notify.actions as actions
+from breathecode.utils import ValidationException
 
 now = timezone.now()
 
