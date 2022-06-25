@@ -119,7 +119,7 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.notify.actions.send_slack', MagicMock())
-    def test_send_cohort_survey_when_an_email_is_sent(self):
+    def test_send_cohort_survey_when_an_email_is_sent_with_slack_team_and_user(self):
 
         model = self.generate_models(cohort=1,
                                      slack_user=1,
@@ -135,8 +135,21 @@ class SendCohortSurvey(FeedbackTestCase):
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list,
                          [call(model.user, model.survey, status='SENT')])
-
+        print(actions.send_slack.call_args_list)
         token = self.bc.database.get('authenticate.Token', 1, dict=False)
+        print([
+            call('nps_survey',
+                 model.slack_user,
+                 model.slack_team,
+                 data={
+                     'SUBJECT': 'We need your feedback',
+                     'MESSAGE':
+                     'Please take 5 minutes to give us feedback about your experience at the academy so far.',
+                     'TRACKER_URL': 'https://breathecode.herokuapp.com/v1/feedback/survey/1/tracker.png',
+                     'BUTTON': 'Answer the question',
+                     'LINK': f'https://nps.breatheco.de/survey/1?token={token.key}'
+                 })
+        ])
         self.assertEqual(actions.send_slack.call_args_list, [
             call('nps_survey',
                  model.slack_user,
