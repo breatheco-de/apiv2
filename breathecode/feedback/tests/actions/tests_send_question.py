@@ -208,7 +208,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
         model = self.generate_models(user=True,
                                      cohort_user=True,
                                      syllabus_version=True,
-                                     syllabus_schedule=True)
+                                     syllabus_schedule=True,
+                                     syllabus={'name': self.bc.fake.name()})
 
         certificate = model.syllabus.name
         send_question(model['user'])
@@ -268,7 +269,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      academy=True,
                                      syllabus_version=True,
                                      syllabus_schedule=True,
-                                     cohort_kwargs=cohort_kwargs)
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus={'name': self.bc.fake.name()})
 
         certificate = model.syllabus.name
         send_question(model['user'])
@@ -327,7 +329,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      syllabus_version=True,
                                      syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs,
-                                     syllabus={'name': self.bc.fake})
+                                     syllabus={'name': self.bc.fake.name()})
 
         certificate = model.syllabus.name
         send_question(model['user'])
@@ -385,7 +387,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      slack_team_owner=True,
                                      syllabus_version=True,
                                      syllabus_schedule=True,
-                                     cohort_kwargs=cohort_kwargs)
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus={'name': self.bc.fake.name()})
 
         certificate = model.syllabus.name
         send_question(model['user'])
