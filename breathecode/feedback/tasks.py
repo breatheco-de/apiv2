@@ -131,6 +131,10 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
     return _answers
 
 
+def api_url():
+    return os.getenv('API_URL', '')
+
+
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def send_cohort_survey(self, user_id, survey_id):
     logger.debug('Starting send_cohort_survey')

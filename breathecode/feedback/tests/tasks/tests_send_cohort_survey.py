@@ -18,6 +18,13 @@ from breathecode.utils import ValidationException
 now = timezone.now()
 
 
+def apply_get_env(configuration={}):
+    def get_env(key, value=None):
+        return configuration.get(key, value)
+
+    return get_env
+
+
 class SendCohortSurvey(FeedbackTestCase):
     """Test /academy/survey"""
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
@@ -114,6 +121,8 @@ class SendCohortSurvey(FeedbackTestCase):
                 })
         ])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({'API_URL': 'https://breathecode.herokuapp.com'})))
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
