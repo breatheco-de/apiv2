@@ -2,16 +2,14 @@
 Test cases for /academy/:id/member/:id
 """
 from datetime import timedelta
-import os
 import random
 from unittest.mock import MagicMock, patch
-import urllib.parse
 from django.template import loader
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from django.utils import timezone
 
-from breathecode.tests.mocks.requests import apply_requests_post_mock, apply_requests_request_mock
+from breathecode.tests.mocks.requests import apply_requests_request_mock
 from ..mixins import MentorshipTestCase
 from django.core.handlers.wsgi import WSGIRequest
 
@@ -38,7 +36,12 @@ def format_datetime(self, date):
     return self.bc.datetime.to_iso_string(date)
 
 
-def render(message, mentor_profile=None, token=None, fix_logo=False, start_session=False):
+def render(message,
+           mentor_profile=None,
+           token=None,
+           fix_logo=False,
+           start_session=False,
+           append_redirect=False):
     slug = mentor_profile.slug if mentor_profile else 'asd'
     environ = {
         'HTTP_COOKIE': '',
@@ -577,7 +580,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             content = self.bc.format.from_bytes(response.content)
             expected = render(
                 f'Hello {model.user.first_name }, you are about to start a {model.mentorship_service.name} '
-                f'with {user.first_name} {user.last_name}',
+                f'with {user.first_name} {user.last_name}.',
                 model.mentor_profile,
                 model.token,
                 fix_logo=True,
@@ -839,8 +842,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                'name': ROOM_NAME,
                'url': ROOM_URL,
            })]))
-    def test_with_mentor_profile__good_statuses__with_mentor_urls__session_without__passing_session__passing_mentee_does_not_exits__(
-            self):
+    def test_with_mentor_profile__passing_session__passing_mentee__passing_redirect(self):
         cases = [{
             'status': x,
             'online_meeting_url': self.bc.fake.url(),
@@ -873,6 +875,76 @@ class AuthenticateTestSuite(MentorshipTestCase):
             content = self.bc.format.from_bytes(response.content)
             expected = render_session(model.mentorship_session, model.mentor_profile, base.user,
                                       model.mentorship_service, model.academy, base.token)
+
+            # dump error in external files
+            if content != expected:
+                with open('content.html', 'w') as f:
+                    f.write(content)
+
+                with open('expected.html', 'w') as f:
+                    f.write(expected)
+
+            self.assertEqual(content, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+                self.bc.format.to_dict(model.mentor_profile),
+            ])
+
+            # teardown
+            self.bc.database.delete('mentorship.MentorProfile')
+
+    """
+    🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
+    passing session and mentee but mentee does not exist, user without name
+    """
+
+    @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'DAILY_API_URL': URL,
+               'DAILY_API_KEY': API_KEY,
+           })))
+    @patch('requests.request',
+           apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
+               'name': ROOM_NAME,
+               'url': ROOM_URL,
+           })]))
+    def test_with_mentor_profile__without_user_name(self):
+        cases = [{
+            'status': x,
+            'online_meeting_url': self.bc.fake.url(),
+            'booking_url': self.bc.fake.url(),
+        } for x in ['ACTIVE', 'UNLISTED']]
+
+        id = 0
+        for mentor_profile in cases:
+            id += 1
+
+            user = {'first_name': '', 'last_name': ''}
+            base = self.bc.database.create(user=user, token=1)
+
+            mentorship_session = {'mentee_id': None}
+            model = self.bc.database.create(mentor_profile=mentor_profile,
+                                            mentorship_session=mentorship_session,
+                                            user=user)
+
+            model.mentorship_session.mentee = None
+            model.mentorship_session.save()
+
+            querystring = self.bc.format.to_querystring({
+                'token': base.token.key,
+            })
+            url = reverse_lazy('mentorship_shortner:meet_slug',
+                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            response = self.client.get(url)
+
+            content = self.bc.format.from_bytes(response.content)
+            expected = render(
+                f'Hello student, you are about to start a {model.mentorship_service.name} with a mentor.',
+                model.mentor_profile,
+                base.token,
+                fix_logo=True,
+                start_session=True)
 
             # dump error in external files
             if content != expected:

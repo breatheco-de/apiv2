@@ -1,4 +1,5 @@
 import hashlib, timeago, logging
+import re
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
@@ -259,8 +260,18 @@ def forward_meet_url(request, mentor_slug, token):
     if mentee_hit_start is not None or token.user.id == session.mentor.user.id:
         return render_session(request, session, token=token)
 
-    if session.mentor.user.first_name is None or session.mentor.user.first_name == '':
-        session.mentor.user.first_name = 'a mentor.'
+    student_name = session.mentee.first_name or 'student'
+    mentor_name = ''
+
+    if session.mentor.user.first_name:
+        mentor_name = session.mentor.user.first_name
+
+    if session.mentor.user.last_name:
+        mentor_name += ' ' + session.mentor.user.last_name
+
+    mentor_name = re.sub(r'(\S) +(\S)', r'\1 \2', mentor_name).strip()
+    if not mentor_name:
+        mentor_name = 'a mentor'
 
     return render(
         request, 'message.html', {
@@ -273,7 +284,8 @@ def forward_meet_url(request, mentor_slug, token):
             'LINK':
             set_query_parameter('?' + request.GET.urlencode(), 'redirect', 'true'),
             'MESSAGE':
-            f'Hello {session.mentee.first_name }, you are about to start a {session.mentor.service.name} with {session.mentor.user.first_name} {session.mentor.user.last_name}',
+            f'Hello {student_name}, you are about to start a {session.mentor.service.name} '
+            f'with {mentor_name}.',
         })
 
 
