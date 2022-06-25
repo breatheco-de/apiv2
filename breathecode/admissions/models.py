@@ -153,11 +153,21 @@ class Syllabus(models.Model):
         return self.slug if self.slug else 'unknown'
 
 
+PUBLISHED = 'PUBLISHED'
+DRAFT = 'DRAFT'
+VERSION_STATUS = (
+    (PUBLISHED, 'Published'),
+    (DRAFT, 'Draft'),
+)
+
+
 class SyllabusVersion(models.Model):
     json = models.JSONField()
 
     version = models.PositiveSmallIntegerField()
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+    status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED)
+    change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -300,6 +310,9 @@ class CohortUser(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT)
+
+    watching = models.BooleanField(
+        default=False, help_text='You can active students to the watch list and monitor them closely')
 
     finantial_status = models.CharField(max_length=15, choices=FINANTIAL_STATUS, default=None, null=True)
     educational_status = models.CharField(max_length=15, choices=EDU_STATUS, default=None, null=True)

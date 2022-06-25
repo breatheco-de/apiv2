@@ -68,8 +68,6 @@ class GetAssessmentView(APIView):
         if 'lang' in self.request.GET:
             param = self.request.GET.get('lang')
             lookup['lang'] = param
-        else:
-            items = items.filter(original=None)
 
         if 'author' in self.request.GET:
             param = self.request.GET.get('author')

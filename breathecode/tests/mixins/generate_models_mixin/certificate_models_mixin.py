@@ -27,7 +27,7 @@ class CertificateModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'specialty' in models and is_valid(specialty):
+        if not 'specialty' in models and (is_valid(specialty) or is_valid(user_specialty)):
             kargs = {}
 
             if 'syllabus' in models or syllabus:

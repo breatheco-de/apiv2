@@ -61,6 +61,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
@@ -92,6 +93,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 1,
+            'watching': False,
         }])
 
     """
@@ -145,6 +147,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
@@ -176,6 +179,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'TEACHER',
             'user_id': 1,
+            'watching': False,
         }, {
             'cohort_id': 2,
             'educational_status': None,
@@ -183,6 +187,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'id': 2,
             'role': 'TEACHER',
             'user_id': 1,
+            'watching': False,
         }])
 
     """
@@ -210,15 +215,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'role': 'STUDENT',
             'educational_status': None,
             'finantial_status': None,
+            'watching': False,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(),
-                         [{
-                             **self.model_to_dict(model, 'cohort_user'),
-                             'role': 'STUDENT',
-                         }])
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            **self.model_to_dict(model, 'cohort_user'),
+            'role': 'STUDENT',
+            'watching': False,
+        }])
 
     """
     🔽🔽🔽 Put teacher
@@ -271,69 +277,102 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = {'id': 1, 'role': 'TEACHER', 'educational_status': None, 'finantial_status': None}
+        expected = {
+            'id': 1,
+            'role': 'TEACHER',
+            'educational_status': None,
+            'finantial_status': None,
+            'watching': False,
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(),
-                         [{
-                             **self.model_to_dict(model, 'cohort_user'),
-                             'role': 'TEACHER',
-                         }])
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            **self.model_to_dict(model, 'cohort_user'),
+            'role': 'TEACHER',
+            'watching': False,
+        }])
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_staff(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('staff', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('staff',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_teacher(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('teacher', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('teacher',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_syllabus_coordinator(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('syllabus_coordinator', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('syllabus_coordinator',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_homework_reviewer(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('homework_reviewer', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('homework_reviewer',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_growth_manager(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('growth_manager', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('growth_manager',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_culture_and_recruitment(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('culture_and_recruitment',
-                                                                         update=True)
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_country_manager(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('country_manager', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('country_manager',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_community_manager(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('community_manager', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('community_manager',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_career_support(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('career_support', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('career_support',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_assistant(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('assistant', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('assistant',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_admissions_developer(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('admissions_developer', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('admissions_developer',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_admin(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('admin', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('admin',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_academy_token(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_token', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_token',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})
 
     def test_academy_cohort_id_user__post__one_teacher__with_role_academy_coordinator(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_coordinator', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_coordinator',
+                                                                         update=True,
+                                                                         additional_data={'watching': False})

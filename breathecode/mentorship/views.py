@@ -8,10 +8,11 @@ from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import Token
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
-from .actions import close_mentoring_session, get_pending_sessions_or_create, render_session
+from .actions import close_mentoring_session, get_pending_sessions_or_create, render_session, generate_mentor_bills
 from rest_framework import serializers
 from breathecode.notify.actions import get_template_content
 from rest_framework.exceptions import ValidationError, NotFound
@@ -33,6 +34,7 @@ from .serializers import (
     BigBillSerializer,
     GETBillSmallSerializer,
     MentorshipBillPUTSerializer,
+    MentorshipBillPUTListSerializer,
     BillSessionSerializer,
 )
 from rest_framework.response import Response
@@ -155,10 +157,15 @@ def forward_meet_url(request, mentor_slug, token):
     if session_id is not None:
         session = sessions.filter(id=session_id).first()
     else:
-        session = sessions.filter(mentee=mentee).first()
+        session = sessions.filter(Q(mentee=mentee) | Q(mentee__isnull=True)).first()
+        # if the session.mentee is None it means the mentor had some pending unstarted session
+        # if the current user is a mentee, we are going to assign that meeting to it
+        if session.mentee is None and mentee is not None:
+            session.mentee = mentee
 
     if session is None:
-        return render_message(request, 'Impossible to create or retrive mentoring session')
+        return render_message(
+            request, f'Impossible to create or retrieve mentoring session with {mentor.user.first_name}')
 
     if session.mentee is None:
         if mentee_id is not None and mentee_id != 'undefined':
@@ -201,7 +208,7 @@ def forward_meet_url(request, mentor_slug, token):
         if (now - session.ends_at).total_seconds() > (service.duration.seconds / 2):
             return HttpResponseRedirect(
                 redirect_to=
-                f'/mentor/session/{str(session.id)}?token={token.key}&message=Your have a session that expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
+                f'/mentor/session/{str(session.id)}?token={token.key}&message=You have a session that expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
             )
 
         if ((session.mentor.user.id == token.user.id and service.allow_mentors_to_extend)
@@ -305,7 +312,7 @@ def end_mentoring_session(request, session_id, token):
                 request, 'close_session.html', {
                     'token': token.key,
                     'message':
-                    'This session expired without assigned mentee, it probably means the mentee never came. It was marked as failed.',
+                    'Previous session expired without assigned mentee, it probably means the mentee never came. It was marked as failed. Try the mentor meeting URL again.',
                     'mentor': GETMentorBigSerializer(session.mentor, many=False).data,
                     'SUBJECT': 'Close Mentoring Session',
                     'sessions': GETSessionReportSerializer(pending_sessions, many=True).data,
@@ -404,7 +411,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
     # """
     # List all snippets, or create a new snippet.
     # """
-    @capable_of('crud_mentor')
+    @capable_of('crud_mentorship_mentor')
     def post(self, request, academy_id=None):
 
         utc_now = timezone.now()
@@ -425,7 +432,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('crud_mentor')
+    @capable_of('crud_mentorship_mentor')
     def put(self, request, mentor_id=None, academy_id=None):
 
         if mentor_id is None:
@@ -466,8 +473,12 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
             lookup['service__slug'] = param
 
         if 'status' in self.request.GET:
-            param = self.request.GET.get('status')
-            lookup['status'] = param
+            param = self.request.GET.get('status', 'ACTIVE')
+            lookup['status__in'] = [s.strip().upper() for s in param.split(',')]
+
+        if 'syllabus' in self.request.GET:
+            param = self.request.GET.get('syllabus')
+            lookup['syllabus__slug'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
 
@@ -545,6 +556,28 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('read_mentorship_session')
+    def put(self, request, academy_id=None, session_id=None):
+        session = MentorshipSession.objects.filter(id=session_id,
+                                                   mentor__service__academy__id=academy_id).first()
+        if session is None:
+            raise ValidationException('This session does not exist on this academy', code=404)
+
+        data = {}
+        for key in request.data.keys():
+            data[key] = request.data.get(key)
+
+        serializer = SessionSerializer(session,
+                                       data=data,
+                                       context={
+                                           'request': request,
+                                           'academy_id': academy_id
+                                       })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ServiceSessionView(APIView, HeaderLimitOffsetPagination):
@@ -646,7 +679,7 @@ class MentorSessionView(APIView, HeaderLimitOffsetPagination):
 
 
 class BillView(APIView, HeaderLimitOffsetPagination):
-    @capable_of('read_mentorship_bills')
+    @capable_of('read_mentorship_bill')
     def get(self, request, bill_id=None, academy_id=None):
 
         if bill_id is not None:
@@ -687,8 +720,54 @@ class BillView(APIView, HeaderLimitOffsetPagination):
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @capable_of('crud_mentorship_bills')
+    @capable_of('read_mentorship_bill')
     def put(self, request, bill_id=None, academy_id=None):
+        many = isinstance(request.data, list)
+        if many:
+            bill = []
+            for obj in request.data:
+                elem = MentorshipBill.objects.filter(id=obj['id']).first()
+                if elem is None:
+                    raise ValidationException(f'Bill {obj["id"]} not found', 404)
+                bill.append(elem)
+
+        else:
+            if bill_id is None:
+                raise ValidationException('Missing bill ID on the URL', 404)
+
+            bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
+            if bill is None:
+                raise ValidationException('This bill does not exist for this academy', 404)
+
+        serializer = MentorshipBillPUTSerializer(bill,
+                                                 data=request.data,
+                                                 many=many,
+                                                 context={
+                                                     'request': request,
+                                                     'academy_id': academy_id
+                                                 })
+        if serializer.is_valid():
+            mentor = serializer.save()
+            _serializer = GETBillSmallSerializer(bill, many=many)
+            return Response(_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('read_mentorship_bill')
+    def post(self, request, academy_id=None, mentor_id=None):
+
+        if mentor_id is None:
+            raise ValidationException('Missing mentor ID on the URL', 404)
+
+        mentor = MentorProfile.objects.filter(id=mentor_id, service__academy__id=academy_id).first()
+        if mentor is None:
+            raise ValidationException('This mentor does not exist for this academy', 404)
+
+        bills = generate_mentor_bills(mentor)
+        serializer = GETBillSmallSerializer(bills, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('read_mentorship_bill')
+    def delete(self, request, bill_id=None, academy_id=None):
 
         if bill_id is None:
             raise ValidationException('Missing bill ID on the URL', 404)
@@ -697,14 +776,96 @@ class BillView(APIView, HeaderLimitOffsetPagination):
         if bill is None:
             raise ValidationException('This bill does not exist for this academy', 404)
 
-        serializer = MentorshipBillPUTSerializer(bill,
-                                                 data=request.data,
-                                                 context={
-                                                     'request': request,
-                                                     'academy_id': academy_id
-                                                 })
-        if serializer.is_valid():
-            mentor = serializer.save()
-            _serializer = GETBillSmallSerializer(bill)
-            return Response(_serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if bill.status == 'PAID':
+            raise ValidationException('Paid bills cannot be deleted', slug='paid-bill')
+
+        bill.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @has_permission('get_my_mentoring_sessions')
+    def get(self, request):
+
+        items = MentorshipSession.objects.filter(mentor__user__id=request.user.id)
+        lookup = {}
+
+        _status = request.GET.get('status', '')
+        if _status != '':
+            _status = [s.strip().upper() for s in _status.split(',')]
+            _status = list(filter(lambda s: s != '', _status))
+            items = items.filter(status__in=_status)
+
+        billed = request.GET.get('billed', '')
+        if billed == 'true':
+            items = items.filter(bill__isnull=False)
+        elif billed == 'false':
+            items = items.filter(bill__isnull=True)
+
+        started_after = request.GET.get('started_after', '')
+        if started_after != '':
+            items = items.filter(Q(started_at__gte=started_after) | Q(started_at__isnull=True))
+
+        ended_before = request.GET.get('ended_before', '')
+        if ended_before != '':
+            items = items.filter(Q(ended_at__lte=ended_before) | Q(ended_at__isnull=True))
+
+        mentee = request.GET.get('mentee', None)
+        if mentee is not None:
+            lookup['mentee__id__in'] = mentee.split(',')
+
+        items = items.filter(**lookup).order_by('-created_at')
+
+        page = self.paginate_queryset(items, request)
+        serializer = BillSessionSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UserMeBillView(APIView, HeaderLimitOffsetPagination):
+    @has_permission('get_my_mentoring_sessions')
+    def get(self, request, bill_id=None):
+
+        if bill_id is not None:
+            bill = MentorshipBill.objects.filter(id=bill_id, mentor__user__id=request.user.id).first()
+            if bill is None:
+                raise ValidationException('This mentorhip bill does not exist', code=404)
+
+            serializer = BigBillSerializer(bill)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        items = MentorshipBill.objects.filter(mentor__user__id=request.user.id)
+        lookup = {}
+
+        _status = request.GET.get('status', '')
+        if _status != '':
+            _status = [s.strip().upper() for s in _status.split(',')]
+            _status = list(filter(lambda s: s != '', _status))
+            items = items.filter(status__in=_status)
+
+        after = request.GET.get('after', '')
+        if after != '':
+            items = items.filter(created_at__gte=after)
+
+        before = request.GET.get('before', '')
+        if before != '':
+            items = items.filter(created_at__lte=before)
+
+        mentee = request.GET.get('mentee', None)
+        if mentee is not None:
+            lookup['mentee__id__in'] = mentor.split(',')
+
+        items = items.filter(**lookup).order_by('-created_at')
+        page = self.paginate_queryset(items, request)
+        serializer = GETBillSmallSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)

@@ -2,6 +2,7 @@ from breathecode.admissions.caches import CohortCache
 import logging
 import pytz
 from django.db.models import Q
+from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
@@ -32,6 +33,7 @@ from breathecode.utils import (localize_query, capable_of, ValidationException, 
                                GenerateLookupsMixin)
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
 from breathecode.utils import DatetimeInteger
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 logger = logging.getLogger(__name__)
 
@@ -317,9 +319,32 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             if cohorts is not None:
                 items = items.filter(cohort__slug__in=cohorts.split(','))
 
+            watching = request.GET.get('watching', None)
+            if watching is not None:
+                items = items.filter(watching=watching.lower() == 'true')
+
+            if 'cohort' in self.request.GET:
+                param = self.request.GET.get('cohort')
+                items = items.filter(cohort__name__icontains=param)
+
+            like = request.GET.get('like', None)
+            if like is not None:
+                items = query_like_by_full_name(like=like, items=items, prefix='user__')
+
+            syllabus = request.GET.get('syllabus', None)
+            if syllabus is not None:
+                items = items.filter(cohort__syllabus_version__syllabus__slug__in=syllabus.split(','))
+
+            distinct = request.GET.get('distinct', None)
+            if distinct is not None and distinct == 'true':
+                ids = items.distinct('user__id').order_by('user__id').values_list('id', flat=True)
+                items = items.filter(id__in=ids)
+
             users = request.GET.get('users', None)
             if users is not None:
                 items = items.filter(user__id__in=users.split(','))
+
+            items = items.order_by(request.GET.get('sort', '-role'))
 
         except Exception as e:
             raise ValidationException(str(e), 400)
@@ -682,29 +707,22 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class CohortMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class CohortMeView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    cache = CohortCache()
+
+    extensions = APIViewExtensions(cache=CohortCache,
+                                   cache_per_user=True,
+                                   sort='-kickoff_date',
+                                   paginate=True)
 
     @capable_of('read_single_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
-        upcoming = request.GET.get('upcoming', None)
-        academy = request.GET.get('academy', None)
-        stage = request.GET.get('stage', None)
-        like = request.GET.get('like', None)
-        cache_kwargs = {
-            'resource': cohort_id,
-            'upcoming': upcoming,
-            'stage': stage,
-            'academy': academy,
-            'like': like,
-            **self.pagination_params(request),
-        }
+        handler = self.extensions(request)
 
-        cache = self.cache.get(**cache_kwargs)
-        if cache:
+        cache = handler.cache.get()
+        if cache is not None:
             return Response(cache, status=status.HTTP_200_OK)
 
         if cohort_id is not None:
@@ -726,63 +744,40 @@ class CohortMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         cohorts_of_student = CohortUser.objects.filter(user=request.user).values_list('cohort__id', flat=True)
         items = Cohort.objects.filter(academy__id=academy_id, id__in=cohorts_of_student)
 
+        upcoming = request.GET.get('upcoming', None)
         if upcoming == 'true':
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
 
+        stage = request.GET.get('stage', None)
         if stage is not None:
             items = items.filter(stage__in=stage.upper().split(','))
         else:
             items = items.exclude(stage='DELETED')
 
+        like = request.GET.get('like', None)
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
-        sort = request.GET.get('sort', None)
-        if sort is None or sort == '':
-            sort = '-kickoff_date'
+        items = handler.queryset(items)
+        serializer = GetCohortSerializer(items, many=True)
 
-        items = items.order_by(sort)
-
-        page = self.paginate_queryset(items, request)
-        serializer = GetCohortSerializer(page, many=True)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data, cache=self.cache, cache_kwargs=cache_kwargs)
-        else:
-            self.cache.set(serializer.data, **cache_kwargs)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
 
-class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademyCohortView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
     permission_classes = [IsAuthenticated]
-    cache = CohortCache()
+    extensions = APIViewExtensions(cache=CohortCache, sort='-kickoff_date', paginate=True)
 
     @capable_of('read_all_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
-        upcoming = request.GET.get('upcoming', None)
-        academy = request.GET.get('academy', None)
-        stage = request.GET.get('stage', None)
-        location = request.GET.get('location', None)
-        like = request.GET.get('like', None)
-        sort = request.GET.get('sort', None)
-        cache_kwargs = {
-            'resource': cohort_id,
-            'academy_id': academy_id,
-            'upcoming': upcoming,
-            'stage': stage,
-            'academy': academy,
-            'location': location,
-            'like': like,
-            'sort': sort,
-            **self.pagination_params(request),
-        }
+        handler = self.extensions(request)
 
-        cache = self.cache.get(**cache_kwargs)
-        if cache:
+        cache = handler.cache.get()
+        if cache is not None:
             return Response(cache, status=status.HTTP_200_OK)
 
         if cohort_id is not None:
@@ -796,41 +791,37 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
             serializer = GetCohortSerializer(item, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return handler.response(serializer.data)
 
         items = Cohort.objects.filter(academy__id=academy_id)
 
+        upcoming = request.GET.get('upcoming', None)
         if upcoming == 'true':
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
 
+        academy = request.GET.get('academy', None)
         if academy is not None:
             items = items.filter(academy__slug__in=academy.split(','))
 
+        location = request.GET.get('location', None)
         if location is not None:
             items = items.filter(academy__slug__in=location.split(','))
 
+        stage = request.GET.get('stage', None)
         if stage is not None:
             items = items.filter(stage__in=stage.upper().split(','))
         else:
             items = items.exclude(stage='DELETED')
 
+        like = request.GET.get('like', None)
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
-        if sort is None or sort == '':
-            sort = '-kickoff_date'
+        items = handler.queryset(items)
+        serializer = GetCohortSerializer(items, many=True)
 
-        items = items.order_by(sort)
-
-        page = self.paginate_queryset(items, request)
-        serializer = GetCohortSerializer(page, many=True)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data, cache=self.cache, cache_kwargs=cache_kwargs)
-        else:
-            self.cache.set(serializer.data, **cache_kwargs)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
     @capable_of('crud_cohort')
     def post(self, request, academy_id=None):
@@ -868,7 +859,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         serializer = CohortSerializer(data=data, context={'request': request, 'academy': academy})
         if serializer.is_valid():
-            self.cache.clear()
+
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -908,7 +899,6 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                                              'academy': academy,
                                          })
         if serializer.is_valid():
-            self.cache.clear()
             serializer.save()
 
             serializer = GetCohortSerializer(cohort, many=False)
@@ -939,7 +929,6 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 item.stage = DELETED
                 item.save()
 
-            self.cache.clear()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if cohort_id is None:
@@ -961,12 +950,15 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         cohort.stage = DELETED
         cohort.save()
 
-        self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class SyllabusScheduleView(APIView, HeaderLimitOffsetPagination):
+class SyllabusScheduleView(APIView):
+    extensions = APIViewExtensions(paginate=True)
+
     def get(self, request):
+        handler = self.extensions(request)
+
         items = SyllabusSchedule.objects.filter(academy__isnull=False)
 
         syllabus_id = request.GET.get('syllabus_id')
@@ -985,13 +977,10 @@ class SyllabusScheduleView(APIView, HeaderLimitOffsetPagination):
         if academy_slug:
             items = items.filter(academy__slug__in=academy_slug.split(','))
 
-        page = self.paginate_queryset(items, request)
-        serializer = GetSyllabusScheduleSerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = GetSyllabusScheduleSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
 
 class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -1089,12 +1078,17 @@ def get_schedule(request, schedule_id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class SyllabusView(APIView, HeaderLimitOffsetPagination):
+class SyllabusView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
+    extensions = APIViewExtensions(paginate=True)
+
     @capable_of('read_syllabus')
     def get(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
+        handler = self.extensions(request)
+
         if syllabus_id:
             syllabus = Syllabus.objects.filter(
                 Q(academy_owner__id=academy_id) | Q(private=False),
@@ -1122,13 +1116,10 @@ class SyllabusView(APIView, HeaderLimitOffsetPagination):
         items = Syllabus.objects.filter(Q(academy_owner__id=academy_id)
                                         | Q(private=False)).exclude(academy_owner__isnull=True)
 
-        page = self.paginate_queryset(items, request)
-        serializer = GetSyllabusSerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = GetSyllabusSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
     @capable_of('crud_syllabus')
     def post(self, request, academy_id=None):
@@ -1229,7 +1220,7 @@ class SyllabusVersionView(APIView):
                 syllabus_version = SyllabusVersion.objects.filter(
                     Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
                     Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
-                ).order_by('-version').first()
+                ).filter(status='PUBLISHED').order_by('-version').first()
 
             if syllabus_version is None and version is not None and version != 'latest':
                 syllabus_version = SyllabusVersion.objects.filter(
@@ -1239,7 +1230,7 @@ class SyllabusVersionView(APIView):
                 ).first()
 
             if syllabus_version is None:
-                raise ValidationException(f'It syllabus version {version} not found',
+                raise ValidationException(f'Syllabus version "{version}" not found or is a draft',
                                           code=404,
                                           slug='syllabus-version-not-found')
 
@@ -1250,6 +1241,10 @@ class SyllabusVersionView(APIView):
             Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
             Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
         ).order_by('version')
+
+        _status = request.GET.get('status', None)
+        if _status is not None:
+            syllabus_version = syllabus_version.filter(status__in=_status.upper().split(','))
 
         serializer = GetSyllabusVersionSerializer(syllabus_version, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

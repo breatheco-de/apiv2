@@ -33,7 +33,7 @@ def async_repository_issue_github(self, webhook_id):
         if 'comment' in payload:
             comment = payload['comment']
 
-        issue = sync_single_issue(issue=payload['issue'], comment=comment)
+        issue = sync_single_issue(issue=payload['issue'], comment=comment, academy_slug=webhook.academy_slug)
         issue.status = update_status_based_on_github_action(webhook.webhook_action, issue=issue)
         issue.save()
 
@@ -43,7 +43,7 @@ def async_repository_issue_github(self, webhook_id):
         webhook.status = 'DONE'
     except Exception as ex:
         webhook.status = 'ERROR'
-        webhook.status_text = str(ex)
+        webhook.status_text = str(ex)[:255]
         logger.debug(ex)
         status = 'error'
 

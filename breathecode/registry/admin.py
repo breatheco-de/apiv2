@@ -56,8 +56,8 @@ def pull_content_from_github(modeladmin, request, queryset):
     queryset.update(sync_status='PENDING', status_text='Starting to sync...')
     assets = queryset.all()
     for a in assets:
-        #async_pull_from_github.delay(a.slug, request.user.id)
-        pull_from_github(a.slug)  # uncomment for testing purposes
+        async_pull_from_github.delay(a.slug, request.user.id)
+        # pull_from_github(a.slug)  # uncomment for testing purposes
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -193,13 +193,60 @@ class AssetForm(forms.ModelForm):
             'slug')  # or something else
 
 
+class WithDescription(admin.SimpleListFilter):
+
+    title = 'With description'
+
+    parameter_name = 'has_description'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Has description'),
+            ('no', 'No description'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(description__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(description__isnull=True)
+
+
+class WithKeywordFilter(admin.SimpleListFilter):
+
+    title = 'With Keyword'
+
+    parameter_name = 'has_keyword'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Has keyword'),
+            ('no', 'No keyword'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(seo_keywords__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(seo_keywords__isnull=True)
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
     form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('main', 'current_status', 'alias', 'techs', 'url_path')
-    list_filter = ['asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter]
+    list_filter = [
+        'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter,
+        WithKeywordFilter, WithDescription
+    ]
     raw_id_fields = ['author', 'owner']
     actions = [
         test_asset_integrity,
@@ -212,7 +259,15 @@ class AssetAdmin(admin.ModelAdmin):
         get_author_grom_github_usernames,
         generate_spanish_translation,
         remove_dot_from_slug,
-    ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['us', 'es'], name='lang')
+    ] + change_field(['DRAFT', 'UNASSIGNED', 'PUBLISHED'], name='status') + change_field(['us', 'es'],
+                                                                                         name='lang')
+
+    def get_form(self, request, obj=None, **kwargs):
+
+        if obj is not None and obj.readme is not None and 'ipynb' in obj.url and len(obj.readme) > 2000:
+            self.exclude = ('readme', 'html')
+        form = super(AssetAdmin, self).get_form(request, obj, **kwargs)
+        return form
 
     def url_path(self, obj):
         return format_html(f"""
@@ -390,12 +445,34 @@ class AssetCategoryAdmin(admin.ModelAdmin):
     list_filter = ['academy']
 
 
+class KeywordAssignedFilter(admin.SimpleListFilter):
+
+    title = 'With Article'
+
+    parameter_name = 'has_article'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Has article'),
+            ('no', 'No article'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(asset__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(asset__isnull=True)
+
+
 @admin.register(AssetKeyword)
 class AssetKeywordAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'title']
     list_display = ('slug', 'title', 'cluster', 'academy')
     raw_id_fields = ['academy']
-    list_filter = ['academy']
+    list_filter = ['academy', KeywordAssignedFilter]
 
 
 @admin.register(KeywordCluster)

@@ -190,6 +190,67 @@ class AuthenticateTestSuite(AuthTestCase):
         ])
 
     """
+    🔽🔽🔽 GET with UserInvite but this user is already authenticate
+    """
+
+    @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    def test_member_invite_token__with_user_invite__already_as_user(self):
+        user = {'email': 'user@dotdotdotdot.dot'}
+        model = self.bc.database.create(user_invite=user, user=user)
+
+        url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite.token})
+        response = self.client.get(url)
+
+        redirect = os.getenv('API_URL') + '/v1/auth/member/invite'
+        content = self.bc.format.from_bytes(response.content)
+        expected = ''
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertEqual(response.url, redirect)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            self.bc.format.to_dict(model.user_invite),
+        ])
+
+    """
+    🔽🔽🔽 GET with UserInvite and User with another email
+    """
+
+    @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    def test_member_invite_token__with_user_invite__user_with_another_email(self):
+        user = {'email': 'user1@dotdotdotdot.dot'}
+        user_invite = {'email': 'user2@dotdotdotdot.dot'}
+        model = self.bc.database.create(user_invite=user_invite, user=user)
+
+        url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite.token})
+        response = self.client.get(url)
+
+        content = self.bc.format.from_bytes(response.content)
+        expected = render_page_with_user_invite(model)
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            self.bc.format.to_dict(model.user_invite),
+        ])
+
+    """
     🔽🔽🔽 POST bad token, UserInvite without email
     """
 
@@ -216,7 +277,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
@@ -251,7 +312,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
@@ -287,7 +348,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
@@ -328,7 +389,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [])
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
@@ -370,8 +431,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          }])
 
         user_db = [
-            x for x in self.bc.database.list_of('authenticate.User')
-            if x['date_joined'] and x.pop('date_joined')
+            x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')
         ]
         self.assertEqual(user_db, [{
             'email': 'user@dotdotdotdot.dot',
@@ -429,8 +489,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          }])
 
         user_db = [
-            x for x in self.bc.database.list_of('authenticate.User')
-            if x['date_joined'] and x.pop('date_joined')
+            x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')
         ]
         self.assertEqual(user_db, [{
             'email': 'user@dotdotdotdot.dot',
@@ -485,7 +544,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'status': 'ACCEPTED',
                          }])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 
@@ -503,7 +562,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'finantial_status': None,
             'id': 1,
             'role': 'REVIEWER',
-            'user_id': 1
+            'user_id': 1,
+            'watching': False,
         }])
 
     """
@@ -544,7 +604,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'status': 'ACCEPTED',
                          }])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 
@@ -555,6 +615,114 @@ class AuthenticateTestSuite(AuthTestCase):
             'id': 1,
             'role': model.role.slug.upper(),
             'user_id': 1,
+            'watching': False,
+        }])
+
+    """
+    🔽🔽🔽 POST with first name, last name and passwords, UserInvite and User with email and two Cohort
+    with Role
+    """
+
+    @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    def test_member_invite_token__post__with_cohort__with_role__accept_first_invite(self):
+        user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
+        user_invites = [{**user, 'cohort_id': 1}, {**user, 'cohort_id': 2}]
+        model = self.bc.database.create(user=user, user_invite=user_invites, cohort=2, role=1)
+
+        url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite[0].token})
+        data = {
+            'first_name': 'abc',
+            'last_name': 'xyz',
+            'password1': '^3^3uUppppp',
+            'password2': '^3^3uUppppp',
+        }
+        response = self.client.post(url, data)
+
+        content = self.bc.format.from_bytes(response.content)
+        expected = render_page_post_successfully()
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            {
+                **self.bc.format.to_dict(model.user_invite[0]),
+                'status': 'ACCEPTED',
+            },
+            self.bc.format.to_dict(model.user_invite[1]),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
+            self.bc.format.to_dict(model.user),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 1,
+            'role': model.role.slug.upper(),
+            'user_id': 1,
+            'watching': False,
+        }])
+
+    @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    def test_member_invite_token__post__with_cohort__with_role__accept_second_invite(self):
+        user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
+        user_invites = [{**user, 'cohort_id': 1}, {**user, 'cohort_id': 2}]
+        model = self.bc.database.create(user=user, user_invite=user_invites, cohort=2, role=1)
+
+        url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite[1].token})
+        data = {
+            'first_name': 'abc',
+            'last_name': 'xyz',
+            'password1': '^3^3uUppppp',
+            'password2': '^3^3uUppppp',
+        }
+        response = self.client.post(url, data)
+
+        content = self.bc.format.from_bytes(response.content)
+        expected = render_page_post_successfully()
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            self.bc.format.to_dict(model.user_invite[0]),
+            {
+                **self.bc.format.to_dict(model.user_invite[1]),
+                'status': 'ACCEPTED',
+            },
+        ])
+
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
+            self.bc.format.to_dict(model.user),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
+            'cohort_id': 2,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 1,
+            'role': model.role.slug.upper(),
+            'user_id': 1,
+            'watching': False,
         }])
 
     """
@@ -596,7 +764,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'status': 'ACCEPTED',
                          }])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 
@@ -607,6 +775,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'id': 1,
             'role': 'student',
             'user_id': 1,
+            'watching': False,
         }])
 
     """
@@ -651,7 +820,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.User'), [
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model.user),
         ])
 

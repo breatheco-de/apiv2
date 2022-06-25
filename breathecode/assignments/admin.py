@@ -5,7 +5,7 @@ from breathecode.admissions.admin import CohortAdmin
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import Token
 from django.utils.html import format_html
-from .models import Task, UserProxy, CohortProxy
+from .models import Task, UserProxy, CohortProxy, FinalProject
 from .actions import sync_student_tasks, sync_cohort_tasks
 # Register your models here.
 logger = logging.getLogger(__name__)
@@ -101,3 +101,16 @@ class TaskAdmin(admin.ModelAdmin):
         token, created = Token.get_or_create(obj.user, token_type='temporal')
         url = os.getenv('API_URL') + f'/v1/assignment/task/{str(obj.id)}/deliver/{token}'
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>deliver</a>")
+
+
+@admin.register(FinalProject)
+class FinalProjectAdmin(admin.ModelAdmin):
+    list_display = ['name', 'cohort', 'project_status', 'revision_status', 'visibility_status']
+    search_fields = ('name', 'cohort__slug', 'repo_url', 'members__email')
+    list_filter = ['project_status', 'revision_status', 'visibility_status', 'cohort__academy__slug']
+    # actions = [mark_as_delivered, mark_as_approved, mark_as_rejected, mark_as_ignored]
+
+    # def delivery_url(self, obj):
+    #     token, created = Token.get_or_create(obj.user, token_type='temporal')
+    #     url = os.getenv('API_URL') + f'/v1/assignment/task/{str(obj.id)}/deliver/{token}'
+    #     return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>deliver</a>")

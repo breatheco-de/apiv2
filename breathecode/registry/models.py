@@ -100,12 +100,14 @@ DIFFICULTY = (
 )
 
 DRAFT = 'DRAFT'
-UNNASIGNED = 'UNNASIGNED'
-OK = 'OK'
+UNASSIGNED = 'UNASSIGNED'
+WRITING = 'WRITING'
+PUBLISHED = 'PUBLISHED'
 ASSET_STATUS = (
-    (UNNASIGNED, 'Unnasigned'),
+    (UNASSIGNED, 'Unassigned'),
+    (WRITING, 'Writing'),
     (DRAFT, 'Draft'),
-    (OK, 'Ok'),
+    (PUBLISHED, 'Published'),
 )
 
 ASSET_SYNC_STATUS = (
@@ -152,6 +154,8 @@ class Asset(models.Model):
     readme = models.TextField(null=True, blank=True, default=None)
     html = models.TextField(null=True, blank=True, default=None)
 
+    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None)
+
     config = models.JSONField(null=True, blank=True, default=None)
 
     external = models.BooleanField(
@@ -187,6 +191,7 @@ class Asset(models.Model):
                                    null=True,
                                    blank=True,
                                    help_text='Internal state automatically set by the system based on test')
+    published_at = models.DateTimeField(null=True, blank=True, default=None)
     last_synch_at = models.DateTimeField(null=True, blank=True, default=None)
     last_test_at = models.DateTimeField(null=True, blank=True, default=None)
     status_text = models.TextField(null=True,
@@ -240,13 +245,14 @@ class Asset(models.Model):
             super().save(*args, **kwargs)
 
     def get_readme(self, parse=None, raw=False):
-        print('wewewe', type(self.readme), self.readme)
+
         if self.readme is None or self.readme == '':
-            AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
-                          path=self.slug,
-                          asset_type=self.asset_type,
-                          asset=self,
-                          status_text='Readme file was not found').save()
+            if self.asset_type != 'QUIZ':
+                AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
+                              path=self.slug,
+                              asset_type=self.asset_type,
+                              asset=self,
+                              status_text='Readme file was not found').save()
             self.set_readme(
                 get_template('empty.md').render({
                     'title': self.title,

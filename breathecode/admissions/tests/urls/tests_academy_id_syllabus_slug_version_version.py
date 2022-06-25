@@ -130,6 +130,8 @@ class CertificateTestSuite(AdmissionsTestCase):
             'logo': model.syllabus.logo,
             'private': model.syllabus.private,
             'week_hours': model.syllabus.week_hours,
+            'status': model.syllabus_version.status,
+            'change_log_details': model.syllabus_version.change_log_details,
             'main_technologies': None,
         }
 

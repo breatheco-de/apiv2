@@ -147,7 +147,7 @@ def add_event_tags_to_student(self,
     logger.warn('Task add_event_tags_to_student started')
 
     if not user_id and not email:
-        logger.error('Imposible to determine the user email')
+        logger.error('Impossible to determine the user email')
         return
 
     if user_id and email:
@@ -167,7 +167,7 @@ def add_event_tags_to_student(self,
         return
 
     if not event.academy:
-        logger.error(f'Imposible to determine the academy')
+        logger.error(f'Impossible to determine the academy')
         return
 
     academy = event.academy
@@ -180,10 +180,9 @@ def add_event_tags_to_student(self,
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
     tag_slugs = [x for x in event.tags.split(',') if x]  # prevent a tag with the slug ''
     if event.slug:
-        tag_slugs.append(event.slug)
+        tag_slugs.append(f'event-{event.slug}' if not event.slug.startswith('event-') else event.slug)
 
     tags = Tag.objects.filter(slug__in=tag_slugs, ac_academy__id=ac_academy.id)
-
     if not tags:
         logger.warn('Tags not found')
         return
@@ -239,7 +238,7 @@ def add_cohort_slug_as_acp_tag(self, cohort_id: int, academy_id: int) -> None:
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
+def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int, force=False) -> None:
     logger.warn('Task add_event_slug_as_acp_tag started')
 
     if not Academy.objects.filter(id=academy_id).exists():
@@ -267,15 +266,26 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
     else:
         new_tag_slug = f'event-{event.slug}'
 
-    tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
-    if tag:
+    if (tag := Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()) and not force:
         logger.error(f'Tag for event `{event.slug}` already exists')
         return
 
     try:
         data = client.create_tag(new_tag_slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
 
-        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='EVENT', ac_academy=ac_academy, subscribers=0)
+        # retry create the tag in Active Campaign
+        if tag:
+            tag.slug = data['tag']
+            tag.acp_id = data['id']
+            tag.tag_type = 'EVENT'
+            tag.ac_academy = ac_academy
+
+        else:
+            tag = Tag(slug=data['tag'],
+                      acp_id=data['id'],
+                      tag_type='EVENT',
+                      ac_academy=ac_academy,
+                      subscribers=0)
 
         tag.save()
 

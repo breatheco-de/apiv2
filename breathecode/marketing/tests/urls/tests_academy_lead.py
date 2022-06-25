@@ -1,12 +1,15 @@
 """
 Test /academy/lead
 """
+from unittest.mock import MagicMock, call, patch
 from django.utils import timezone
 from datetime import timedelta
 import string
 from random import choice, choices, randint
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import MarketingTestCase
 
 
@@ -514,9 +517,6 @@ class CohortUserTestSuite(MarketingTestCase):
                    str(getattr(model['form_entry'], field)))
             response = self.client.delete(url)
 
-            if response.status_code != 204:
-                print(response.json())
-
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_form_entry_dict(), [])
 
@@ -552,199 +552,8 @@ class CohortUserTestSuite(MarketingTestCase):
                    str(getattr(model2['form_entry'], field)))
             response = self.client.delete(url)
 
-            if response.status_code != 204:
-                print(response.json())
-
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_form_entry_dict(), [])
-
-    """
-    🔽🔽🔽 Check pagination
-    """
-
-    def test_academy_lead__with_ten_datas_with_location_with_comma_just_get_100(self):
-        """Test /cohort without auth"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_lead',
-                                    role='potato')
-
-        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 105)]
-        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at, reverse=True)
-
-        url = reverse_lazy('marketing:academy_lead')
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'country': model['form_entry'].country,
-            'course': model['form_entry'].course,
-            'email': model['form_entry'].email,
-            'first_name': model['form_entry'].first_name,
-            'gclid': None,
-            'id': model['form_entry'].id,
-            'language': model['form_entry'].language,
-            'last_name': model['form_entry'].last_name,
-            'lead_type': model['form_entry'].lead_type,
-            'location': model['form_entry'].location,
-            'storage_status': model['form_entry'].storage_status,
-            'tags': model['form_entry'].tags,
-            'utm_campaign': model['form_entry'].utm_campaign,
-            'utm_medium': model['form_entry'].utm_medium,
-            'utm_source': model['form_entry'].utm_source,
-            'utm_url': model['form_entry'].utm_url,
-            'ac_expected_cohort': model['form_entry'].ac_expected_cohort,
-            'created_at': self.datetime_to_iso(model['form_entry'].created_at),
-            'user': None,
-            'phone': None,
-        } for model in ordened_models][:100]
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])
-
-    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_first_five(self):
-        """Test /cohort without auth"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_lead',
-                                    role='potato')
-
-        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
-        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at, reverse=True)
-
-        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            None,
-            'next':
-            'http://testserver/v1/marketing/academy/lead?limit=5&'
-            f'offset=5',
-            'previous':
-            None,
-            'last':
-            'http://testserver/v1/marketing/academy/lead?limit=5&'
-            f'offset=5',
-            'results': [{
-                'country': model['form_entry'].country,
-                'course': model['form_entry'].course,
-                'email': model['form_entry'].email,
-                'first_name': model['form_entry'].first_name,
-                'gclid': None,
-                'id': model['form_entry'].id,
-                'language': model['form_entry'].language,
-                'last_name': model['form_entry'].last_name,
-                'lead_type': model['form_entry'].lead_type,
-                'location': model['form_entry'].location,
-                'storage_status': model['form_entry'].storage_status,
-                'tags': model['form_entry'].tags,
-                'utm_campaign': model['form_entry'].utm_campaign,
-                'utm_medium': model['form_entry'].utm_medium,
-                'utm_source': model['form_entry'].utm_source,
-                'utm_url': model['form_entry'].utm_url,
-                'ac_expected_cohort': model['form_entry'].ac_expected_cohort,
-                'created_at': self.datetime_to_iso(model['form_entry'].created_at),
-                'user': None,
-                'phone': None,
-            } for model in ordened_models][:5],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])
-
-    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_last_five(self):
-        """Test /cohort without auth"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_lead',
-                                    role='potato')
-
-        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
-        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at, reverse=True)
-
-        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            'http://testserver/v1/marketing/academy/lead?limit=5',
-            'next':
-            None,
-            'previous':
-            'http://testserver/v1/marketing/academy/lead?limit=5',
-            'last':
-            None,
-            'results': [{
-                'country': model['form_entry'].country,
-                'course': model['form_entry'].course,
-                'email': model['form_entry'].email,
-                'first_name': model['form_entry'].first_name,
-                'gclid': None,
-                'id': model['form_entry'].id,
-                'language': model['form_entry'].language,
-                'last_name': model['form_entry'].last_name,
-                'lead_type': model['form_entry'].lead_type,
-                'location': model['form_entry'].location,
-                'storage_status': model['form_entry'].storage_status,
-                'tags': model['form_entry'].tags,
-                'utm_campaign': model['form_entry'].utm_campaign,
-                'utm_medium': model['form_entry'].utm_medium,
-                'utm_source': model['form_entry'].utm_source,
-                'utm_url': model['form_entry'].utm_url,
-                'ac_expected_cohort': model['form_entry'].ac_expected_cohort,
-                'created_at': self.datetime_to_iso(model['form_entry'].created_at),
-                'user': None,
-                'phone': None,
-            } for model in ordened_models][5:],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])
-
-    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
-        """Test /cohort without auth"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_lead',
-                                    role='potato')
-
-        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
-
-        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/marketing/academy/lead?limit=5',
-            'next': None,
-            'previous': 'http://testserver/v1/marketing/academy/lead?limit=5&'
-            f'offset=5',
-            'last': None,
-            'results': [],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])
 
     """
     🔽🔽🔽 With full like in querystring
@@ -973,3 +782,39 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(self.all_form_entry_dict(), [{
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
+
+    """
+    🔽🔽🔽 Spy extensions
+    """
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_academy_lead__spy_extensions(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        url = reverse_lazy('marketing:academy_lead')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato')
+
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension', 'SortExtension']),
+        ])
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_lead__spy_extension_arguments(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        url = reverse_lazy('marketing:academy_lead')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato')
+
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(sort='-created_at', paginate=True),
+        ])

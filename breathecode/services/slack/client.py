@@ -60,7 +60,7 @@ class Slack:
 
         _commands = re.findall(patterns['command'], content)
         if len(_commands) != 1:
-            raise SlackException('Imposible to determine command', slug='command-does-not-found')
+            raise SlackException('Impossible to determine command', slug='command-does-not-found')
 
         matches = re.findall(patterns['users'], content)
         response['users'] = [u[0] for u in matches]

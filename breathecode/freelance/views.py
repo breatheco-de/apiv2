@@ -177,8 +177,8 @@ def get_latest_bill(request, user_id=None):
     if freelancer is None or reviewer is None:
         raise serializers.ValidationError('Freelancer or reviewer not found', code=404)
 
-    open_bill = generate_freelancer_bill(freelancer)
-    return Response(open_bill, status=status.HTTP_200_OK)
+    open_bills = generate_freelancer_bill(freelancer)
+    return Response(open_bills, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

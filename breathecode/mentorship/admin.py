@@ -2,7 +2,7 @@ import json, pytz, logging, requests, re
 from django.contrib import admin, messages
 from django import forms
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
-from .actions import generate_mentor_bill, mentor_is_ready
+from .actions import generate_mentor_bills, mentor_is_ready
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
@@ -32,7 +32,7 @@ class MentorForm(forms.ModelForm):
 def generate_bill(modeladmin, request, queryset):
     mentors = queryset.all()
     for m in mentors:
-        generate_mentor_bill(m, reset=True)
+        generate_mentor_bills(m, reset=True)
 
 
 def mark_as_active(modeladmin, request, queryset):

@@ -5,11 +5,11 @@ import re
 from unittest.mock import MagicMock, call, patch
 from django.utils import timezone
 from breathecode.admissions.caches import CohortCache
-from breathecode.services import datetime_to_iso_format
-from random import choice
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import AdmissionsTestCase
 
 
@@ -122,6 +122,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
             'ending_date': model['cohort'].ending_date,
@@ -138,6 +139,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
+                'status': model['cohort'].syllabus_version.status,
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'version': model['cohort'].syllabus_version.version,
@@ -237,6 +239,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -253,6 +256,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
+                'status': model['cohort'].syllabus_version.status,
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'version': model['cohort'].syllabus_version.version,
@@ -315,6 +319,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -333,6 +338,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -393,6 +399,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -411,6 +418,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -568,6 +576,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model.cohort.current_day,
             'current_module': None,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -584,6 +593,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -675,6 +685,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -693,6 +704,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -753,6 +765,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -771,6 +784,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -803,411 +817,57 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_cohort_me_with_ten_datas(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_cohort_me__spy_extensions(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     cohort=10,
+                                     cohort=True,
                                      profile_academy=True,
                                      capability='read_single_cohort',
                                      role='potato',
-                                     cohort_user=[{
-                                         'cohort_id': id
-                                     } for id in range(1, 11)],
+                                     cohort_user=1,
                                      syllabus=True,
                                      syllabus_version=True,
                                      syllabus_schedule=True)
 
-        cohorts = model.cohort
-        cohorts.sort(key=lambda x: x.kickoff_date, reverse=True)
-
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        self.client.force_authenticate(user=model['user'])
-        url = reverse_lazy('admissions:academy_cohort_me')
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'id': cohort.id,
-            'slug': cohort.slug,
-            'name': cohort.name,
-            'never_ends': cohort.never_ends,
-            'private': cohort.private,
-            'language': cohort.language,
-            'kickoff_date': datetime_to_iso_format(cohort.kickoff_date),
-            'ending_date': cohort.ending_date,
-            'stage': cohort.stage,
-            'current_day': cohort.current_day,
-            'current_module': None,
-            'online_meeting_url': cohort.online_meeting_url,
-            'timezone': cohort.timezone,
-            'timeslots': [],
-            'schedule': {
-                'id': cohort.schedule.id,
-                'name': cohort.schedule.name,
-                'syllabus': cohort.schedule.syllabus.id,
-            },
-            'syllabus_version': {
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'version': cohort.syllabus_version.version,
-                'syllabus': cohort.syllabus_version.syllabus.id,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': cohort.academy.id,
-                'slug': cohort.academy.slug,
-                'name': cohort.academy.name,
-                'country': {
-                    'code': cohort.academy.country.code,
-                    'name': cohort.academy.country.name,
-                },
-                'city': {
-                    'name': cohort.academy.city.name,
-                },
-                'logo_url': cohort.academy.logo_url,
-            },
-        } for cohort in cohorts]
+        url = reverse_lazy(
+            'admissions:academy_cohort_me') + f'?location={model["academy"].slug},they-killed-kenny'
+        self.client.get(url)
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict(cohorts))
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+        ])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_cohort_me_with_ten_datas_just_get_100(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_cohort_me__spy_extension_arguments(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     cohort=105,
+                                     cohort=True,
                                      profile_academy=True,
                                      capability='read_single_cohort',
                                      role='potato',
-                                     cohort_user=[{
-                                         'cohort_id': id
-                                     } for id in range(1, 106)],
+                                     cohort_user=1,
                                      syllabus=True,
                                      syllabus_version=True,
                                      syllabus_schedule=True)
 
-        cohorts = model.cohort
-        cohorts.sort(key=lambda x: x.kickoff_date, reverse=True)
-
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        self.client.force_authenticate(user=model['user'])
-        url = reverse_lazy('admissions:academy_cohort_me')
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'id': cohort.id,
-            'slug': cohort.slug,
-            'name': cohort.name,
-            'never_ends': cohort.never_ends,
-            'private': cohort.private,
-            'language': cohort.language,
-            'kickoff_date': datetime_to_iso_format(cohort.kickoff_date),
-            'ending_date': cohort.ending_date,
-            'stage': cohort.stage,
-            'current_day': cohort.current_day,
-            'current_module': None,
-            'online_meeting_url': cohort.online_meeting_url,
-            'timezone': cohort.timezone,
-            'timeslots': [],
-            'schedule': {
-                'id': cohort.schedule.id,
-                'name': cohort.schedule.name,
-                'syllabus': cohort.schedule.syllabus.id,
-            },
-            'syllabus_version': {
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'version': cohort.syllabus_version.version,
-                'syllabus': cohort.syllabus_version.syllabus.id,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': cohort.academy.id,
-                'slug': cohort.academy.slug,
-                'name': cohort.academy.name,
-                'country': {
-                    'code': cohort.academy.country.code,
-                    'name': cohort.academy.country.name,
-                },
-                'city': {
-                    'name': cohort.academy.city.name,
-                },
-                'logo_url': cohort.academy.logo_url,
-            },
-        } for cohort in cohorts[:100]]
+        url = reverse_lazy(
+            'admissions:academy_cohort_me') + f'?location={model["academy"].slug},they-killed-kenny'
+        self.client.get(url)
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict(cohorts))
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
-
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_cohort_me_with_ten_datas_pagination_first_five(self):
-        """Test /cohort without auth"""
-        from breathecode.admissions.signals import cohort_saved
-
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=10,
-                                     profile_academy=True,
-                                     capability='read_single_cohort',
-                                     role='potato',
-                                     cohort_user=[{
-                                         'cohort_id': id
-                                     } for id in range(1, 11)],
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
-
-        cohorts = model.cohort
-        cohorts.sort(key=lambda x: x.kickoff_date, reverse=True)
-
-        # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
-
-        self.client.force_authenticate(user=model['user'])
-        base_url = reverse_lazy('admissions:academy_cohort_me')
-        url = f'{base_url}?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            None,
-            'next':
-            'http://testserver/v1/admissions/academy/cohort/me?limit=5&offset=5',
-            'previous':
-            None,
-            'last':
-            'http://testserver/v1/admissions/academy/cohort/me?limit=5&offset=5',
-            'results': [{
-                'id': cohort.id,
-                'slug': cohort.slug,
-                'name': cohort.name,
-                'never_ends': cohort.never_ends,
-                'private': cohort.private,
-                'language': cohort.language,
-                'kickoff_date': datetime_to_iso_format(cohort.kickoff_date),
-                'ending_date': cohort.ending_date,
-                'stage': cohort.stage,
-                'current_day': cohort.current_day,
-                'current_module': None,
-                'online_meeting_url': cohort.online_meeting_url,
-                'timezone': cohort.timezone,
-                'timeslots': [],
-                'schedule': {
-                    'id': cohort.schedule.id,
-                    'name': cohort.schedule.name,
-                    'syllabus': cohort.schedule.syllabus.id,
-                },
-                'syllabus_version': {
-                    'name': model.syllabus.name,
-                    'slug': model.syllabus.slug,
-                    'version': cohort.syllabus_version.version,
-                    'syllabus': cohort.syllabus_version.syllabus.id,
-                    'duration_in_days': model.syllabus.duration_in_days,
-                    'duration_in_hours': model.syllabus.duration_in_hours,
-                    'github_url': model.syllabus.github_url,
-                    'logo': model.syllabus.logo,
-                    'private': model.syllabus.private,
-                    'week_hours': model.syllabus.week_hours,
-                },
-                'academy': {
-                    'id': cohort.academy.id,
-                    'slug': cohort.academy.slug,
-                    'name': cohort.academy.name,
-                    'country': {
-                        'code': cohort.academy.country.code,
-                        'name': cohort.academy.country.name,
-                    },
-                    'city': {
-                        'name': cohort.academy.city.name,
-                    },
-                    'logo_url': cohort.academy.logo_url,
-                },
-            } for cohort in cohorts[:5]],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict(cohorts))
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
-
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_cohort_me_with_ten_datas_pagination_last_five(self):
-        """Test /cohort without auth"""
-        from breathecode.admissions.signals import cohort_saved
-
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=10,
-                                     profile_academy=True,
-                                     capability='read_single_cohort',
-                                     role='potato',
-                                     cohort_user=[{
-                                         'cohort_id': id
-                                     } for id in range(1, 11)],
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
-
-        cohorts = model.cohort
-        cohorts.sort(key=lambda x: x.kickoff_date, reverse=True)
-
-        # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
-
-        self.client.force_authenticate(user=model['user'])
-        base_url = reverse_lazy('admissions:academy_cohort_me')
-        url = f'{base_url}?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            'http://testserver/v1/admissions/academy/cohort/me?limit=5',
-            'next':
-            None,
-            'previous':
-            'http://testserver/v1/admissions/academy/cohort/me?limit=5',
-            'last':
-            None,
-            'results': [{
-                'id': cohort.id,
-                'slug': cohort.slug,
-                'name': cohort.name,
-                'never_ends': cohort.never_ends,
-                'private': cohort.private,
-                'language': cohort.language,
-                'kickoff_date': datetime_to_iso_format(cohort.kickoff_date),
-                'ending_date': cohort.ending_date,
-                'stage': cohort.stage,
-                'current_day': cohort.current_day,
-                'current_module': None,
-                'online_meeting_url': cohort.online_meeting_url,
-                'timezone': cohort.timezone,
-                'timeslots': [],
-                'schedule': {
-                    'id': cohort.schedule.id,
-                    'name': cohort.schedule.name,
-                    'syllabus': cohort.schedule.syllabus.id,
-                },
-                'syllabus_version': {
-                    'name': model.syllabus.name,
-                    'slug': model.syllabus.slug,
-                    'version': cohort.syllabus_version.version,
-                    'syllabus': cohort.syllabus_version.syllabus.id,
-                    'duration_in_days': model.syllabus.duration_in_days,
-                    'duration_in_hours': model.syllabus.duration_in_hours,
-                    'github_url': model.syllabus.github_url,
-                    'logo': model.syllabus.logo,
-                    'private': model.syllabus.private,
-                    'week_hours': model.syllabus.week_hours,
-                },
-                'academy': {
-                    'id': cohort.academy.id,
-                    'slug': cohort.academy.slug,
-                    'name': cohort.academy.name,
-                    'country': {
-                        'code': cohort.academy.country.code,
-                        'name': cohort.academy.country.name,
-                    },
-                    'city': {
-                        'name': cohort.academy.city.name,
-                    },
-                    'logo_url': cohort.academy.logo_url,
-                },
-            } for cohort in cohorts[5:]],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict(cohorts))
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
-
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_cohort_me_with_ten_datas_pagination_after_last_five(self):
-        """Test /cohort without auth"""
-        from breathecode.admissions.signals import cohort_saved
-
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=10,
-                                     profile_academy=True,
-                                     capability='read_single_cohort',
-                                     role='potato',
-                                     cohort_user=[{
-                                         'cohort_id': id
-                                     } for id in range(1, 11)],
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
-
-        cohorts = model.cohort
-
-        # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
-
-        self.client.force_authenticate(user=model['user'])
-        base_url = reverse_lazy('admissions:academy_cohort_me')
-        url = f'{base_url}?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/admissions/academy/cohort/me?limit=5',
-            'next': None,
-            'previous': 'http://testserver/v1/admissions/academy/cohort/me?limit=5&offset=5',
-            'last': None,
-            'results': [],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.bc.format.to_dict(cohorts))
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
-
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_cohort_me_with_data_testing_cache(self):
-        """Test /cohort without auth"""
-        cache_keys = [
-            'Cohort__resource=None&academy_id=1&upcoming=None&stage=None&academy='
-            'None&location=None&like=None&sort=None&limit=None&offset=None'
-        ]
-
-        self.assertEqual(self.cache.keys(), [])
-
-        old_models = self.check_cohort_me__with_data()
-        self.assertEqual(self.cache.keys(), cache_keys)
-
-        self.check_cohort_me__with_data(old_models)
-        self.assertEqual(self.cache.keys(), cache_keys)
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=CohortCache, cache_per_user=True, sort='-kickoff_date', paginate=True),
+        ])

@@ -157,6 +157,7 @@ class SyllabusVersionSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
+    status = serpy.Field()
     slug = serpy.MethodField()
     name = serpy.MethodField()
     syllabus = serpy.MethodField()
@@ -199,6 +200,8 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     """The serializer schema definition."""
     json = serpy.Field()
     version = serpy.Field()
+    status = serpy.Field()
+    change_log_details = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -266,6 +269,7 @@ class GetCohortSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     never_ends = serpy.Field()
+    remote_available = serpy.Field()
     private = serpy.Field()
     language = serpy.Field()
     kickoff_date = serpy.Field()
@@ -336,6 +340,7 @@ class GetCohortUserSerializer(serpy.Serializer):
     role = serpy.Field()
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
+    watching = serpy.Field()
     created_at = serpy.Field()
     profile_academy = serpy.MethodField()
 
@@ -470,11 +475,21 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
     def validate(self, data):
 
+        kickoff_date = (data['kickoff_date'] if 'kickoff_date' in data else
+                        None) or (self.instance.kickoff_date if self.instance else None)
+
+        ending_date = (data['ending_date'] if 'ending_date' in data else None) or (self.instance.ending_date
+                                                                                   if self.instance else None)
+
+        if kickoff_date and ending_date and kickoff_date > ending_date:
+            raise ValidationException('kickoff_date cannot be greather than ending_date',
+                                      slug='kickoff-date-greather-than-ending-date')
+
         if 'stage' in data:
             possible_stages = [stage_slug for stage_slug, stage_label in COHORT_STAGE]
             if data['stage'] not in possible_stages:
-                raise ValidationException(
-                    f"Invalid cohort stage {data['stage']}', slug='invalid-cohort-stage")
+                raise ValidationException(f"Invalid cohort stage {data['stage']}",
+                                          slug='invalid-cohort-stage')
 
         if 'syllabus' in data:
             strings = data['syllabus'].split('.v')
@@ -546,9 +561,9 @@ class CohortSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus', 'schedule',
-                  'syllabus_version', 'ending_date', 'stage', 'language', 'created_at', 'updated_at',
-                  'never_ends', 'online_meeting_url', 'timezone')
+        fields = ('id', 'slug', 'name', 'remote_available', 'kickoff_date', 'current_day', 'academy',
+                  'syllabus', 'schedule', 'syllabus_version', 'ending_date', 'stage', 'language',
+                  'created_at', 'updated_at', 'never_ends', 'online_meeting_url', 'timezone')
 
     def create(self, validated_data):
         del self.context['request']
@@ -568,6 +583,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     private = serializers.BooleanField(required=False)
     kickoff_date = serializers.DateTimeField(required=False)
     ending_date = serializers.DateTimeField(required=False, allow_null=True)
+    remote_available = serpy.Field(required=False)
     current_day = serializers.IntegerField(required=False)
     current_module = serializers.IntegerField(required=False)
     stage = serializers.CharField(required=False)
@@ -575,9 +591,9 @@ class CohortPUTSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-                  'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private', 'online_meeting_url',
-                  'timezone', 'current_module')
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'remote_available', 'current_day',
+                  'stage', 'language', 'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private',
+                  'online_meeting_url', 'timezone', 'current_module')
 
     def update(self, instance, validated_data):
         last_schedule = instance.schedule
@@ -704,6 +720,10 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         if not id and cohort_user:
             id = cohort_user.id
 
+        watching = request_item.get('watching') == True
+        if watching and cohort_user.educational_status != 'ACTIVE':
+            raise ValidationException('The student is not active in this cohort', slug='student-not-active')
+
         is_graduated = request_item.get('educational_status') == 'GRADUATED'
         is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else
                    request_item.get('finantial_status') == 'LATE')
@@ -827,7 +847,7 @@ class CohortUserPOSTSerializer(serpy.Serializer):
 class CohortUserPUTSerializer(CohortUserSerializerMixin):
     class Meta:
         model = CohortUser
-        fields = ['id', 'role', 'educational_status', 'finantial_status']
+        fields = ['id', 'role', 'educational_status', 'finantial_status', 'watching']
         list_serializer_class = CohortUserListSerializer
 
 
@@ -846,7 +866,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ['json', 'version', 'syllabus']
+        fields = ['json', 'version', 'syllabus', 'status', 'change_log_details']
         exclude = ()
         extra_kwargs = {
             'syllabus': {

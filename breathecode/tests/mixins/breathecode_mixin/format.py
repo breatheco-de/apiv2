@@ -21,6 +21,21 @@ class Format:
     def __init__(self, parent) -> None:
         self._parent = parent
 
+    def table(self, arg: QuerySet) -> dict[str, Any] | list[dict[str, Any]]:
+        """
+        Convert a QuerySet in a list.
+
+        Usage:
+
+        ```py
+        model = self.bc.database.create(user=1, group=1)
+
+        self.bc.format.model(model.user.groups.all())  # = [{...}]
+        ```
+        """
+
+        return [ModelsMixin.remove_dinamics_fields(self, data.__dict__.copy()) for data in arg]
+
     def to_dict(self, arg: Any) -> dict[str, Any] | list[dict[str, Any]]:
         """
         Parse the object to a `dict` or `list[dict]`.

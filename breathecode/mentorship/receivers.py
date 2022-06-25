@@ -1,6 +1,4 @@
 import logging
-from django.dispatch import receiver
-from django.db.models import Avg
 # from .models import Answer
 # from .tasks import process_student_graduation, process_answer_received, send_mentorship_session_survey
 

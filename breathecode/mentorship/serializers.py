@@ -1,7 +1,7 @@
 import serpy, re, math, requests
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
-from .actions import mentor_is_ready
+from .actions import mentor_is_ready, generate_mentor_bills
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -435,7 +435,32 @@ class SessionSerializer(serializers.ModelSerializer):
                         f'The field {field} is automatically set by the system during online mentorships',
                         slug='read-only-field-online')
 
-        return supper().validate(data)
+        return super().validate(data)
+
+    def update(self, instance, validated_data):
+        result = super().update(instance, validated_data)
+
+        bill = MentorshipBill.objects.filter(id=instance.bill_id).first()
+        if bill is None:
+            return result
+
+        mentor = MentorProfile.objects.filter(id=instance.mentor_id).first()
+
+        generate_mentor_bills(mentor, recalculate_bill=bill)
+
+        return result
+
+
+class MentorshipBillPUTListSerializer(serializers.ListSerializer):
+    def update(self, instances, validated_data):
+
+        instance_hash = {index: instance for index, instance in enumerate(instances)}
+
+        result = [
+            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
+        ]
+
+        return result
 
 
 class MentorshipBillPUTSerializer(serializers.ModelSerializer):
@@ -443,6 +468,7 @@ class MentorshipBillPUTSerializer(serializers.ModelSerializer):
         model = MentorshipBill
         exclude = ('created_at', 'updated_at', 'academy', 'mentor', 'reviewer', 'total_duration_in_minutes',
                    'total_duration_in_hours', 'total_price', 'overtime_minutes')
+        list_serializer_class = MentorshipBillPUTListSerializer
 
     def validate(self, data):
 

@@ -287,10 +287,7 @@ def sync_github_lesson(github, asset):
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
 
-    try:
-        asset.readme = repo.get_contents(file_path).content
-    except GithubException as e:
-        asset.readme = get_blob_content(repo, file_path, branch=branch_name).content
+    asset.readme = get_blob_content(repo, file_path, branch=branch_name).content
 
     readme = asset.get_readme(parse=True)
     asset.html = readme['html']
@@ -355,7 +352,7 @@ def sync_learnpack_asset(github, asset):
 
     lang = asset.lang
     if lang is None or lang == '':
-        raise Exception('Language for this asset is not defined, imposible to retrieve readme')
+        raise Exception('Language for this asset is not defined, impossible to retrieve readme')
     elif lang in ['us', 'en']:
         lang = ''
     else:

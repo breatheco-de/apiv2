@@ -563,6 +563,33 @@ class AuthenticateTestSuite(AuthTestCase):
         ])
 
     """
+    🔽🔽🔽 PUT role does not exists
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__role_does_not_exists(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='crud_member',
+                                     profile_academy=True)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '2'})
+
+        data = {'role': 'mirai-nikki'}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'role': ['Invalid pk "mirai-nikki" - object does not exist.']}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    """
     🔽🔽🔽 PUT user not exists, it's use the post serializer
     """
 

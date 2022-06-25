@@ -1,9 +1,12 @@
 """
 Test /certificate
 """
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from random import choice, randint
+
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import AdmissionsTestCase
 
 
@@ -239,121 +242,29 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
 
     """
-    🔽🔽🔽 Pagination
+    🔽🔽🔽 Spy the extensions
     """
 
-    def test_certificate_with_data_without_pagination_get_just_100(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_certificate__spy_extensions(self):
         """Test /certificate without auth"""
-        base = self.bc.database.create(authenticate=True)
-        models = [
-            self.bc.database.create(syllabus_schedule=True, syllabus=True, models=base)
-            for _ in range(0, 105)
-        ]
+
         url = reverse_lazy('admissions:schedule')
-        response = self.client.get(url)
-        json = response.json()
+        self.bc.database.create(authenticate=True)
+        self.client.get(url)
 
-        self.assertEqual(json, [{
-            'id': model['syllabus_schedule'].id,
-            'name': model['syllabus_schedule'].name,
-            'description': model['syllabus_schedule'].description,
-            'syllabus': model['syllabus_schedule'].syllabus.id,
-        } for model in models if model['syllabus_schedule'].id <= 100])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension']),
+        ])
 
-        self.assertEqual(self.all_syllabus_schedule_dict(), [{
-            **self.model_to_dict(model, 'syllabus_schedule'),
-        } for model in models])
-
-    def test_certificate_with_data_with_pagination_first_five(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_certificate__spy_extension_arguments(self):
         """Test /certificate without auth"""
-        base = self.bc.database.create(authenticate=True)
-        models = [
-            self.bc.database.create(syllabus_schedule=True, syllabus=True, models=base) for _ in range(0, 10)
-        ]
-        url = reverse_lazy('admissions:schedule') + '?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
 
-        self.assertEqual(
-            json, {
-                'count':
-                10,
-                'first':
-                None,
-                'last':
-                'http://testserver/v1/admissions/schedule?limit=5&offset=5',
-                'next':
-                'http://testserver/v1/admissions/schedule?limit=5&offset=5',
-                'previous':
-                None,
-                'results': [{
-                    'id': model['syllabus_schedule'].id,
-                    'name': model['syllabus_schedule'].name,
-                    'description': model['syllabus_schedule'].description,
-                    'syllabus': model['syllabus_schedule'].syllabus.id,
-                } for model in models if model['syllabus_schedule'].id <= 5]
-            })
+        url = reverse_lazy('admissions:schedule')
+        self.bc.database.create(authenticate=True)
+        self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_syllabus_schedule_dict(), [{
-            **self.model_to_dict(model, 'syllabus_schedule'),
-        } for model in models])
-
-    def test_certificate_with_data_with_pagination_last_five(self):
-        """Test /certificate without auth"""
-        base = self.bc.database.create(authenticate=True)
-        models = [
-            self.bc.database.create(syllabus_schedule=True, syllabus=True, models=base) for _ in range(0, 10)
-        ]
-        url = reverse_lazy('admissions:schedule') + '?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(
-            json, {
-                'count':
-                10,
-                'first':
-                'http://testserver/v1/admissions/schedule?limit=5',
-                'last':
-                None,
-                'next':
-                None,
-                'previous':
-                'http://testserver/v1/admissions/schedule?limit=5',
-                'results': [{
-                    'id': model['syllabus_schedule'].id,
-                    'name': model['syllabus_schedule'].name,
-                    'description': model['syllabus_schedule'].description,
-                    'syllabus': model['syllabus_schedule'].syllabus.id,
-                } for model in models if model['syllabus_schedule'].id > 5],
-            })
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_syllabus_schedule_dict(), [{
-            **self.model_to_dict(model, 'syllabus_schedule'),
-        } for model in models])
-
-    def test_certificate_with_data_with_pagination_after_last_five(self):
-        """Test /certificate without auth"""
-        base = self.bc.database.create(authenticate=True)
-        models = [self.bc.database.create(syllabus_schedule=1, academy=1, models=base) for _ in range(0, 10)]
-        url = reverse_lazy('admissions:schedule') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(
-            json, {
-                'count': 10,
-                'first': 'http://testserver/v1/admissions/schedule?limit=5',
-                'last': None,
-                'next': None,
-                'previous': 'http://testserver/v1/admissions/schedule?limit=5&offset=5',
-                'results': [],
-            })
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_syllabus_schedule_dict(), [{
-            **self.model_to_dict(model, 'syllabus_schedule'),
-        } for model in models])
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])

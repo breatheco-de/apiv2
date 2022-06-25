@@ -2,6 +2,7 @@ import re
 import inspect
 from rest_framework.test import APITestCase
 from typing import Optional
+from faker import Faker
 from .cache import Cache
 from .datetime import Datetime
 from .request import Request
@@ -31,6 +32,7 @@ class Breathecode:
     check: Check
     format: Format
     _parent: APITestCase
+    fake: Faker
 
     def __init__(self, parent) -> None:
         self._parent = parent
@@ -41,6 +43,7 @@ class Breathecode:
         self.database = Database(parent)
         self.check = Check(parent)
         self.format = Format(parent)
+        self.fake = Faker()
 
     def help(self, *args) -> None:
         """
