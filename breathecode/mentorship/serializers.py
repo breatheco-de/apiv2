@@ -1,7 +1,7 @@
 import serpy, re, math, requests
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
-from .actions import mentor_is_ready
+from .actions import mentor_is_ready, generate_mentor_bills
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -438,8 +438,17 @@ class SessionSerializer(serializers.ModelSerializer):
         return super().validate(data)
 
     def update(self, instance, validated_data):
+        result = super().update(instance, validated_data)
 
-        return super().update(instance, validated_data)
+        bill = MentorshipBill.objects.filter(id=instance.bill_id).first()
+        if bill is None:
+            return result
+
+        mentor = MentorProfile.objects.filter(id=instance.mentor_id).first()
+
+        generate_mentor_bills(mentor, recalculate_bill=bill)
+
+        return result
 
 
 class MentorshipBillPUTListSerializer(serializers.ListSerializer):

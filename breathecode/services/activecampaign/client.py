@@ -46,7 +46,7 @@ class ActiveCampaign:
             raise Exception('Invalid webhook')
 
         if not webhook.webhook_type:
-            raise Exception('Imposible to webhook_type')
+            raise Exception('Impossible to webhook_type')
 
         action = webhook.webhook_type
         logger.debug(f'Executing ActiveCampaign Webhook => {action}')
@@ -120,7 +120,7 @@ class ActiveCampaign:
         resp = requests.get(f'{self.host}/api/3/contacts',
                             headers={'Api-Token': self.token},
                             params={'email': email})
-        logger.debug(f'Get contact by email {self.host}/api/3/contacts', resp.status_code)
+        logger.debug(f'Get contact by email {self.host}/api/3/contacts {resp.status_code}')
         data = resp.json()
         if data and 'contacts' in data and len(data['contacts']) == 1:
             return data['contacts'][0]
@@ -151,10 +151,16 @@ class ActiveCampaign:
         #/api/3/deals/id
         #Api-Token
         body = {'contactTag': {'contact': contact_id, 'tag': tag_id}}
-        resp = requests.post(f'{self.host}/api/3/contactTags', headers={'Api-Token': self.token}, json=body)
+        headers = {
+            'Api-Token': self.token,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        }
+        resp = requests.post(f'{self.host}/api/3/contactTags', headers=headers, json=body)
         logger.debug(f'Add tag to contact')
 
-        if resp.status_code == 201:
+        # can return status 200 if the contact have has been tagged, this case is not a error
+        if resp.status_code < 400:
             data = resp.json()
             if data and 'contactTag' in data:
                 return data['contactTag']

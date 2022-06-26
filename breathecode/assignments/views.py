@@ -13,10 +13,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils import APIException
-from .models import Task
+from .models import Task, FinalProject
 from .actions import deliver_task
 from .forms import DeliverAssigntmentForm
-from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer, TaskGETDeliverSerializer)
+from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer, TaskGETDeliverSerializer,
+                          FinalProjectGETSerializer, PostFinalProjectSerializer, PUTFinalProjectSerializer)
 from .actions import sync_cohort_tasks
 import breathecode.assignments.tasks as tasks
 
@@ -110,6 +111,121 @@ def sync_cohort_tasks_view(request, cohort_id=None):
 
     serializer = TaskGETSerializer(syncronized, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class FinalProjectMeView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    def get(self, request, project_id=None, user_id=None):
+        if not user_id:
+            user_id = request.user.id
+
+        if project_id is not None:
+            item = FinalProject.objects.filter(id=project_id, user__id=user_id).first()
+            if item is None:
+                raise ValidationException('Project not found', code=404, slug='project-not-found')
+
+            serializer = FinalProjectGETSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = FinalProject.objects.filter(members__id=user_id)
+
+        project_status = request.GET.get('project_status', None)
+        if project_status is not None:
+            items = items.filter(project_status__in=project_status.split(','))
+
+        members = request.GET.get('members', None)
+        if members is not None and isinstance(members, list):
+            items = items.filter(members__id__in=members)
+
+        revision_status = request.GET.get('revision_status', None)
+        if revision_status is not None:
+            items = items.filter(revision_status__in=revision_status.split(','))
+
+        visibility_status = request.GET.get('visibility_status', None)
+        if visibility_status is not None:
+            items = items.filter(visibility_status__in=visibility_status.split(','))
+        else:
+            items = items.filter(visibility_status='PUBLIC')
+
+        cohort = request.GET.get('cohort', None)
+        if cohort is not None:
+            if cohort == 'null':
+                items = items.filter(cohort__isnull=True)
+            else:
+                cohorts = cohort.split(',')
+                ids = [x for x in cohorts if x.isnumeric()]
+                slugs = [x for x in cohorts if not x.isnumeric()]
+                items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
+
+        serializer = FinalProjectGETSerializer(items, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, user_id=None):
+
+        # only create tasks for yourself
+        if user_id is None:
+            user_id = request.user.id
+
+        payload = request.data
+
+        if isinstance(request.data, list) == False:
+            payload = [request.data]
+
+        serializer = PostFinalProjectSerializer(data=payload,
+                                                context={
+                                                    'request': request,
+                                                    'user_id': user_id
+                                                },
+                                                many=True)
+        if serializer.is_valid():
+            serializer.save()
+            # tasks.teacher_task_notification.delay(serializer.data['id'])
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, project_id=None):
+        def update(_req, data, _id=None, only_validate=True):
+            if _id is None:
+                raise ValidationException('Missing project id to update', slug='missing-project-id')
+
+            item = FinalProject.objects.filter(id=_id).first()
+            if item is None:
+                raise ValidationException('Final Project not found', slug='project-not-found')
+
+            serializer = PUTFinalProjectSerializer(item, data=data, context={'request': _req})
+            if serializer.is_valid():
+                if not only_validate:
+                    serializer.save()
+                return status.HTTP_200_OK, serializer.data
+            return status.HTTP_400_BAD_REQUEST, serializer.errors
+
+        if project_id is not None:
+            code, data = update(request, request.data, project_id, only_validate=False)
+            return Response(data, status=code)
+
+        else:  # project_id is None:
+
+            if isinstance(request.data, list) == False:
+                raise ValidationException(
+                    'You are trying to update many project at once but you didn\'t provide a list on the payload',
+                    slug='update-without-list')
+
+            for item in request.data:
+                if 'id' not in item:
+                    item['id'] = None
+                code, data = update(request, item, item['id'], only_validate=True)
+                if code != status.HTTP_200_OK:
+                    return Response(data, status=code)
+
+            updated_projects = []
+            for item in request.data:
+                code, data = update(request, item, item['id'], only_validate=False)
+                if code == status.HTTP_200_OK:
+                    updated_projects.append(data)
+
+            return Response(updated_projects, status=status.HTTP_200_OK)
 
 
 class TaskMeView(APIView):

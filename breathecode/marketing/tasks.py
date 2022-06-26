@@ -147,7 +147,7 @@ def add_event_tags_to_student(self,
     logger.warn('Task add_event_tags_to_student started')
 
     if not user_id and not email:
-        logger.error('Imposible to determine the user email')
+        logger.error('Impossible to determine the user email')
         return
 
     if user_id and email:
@@ -167,7 +167,7 @@ def add_event_tags_to_student(self,
         return
 
     if not event.academy:
-        logger.error(f'Imposible to determine the academy')
+        logger.error(f'Impossible to determine the academy')
         return
 
     academy = event.academy
@@ -180,10 +180,9 @@ def add_event_tags_to_student(self,
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
     tag_slugs = [x for x in event.tags.split(',') if x]  # prevent a tag with the slug ''
     if event.slug:
-        tag_slugs.append(event.slug)
+        tag_slugs.append(f'event-{event.slug}' if not event.slug.startswith('event-') else event.slug)
 
     tags = Tag.objects.filter(slug__in=tag_slugs, ac_academy__id=ac_academy.id)
-
     if not tags:
         logger.warn('Tags not found')
         return

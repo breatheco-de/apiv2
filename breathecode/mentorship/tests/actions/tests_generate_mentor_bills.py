@@ -1,22 +1,18 @@
 """
-Test mentorhips
+Test mentorships
 """
-import random, datetime
+import datetime
 from unittest.mock import patch
-from django.db.models.query import QuerySet
 from django.utils import timezone
-from datetime import timedelta
-from unittest.mock import MagicMock, call, patch
-from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_request_mock
+from unittest.mock import MagicMock, patch
 
-from breathecode.authenticate.models import Token
 from ..mixins import MentorshipTestCase
-from ...models import MentorshipSession
-from ...actions import get_pending_sessions_or_create, generate_mentor_bills
+from ...actions import generate_mentor_bills
 
-NOW = timezone.now()
+NOW = timezone.now().replace(year=2022, month=1, day=10)
 
 
+#FIXME: improve this tests
 class GenerateMentorBillsTestCase(MentorshipTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=NOW))
     def test_generate_bills_with_no_previous_bills_no_unpaid_sessions(self):

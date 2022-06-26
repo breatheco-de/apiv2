@@ -228,6 +228,10 @@ CAPABILITIES = [
         'description': 'Get all mentorship mentors from one academy'
     },
     {
+        'slug': 'crud_mentorship_mentor',
+        'description': 'Create, delete or update all mentorship mentors from one academy'
+    },
+    {
         'slug': 'read_mentorship_session',
         'description': 'Get all session from one academy'
     },
@@ -252,12 +256,8 @@ CAPABILITIES = [
         'description': 'Read all mentroship bills from one academy'
     },
     {
-        'slug': 'read_mentor',
-        'description': 'Get update academy mentors'
-    },
-    {
-        'slug': 'crud_mentor',
-        'description': 'Update, create and delete academy mentors'
+        'slug': 'read_asset',
+        'description': 'Read all academy registry assets'
     },
     {
         'slug': 'crud_asset',
@@ -343,6 +343,17 @@ ROLES = [
         ],
     },
     {
+        'slug': 'content_writer',
+        'name': 'Content Writer (Base)',
+        'caps': [
+            'read_member',
+            'read_media',
+            'read_my_academy',
+            'read_asset',
+            'crud_asset',
+        ],
+    },
+    {
         'slug':
         'student',
         'name':
@@ -416,9 +427,24 @@ def extend_roles(roles: list[RoleType]) -> None:
         ]
     })
     roles.append({
-        'slug': 'career_support',
-        'name': 'Career Support Specialist',
-        'caps': extend(roles, ['staff']) + ['read_certificate', 'crud_certificate', 'crud_shortlink']
+        'slug':
+        'career_support',
+        'name':
+        'Career Support Specialist',
+        'caps':
+        extend(roles, ['staff']) + [
+            'read_certificate',
+            'crud_certificate',
+            'crud_shortlink',
+            'read_mentorship_mentor',
+            'crud_mentorship_mentor',
+            'read_mentorship_service',
+            'crud_mentorship_service',
+            'read_mentorship_session',
+            'crud_mentorship_session',
+            'crud_mentorship_bill',
+            'read_mentorship_bill',
+        ]
     })
     roles.append({
         'slug':
@@ -432,9 +458,12 @@ def extend_roles(roles: list[RoleType]) -> None:
         ]
     })
     roles.append({
-        'slug': 'syllabus_coordinator',
-        'name': 'Syllabus Coordinator',
-        'caps': extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
+        'slug':
+        'syllabus_coordinator',
+        'name':
+        'Syllabus Coordinator',
+        'caps':
+        extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset', 'read_asset']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
@@ -449,7 +478,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_all_cohort', 'crud_media'
+            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset'
         ]
     })
     roles.append({
@@ -502,9 +531,9 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_assignment_sensitive_details',
             'crud_shortlink',
             'invite_resend',
-            'crud_mentor',
             'crud_invite',
-            'read_mentor',
+            'crud_mentorship_mentor',
+            'read_mentorship_mentor',
             'read_mentorship_service',
             'crud_mentorship_service',
             'read_mentorship_session',

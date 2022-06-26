@@ -630,7 +630,7 @@ class ICalStudentView(APIView):
 
             if item.cohort.academy.website_url:
                 location = f'{location} ({item.cohort.academy.website_url})'
-            event['location'] = vText(item.cohort.academy.name)
+            event['location'] = vText(item.cohort.online_meeting_url or item.cohort.academy.name)
 
             calendar.add_component(event)
 
@@ -793,13 +793,13 @@ class ICalCohortsView(APIView):
             if item.academy.website_url:
                 location = f'{location} ({item.academy.website_url})'
 
-            event['location'] = vText(item.academy.name)
+            event['location'] = vText(item.online_meeting_url or item.academy.name)
 
             if first_timeslot:
-                event_first_day['location'] = vText(item.academy.name)
+                event_first_day['location'] = vText(item.online_meeting_url or item.academy.name)
 
             if has_last_day:
-                event_last_day['location'] = vText(item.academy.name)
+                event_last_day['location'] = vText(item.online_meeting_url or item.academy.name)
 
             if first_timeslot:
                 calendar.add_component(event_first_day)

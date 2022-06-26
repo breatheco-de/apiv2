@@ -73,3 +73,21 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
+
+    """
+    🔽🔽🔽 DELETE found, it's deleted, with Profile, the image keep
+    """
+
+    def test__delete__found__with_profile__keep_the_image(self):
+        profile = {'avatar_url': self.bc.fake.url()}
+        model = self.bc.database.create(user=1, credentials_github=1, profile=profile)
+
+        self.bc.request.authenticate(model.user)
+        url = reverse_lazy('authenticate:github_me')
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
+            self.bc.format.to_dict(model.profile),
+        ])
