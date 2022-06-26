@@ -13,7 +13,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
-from .actions import (close_mentoring_session, extend_session, get_pending_sessions_or_create, render_session,
+from .actions import (close_mentoring_session, get_pending_sessions_or_create, render_session,
                       generate_mentor_bills)
 from breathecode.mentorship import actions
 from breathecode.notify.actions import get_template_content
@@ -99,194 +99,238 @@ def forward_booking_url(request, mentor_slug, token):
     })
 
 
-@private_view()
-def forward_meet_url(request, mentor_slug, token):
-    # If the ? is added at the end, everyone can assume the querystring already started
-    # and its a lot easier to append variables to it
-    baseUrl = request.get_full_path()
-    if '?' not in baseUrl:
-        baseUrl += '?'
+class ForwardMeetUrl:
+    def __init__(self, request, mentor_slug, token):
+        self.request = request
+        self.mentor_slug = mentor_slug
+        self.token = token
+        self.baseUrl = request.get_full_path()
+        self.now = timezone.now()
+        self.query_params = self.querystring()
 
-    now = timezone.now()
-    if isinstance(token, HttpResponseRedirect):
-        return token
+        if '?' not in self.baseUrl:
+            self.baseUrl += '?'
 
-    mentee_hit_start = request.GET.get('redirect', None)
-    extend = request.GET.get('extend', None)
-    session_id = request.GET.get('session', None)
-    mentee_id = request.GET.get('mentee', None)
+    def querystring(self):
+        params = ['redirect', 'extend', 'session', 'mentee']
+        result = {}
 
-    sessions = None
-    mentee = None
-    mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
-    if mentor is None:
-        return render_message(request, f'No mentor found with slug {mentor_slug}')
+        for param in params:
+            result[param] = self.request.GET.get(param, None)
 
-    # add academy to session, will be available on html templates
-    request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
+        return result
 
-    if mentor.status not in ['ACTIVE', 'UNLISTED']:
-        return render_message(request, f'This mentor is not active at the moment')
+    def render_pick_session(self, mentor, sessions):
+        return render(
+            self.request, 'pick_session.html', {
+                'token': self.token.key,
+                'mentor': GETMentorBigSerializer(mentor, many=False).data,
+                'SUBJECT': 'Mentoring Session',
+                'sessions': GETSessionReportSerializer(sessions, many=True).data,
+                'baseUrl': self.baseUrl,
+            })
 
-    try:
-        actions.mentor_is_ready(mentor)
+    def render_pick_mentee(self, mentor, session):
+        return render(
+            self.request, 'pick_mentee.html', {
+                'token': self.token.key,
+                'mentor': GETMentorBigSerializer(mentor, many=False).data,
+                'SUBJECT': 'Mentoring Session',
+                'sessions': GETSessionReportSerializer(session, many=False).data,
+                'baseUrl': self.baseUrl,
+            })
 
-    except:
-        return render_message(request, f'This mentor is not ready too')
-
-    # if the mentor is not the user, then we assume is the mentee
-    if mentor.user.id != token.user.id:
-        mentee = token.user
-
-    # if specific sessions is being loaded
-    if session_id is not None:
-        sessions = MentorshipSession.objects.filter(id=session_id)
-        if sessions.count() == 0:
-            return render_message(request, f'Session with id {session_id} not found')
-    else:
-        sessions = get_pending_sessions_or_create(token, mentor, mentee)
-        logger.debug(f'Found {sessions.count()} sessions to close or create')
-
-    logger.debug(f'Mentor: {mentor.user.id}, Session user:{token.user.id}, Mentee: {str(mentee)}')
-    if mentor.user.id == token.user.id:
-        logger.debug(f'With {sessions.count()} sessions and session_id {session_id}')
-        if sessions.count() > 0 and (session_id is None or str(sessions.first().id) != session_id):
-            return render(
-                request, 'pick_session.html', {
-                    'token': token.key,
-                    'mentor': GETMentorBigSerializer(mentor, many=False).data,
-                    'SUBJECT': 'Mentoring Session',
-                    'sessions': GETSessionReportSerializer(sessions, many=True).data,
-                    'baseUrl': baseUrl,
-                })
-    """
-    From this line on, we know exactly what session is about to be opened,
-    if the mentee is None it probably is a new session
-    """
-    logger.debug(f'Ready to render session')
-    session = None
-    if session_id is not None:
-        session = sessions.filter(id=session_id).first()
-    else:
-        session = sessions.filter(Q(mentee=mentee) | Q(mentee__isnull=True)).first()
-        # if the session.mentee is None it means the mentor had some pending unstarted session
-        # if the current user is a mentee, we are going to assign that meeting to it
-        if session.mentee is None and mentee is not None:
-            session.mentee = mentee
-
-    if session is None:
+    def render_end_session(self, message, btn_url):
         return render_message(
-            request, f'Impossible to create or retrieve mentoring session with {mentor.user.first_name}')
+            self.request,
+            message,
+            btn_label='End Session',
+            btn_url=btn_url,
+            btn_target='_self',
+        )
 
-    if session.mentee is None:
-        if mentee_id is not None and mentee_id != 'undefined':
-            session.mentee = User.objects.filter(id=mentee_id).first()
+    def get_user_name(self, user, default):
+        name = ''
+
+        if user.first_name:
+            name = user.first_name
+
+        if user.last_name:
+            name += ' ' + user.last_name
+
+        name = re.sub(r'(\S) +(\S)', r'\1 \2', name).strip()
+        if not name:
+            name = default
+
+        return name
+
+    def render_start_session(self, session):
+        student_name = self.get_user_name(session.mentee, 'student')
+        mentor_name = self.get_user_name(session.mentor.user, 'a mentor')
+        link = set_query_parameter('?' + self.request.GET.urlencode(), 'redirect', 'true')
+        message = (f'Hello {student_name}, you are about to start a {session.mentor.service.name} '
+                   f'with {mentor_name}.')
+
+        return render(
+            self.request, 'message.html', {
+                'SUBJECT': 'Mentoring Session',
+                'BUTTON': 'Start Session',
+                'BUTTON_TARGET': '_self',
+                'LINK': link,
+                'MESSAGE': message,
+            })
+
+    def get_pending_sessions_or_create(self, mentor, mentee):
+        # if specific sessions is being loaded
+        if self.query_params['session'] is not None:
+            sessions = MentorshipSession.objects.filter(id=self.query_params['session'])
+            if sessions.count() == 0:
+                return render_message(self.request,
+                                      f'Session with id {self.query_params["session"]} not found')
+        else:
+            sessions = actions.get_pending_sessions_or_create(self.token, mentor, mentee)
+            logger.debug(f'Found {sessions.count()} sessions to close or create')
+
+        return sessions
+
+    def get_session(self, sessions, mentee):
+        if self.query_params['session'] is not None:
+            session = sessions.filter(id=self.query_params['session']).first()
+        else:
+            session = sessions.filter(Q(mentee=mentee) | Q(mentee__isnull=True)).first()
+            # if the session.mentee is None it means the mentor had some pending unstarted session
+            # if the current user is a mentee, we are going to assign that meeting to it
+            if session and session.mentee is None and mentee is not None:
+                session.mentee = mentee
+
+        return session
+
+    def __call__(self):
+        if isinstance(self.token, HttpResponseRedirect):
+            return self.token
+
+        mentor = MentorProfile.objects.filter(slug=self.mentor_slug).first()
+        if mentor is None:
+            return render_message(self.request, f'No mentor found with slug {self.mentor_slug}')
+
+        # add academy to session, will be available on html templates
+        self.request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
+
+        if mentor.status not in ['ACTIVE', 'UNLISTED']:
+            return render_message(self.request, f'This mentor is not active at the moment')
+
+        try:
+            actions.mentor_is_ready(mentor)
+
+        except:
+            return render_message(self.request, f'This mentor is not ready too')
+
+        is_token_of_mentee = mentor.user.id != self.token.user.id
+
+        # if the mentor is not the user, then we assume is the mentee
+        mentee = self.token.user if is_token_of_mentee else None
+        sessions = self.get_pending_sessions_or_create(mentor, mentee)
+
+        if not is_token_of_mentee and sessions.count() > 0 and str(
+                sessions.first().id) != self.query_params['session']:
+            return self.render_pick_session(mentor, sessions)
+
+        # this also set the session.mentee
+        session = self.get_session(sessions, mentee)
+        if session is None:
+            name = self.get_user_name(mentor.user, 'the mentor')
+            return render_message(self.request,
+                                  f'Impossible to create or retrieve mentoring session with {name}.')
+
+        is_mentee_params_set = bool(self.query_params['mentee'])
+        is_mentee_params_undefined = self.query_params['mentee'] == 'undefined'
+
+        # passing mentee query param
+        if session.mentee is None and is_mentee_params_set and not is_mentee_params_undefined:
+            session.mentee = User.objects.filter(id=self.query_params['mentee']).first()
             if session.mentee is None:
                 return render_message(
-                    request,
-                    f'Mentee with user id {mentee_id} was not found, <a href="{baseUrl}&mentee=undefined">click here to start the session anyway.</a>'
-                )
+                    self.request, f'Mentee with user id {self.query_params["mentee"]} was not found, '
+                    f'<a href="{self.baseUrl}&mentee=undefined">click here to start the session anyway.</a>')
 
-        elif mentee_id != 'undefined' and session.mentee is None:
-            return render(
-                request, 'pick_mentee.html', {
-                    'token': token.key,
-                    'mentor': GETMentorBigSerializer(mentor, many=False).data,
-                    'SUBJECT': 'Mentoring Session',
-                    'sessions': GETSessionReportSerializer(session, many=False).data,
-                    'baseUrl': baseUrl,
-                })
+        # passing a invalid mentee query param
+        if session.mentee is None and not is_mentee_params_undefined:
+            return self.render_pick_mentee(mentor, session)
 
-    if session.status not in ['PENDING', 'STARTED']:
-        return render_message(
-            request,
-            f'This mentoring session has ended ({session.status}), would you like <a href="/mentor/meet/{mentor.slug}">to start a new one?</a>.',
-        )
-    # Who is joining? Set meeting joinin dates
-    if mentor.user.id == token.user.id:
-        # only reset the joined_at it has ben more than 5min and the session has not started yey
-        if session.mentor_joined_at is None or (session.started_at is None and
-                                                ((now - session.mentor_joined_at).seconds > 300)):
-            session.mentor_joined_at = now
-    elif mentee_hit_start is not None and session.mentee.id == token.user.id:
-        if session.started_at is None:
-            session.started_at = now
-            session.status = 'STARTED'
+        # session ended
+        if session.status not in ['PENDING', 'STARTED']:
+            return render_message(
+                self.request,
+                f'This mentoring session has ended ({session.status}), would you like '
+                f'<a href="/mentor/meet/{mentor.slug}">to start a new one?</a>.',
+            )
+        # Who is joining? Set meeting join in dates
+        if not is_token_of_mentee:
+            # only reset the joined_at it has ben more than 5min and the session has not started yey
+            if session.mentor_joined_at is None or (session.started_at is None and
+                                                    ((self.now - session.mentor_joined_at).seconds > 300)):
+                session.mentor_joined_at = self.now
 
-    # if it expired already you could extend it
-    service = session.mentor.service
-    if session.ends_at is not None and session.ends_at < now:
-        if (now - session.ends_at).total_seconds() > (service.duration.seconds / 2):
+        elif self.query_params['redirect'] is not None and session.mentee.id == self.token.user.id:
+            if session.started_at is None:
+                session.started_at = self.now
+                session.status = 'STARTED'
+
+        # if it expired already you could extend it
+        service = session.mentor.service
+
+        session_ends_in_the_pass = session.ends_at is not None and session.ends_at < self.now
+        # can extend this session?
+        if session_ends_in_the_pass and (self.now -
+                                         session.ends_at).total_seconds() > (service.duration.seconds / 2):
             return HttpResponseRedirect(
                 redirect_to=
-                f'/mentor/session/{str(session.id)}?token={token.key}&message=You have a session that expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
-            )
+                f'/mentor/session/{str(session.id)}?token={self.token.key}&message=You have a session that '
+                f'expired {timeago.format(session.ends_at, self.now)}. Only sessions with less than '
+                f'{round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from '
+                'expiration can be extended (if allowed by the academy)')
 
-        if ((session.mentor.user.id == token.user.id and service.allow_mentors_to_extend)
-                or (session.mentor.user.id != token.user.id and service.allow_mentee_to_extend)):
-            if extend is True:
+        if session_ends_in_the_pass and ((is_token_of_mentee and service.allow_mentee_to_extend) or
+                                         (not is_token_of_mentee and service.allow_mentors_to_extend)):
+
+            if self.query_params['extend'] == 'true':
                 try:
-                    session = extend_session(session)
+                    session = actions.extend_session(session)
 
                 except ExtendSessionException as e:
-                    return render_message(
-                        request,
-                        str(e),
-                        btn_label='End Session',
-                        btn_url=f'/mentor/session/{str(session.id)}?token={token.key}',
-                        btn_target='_self',
-                    )
+                    return self.render_end_session(
+                        str(e), btn_url=f'/mentor/session/{str(session.id)}?token={self.token.key}')
 
-            extend_url = set_query_parameter(request.get_full_path(), 'extend', 'true')
+            extend_url = set_query_parameter(self.request.get_full_path(), 'extend', 'true')
+            return self.render_end_session(
+                f'The mentoring session expired {timeago.format(session.ends_at, self.now)}: You can '
+                f'<a href="{extend_url}">extend it for another 30 minutes</a> or end the session right '
+                'now.',
+                btn_url=f'/mentor/session/{str(session.id)}?token={self.token.key}')
+
+        elif session_ends_in_the_pass:
             return render_message(
-                request,
-                f'The mentoring session expired {timeago.format(session.ends_at, now)}: You can <a href="{extend_url}">extend it for another 30 minutes</a> or end the session right now.',
-                btn_label='End Session',
-                btn_url=f'/mentor/session/{str(session.id)}?token={token.key}',
-                btn_target='_self',
-            )
-        else:
-            return render_message(
-                request,
-                f'The mentoring session expired {timeago.format(session.ends_at, now)} and it cannot be extended',
+                self.request,
+                f'The mentoring session expired {timeago.format(session.ends_at, self.now)} and it '
+                'cannot be extended.',
             )
 
-    # save progress so far, we are about to render the session below
-    session.save()
+        # save progress so far, we are about to render the session below
+        session.save()
 
-    if session.mentee is None:
-        return render_session(request, session, token=token)
+        if session.mentee is None:
+            return render_session(self.request, session, token=self.token)
 
-    if mentee_hit_start is not None or token.user.id == session.mentor.user.id:
-        return render_session(request, session, token=token)
+        if self.query_params['redirect'] is not None or self.token.user.id == session.mentor.user.id:
+            return render_session(self.request, session, token=self.token)
 
-    student_name = session.mentee.first_name or 'student'
-    mentor_name = ''
+        return self.render_start_session(session)
 
-    if session.mentor.user.first_name:
-        mentor_name = session.mentor.user.first_name
 
-    if session.mentor.user.last_name:
-        mentor_name += ' ' + session.mentor.user.last_name
-
-    mentor_name = re.sub(r'(\S) +(\S)', r'\1 \2', mentor_name).strip()
-    if not mentor_name:
-        mentor_name = 'a mentor'
-
-    return render(
-        request, 'message.html', {
-            'SUBJECT':
-            'Mentoring Session',
-            'BUTTON':
-            'Start Session',
-            'BUTTON_TARGET':
-            '_self',
-            'LINK':
-            set_query_parameter('?' + request.GET.urlencode(), 'redirect', 'true'),
-            'MESSAGE':
-            f'Hello {student_name}, you are about to start a {session.mentor.service.name} '
-            f'with {mentor_name}.',
-        })
+@private_view()
+def forward_meet_url(request, mentor_slug, token):
+    handler = ForwardMeetUrl(request, mentor_slug, token)
+    return handler()
 
 
 @private_view()
@@ -883,7 +927,7 @@ class UserMeBillView(APIView, HeaderLimitOffsetPagination):
         if bill_id is not None:
             bill = MentorshipBill.objects.filter(id=bill_id, mentor__user__id=request.user.id).first()
             if bill is None:
-                raise ValidationException('This mentorhip bill does not exist', code=404)
+                raise ValidationException('This mentorship bill does not exist', code=404)
 
             serializer = BigBillSerializer(bill)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -907,7 +951,7 @@ class UserMeBillView(APIView, HeaderLimitOffsetPagination):
 
         mentee = request.GET.get('mentee', None)
         if mentee is not None:
-            lookup['mentee__id__in'] = mentor.split(',')
+            lookup['mentee__id__in'] = mentee.split(',')
 
         items = items.filter(**lookup).order_by('-created_at')
         page = self.paginate_queryset(items, request)
