@@ -10,7 +10,7 @@ from breathecode.admissions.admin import CohortAdmin
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.utils.admin import change_field
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword, AssetComment
 from .tasks import async_pull_from_github, async_test_asset
 from .actions import pull_from_github, get_user_from_github_username, test_asset
 
@@ -481,3 +481,11 @@ class KeywordClusterAdmin(admin.ModelAdmin):
     list_display = ('slug', 'title', 'academy')
     raw_id_fields = ['academy']
     list_filter = ['academy']
+
+
+@admin.register(AssetComment)
+class AssetCommentAdmin(admin.ModelAdmin):
+    list_display = ['asset', 'text', 'author']
+    search_fields = ('asset__slug', 'author__first_name', 'author__last_name', 'author__email')
+    raw_id_fields = ['asset', 'author']
+    list_filter = ['asset__academy']

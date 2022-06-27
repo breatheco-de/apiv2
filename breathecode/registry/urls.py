@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import (AssetView, get_keywords, get_clusters, get_categories, render_readme, get_technologies,
                     get_config, get_translations, handle_test_syllabus, render_preview_html,
-                    handle_test_asset, forward_asset_url, get_alias_redirects, AcademyAssetView)
+                    handle_test_asset, forward_asset_url, get_alias_redirects, AcademyAssetView,
+                    AcademyAssetActionView, AcademyAssetCommentView)
 
 app_name = 'feedback'
 urlpatterns = [
@@ -14,6 +15,9 @@ urlpatterns = [
     path('asset/<str:asset_slug>.<str:extension>', render_readme),
     path('asset/<str:asset_slug>', AssetView.as_view()),
     path('academy/asset', AcademyAssetView.as_view()),
+    path('academy/asset/comment', AcademyAssetCommentView.as_view()),
+    path('academy/asset/comment/<str:comment_id>', AcademyAssetCommentView.as_view()),
+    path('academy/asset/<str:asset_slug>/action/<str:action_slug>', AcademyAssetActionView.as_view()),
     path('academy/asset/<str:asset_slug>', AcademyAssetView.as_view()),
     path('keyword', get_keywords),
     path('keywordcluster', get_clusters),

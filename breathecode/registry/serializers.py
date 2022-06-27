@@ -1,4 +1,4 @@
-from .models import Asset, AssetAlias
+from .models import Asset, AssetAlias, AssetComment
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework import serializers
 from rest_framework import status
@@ -22,6 +22,11 @@ class UserSerializer(serpy.Serializer):
     profile = ProfileSerializer(required=False)
 
 
+class SmallAsset(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+
+
 class AcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
@@ -35,6 +40,15 @@ class AssetCategorySmallSerializer(serpy.Serializer):
 class KeywordClusterSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
+
+
+class AcademyCommentSerializer(serpy.Serializer):
+    id = serpy.Field()
+    text = serpy.Field()
+    asset = SmallAsset()
+    resolved = serpy.Field()
+    author = UserSerializer()
+    created_at = serpy.Field()
 
 
 class AssetSerializer(serpy.Serializer):
@@ -102,6 +116,14 @@ class AssetBigSerializer(AssetMidSerializer):
     description = serpy.Field()
     status_text = serpy.Field()
     author = UserSerializer(required=False)
+    owner = UserSerializer(required=False)
+
+    test_status = serpy.Field()
+    last_test_at = serpy.Field()
+    sync_status = serpy.Field()
+    last_synch_at = serpy.Field()
+    status_text = serpy.Field()
+    published_at = serpy.Field()
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -150,6 +172,30 @@ class PostAssetSerializer(serializers.ModelSerializer):
         return validated_data
 
 
+class PostAssetCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetComment
+        exclude = ()
+
+
+class PutAssetCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetComment
+        exclude = ('text', 'asset', 'author')
+
+    def validate(self, data):
+
+        validated_data = super().validate(data)
+
+        academy_id = self.context.get('academy_id')
+        session_user = self.context.get('request').user
+
+        if self.instance.author is not None and self.instance.author.id != session_user.id:
+            raise ValidationException('Only the comment author can mark this comment as resolved')
+
+        return validated_data
+
+
 class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
@@ -185,10 +231,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 raise ValidationException(f'You can only update card assigned to yourself',
                                           status.HTTP_400_BAD_REQUEST)
 
-        if data['status'] == 'UNASSIGNED':
-            data['author'] = None
-
-        if data['status'] == 'PUBLISHED':
+        if 'status' in data and data['status'] == 'PUBLISHED':
             if self.instance.test_status != 'Ok':
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
