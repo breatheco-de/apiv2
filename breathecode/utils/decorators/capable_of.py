@@ -77,7 +77,8 @@ def get_academy_from_capability(kwargs, request, capability):
             f"You (user: {request.user.id}) don't have this capability: {capability} for academy {academy_id}"
         )
 
-    if request.get_full_path() != '/v1/activity/academy/activate':
+    print(request.get_full_path())
+    if request.get_full_path() != '/v1/admissions/academy/activate':
         academy = capable.first().academy
         if academy.status == 'INACTIVE':
             raise PermissionDenied(f'This academy is not active')
