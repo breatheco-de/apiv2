@@ -1,9 +1,7 @@
 """
 Test cases for /academy/:id/member/:id
 """
-import os
 from unittest.mock import MagicMock, patch
-import urllib.parse
 from django.template import loader
 from django.urls.base import reverse_lazy
 from rest_framework import status

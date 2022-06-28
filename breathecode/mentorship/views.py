@@ -340,14 +340,16 @@ def end_mentoring_session(request, session_id, token):
         _dict = request.POST.copy()
         form = CloseMentoringSessionForm(_dict)
 
-        token = Token.objects.filter(key=_dict['token']).first()
+        token_key = _dict.get('token')
+        token = Token.objects.filter(key=token_key).first()
         if token is None or (token.expires_at is not None and token.expires_at < now):
-            messages.error(request, f'Invalid or expired deliver token {_dict["token"]}')
+            messages.error(request, 'Invalid or expired deliver token.')
             return render(request, 'form.html', {'form': form})
 
-        session = MentorshipSession.objects.filter(id=_dict['session_id']).first()
+        session_id_from_body = _dict.get('session_id')
+        session = MentorshipSession.objects.filter(id=session_id_from_body).first()
         if session is None:
-            messages.error(request, 'Invalid session id')
+            messages.error(request, 'Invalid session id.')
             return render(request, 'form.html', {'form': form})
 
         if form.is_valid():
@@ -370,7 +372,7 @@ def end_mentoring_session(request, session_id, token):
     elif request.method == 'GET':
         session = MentorshipSession.objects.filter(id=session_id).first()
         if session is None:
-            return render_message(request, f'Invalid session id {str(session_id)}')
+            return render_message(request, f'Session not found with id {str(session_id)}')
 
         # add academy to session, will be available on html templates
         request.session['academy'] = GetAcademySmallSerializer(session.mentor.service.academy).data
@@ -379,29 +381,37 @@ def end_mentoring_session(request, session_id, token):
         session.mentor_left_at = now
         session.save()
 
-        if session.mentee is None:
+        mentee = session.mentee
+
+        if mentee is None:
             session.status = 'FAILED'
-            session.summary = 'This session expired without assigned mentee, it probably means the mentee never came. It will be marked as failed'
+            session.summary = ('This session expired without assigned mentee, it probably means the mentee '
+                               'never came. It will be marked as failed')
             session.save()
             pending_sessions = MentorshipSession.objects.filter(mentor__id=session.mentor.id,
                                                                 status__in=['STARTED', 'PENDING'])
             return render(
                 request, 'close_session.html', {
-                    'token': token.key,
+                    'token':
+                    token.key,
                     'message':
-                    'Previous session expired without assigned mentee, it probably means the mentee never came. It was marked as failed. Try the mentor meeting URL again.',
-                    'mentor': GETMentorBigSerializer(session.mentor, many=False).data,
-                    'SUBJECT': 'Close Mentoring Session',
-                    'sessions': GETSessionReportSerializer(pending_sessions, many=True).data,
-                    'baseUrl': request.get_full_path(),
+                    'Previous session expired without assigned mentee, it probably means the mentee never came. It was '
+                    'marked as failed. Try the mentor meeting URL again.',
+                    'mentor':
+                    GETMentorBigSerializer(session.mentor, many=False).data,
+                    'SUBJECT':
+                    'Close Mentoring Session',
+                    'sessions':
+                    GETSessionReportSerializer(pending_sessions, many=True).data,
+                    'baseUrl':
+                    request.get_full_path(),
                 })
 
         _dict = request.GET.copy()
         _dict['token'] = request.GET.get('token', None)
         _dict['status'] = 'COMPLETED'
         _dict['summary'] = session.summary
-        _dict[
-            'student_name'] = session.mentee.first_name + ' ' + session.mentee.last_name + ', ' + session.mentee.email
+        _dict['student_name'] = f'{mentee.first_name} {mentee.last_name}, {mentee.email}'
         _dict['session_id'] = session.id
         form = CloseMentoringSessionForm(_dict)
 
