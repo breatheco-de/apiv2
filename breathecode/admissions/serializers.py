@@ -130,6 +130,16 @@ class GetAcademySerializer(serpy.Serializer):
     logo_url = serpy.Field()
 
 
+class GetAcademyWithStatusSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    status = serpy.Field()
+    country = CountrySerializer(required=False)
+    city = CitySerializer(required=False)
+    logo_url = serpy.Field()
+
+
 class GetBigAcademySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
