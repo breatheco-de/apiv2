@@ -169,10 +169,10 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         view = get_id
 
         response = view(request, id=1).render()
-        expected = {'academy_id': 1, 'id': 1}
+        expected = {'detail': 'This academy is deleted', 'status_code': 403}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class ViewTestSuite(UtilsTestCase):
@@ -284,8 +284,6 @@ class ViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         request = APIRequestFactory()
-        slug_1 = self.bc.fake.slug()
-        slug_2 = self.bc.fake.slug()
         request = request.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
         force_authenticate(request, user=model.user)
 
@@ -296,4 +294,23 @@ class ViewTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        assert 0
+
+    def test_capable_of__view__get_id__with_user__with_permission__academy_deleted_with_correct_link(self):
+        academy_kwargs = {'status': 'DELETED'}
+        model = self.bc.database.create(user=1,
+                                        academy=academy_kwargs,
+                                        profile_academy=1,
+                                        role=1,
+                                        capability='can_kill_kenny')
+
+        request = APIRequestFactory()
+        request = request.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
+        force_authenticate(request, user=model.user)
+
+        view = TestView.as_view()
+
+        response = view(request, id=1).render()
+        expected = {'detail': 'This academy is deleted', 'status_code': 403}
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
