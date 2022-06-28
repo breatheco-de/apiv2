@@ -132,7 +132,6 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
 
 def api_url():
-    print(os.getenv, os.getenv('API_URL', ''))
     return os.getenv('API_URL', '')
 
 

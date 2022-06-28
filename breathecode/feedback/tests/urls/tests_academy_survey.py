@@ -588,7 +588,7 @@ class SurveyTestSuite(FeedbackTestCase):
            }))
     def test_academy_survey__post__when_send_survey_group_is_called(self):
         """Test /academy/sur."""
-        print(now)
+
         self.headers(academy=1)
         cohort_user_kwargs = [{'role': 'STUDENT'}, {'role': 'TEACHER'}]
         model = self.bc.database.create(
