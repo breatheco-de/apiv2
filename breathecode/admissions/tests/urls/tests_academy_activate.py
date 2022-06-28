@@ -68,10 +68,10 @@ class AcademyActivateTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {'detail': 'academy-deleted', 'status_code': 400}
+        expected = {'detail': 'This academy is deleted', 'status_code': 403}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.bc.database.list_of('admissions.Academy'),
                          [self.bc.format.to_dict(model.academy)])
 

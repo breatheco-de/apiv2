@@ -121,10 +121,6 @@ class AcademyActivateView(APIView):
     def put(self, request, academy_id=None):
 
         academy = Academy.objects.filter(id=academy_id).first()
-        print(academy.status)
-
-        if academy.status == 'DELETED':
-            raise ValidationException('Academy has already been deleted', slug='academy-deleted')
 
         academy.status = 'ACTIVE'
         academy.save()
