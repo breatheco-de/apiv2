@@ -93,6 +93,7 @@ class SendCohortSurvey(FeedbackTestCase):
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list, [])
         self.assertEqual(actions.send_email_message.call_args_list, [])
 
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': 'https://hello.com'})))
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
@@ -115,14 +116,13 @@ class SendCohortSurvey(FeedbackTestCase):
                     'SUBJECT': 'We need your feedback',
                     'MESSAGE':
                     'Please take 5 minutes to give us feedback about your experience at the academy so far.',
-                    'TRACKER_URL': 'https://breathecode.herokuapp.com/v1/feedback/survey/1/tracker.png',
+                    'TRACKER_URL': 'https://hello.com/v1/feedback/survey/1/tracker.png',
                     'BUTTON': 'Answer the question',
                     'LINK': f'https://nps.breatheco.de/survey/1?token={token.key}'
                 })
         ])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({'API_URL': 'https://breathecode.herokuapp.com'})))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': 'https://hello.com'})))
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
@@ -144,41 +144,32 @@ class SendCohortSurvey(FeedbackTestCase):
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list,
                          [call(model.user, model.survey, status='SENT')])
-        print(actions.send_slack.call_args_list)
+
         token = self.bc.database.get('authenticate.Token', 1, dict=False)
-        print([
-            call('nps_survey',
-                 model.slack_user,
-                 model.slack_team,
-                 data={
-                     'SUBJECT': 'We need your feedback',
-                     'MESSAGE':
-                     'Please take 5 minutes to give us feedback about your experience at the academy so far.',
-                     'TRACKER_URL': 'https://breathecode.herokuapp.com/v1/feedback/survey/1/tracker.png',
-                     'BUTTON': 'Answer the question',
-                     'LINK': f'https://nps.breatheco.de/survey/1?token={token.key}'
-                 })
-        ])
-        self.assertEqual(actions.send_slack.call_args_list, [
-            call('nps_survey',
-                 model.slack_user,
-                 model.slack_team,
-                 data={
-                     'SUBJECT': 'We need your feedback',
-                     'MESSAGE':
-                     'Please take 5 minutes to give us feedback about your experience at the academy so far.',
-                     'TRACKER_URL': 'https://breathecode.herokuapp.com/v1/feedback/survey/1/tracker.png',
-                     'BUTTON': 'Answer the question',
-                     'LINK': f'https://nps.breatheco.de/survey/1?token={token.key}'
-                 })
-        ])
+
+        self.assertEqual(
+            str(actions.send_slack.call_args_list),
+            str([
+                call(
+                    'nps_survey',
+                    model.slack_user,
+                    model.slack_team,
+                    data={
+                        'SUBJECT': 'We need your feedback',
+                        'MESSAGE':
+                        'Please take 5 minutes to give us feedback about your experience at the academy so far.',
+                        'TRACKER_URL': 'https://hello.com/v1/feedback/survey/1/tracker.png',
+                        'BUTTON': 'Answer the question',
+                        'LINK': f'https://nps.breatheco.de/survey/1?token={token.key}'
+                    })
+            ]))
         self.assertEqual(actions.send_email_message.call_args_list, [
             call(
                 'nps_survey', model.user.email, {
                     'SUBJECT': 'We need your feedback',
                     'MESSAGE':
                     'Please take 5 minutes to give us feedback about your experience at the academy so far.',
-                    'TRACKER_URL': 'https://breathecode.herokuapp.com/v1/feedback/survey/1/tracker.png',
+                    'TRACKER_URL': 'https://hello.com/v1/feedback/survey/1/tracker.png',
                     'BUTTON': 'Answer the question',
                     'LINK': f'https://nps.breatheco.de/survey/1?token={token.key}'
                 })

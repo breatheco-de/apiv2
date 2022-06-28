@@ -132,6 +132,7 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
 
 def api_url():
+    print(os.getenv, os.getenv('API_URL', ''))
     return os.getenv('API_URL', '')
 
 
@@ -172,7 +173,7 @@ def send_cohort_survey(self, user_id, survey_id):
     data = {
         'SUBJECT': strings[survey.lang]['survey_subject'],
         'MESSAGE': strings[survey.lang]['survey_message'],
-        'TRACKER_URL': f'{API_URL}/v1/feedback/survey/{survey_id}/tracker.png',
+        'TRACKER_URL': f'{api_url()}/v1/feedback/survey/{survey_id}/tracker.png',
         'BUTTON': strings[survey.lang]['button_label'],
         'LINK': f'https://nps.breatheco.de/survey/{survey_id}?token={token.key}',
     }
