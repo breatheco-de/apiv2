@@ -580,7 +580,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    # @patch('django.utils.timezone.now', MagicMock(return_value=now))
     @patch('breathecode.feedback.actions.send_survey_group',
            MagicMock(return_value={
                'success': [],
