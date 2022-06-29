@@ -327,7 +327,11 @@ class AssetAdmin(admin.ModelAdmin):
 
 def merge_technologies(modeladmin, request, queryset):
     technologies = queryset.all()
-    target_tech = None
+
+    target_tech = technologies.filter(parent__isnull=True, featured_asset__isnull=False).first()
+    if target_tech is None:
+        target_tech = technologies.filter(parent__isnull=True).first()
+
     for t in technologies:
         # skip the first one
         if target_tech is None:
@@ -336,7 +340,6 @@ def merge_technologies(modeladmin, request, queryset):
 
         for a in t.asset_set.all():
             a.technologies.add(target_tech)
-        t.delete()
 
 
 class ParentFilter(admin.SimpleListFilter):
