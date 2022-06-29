@@ -341,6 +341,10 @@ def merge_technologies(modeladmin, request, queryset):
         for a in t.asset_set.all():
             a.technologies.add(target_tech)
 
+        if t.id != target_tech.id:
+            t.parent = target_tech
+            t.save()
+
 
 class ParentFilter(admin.SimpleListFilter):
 
