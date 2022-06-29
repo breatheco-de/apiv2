@@ -95,7 +95,7 @@ def render_preview_html(request, asset_slug):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_technologies(request):
-    tech = AssetTechnology.objects.all()
+    tech = AssetTechnology.objects.filter(parent__isnull=True)
 
     serializer = AssetTechnologySerializer(tech, many=True)
     return Response(serializer.data)

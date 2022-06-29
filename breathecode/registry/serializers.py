@@ -83,7 +83,7 @@ class AssetSerializer(serpy.Serializer):
         return result
 
     def get_technologies(self, obj):
-        _s = list(map(lambda t: t.slug, obj.technologies.all()))
+        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True)))
         return _s
 
     def get_seo_keywords(self, obj):
@@ -129,9 +129,15 @@ class AssetBigSerializer(AssetMidSerializer):
     updated_at = serpy.Field()
 
 
-class AssetTechnologySerializer(serpy.Serializer):
+class ParentAssetTechnologySerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
+    description = serpy.Field()
+    icon_url = serpy.Field()
+
+
+class AssetTechnologySerializer(ParentAssetTechnologySerializer):
+    parent = ParentAssetTechnologySerializer(required=False)
 
 
 class AssetCategorySerializer(serpy.Serializer):

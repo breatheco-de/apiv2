@@ -339,12 +339,43 @@ def merge_technologies(modeladmin, request, queryset):
         t.delete()
 
 
-# Register your models here.
+class ParentFilter(admin.SimpleListFilter):
+
+    title = 'With Parent'
+
+    parameter_name = 'has_parent'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('parents', 'Parents'),
+            ('alias', 'Aliases'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'parents':
+            return queryset.filter(parent__isnull=True)
+
+        if self.value() == 'alias':
+            return queryset.filter(parent__isnull=False)
+
+
 @admin.register(AssetTechnology)
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
-    list_display = ('slug', 'title')
+    list_display = ('id', 'get_slug', 'title', 'parent', 'description')
+    list_filter = (ParentFilter, )
+
     actions = (merge_technologies, )
+
+    def get_slug(self, obj):
+        parent = ''
+        if obj.parent is None:
+            parent = '🤰🏻'
+
+        return format_html(parent + ' ' +
+                           f'<a href="/admin/registry/assettechnology/{obj.id}/change/">{obj.slug}</a>')
 
 
 @admin.register(AssetAlias)
@@ -470,7 +501,7 @@ class KeywordAssignedFilter(admin.SimpleListFilter):
 @admin.register(AssetKeyword)
 class AssetKeywordAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'title']
-    list_display = ('slug', 'title', 'cluster', 'academy')
+    list_display = ('id', 'slug', 'title', 'cluster', 'academy')
     raw_id_fields = ['academy']
     list_filter = ['academy', KeywordAssignedFilter]
 
@@ -478,7 +509,7 @@ class AssetKeywordAdmin(admin.ModelAdmin):
 @admin.register(KeywordCluster)
 class KeywordClusterAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'title']
-    list_display = ('slug', 'title', 'academy')
+    list_display = ('id', 'slug', 'title', 'academy')
     raw_id_fields = ['academy']
     list_filter = ['academy']
 
