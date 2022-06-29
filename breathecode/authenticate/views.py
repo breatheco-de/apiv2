@@ -543,7 +543,7 @@ class StudentView(APIView, GenerateLookupsMixin):
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
-        force = request.GET.get('force', 'false')
+        allow_old = request.GET.get('allow_old', 'false')
         not_recent = []
 
         if lookups and user_id_or_email:
@@ -555,7 +555,7 @@ class StudentView(APIView, GenerateLookupsMixin):
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
-            if force != 'true':
+            if allow_old != 'true':
                 responses = []
                 not_recent = items.filter(created_at__lt=Now() - timedelta(minutes=30))
                 responses.append(
