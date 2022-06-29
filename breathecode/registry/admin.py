@@ -366,6 +366,7 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
     list_display = ('id', 'get_slug', 'title', 'parent', 'description')
     list_filter = (ParentFilter, )
+    raw_id_fields = ['parent']
 
     actions = (merge_technologies, )
 
