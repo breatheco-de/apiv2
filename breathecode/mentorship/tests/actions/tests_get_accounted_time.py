@@ -345,9 +345,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         result = get_accounted_time(model.mentorship_session)
         extended_message = (' The session accounted duration was limited to the maximum allowed '
                             f'{duration_to_str(model.mentorship_service.max_duration)}.')
+        maximum = timedelta(hours=2)
         expected = {
             'accounted_duration':
-            diff,
+            diff if diff < maximum else maximum,
             'status_message': ('The lasted way more than it should, accounting duration based on the time '
                                f'where the mentee left the meeting {duration_to_str(diff)}.'),
         }
@@ -371,7 +372,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         mentorship_session = {
             'started_at': now,
             'mentor_joined_at': now,
-            'ended_at': now + timedelta(seconds=random.randint(0, 85399)),  # less one day
+            'ended_at': now + timedelta(seconds=random.randint(7201, 85399)),  # less one day
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10)}
         model = self.bc.database.create(mentorship_session=mentorship_session,
