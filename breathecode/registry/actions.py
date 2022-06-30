@@ -158,6 +158,10 @@ def create_asset(data, asset_type, force=False):
                 t = AssetTechnology(slug=tech, title=tech)
                 t.save()
 
+            # Parent technologies will merge similar ones like: reactjs and react.js together.
+            if t.parent is not None:
+                t = t.parent
+
             if a.technologies.filter(slug=tech).first() is None:
                 a.technologies.add(t)
 
@@ -416,6 +420,11 @@ def sync_learnpack_asset(github, asset):
                 if technology is None:
                     technology = AssetTechnology(slug=_slug, title=tech_slug)
                     technology.save()
+
+                # Parent technologies will merge similar ones like: reactjs and react.js together.
+                if technology.parent is not None:
+                    technology = technology.parent
+
                 asset.technologies.add(technology)
     return asset
 

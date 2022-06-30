@@ -16,6 +16,14 @@ logger = logging.getLogger(__name__)
 class AssetTechnology(models.Model):
     slug = models.SlugField(max_length=200, unique=True)
     title = models.CharField(max_length=200, blank=True)
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    featured_asset = models.ForeignKey('Asset',
+                                       on_delete=models.SET_NULL,
+                                       default=None,
+                                       blank=True,
+                                       null=True)
+    description = models.TextField(null=True, blank=True, default=None)
+    icon_url = models.URLField(null=True, blank=True, default=None, help_text='Image icon to show on website')
 
     def __str__(self):
         return self.title
@@ -142,6 +150,12 @@ class Asset(models.Model):
     solution_url = models.URLField(null=True, blank=True, default=None)
     preview = models.URLField(null=True, blank=True, default=None)
     description = models.TextField(null=True, blank=True, default=None)
+    requirements = models.TextField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text='Brief for the copywriters, mainly used to describe what this lessons needs to be about')
+
     readme_url = models.URLField(
         null=True,
         blank=True,
@@ -177,7 +191,7 @@ class Asset(models.Model):
 
     status = models.CharField(max_length=20,
                               choices=ASSET_STATUS,
-                              default=DRAFT,
+                              default=UNASSIGNED,
                               help_text='Related to the publishing of the asset')
     sync_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
@@ -350,6 +364,24 @@ class AssetAlias(models.Model):
 
     def __str__(self):
         return self.slug
+
+
+class AssetComment(models.Model):
+
+    text = models.TextField()
+    resolved = models.BooleanField(default=False)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    author = models.ForeignKey(User,
+                               on_delete=models.SET_NULL,
+                               default=None,
+                               blank=True,
+                               null=True,
+                               help_text='Who wrote the lesson, not necessarily the owner')
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    def __str__(self):
+        return 'AssetComment ' + str(self.id)
 
 
 ERROR = 'ERROR'

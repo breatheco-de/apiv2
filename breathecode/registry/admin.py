@@ -10,7 +10,7 @@ from breathecode.admissions.admin import CohortAdmin
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.utils.admin import change_field
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword, AssetComment
 from .tasks import async_pull_from_github, async_test_asset
 from .actions import pull_from_github, get_user_from_github_username, test_asset
 
@@ -327,7 +327,11 @@ class AssetAdmin(admin.ModelAdmin):
 
 def merge_technologies(modeladmin, request, queryset):
     technologies = queryset.all()
-    target_tech = None
+
+    target_tech = technologies.filter(parent__isnull=True, featured_asset__isnull=False).first()
+    if target_tech is None:
+        target_tech = technologies.filter(parent__isnull=True).first()
+
     for t in technologies:
         # skip the first one
         if target_tech is None:
@@ -336,15 +340,50 @@ def merge_technologies(modeladmin, request, queryset):
 
         for a in t.asset_set.all():
             a.technologies.add(target_tech)
-        t.delete()
+
+        if t.id != target_tech.id:
+            t.parent = target_tech
+            t.save()
 
 
-# Register your models here.
+class ParentFilter(admin.SimpleListFilter):
+
+    title = 'With Parent'
+
+    parameter_name = 'has_parent'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('parents', 'Parents'),
+            ('alias', 'Aliases'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'parents':
+            return queryset.filter(parent__isnull=True)
+
+        if self.value() == 'alias':
+            return queryset.filter(parent__isnull=False)
+
+
 @admin.register(AssetTechnology)
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
-    list_display = ('slug', 'title')
+    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description')
+    list_filter = (ParentFilter, )
+    raw_id_fields = ['parent', 'featured_asset']
+
     actions = (merge_technologies, )
+
+    def get_slug(self, obj):
+        parent = ''
+        if obj.parent is None:
+            parent = '🤰🏻'
+
+        return format_html(parent + ' ' +
+                           f'<a href="/admin/registry/assettechnology/{obj.id}/change/">{obj.slug}</a>')
 
 
 @admin.register(AssetAlias)
@@ -470,7 +509,7 @@ class KeywordAssignedFilter(admin.SimpleListFilter):
 @admin.register(AssetKeyword)
 class AssetKeywordAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'title']
-    list_display = ('slug', 'title', 'cluster', 'academy')
+    list_display = ('id', 'slug', 'title', 'cluster', 'academy')
     raw_id_fields = ['academy']
     list_filter = ['academy', KeywordAssignedFilter]
 
@@ -478,6 +517,14 @@ class AssetKeywordAdmin(admin.ModelAdmin):
 @admin.register(KeywordCluster)
 class KeywordClusterAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'title']
-    list_display = ('slug', 'title', 'academy')
+    list_display = ('id', 'slug', 'title', 'academy')
     raw_id_fields = ['academy']
     list_filter = ['academy']
+
+
+@admin.register(AssetComment)
+class AssetCommentAdmin(admin.ModelAdmin):
+    list_display = ['asset', 'text', 'author']
+    search_fields = ('asset__slug', 'author__first_name', 'author__last_name', 'author__email')
+    raw_id_fields = ['asset', 'author']
+    list_filter = ['asset__academy']
