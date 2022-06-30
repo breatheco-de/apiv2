@@ -5,18 +5,19 @@ from django.utils import timezone
 from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
-from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword
-from .actions import test_syllabus, test_asset
+from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword, AssetComment
+from .actions import test_syllabus, test_asset, pull_from_github, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
-from .caches import AssetCache
+from .caches import AssetCache, AssetCommentCache
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
-                          KeywordClusterSerializer, AcademyAssetSerializer, AssetPUTSerializer)
+                          KeywordClusterSerializer, AcademyAssetSerializer, AssetPUTSerializer,
+                          AcademyCommentSerializer, PostAssetCommentSerializer, PutAssetCommentSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
@@ -94,7 +95,7 @@ def render_preview_html(request, asset_slug):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_technologies(request):
-    tech = AssetTechnology.objects.all()
+    tech = AssetTechnology.objects.filter(parent__isnull=True)
 
     serializer = AssetTechnologySerializer(tech, many=True)
     return Response(serializer.data)
@@ -148,6 +149,7 @@ def handle_test_asset(request):
 @permission_classes([AllowAny])
 @xframe_options_exempt
 def render_readme(request, asset_slug, extension='raw'):
+
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
         raise ValidationException('Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
@@ -335,6 +337,33 @@ class AssetView(APIView, GenerateLookupsMixin):
 
 
 # Create your views here.
+class AcademyAssetActionView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('crud_asset')
+    def put(self, request, asset_slug, action_slug, academy_id=None):
+
+        if asset_slug is None:
+            raise ValidationException('Missing asset_slug')
+
+        asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
+        if asset is None:
+            raise ValidationException('This asset does not exist for this academy', 404)
+
+        try:
+            if action_slug == 'test':
+                test_asset(asset)
+            elif action_slug == 'sync':
+                pull_from_github(asset.slug)
+        except Exception as e:
+            pass
+
+        serializer = AssetBigSerializer(asset)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# Create your views here.
 class AcademyAssetView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -494,3 +523,92 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Create your views here.
+class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(cache=AssetCommentCache, sort='-created_at', paginate=True)
+
+    @capable_of('read_asset')
+    def get(self, request, academy_id=None):
+
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = AssetComment.objects.filter(asset__academy__id=academy_id)
+        lookup = {}
+
+        if 'asset' in self.request.GET:
+            param = self.request.GET.get('asset')
+            lookup['asset__slug__in'] = [p.lower() for p in param.split(',')]
+
+        if 'resolved' in self.request.GET:
+            param = self.request.GET.get('resolved')
+            if param == 'true':
+                lookup['resolved'] = True
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = AcademyCommentSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of('crud_asset')
+    def post(self, request, academy_id=None):
+
+        payload = {**request.data, 'author': request.user.id}
+
+        serializer = PostAssetCommentSerializer(data=payload,
+                                                context={
+                                                    'request': request,
+                                                    'academy': academy_id
+                                                })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = AcademyCommentSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_asset')
+    def put(self, request, comment_id, academy_id=None):
+
+        if comment_id is None:
+            raise ValidationException('Missing comment_id')
+
+        comment = AssetComment.objects.filter(id=comment_id, asset__academy__id=academy_id).first()
+        if comment is None:
+            raise ValidationException('This comment does not exist for this academy', 404)
+
+        data = {**request.data}
+        if 'status' in request.data and request.data['status'] == 'UNASSIGNED':
+            data['author'] = None
+
+        serializer = PutAssetCommentSerializer(comment,
+                                               data=data,
+                                               context={
+                                                   'request': request,
+                                                   'academy': academy_id
+                                               })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = AcademyCommentSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_asset')
+    def delete(self, request, comment_id=None, academy_id=None):
+
+        if comment_id is None:
+            raise ValidationException('Missing comment ID on the URL', 404)
+
+        comment = AssetComment.objects.filter(id=comment_id, asset__academy__id=academy_id).first()
+        if comment is None:
+            raise ValidationException('This comment does not exist', 404)
+
+        comment.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)

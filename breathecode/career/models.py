@@ -190,8 +190,8 @@ class Job(models.Model):
     remote = models.BooleanField(default=False, verbose_name='Remote')
     employer = models.ForeignKey(Employer, on_delete=models.CASCADE, null=True, blank=True)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
-    career_tags = models.ManyToManyField(CareerTag, null=True, blank=True)
-    locations = models.ManyToManyField(Location, null=True, blank=True)
+    career_tags = models.ManyToManyField(CareerTag, blank=True)
+    locations = models.ManyToManyField(Location, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
