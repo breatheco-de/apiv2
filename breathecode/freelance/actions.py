@@ -189,11 +189,13 @@ def generate_freelancer_bill(freelancer):
             open_bill.save()
         return open_bill
 
-    done_issues = Issue.objects.filter(freelancer__id=freelancer.id,
-                                       status='DONE').filter(Q(bill__isnull=True) | Q(bill__status='DUE'))
+    done_issues = Issue.objects.filter(
+        freelancer__id=freelancer.id,
+        status='DONE').filter(Q(bill__isnull=True) | Q(bill__status='DUE')).exclude(academy__isnull=True)
     bills = {}
 
     for issue in done_issues:
+
         issue.bill = get_bill(issue.academy)
         issue.status_message = ''
 
