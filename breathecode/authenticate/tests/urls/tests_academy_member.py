@@ -454,6 +454,75 @@ class MemberGetTestSuite(AuthTestCase):
                              'user_id': 1
                          }])
 
+    """
+    🔽🔽🔽 GET query allow_students
+    """
+
+    def test_academy_member_query_allow_students(self):
+        """Test /academy/member"""
+        self.bc.request.set_headers(academy=1)
+        role = 'student'
+        base = self.bc.database.create(authenticate=True, role=role, capability='read_member')
+
+        profile_academy_kwargs = {
+            'email': 'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+            'status': 'ACTIVE'
+        }
+
+        model_1 = self.bc.database.create(profile_academy=True,
+                                          profile_academy_kwargs=profile_academy_kwargs,
+                                          models=base)
+
+        base_url = reverse_lazy('authenticate:academy_member')
+        url = f'{base_url}?include_students=true'
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model_1['profile_academy'].academy.id,
+                'name': model_1['profile_academy'].academy.name,
+                'slug': model_1['profile_academy'].academy.slug
+            },
+            'address': model_1['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model_1['profile_academy'].created_at),
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': model_1['profile_academy'].id,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
+            'role': {
+                'id': 'student',
+                'name': 'student',
+                'slug': 'student'
+            },
+            'status': 'ACTIVE',
+            'user': {
+                'email': model_1['profile_academy'].user.email,
+                'first_name': model_1['profile_academy'].user.first_name,
+                'profile': None,
+                'id': model_1['profile_academy'].user.id,
+                'last_name': model_1['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
+                         [{
+                             'academy_id': 1,
+                             'address': model_1['profile_academy'].address,
+                             'email': model_1['profile_academy'].email,
+                             'first_name': model_1['profile_academy'].first_name,
+                             'id': 1,
+                             'last_name': model_1['profile_academy'].last_name,
+                             'phone': model_1['profile_academy'].phone,
+                             'role_id': 'student',
+                             'status': 'ACTIVE',
+                             'user_id': 1
+                         }])
+
     def test_academy_member_query_like_first_name_status_active(self):
         """Test /academy/member"""
         self.bc.request.set_headers(academy=1)
