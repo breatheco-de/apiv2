@@ -1,5 +1,7 @@
 import serpy
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.serializers import GetSmallSyllabusScheduleSerializer
+from breathecode.authenticate.serializers import GetProfileAcademyTinySerializer
 
 
 class ProfileSmallSerializer(serpy.Serializer):
@@ -155,3 +157,11 @@ class UserSpecialtySerializer(serpy.Serializer):
     updated_at = serpy.Field()
     created_at = serpy.Field()
     issued_at = serpy.Field()
+
+    profile_academy = serpy.MethodField()
+
+    def get_profile_academy(self, obj):
+        profileAcademy = ProfileAcademy.objects.filter(user__id=obj.user.id).first()
+        if profileAcademy is not None:
+            return GetProfileAcademyTinySerializer(profileAcademy).data
+        return None

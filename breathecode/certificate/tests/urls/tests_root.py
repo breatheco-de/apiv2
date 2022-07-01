@@ -241,6 +241,20 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': model['user'].first_name,
                 'id': 1,
                 'last_name': model['user'].last_name
+            },
+            'profile_academy': {
+                'first_name': model['profile_academy'].first_name,
+                'id': model['profile_academy'].id,
+                'last_name': model['profile_academy'].last_name,
+                'status': model['profile_academy'].status,
+                'phone': model['profile_academy'].phone,
+                'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+                'email': model['profile_academy'].email,
+                'academy': {
+                    'id': 1,
+                    'name': model['academy'].name,
+                    'slug': model['academy'].slug,
+                },
             }
         }]
         self.assertEqual(json, expected)
@@ -319,12 +333,14 @@ class CertificateTestSuite(CertificateTestCase):
         models = [
             self.generate_models(user=True,
                                  cohort_user=True,
+                                 profile_academy=True,
                                  user_specialty=True,
                                  user_specialty_kwargs=user_specialty_2_kwargs,
                                  cohort_user_kwargs=cohort_user_kwargs,
                                  models=base),
             self.generate_models(user=True,
                                  cohort_user=True,
+                                 profile_academy=True,
                                  user_specialty=True,
                                  user_specialty_kwargs=user_specialty_1_kwargs,
                                  cohort_user_kwargs=cohort_user_kwargs,
@@ -414,7 +430,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': models[0].user.first_name,
                 'id': 2,
                 'last_name': models[0].user.last_name
-            }
+            },
+            'profile_academy': None
         }, {
             'academy': {
                 'id': 1,
@@ -470,7 +487,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': models[1].user.first_name,
                 'id': 3,
                 'last_name': models[1].user.last_name
-            }
+            },
+            'profile_academy': None
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -638,7 +656,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': models[0].user.first_name,
                 'id': 2,
                 'last_name': models[0].user.last_name
-            }
+            },
+            'profile_academy': None
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -750,7 +769,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': models[0].user.first_name,
                 'id': 2,
                 'last_name': models[0].user.last_name
-            }
+            },
+            'profile_academy': None
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -858,7 +878,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': models[0].user.first_name,
                 'id': 2,
                 'last_name': models[0].user.last_name
-            }
+            },
+            'profile_academy': None
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -967,7 +988,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': models[0].user.first_name,
                 'id': 2,
                 'last_name': models[0].user.last_name,
-            }
+            },
+            'profile_academy': None
         }]
 
         self.assertEqual(json, expected)
