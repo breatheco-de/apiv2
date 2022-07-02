@@ -10,14 +10,15 @@ from .actions import test_syllabus, test_asset, pull_from_github, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
-from .caches import AssetCache, AssetCommentCache
+from .caches import AssetCache, AssetCommentCache, TechnologyCache
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
                           KeywordClusterSerializer, AcademyAssetSerializer, AssetPUTSerializer,
-                          AcademyCommentSerializer, PostAssetCommentSerializer, PutAssetCommentSerializer)
+                          AcademyCommentSerializer, PostAssetCommentSerializer, PutAssetCommentSerializer,
+                          AssetBigTechnologySerializer, TechnolgyPUTSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
@@ -101,6 +102,68 @@ def get_technologies(request):
     return Response(serializer.data)
 
 
+# Create your views here.
+class AcademyTechnologyView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(cache=TechnologyCache, sort='-slug', paginate=True)
+
+    @capable_of('read_technology')
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = AssetTechnology.objects.filter(parent__isnull=True)
+        lookup = {}
+
+        if 'language' in self.request.GET:
+            param = self.request.GET.get('language')
+            if param == 'en':
+                param = 'us'
+            lookup['lang'] = param
+
+        if 'visibility' in self.request.GET:
+            param = self.request.GET.get('visibility')
+            lookup['visibility__in'] = [p.upper() for p in param.split(',')]
+        else:
+            lookup['visibility'] = 'PUBLIC'
+
+        if 'parent' in self.request.GET:
+            parents = self.request.GET.get('parent')
+            lookup['parent__id__in'] = [p.upper() for p in param.split(',')]
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = AssetBigTechnologySerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of('crud_technology')
+    def put(self, request, tech_slug=None, academy_id=None):
+        if tech_slug is None:
+            raise ValidationException('Missing technology slug')
+
+        tech = AssetTechnology.objects.filter(slug=tech_slug).first()
+        if tech is None:
+            raise ValidationException('This technology does not exist for this academy', 404)
+
+        serializer = TechnolgyPUTSerializer(tech,
+                                            data=request.data,
+                                            context={
+                                                'request': request,
+                                                'academy_id': academy_id
+                                            })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = AssetBigTechnologySerializer(tech, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['GET'])
 def get_categories(request):
     items = AssetCategory.objects.all()
@@ -118,6 +181,14 @@ def get_keywords(request):
 @api_view(['GET'])
 def get_clusters(request):
     items = KeywordCluster.objects.all()
+    lookup = {}
+
+    if 'academy' in request.GET:
+        param = request.GET.get('academy')
+        lookup['academy__id__in'] = [p.lower() for p in param.split(',')]
+
+    items = items.filter(**lookup)
+
     serializer = KeywordClusterSerializer(items, many=True)
     return Response(serializer.data)
 
@@ -497,7 +568,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
         if asset is None:
-            raise NotFound('This asset does not exist for this academy')
+            raise ValidationException('This asset does not exist for this academy', 404)
 
         serializer = AssetPUTSerializer(asset,
                                         data=request.data,
@@ -514,11 +585,16 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
     @capable_of('crud_asset')
     def post(self, request, academy_id=None):
 
-        serializer = PostAssetSerializer(data=request.data,
-                                         context={
-                                             'request': request,
-                                             'academy': academy_id
-                                         })
+        data = {
+            **request.data,
+        }
+
+        if 'seo_keywords' in data and len(data['seo_keywords']) > 0:
+            if isinstance(data['seo_keywords'][0], str):
+                data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list(
+                    'pk', flat=True)
+
+        serializer = PostAssetSerializer(data=data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -12,16 +12,32 @@ from breathecode.assessment.models import Assessment
 __all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
 logger = logging.getLogger(__name__)
 
+PUBLIC = 'PUBLIC'
+UNLISTED = 'UNLISTED'
+PRIVATE = 'PRIVATE'
+VISIBILITY = (
+    (PUBLIC, 'Public'),
+    (UNLISTED, 'Unlisted'),
+    (PRIVATE, 'Private'),
+)
+
 
 class AssetTechnology(models.Model):
     slug = models.SlugField(max_length=200, unique=True)
     title = models.CharField(max_length=200, blank=True)
+    lang = models.CharField(max_length=2,
+                            blank=True,
+                            default=None,
+                            null=True,
+                            help_text='Leave blank if will be shown in all languages')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
     featured_asset = models.ForeignKey('Asset',
                                        on_delete=models.SET_NULL,
                                        default=None,
                                        blank=True,
                                        null=True)
+    visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
+
     description = models.TextField(null=True, blank=True, default=None)
     icon_url = models.URLField(null=True, blank=True, default=None, help_text='Image icon to show on website')
 
@@ -35,6 +51,7 @@ class AssetCategory(models.Model):
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
     description = models.TextField(null=True, blank=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -48,6 +65,12 @@ class KeywordCluster(models.Model):
     title = models.CharField(max_length=200)
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
+    is_deprecated = models.BooleanField(
+        default=False,
+        help_text=
+        'Used when you want to stop using this cluster, all previous articles will be kept but no new articles will be assigned'
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -75,15 +98,6 @@ class AssetKeyword(models.Model):
     def __str__(self):
         return self.slug
 
-
-PUBLIC = 'PUBLIC'
-UNLISTED = 'UNLISTED'
-PRIVATE = 'PRIVATE'
-VISIBILITY = (
-    (PUBLIC, 'Public'),
-    (UNLISTED, 'Unlisted'),
-    (PRIVATE, 'Private'),
-)
 
 PROJECT = 'PROJECT'
 EXERCISE = 'EXERCISE'
@@ -146,7 +160,7 @@ class Asset(models.Model):
                                  blank=True,
                                  null=True)
 
-    url = models.URLField()
+    url = models.URLField(null=True, blank=True, default=None)
     solution_url = models.URLField(null=True, blank=True, default=None)
     preview = models.URLField(null=True, blank=True, default=None)
     description = models.TextField(null=True, blank=True, default=None)

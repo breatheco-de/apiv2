@@ -1,4 +1,5 @@
-from .models import Asset, AssetAlias, AssetComment
+from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology
+from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework import serializers
 from rest_framework import status
@@ -140,6 +141,20 @@ class AssetTechnologySerializer(ParentAssetTechnologySerializer):
     parent = ParentAssetTechnologySerializer(required=False)
 
 
+class AssetBigTechnologySerializer(AssetTechnologySerializer):
+
+    assets = serpy.MethodField()
+    alias = serpy.MethodField()
+
+    def get_assets(self, obj):
+        assets = Asset.objects.filter(technologies__id=obj.id)
+        return list(map(lambda t: t.slug, assets))
+
+    def get_alias(self, obj):
+        techs = AssetTechnology.objects.filter(parent=obj.id)
+        return list(map(lambda t: t.slug, techs))
+
+
 class AssetCategorySerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
@@ -147,11 +162,29 @@ class AssetCategorySerializer(serpy.Serializer):
     academy = AcademySmallSerializer()
 
 
+class _Keyword(serpy.Serializer):
+    slug = serpy.Field()
+    published_assets = serpy.MethodField()
+
+    def get_published_assets(self, obj):
+        return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
+
+
 class KeywordClusterSerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
     academy = AcademySmallSerializer()
     lang = serpy.Field()
+
+    total_articles = serpy.MethodField()
+    keywords = serpy.MethodField()
+
+    def get_keywords(self, obj):
+        kws = AssetKeyword.objects.filter(cluster__id=obj.id)
+        return _Keyword(kws, many=True).data
+
+    def get_total_articles(self, obj):
+        return Asset.objects.filter(seo_keywords__cluster__id=obj.id).count()
 
 
 class AssetKeywordSerializer(serpy.Serializer):
@@ -162,7 +195,14 @@ class AssetKeywordSerializer(serpy.Serializer):
     cluster = KeywordClusterSmallSerializer()
 
 
+class TechSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetTechnology
+
+
 class PostAssetSerializer(serializers.ModelSerializer):
+    technologies = TechSerializer(many=True, required=False)
+
     class Meta:
         model = Asset
         exclude = ()
@@ -176,6 +216,12 @@ class PostAssetSerializer(serializers.ModelSerializer):
             raise ValidationException('Asset alias already exists with this slug')
 
         return validated_data
+
+
+class TechnolgyPUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetTechnology
+        exclude = ('slug', )
 
 
 class PostAssetCommentSerializer(serializers.ModelSerializer):

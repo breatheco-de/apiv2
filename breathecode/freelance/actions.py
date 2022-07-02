@@ -112,6 +112,8 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
             assigne = issue['assignees'][0]
             freelancer = Freelancer.objects.filter(github_user__github_id=assigne['id']).first()
             if freelancer is None:
+                _issue.freelancer = None
+                _issue.save()
                 raise Exception(
                     f'Assined github user: {assigne["id"]} is not a freelancer but is the main user asociated to this issue'
                 )

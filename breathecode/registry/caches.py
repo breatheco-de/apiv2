@@ -1,5 +1,5 @@
 from breathecode.utils import Cache
-from .models import Asset, AssetComment
+from .models import Asset, AssetComment, AssetTechnology
 
 
 class AssetCache(Cache):
@@ -11,4 +11,10 @@ class AssetCache(Cache):
 class AssetCommentCache(Cache):
     model = AssetComment
     depends = ['Asset', 'User']
+    parents = []
+
+
+class TechnologyCache(Cache):
+    model = AssetTechnology
+    depends = []
     parents = []

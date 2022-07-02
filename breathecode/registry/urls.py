@@ -3,7 +3,7 @@ from django.urls import path, include
 from .views import (AssetView, get_keywords, get_clusters, get_categories, render_readme, get_technologies,
                     get_config, get_translations, handle_test_syllabus, render_preview_html,
                     handle_test_asset, forward_asset_url, get_alias_redirects, AcademyAssetView,
-                    AcademyAssetActionView, AcademyAssetCommentView)
+                    AcademyAssetActionView, AcademyAssetCommentView, AcademyTechnologyView)
 
 app_name = 'feedback'
 urlpatterns = [
@@ -23,6 +23,8 @@ urlpatterns = [
     path('keywordcluster', get_clusters),
     path('category', get_categories),
     path('technology', get_technologies),
+    path('academy/technology', AcademyTechnologyView.as_view()),
+    path('academy/technology/<str:tech_slug>', AcademyTechnologyView.as_view()),
     path('translation', get_translations),
     path('syllabus/test', handle_test_syllabus),
     path('alias/redirect', get_alias_redirects),

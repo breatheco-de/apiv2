@@ -279,6 +279,14 @@ CAPABILITIES = [
         'slug': 'update_gitpod_user',
         'description': 'Update gitpod user expiration based on available information'
     },
+    {
+        'slug': 'read_technology',
+        'description': 'Read asset technologies'
+    },
+    {
+        'slug': 'crud_technology',
+        'description': 'Update, create and delete asset technologies'
+    },
 ]
 
 ROLES = [
@@ -304,6 +312,7 @@ ROLES = [
             'crud_lead',
             'crud_tag',
             'read_tag',
+            'read_technology',
             'read_review',
             'read_shortlink',
             'read_nps_answers',
@@ -351,6 +360,7 @@ ROLES = [
             'read_my_academy',
             'read_asset',
             'crud_asset',
+            'crud_technology',
         ],
     },
     {
