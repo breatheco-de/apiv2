@@ -7,6 +7,7 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from django.db.models import Q
 from .signals import asset_slug_modified
+from slugify import slugify
 from breathecode.assessment.models import Assessment
 
 __all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
@@ -43,6 +44,20 @@ class AssetTechnology(models.Model):
 
     def __str__(self):
         return self.title
+
+    @classmethod
+    def get_or_create(cls, tech_slug):
+        _slug = slugify(tech_slug)
+        technology = cls.objects.filter(slug__iexact=_slug).first()
+        if technology is None:
+            technology = cls(slug=_slug, title=tech_slug)
+            technology.save()
+
+        # Parent technologies will merge similar ones like: reactjs and react.js together.
+        if technology.parent is not None:
+            technology = technology.parent
+
+        return technology
 
 
 class AssetCategory(models.Model):

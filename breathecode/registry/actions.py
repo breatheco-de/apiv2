@@ -152,16 +152,10 @@ def create_asset(data, asset_type, force=False):
                 a.save()
 
     if 'tags' in data:
+
+        a.technologies.clear()
         for tech in data['tags']:
-            t = AssetTechnology.objects.filter(slug=tech).first()
-            if t is None:
-                t = AssetTechnology(slug=tech, title=tech)
-                t.save()
-
-            # Parent technologies will merge similar ones like: reactjs and react.js together.
-            if t.parent is not None:
-                t = t.parent
-
+            technology = AssetTechnology.get_or_create(tech)
             if a.technologies.filter(slug=tech).first() is None:
                 a.technologies.add(t)
 
@@ -318,6 +312,12 @@ def sync_github_lesson(github, asset):
         logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
         asset.slug = fm['slug']
 
+    if 'tags' in fm and isinstance(fm['tags'], list):
+        asset.technologies.clear()
+        for tech_slug in fm['tags']:
+            technology = AssetTechnology.get_or_create(tech_slug)
+            asset.technologies.add(technology)
+
     return asset
 
 
@@ -414,17 +414,9 @@ def sync_learnpack_asset(github, asset):
             asset.with_solutions = True
 
         if 'technologies' in config:
+            asset.technologies.clear()
             for tech_slug in config['technologies']:
-                _slug = slugify(tech_slug)
-                technology = AssetTechnology.objects.filter(slug__iexact=_slug).first()
-                if technology is None:
-                    technology = AssetTechnology(slug=_slug, title=tech_slug)
-                    technology.save()
-
-                # Parent technologies will merge similar ones like: reactjs and react.js together.
-                if technology.parent is not None:
-                    technology = technology.parent
-
+                technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
     return asset
 
