@@ -9,7 +9,7 @@ from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
-# IMPORTANT: the loader.render_to_string in a function is inside of funcion render
+# IMPORTANT: the loader.render_to_string in a function is inside of function render
 def render_page_without_invites():
     request = None
     APP_URL = os.getenv('APP_URL', '')

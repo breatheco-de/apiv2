@@ -33,6 +33,8 @@ def generate_user_invite(data: dict) -> dict:
         'sent_at': None,
         'status': 'PENDING',
         'token': '',
+        'process_message': '',
+        'process_status': 'PENDING',
         **data,
     }
 
