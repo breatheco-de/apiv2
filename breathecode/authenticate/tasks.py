@@ -11,11 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def app_url_env():
-    if app_url_env.__dict__['cache']:
-        return app_url_env.__dict__['cache']
-
-    app_url_env.__dict__['cache'] = os.getenv('APP_URL', '')
-    return app_url_env.__dict__['cache']
+    return os.getenv('APP_URL', '')
 
 
 APP_URL = os.getenv('APP_URL', '')
