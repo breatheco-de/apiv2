@@ -10,13 +10,6 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 
-def app_url_env():
-    return os.getenv('APP_URL', '')
-
-
-APP_URL = os.getenv('APP_URL', '')
-
-
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception, )
     #                                           seconds
