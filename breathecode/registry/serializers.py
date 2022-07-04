@@ -218,10 +218,44 @@ class PostAssetSerializer(serializers.ModelSerializer):
         return validated_data
 
 
-class TechnolgyPUTSerializer(serializers.ModelSerializer):
+class TechnologyPUTSerializer(serializers.ModelSerializer):
+    parent = serializers.CharField(required=False, allow_null=True)
+
     class Meta:
         model = AssetTechnology
         exclude = ('slug', )
+
+    def validate(self, data):
+        validated_data = {**data}
+
+        if 'parent' in data and data['parent'] is not None:
+            parent = None
+            if isinstance(data['parent'], int) or data['parent'].isnumeric():
+                parent = AssetTechnology.objects.filter(id=data['parent']).first()
+            else:
+                parent = AssetTechnology.objects.filter(slug=data['parent']).first()
+
+            if parent.parent is not None:
+                raise ValidationException(
+                    f'The technology parent you are trying to set {parent.slug}, its a child of another technology, only technologies without parent can be set as parent'
+                )
+
+            if parent is None:
+                raise ValidationException(f'Parent with slug or id {data["parent"]} not found')
+
+            # if parent.id == self.instance.id:
+            #     raise ValidationException(f'Technology cannot be a parent of itself')
+
+            validated_data['parent'] = parent
+
+        return validated_data
+
+    def update(self, instance, validated_data):
+        if 'parent' in validated_data and validated_data['parent'] is None:
+            instance.parent = validated_data.pop('parent')
+            instance.save()
+
+        return super().update(instance, validated_data)
 
 
 class PostAssetCommentSerializer(serializers.ModelSerializer):

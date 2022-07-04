@@ -18,7 +18,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
                           KeywordClusterSerializer, AcademyAssetSerializer, AssetPUTSerializer,
                           AcademyCommentSerializer, PostAssetCommentSerializer, PutAssetCommentSerializer,
-                          AssetBigTechnologySerializer, TechnolgyPUTSerializer)
+                          AssetBigTechnologySerializer, TechnologyPUTSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
@@ -116,14 +116,17 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         if cache is not None:
             return Response(cache, status=status.HTTP_200_OK)
 
-        items = AssetTechnology.objects.filter(parent__isnull=True)
+        items = AssetTechnology.objects.all()
         lookup = {}
+
+        if 'include_children' not in self.request.GET:
+            items = items.filter(parent__isnull=True)
 
         if 'language' in self.request.GET:
             param = self.request.GET.get('language')
             if param == 'en':
                 param = 'us'
-            lookup['lang'] = param
+            items = items.filter(Q(lang=param) | Q(lang='') | Q(lang__isnull=True))
 
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')
@@ -135,6 +138,10 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
             parents = self.request.GET.get('parent')
             lookup['parent__id__in'] = [p.upper() for p in param.split(',')]
 
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
         items = items.filter(**lookup)
         items = handler.queryset(items)
 
@@ -144,24 +151,48 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_technology')
     def put(self, request, tech_slug=None, academy_id=None):
-        if tech_slug is None:
-            raise ValidationException('Missing technology slug')
 
-        tech = AssetTechnology.objects.filter(slug=tech_slug).first()
-        if tech is None:
-            raise ValidationException('This technology does not exist for this academy', 404)
+        lookups = self.generate_lookups(request, many_fields=['slug'])
 
-        serializer = TechnolgyPUTSerializer(tech,
-                                            data=request.data,
-                                            context={
-                                                'request': request,
-                                                'academy_id': academy_id
-                                            })
-        if serializer.is_valid():
-            serializer.save()
-            serializer = AssetBigTechnologySerializer(tech, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if lookups and tech_slug:
+            raise ValidationException(
+                'user_id or cohort_id was provided in url '
+                'in bulk mode request, use querystring style instead',
+                code=400)
+
+        if 'slug' not in request.GET and tech_slug is None:
+            raise ValidationException('Missing technology slug(s)')
+        elif tech_slug is not None:
+            lookups['slug__in'] = [tech_slug]
+
+        print(lookups)
+        techs = AssetTechnology.objects.filter(**lookups)
+        _count = techs.count()
+        if _count == 0:
+            raise ValidationException('This technolog(ies) does not exist for this academy', 404)
+
+        serializers = []
+        for t in techs:
+            serializer = TechnologyPUTSerializer(t,
+                                                 data=request.data,
+                                                 many=False,
+                                                 context={
+                                                     'request': request,
+                                                     'academy_id': academy_id
+                                                 })
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializers.append(serializer)
+
+        resp = []
+        for s in serializers:
+            tech = s.save()
+            resp.append(AssetBigTechnologySerializer(tech, many=False).data)
+
+        if tech_slug is not None:
+            return Response(resp.pop(), status=status.HTTP_200_OK)
+        else:
+            return Response(resp, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
