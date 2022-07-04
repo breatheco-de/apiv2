@@ -544,7 +544,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         if 'technologies' in self.request.GET:
             param = self.request.GET.get('technologies')
-            lookup['technologies__in'] = [p.lower() for p in param.split(',')]
+            lookup['technologies__slug__in'] = [p.lower() for p in param.split(',')]
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
