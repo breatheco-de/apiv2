@@ -90,6 +90,15 @@ INVITE_STATUS = (
     (WAITING_LIST, 'Waiting list'),
 )
 
+PENDING = 'PENDING'
+DONE = 'DONE'
+ERROR = 'ERROR'
+PROCESS_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (ERROR, 'Error'),
+)
+
 
 class UserInvite(models.Model):
 
@@ -107,6 +116,9 @@ class UserInvite(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
 
     status = models.CharField(max_length=15, choices=INVITE_STATUS, default=PENDING)
+
+    process_status = models.CharField(max_length=7, choices=PROCESS_STATUS, default=PENDING)
+    process_message = models.CharField(max_length=150, default='')
 
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',

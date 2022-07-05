@@ -60,6 +60,8 @@ class SubscribeTestSuite(AuthTestCase):
                              'status': 'WAITING_LIST',
                              'token': hashlib.sha1(
                                  (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                             'process_message': '',
+                             'process_status': 'PENDING',
                              **data,
                          }])
 
@@ -158,6 +160,8 @@ class SubscribeTestSuite(AuthTestCase):
                 'sent_at': None,
                 'status': 'WAITING_LIST',
                 'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                'process_message': '',
+                'process_status': 'PENDING',
                 **data,
             }
         ])

@@ -298,7 +298,7 @@ def get_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
     }
 
 
-# IMPORTANT: the loader.render_to_string in a function is inside of funcion render
+# IMPORTANT: the loader.render_to_string in a function is inside of function render
 def render_successfully(self, mentorship_bill, mentor_profile, mentorship_service, user, academy, data={}):
     request = None
     APP_URL = os.getenv('APP_URL', '')

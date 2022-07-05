@@ -1,4 +1,5 @@
 import os, requests, base64, logging
+import re
 import urllib.parse
 import breathecode.notify.actions as notify_actions
 from datetime import timezone, timedelta
@@ -81,6 +82,12 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
+
+PATTERNS = {
+    'CONTAINS_LOWERCASE': r'[a-z]',
+    'CONTAINS_UPPERCASE': r'[A-Z]',
+    'CONTAINS_SYMBOLS': r'[^a-zA-Z]',
+}
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -1300,30 +1307,57 @@ def pick_password(request, token):
     _dict['token'] = token
     _dict['callback'] = request.GET.get('callback', '')
 
+    token_instance = Token.get_valid(token)
+
+    # allow a token to change the password
+    if token_instance:
+        user = token_instance.user
+
+    # allow a invite token to change the password
+    else:
+        invite = UserInvite.objects.filter(token=token).first()
+
+        # just can process if this user not have a password yet
+        user = User.objects.filter(email=invite.email, password='').first() if invite else None
+
+    if not user:
+        return render_message(request, 'The link has expired.')
+
     form = PickPasswordForm(_dict)
     if request.method == 'POST':
         password1 = request.POST.get('password1', None)
         password2 = request.POST.get('password2', None)
+
         if password1 != password2:
             messages.error(request, 'Passwords don\'t match')
             return render(request, 'form.html', {'form': form})
 
-        token = Token.get_valid(request.POST.get('token', None))
-        if token is None:
-            messages.error(request, 'Invalid or expired token ' + str(token))
+        if not password1:
+            messages.error(request, "Password can't be empty")
+            return render(request, 'form.html', {'form': form})
+
+        if (len(password1) < 8 or not re.findall(PATTERNS['CONTAINS_LOWERCASE'], password1)
+                or not re.findall(PATTERNS['CONTAINS_UPPERCASE'], password1)
+                or not re.findall(PATTERNS['CONTAINS_SYMBOLS'], password1)):
+            messages.error(request, 'Password must contain 8 characters with lowercase, uppercase and '
+                           'symbols')
+            return render(request, 'form.html', {'form': form})
 
         else:
-            user = token.user
             user.set_password(password1)
             user.save()
-            token.delete()
+
+            # destroy the token
+            if token_instance:
+                token_instance.delete()
+
             callback = request.POST.get('callback', None)
             if callback is not None and callback != '':
                 return HttpResponseRedirect(redirect_to=request.POST.get('callback'))
             else:
                 return render(
                     request, 'message.html',
-                    {'message': 'You password has been reset successfully, you can close this window.'})
+                    {'MESSAGE': 'You password has been reset successfully, you can close this window.'})
 
     return render(request, 'form.html', {'form': form})
 
