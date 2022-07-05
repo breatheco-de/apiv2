@@ -384,6 +384,20 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': model['user'].first_name,
                 'id': 1,
                 'last_name': model['user'].last_name
+            },
+            'profile_academy': {
+                'first_name': model['profile_academy'].first_name,
+                'id': model['profile_academy'].id,
+                'last_name': model['profile_academy'].last_name,
+                'status': model['profile_academy'].status,
+                'phone': model['profile_academy'].phone,
+                'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+                'email': model['profile_academy'].email,
+                'academy': {
+                    'id': 1,
+                    'name': model['academy'].name,
+                    'slug': model['academy'].slug,
+                },
             }
         }]
 
@@ -518,6 +532,20 @@ class CertificateTestSuite(CertificateTestCase):
                 'id': 1,
                 'last_name': model['user'].last_name
             },
+            'profile_academy': {
+                'first_name': model['profile_academy'].first_name,
+                'id': model['profile_academy'].id,
+                'last_name': model['profile_academy'].last_name,
+                'status': model['profile_academy'].status,
+                'phone': model['profile_academy'].phone,
+                'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+                'email': model['profile_academy'].email,
+                'academy': {
+                    'id': 1,
+                    'name': model['academy'].name,
+                    'slug': model['academy'].slug,
+                },
+            },
         }]
 
         self.assertEqual(json, expected)
@@ -640,6 +668,20 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': model['user'].first_name,
                 'id': 1,
                 'last_name': model['user'].last_name
+            },
+            'profile_academy': {
+                'first_name': model['profile_academy'].first_name,
+                'id': model['profile_academy'].id,
+                'last_name': model['profile_academy'].last_name,
+                'status': model['profile_academy'].status,
+                'phone': model['profile_academy'].phone,
+                'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+                'email': model['profile_academy'].email,
+                'academy': {
+                    'id': 1,
+                    'name': model['academy'].name,
+                    'slug': model['academy'].slug,
+                },
             }
         }]
 
@@ -783,6 +825,20 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': model['user'].first_name,
                 'id': 1,
                 'last_name': model['user'].last_name
+            },
+            'profile_academy': {
+                'first_name': model['profile_academy'].first_name,
+                'id': model['profile_academy'].id,
+                'last_name': model['profile_academy'].last_name,
+                'status': model['profile_academy'].status,
+                'phone': model['profile_academy'].phone,
+                'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+                'email': model['profile_academy'].email,
+                'academy': {
+                    'id': 1,
+                    'name': model['academy'].name,
+                    'slug': model['academy'].slug,
+                },
             }
         }]
 

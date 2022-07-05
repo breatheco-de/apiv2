@@ -179,7 +179,10 @@ class MemberView(APIView, GenerateLookupsMixin):
             serializer = GetProfileAcademySerializer(item, many=False)
             return Response(serializer.data)
 
-        items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug='student')
+        items = ProfileAcademy.objects.filter(academy__id=academy_id)
+        include = request.GET.get('include', '').split()
+        if not 'student' in include:
+            items = items.exclude(role__slug='student')
 
         roles = request.GET.get('roles', None)
         if roles is not None:
@@ -543,7 +546,7 @@ class StudentView(APIView, GenerateLookupsMixin):
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
-        force = request.GET.get('force', 'false')
+        allow_old = request.GET.get('allow_old', 'false')
         not_recent = []
 
         if lookups and user_id_or_email:
@@ -555,7 +558,7 @@ class StudentView(APIView, GenerateLookupsMixin):
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
-            if force != 'true':
+            if allow_old != 'true':
                 responses = []
                 not_recent = items.filter(created_at__lt=Now() - timedelta(minutes=30))
                 responses.append(

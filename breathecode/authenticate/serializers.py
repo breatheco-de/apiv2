@@ -298,6 +298,19 @@ class GetProfileAcademySmallSerializer(serpy.Serializer):
     last_name = serpy.Field()
 
 
+class GetProfileAcademyTinySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    academy = AcademySmallSerializer()
+    created_at = serpy.Field()
+    email = serpy.Field()
+    phone = serpy.Field()
+    status = serpy.Field()
+
+
 # Create your models here.
 
 

@@ -6,7 +6,7 @@ import urllib.parse
 from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from django.utils import timezone
+from django.utils import timezone, dateparse
 from random import choice
 import breathecode.notify.actions as actions
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
@@ -38,6 +38,8 @@ def generate_user_invite(data: dict) -> dict:
 
 
 UTC_NOW = timezone.now()
+
+A_YEAR_AGO = dateparse.parse_date('2014-01-01')
 
 
 def getrandbits(n):
@@ -1504,3 +1506,56 @@ class StudentDeleteTestSuite(AuthTestCase):
 
             for model in ProfileAcademy.objects.all():
                 model.delete()
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=A_YEAR_AGO))
+    def test_academy_student_delete_in_bulk_with_old_students(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        many_fields = ['id']
+
+        base = self.bc.database.create(academy=True, capability='crud_student', role='student')
+
+        for field in many_fields:
+            profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'address': choice(['asd', 'qwe', 'zxc']),
+                'phone': choice(['123', '456', '789']),
+                'status': choice(['INVITED', 'ACTIVE']),
+            }
+            model1 = self.bc.database.create(authenticate=True,
+                                             profile_academy=True,
+                                             profile_academy_kwargs=profile_academy_kwargs,
+                                             models=base)
+
+            profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'address': choice(['asd', 'qwe', 'zxc']),
+                'phone': choice(['123', '456', '789']),
+                'status': choice(['INVITED', 'ACTIVE']),
+            }
+            model2 = self.bc.database.create(profile_academy=True,
+                                             profile_academy_kwargs=profile_academy_kwargs,
+                                             models=base)
+
+            url = (reverse_lazy('authenticate:academy_student') + f'?{field}=' +
+                   str(getattr(model1['profile_academy'], field)) + ',' +
+                   str(getattr(model2['profile_academy'], field)))
+            response = self.client.delete(url)
+
+            expected = [{
+                'pk': model1['profile_academy'].id,
+                'display_field': 'first_name',
+                'display_value': model1['profile_academy'].first_name
+            }, {
+                'pk': model2['profile_academy'].id,
+                'display_field': 'first_name',
+                'display_value': model2['profile_academy'].first_name
+            }]
+
+            self.assertEqual(response.status_code, 207)
+            self.assertEqual(response.data['failure'][0]['detail'], 'non-recently-created')
+            self.assertEqual(response.data['failure'][0]['resources'], expected)

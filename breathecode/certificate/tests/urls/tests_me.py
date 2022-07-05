@@ -45,6 +45,7 @@ def get_serializer(self, user_specialty, academy, specialty, user):
             'id': user.id,
             'last_name': user.last_name,
         },
+        'profile_academy': None
     }
 
 
