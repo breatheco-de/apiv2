@@ -119,7 +119,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         items = AssetTechnology.objects.all()
         lookup = {}
 
-        if 'include_children' not in self.request.GET:
+        if 'include_children' not in self.request.GET or self.request.GET['include_children'] != 'true':
             items = items.filter(parent__isnull=True)
 
         if 'language' in self.request.GET:
@@ -139,7 +139,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
             lookup['parent__id__in'] = [p.upper() for p in param.split(',')]
 
         like = request.GET.get('like', None)
-        if like is not None:
+        if like is not None and like != 'undefined' and like != '':
             items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
 
         items = items.filter(**lookup)

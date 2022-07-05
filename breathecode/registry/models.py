@@ -47,7 +47,7 @@ class AssetTechnology(models.Model):
 
     @classmethod
     def get_or_create(cls, tech_slug):
-        _slug = slugify(tech_slug)
+        _slug = slugify(tech_slug).lower()
         technology = cls.objects.filter(slug__iexact=_slug).first()
         if technology is None:
             technology = cls(slug=_slug, title=tech_slug)
