@@ -2,7 +2,7 @@ import serpy
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
 import breathecode.mentorship.actions as actions
-from .actions import mentor_is_ready, generate_single_mentor_bill
+from .actions import mentor_is_ready, generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from breathecode.utils.datetime_interger import duration_to_str
@@ -441,7 +441,7 @@ class SessionSerializer(serializers.ModelSerializer):
         mentor = MentorProfile.objects.filter(id=instance.mentor_id).first()
 
         print('aja')
-        generate_single_mentor_bill(mentor, bill, bill.mentorshipsession_set.all())
+        generate_mentor_bill(mentor, bill, bill.mentorshipsession_set.all())
 
         return result
 

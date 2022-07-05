@@ -476,7 +476,7 @@ class MemberGetTestSuite(AuthTestCase):
                                           models=base)
 
         base_url = reverse_lazy('authenticate:academy_member')
-        url = f'{base_url}?include_students=true'
+        url = f'{base_url}?include=student'
 
         response = self.client.get(url)
         json = response.json()

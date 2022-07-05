@@ -292,7 +292,7 @@ def generate_mentor_bills(mentor, reset=False):
         print(
             f'There are {len(monthly_unpaid_sessions)} unpaid sessions starting from {start_at} to {end_at}')
 
-        generate_single_mentor_bill(mentor, open_bill, monthly_unpaid_sessions, reset)
+        generate_mentor_bill(mentor, open_bill, monthly_unpaid_sessions, reset)
 
         generated_bills.append(open_bill)
         print(f'Added bill with total ammount {open_bill.total_duration_in_hours}')
@@ -304,7 +304,7 @@ def generate_mentor_bills(mentor, reset=False):
     return generated_bills
 
 
-def generate_single_mentor_bill(mentor, bill, sessions, reset=False):
+def generate_mentor_bill(mentor, bill, sessions, reset=False):
     total = {'minutes': 0, 'overtime_minutes': 0}
 
     for session in sessions:

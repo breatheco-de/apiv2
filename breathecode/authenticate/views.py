@@ -179,11 +179,10 @@ class MemberView(APIView, GenerateLookupsMixin):
             serializer = GetProfileAcademySerializer(item, many=False)
             return Response(serializer.data)
 
-        include_students = request.GET.get('include_students', 'false')
-        if include_students == 'true':
-            items = ProfileAcademy.objects.filter(academy__id=academy_id)
-        else:
-            items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug='student')
+        items = ProfileAcademy.objects.filter(academy__id=academy_id)
+        include = request.GET.get('include', '').split()
+        if not 'student' in include:
+            items = items.exclude(role__slug='student')
 
         roles = request.GET.get('roles', None)
         if roles is not None:
