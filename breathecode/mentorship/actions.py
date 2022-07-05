@@ -254,16 +254,19 @@ def generate_mentor_bills(mentor, reset=False):
 
     def get_unpaid_sessions():
         return MentorshipSession.objects.filter(
-            allow_billing=True, mentor__id=mentor.id,
-            status__in=['COMPLETED', 'FAILED']).filter(started_at__isnull=False).filter(
-                Q(bill__isnull=True)
-                | Q(bill__status='DUE', bill__academy=mentor.service.academy)).order_by('started_at')
+            Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.service.academy),
+            allow_billing=True,
+            mentor__id=mentor.id,
+            status__in=['COMPLETED', 'FAILED'],
+            started_at__isnull=False,
+        ).order_by('started_at')
 
     previous_bill = MentorshipBill.objects.filter(mentor__id=mentor.id,
                                                   academy__id=mentor.service.academy.id,
                                                   status='DUE').order_by('-started_at').first()
 
-    if previous_bill is not None and previous_bill.ended_at > timezone.now():
+    if (previous_bill is not None and previous_bill.started_at and previous_bill.ended_at
+            and previous_bill.ended_at > timezone.now()):
         return generated_bills
 
     monthly_unpaid_sessions = None
@@ -274,7 +277,7 @@ def generate_mentor_bills(mentor, reset=False):
         if unpaid_sessions.count() == 0:
             return generated_bills
 
-        if previous_bill is None:
+        if previous_bill is None or not previous_bill.started_at or not previous_bill.ended_at:
             start_at = unpaid_sessions.first().started_at
             end_at = last_month_date(start_at)
         else:
