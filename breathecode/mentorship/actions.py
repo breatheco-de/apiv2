@@ -1,20 +1,33 @@
-import os, re, json, logging, time, datetime, requests
+import logging, datetime, requests
 import pytz
-from itertools import chain
 from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
 from django.shortcuts import render
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
-from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
-from .models import MentorshipSession, MentorshipBill
 from breathecode.utils.datetime_interger import duration_to_str
+from django.db.models import QuerySet
+from .models import MentorshipSession, MentorshipBill
 
 logger = logging.getLogger(__name__)
 
 
+def close_older_sessions():
+    """close the sessions after two hours of ends_at"""
+
+    now = timezone.now()
+    diff = timedelta(hours=2)
+    sessions = MentorshipSession.objects.filter(status__in=['PENDING', 'STARTED'], ends_at__lt=now - diff)
+
+    close_mentoring_sessions(sessions, {
+        'summary': 'Automatically closed because its ends was two hours ago or more',
+        'status': 'FAILED',
+    })
+
+
 def get_pending_sessions_or_create(token, mentor, mentee=None):
+    close_older_sessions()
 
     # starting to pick pending sessions
     pending_sessions = []
@@ -46,11 +59,13 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
             last_one = unfinished_sessions.first()
             pending_sessions += [last_one.id]
             # close the rest
-            close_mentoring_session(
+            close_mentoring_sessions(
                 unfinished_sessions.exclude(id=last_one.id), {
                     'summary':
-                    'Automatically closed, not enough information on the meeting the mentor forgot to specify the mentee and the mentee never joined',
-                    'status': 'FAILED'
+                    'Automatically closed, not enough information on the meeting the mentor forgot to '
+                    'specify the mentee and the mentee never joined',
+                    'status':
+                    'FAILED',
                 })
 
     # return all the collected pending sessions
@@ -120,12 +135,13 @@ def render_session(request, session, token):
     return render(request, 'daily.html', data)
 
 
-def close_mentoring_session(session, data):
+def close_mentoring_sessions(sessions: QuerySet[MentorshipSession], data: dict):
+    for session in sessions:
+        close_mentoring_session(session, data)
 
-    sessions_to_close = session
-    if isinstance(session, MentorshipSession):
-        sessions_to_close = MentorshipSession.objects.filter(id=session.id)
 
+def close_mentoring_session(session: MentorshipSession, data: dict):
+    sessions_to_close = MentorshipSession.objects.filter(id=session.id)
     sessions_to_close.update(summary=data['summary'], status=data['status'].upper(), ended_at=timezone.now())
 
     return sessions_to_close

@@ -13,8 +13,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
-from .actions import (close_mentoring_session, get_pending_sessions_or_create, render_session,
-                      generate_mentor_bills)
+from .actions import close_mentoring_session, render_session, generate_mentor_bills
 from breathecode.mentorship import actions
 from breathecode.notify.actions import get_template_content
 from .serializers import (
