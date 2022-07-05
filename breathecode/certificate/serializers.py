@@ -161,7 +161,8 @@ class UserSpecialtySerializer(serpy.Serializer):
     profile_academy = serpy.MethodField()
 
     def get_profile_academy(self, obj):
-        profileAcademy = ProfileAcademy.objects.filter(user__id=obj.user.id).first()
+        profileAcademy = ProfileAcademy.objects.filter(academy__id=obj.academy.id,
+                                                       user__id=obj.user.id).first()
         if profileAcademy is not None:
             return GetProfileAcademyTinySerializer(profileAcademy).data
         return None
