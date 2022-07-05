@@ -1546,5 +1546,16 @@ class StudentDeleteTestSuite(AuthTestCase):
                    str(getattr(model2['profile_academy'], field)))
             response = self.client.delete(url)
 
+            expected = [{
+                'pk': model1['profile_academy'].id,
+                'display_field': 'first_name',
+                'display_value': model1['profile_academy'].first_name
+            }, {
+                'pk': model2['profile_academy'].id,
+                'display_field': 'first_name',
+                'display_value': model2['profile_academy'].first_name
+            }]
+
             self.assertEqual(response.status_code, 207)
             self.assertEqual(response.data['failure'][0]['detail'], 'non-recently-created')
+            self.assertEqual(response.data['failure'][0]['resources'], expected)

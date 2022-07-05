@@ -440,7 +440,6 @@ class SessionSerializer(serializers.ModelSerializer):
 
         mentor = MentorProfile.objects.filter(id=instance.mentor_id).first()
 
-        print('aja')
         generate_mentor_bill(mentor, bill, bill.mentorshipsession_set.all())
 
         return result
