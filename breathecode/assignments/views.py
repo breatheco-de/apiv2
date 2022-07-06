@@ -7,7 +7,8 @@ from django.db.models import Q
 from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
 from django.contrib import messages
-from breathecode.utils import ValidationException, capable_of, localize_query
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils import ValidationException, capable_of, localize_query, GenerateLookupsMixin
 from breathecode.admissions.models import Academy, CohortUser, Cohort
 from breathecode.authenticate.models import Token
 from rest_framework.decorators import api_view, permission_classes
@@ -16,6 +17,7 @@ from rest_framework import status
 from breathecode.utils import APIException
 from .models import Task, FinalProject
 from .actions import deliver_task
+from .caches import TaskCache
 from .forms import DeliverAssigntmentForm
 from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer, TaskGETDeliverSerializer,
                           FinalProjectGETSerializer, PostFinalProjectSerializer, PUTFinalProjectSerializer)
@@ -227,6 +229,56 @@ class FinalProjectMeView(APIView):
                     updated_projects.append(data)
 
             return Response(updated_projects, status=status.HTTP_200_OK)
+
+
+class CohortTaskView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(cache=TaskCache, sort='-created_at', paginate=True)
+
+    @capable_of('read_assignment')
+    def get(self, request, cohort_id, academy_id):
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = Task.objects.all()
+        lookup = {}
+
+        if isinstance(cohort_id, int) or cohort_id.isnumeric():
+            lookup['cohort__id'] = cohort_id
+        else:
+            lookup['cohort__slug'] = cohort_id
+
+        task_type = request.GET.get('task_type', None)
+        if task_type is not None:
+            lookup['task_type__in'] = task_type.split(',')
+
+        task_status = request.GET.get('task_status', None)
+        if task_status is not None:
+            lookup['task_status__in'] = task_status.split(',')
+
+        revision_status = request.GET.get('revision_status', None)
+        if revision_status is not None:
+            lookup['revision_status__in'] = revision_status.split(',')
+
+        like = request.GET.get('like', None)
+        if like is not None and like != 'undefined' and like != '':
+            items = items.filter(Q(associated_slug__icontains=like) | Q(title__icontains=like))
+
+        # tasks from users that belong to these cohort
+        student = request.GET.get('student', None)
+        if student is not None:
+            lookup['user__cohortuser__user__id__in'] = student.split(',')
+            lookup['user__cohortuser__role'] = 'STUDENT'
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = TaskGETSerializer(items, many=True)
+        return handler.response(serializer.data)
 
 
 class TaskMeView(APIView):
