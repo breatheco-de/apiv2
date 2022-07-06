@@ -346,6 +346,14 @@ def merge_technologies(modeladmin, request, queryset):
             t.save()
 
 
+def slug_to_lower_case(modeladmin, request, queryset):
+    technologies = queryset.all()
+
+    for t in technologies:
+        t.slug = t.slug.lower()
+        t.save()
+
+
 class ParentFilter(admin.SimpleListFilter):
 
     title = 'With Parent'
@@ -375,7 +383,7 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
     list_filter = (ParentFilter, )
     raw_id_fields = ['parent', 'featured_asset']
 
-    actions = (merge_technologies, )
+    actions = (merge_technologies, slug_to_lower_case)
 
     def get_slug(self, obj):
         parent = ''
