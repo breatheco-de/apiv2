@@ -43,6 +43,7 @@ def capable_of(capability=None):
 def get_academy_from_capability(kwargs, request, capability):
 
     academy_id = None
+
     if 'academy_id' not in kwargs and ('Academy' not in request.headers
                                        or 'academy' not in request.headers) and 'academy' not in request.GET:
         raise PermissionDenied(
@@ -75,5 +76,11 @@ def get_academy_from_capability(kwargs, request, capability):
         raise PermissionDenied(
             f"You (user: {request.user.id}) don't have this capability: {capability} for academy {academy_id}"
         )
+
+    academy = capable.first().academy
+    if academy.status == 'DELETED':
+        raise PermissionDenied(f'This academy is deleted')
+    if request.get_full_path() != '/v1/admissions/academy/activate' and academy.status == 'INACTIVE':
+        raise PermissionDenied(f'This academy is not active')
 
     return academy_id

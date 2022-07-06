@@ -12,6 +12,8 @@ from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, Cre
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
 from breathecode.utils.datetime_interger import from_now
+from django.db.models import QuerySet
+from . import tasks
 
 logger = logging.getLogger(__name__)
 
@@ -79,12 +81,25 @@ class TokenAdmin(admin.ModelAdmin):
         return ['key']
 
 
+def accept_selected_users_from_waiting_list(modeladmin, request, queryset: QuerySet[UserInvite]):
+    queryset = queryset.exclude(process_status='DONE').order_by('id')
+    for x in queryset:
+        tasks.async_accept_user_from_waiting_list.delay(x.id)
+
+
+def accept_all_users_from_waiting_list(modeladmin, request, queryset: QuerySet[UserInvite]):
+    queryset = UserInvite.objects.all().exclude(process_status='DONE').order_by('id')
+    for x in queryset:
+        tasks.async_accept_user_from_waiting_list.delay(x.id)
+
+
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name']
-    list_filter = ['academy', 'role', 'status']
+    list_filter = ['academy', 'role', 'status', 'process_status']
     list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at',
                     'invite_url')
+    actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list]
 
     def invite_url(self, obj):
         params = {'callback': 'https://learn.breatheco.de'}

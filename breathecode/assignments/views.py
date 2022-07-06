@@ -1,3 +1,4 @@
+from django.http import HttpResponseRedirect
 from breathecode.authenticate.models import ProfileAcademy
 import logging
 from django.shortcuts import render

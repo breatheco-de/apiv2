@@ -1,4 +1,5 @@
 import os, requests, base64, logging
+import re
 import urllib.parse
 import breathecode.notify.actions as notify_actions
 from datetime import timezone, timedelta
@@ -23,9 +24,12 @@ from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import datetime
+from django.db.models.functions import Now
 
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
+from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils import response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from .authentication import ExpiringTokenAuthentication
@@ -78,6 +82,12 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
+
+PATTERNS = {
+    'CONTAINS_LOWERCASE': r'[a-z]',
+    'CONTAINS_UPPERCASE': r'[A-Z]',
+    'CONTAINS_SYMBOLS': r'[^a-zA-Z]',
+}
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -176,7 +186,10 @@ class MemberView(APIView, GenerateLookupsMixin):
             serializer = GetProfileAcademySerializer(item, many=False)
             return Response(serializer.data)
 
-        items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug='student')
+        items = ProfileAcademy.objects.filter(academy__id=academy_id)
+        include = request.GET.get('include', '').split()
+        if not 'student' in include:
+            items = items.exclude(role__slug='student')
 
         roles = request.GET.get('roles', None)
         if roles is not None:
@@ -540,6 +553,8 @@ class StudentView(APIView, GenerateLookupsMixin):
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
+        allow_old = request.GET.get('allow_old', 'false')
+        not_recent = []
 
         if lookups and user_id_or_email:
             raise ValidationException(
@@ -550,11 +565,25 @@ class StudentView(APIView, GenerateLookupsMixin):
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
+            if allow_old != 'true':
+                responses = []
+                not_recent = items.filter(created_at__lt=Now() - timedelta(minutes=30))
+                responses.append(
+                    MultiStatusResponse('Only recently created students can be deleted',
+                                        code=400,
+                                        slug='non-recently-created',
+                                        queryset=not_recent))
+                items = items.filter(created_at__gt=Now() - timedelta(minutes=30))
+                if items:
+                    responses.append(MultiStatusResponse(code=204, queryset=items))
 
             for item in items:
 
                 item.delete()
 
+            if not_recent:
+                response = response_207(responses, 'first_name')
+                return response
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or user_id_or_email is None:
@@ -1278,30 +1307,57 @@ def pick_password(request, token):
     _dict['token'] = token
     _dict['callback'] = request.GET.get('callback', '')
 
+    token_instance = Token.get_valid(token)
+
+    # allow a token to change the password
+    if token_instance:
+        user = token_instance.user
+
+    # allow a invite token to change the password
+    else:
+        invite = UserInvite.objects.filter(token=token).first()
+
+        # just can process if this user not have a password yet
+        user = User.objects.filter(email=invite.email, password='').first() if invite else None
+
+    if not user:
+        return render_message(request, 'The link has expired.')
+
     form = PickPasswordForm(_dict)
     if request.method == 'POST':
         password1 = request.POST.get('password1', None)
         password2 = request.POST.get('password2', None)
+
         if password1 != password2:
             messages.error(request, 'Passwords don\'t match')
             return render(request, 'form.html', {'form': form})
 
-        token = Token.get_valid(request.POST.get('token', None))
-        if token is None:
-            messages.error(request, 'Invalid or expired token ' + str(token))
+        if not password1:
+            messages.error(request, "Password can't be empty")
+            return render(request, 'form.html', {'form': form})
+
+        if (len(password1) < 8 or not re.findall(PATTERNS['CONTAINS_LOWERCASE'], password1)
+                or not re.findall(PATTERNS['CONTAINS_UPPERCASE'], password1)
+                or not re.findall(PATTERNS['CONTAINS_SYMBOLS'], password1)):
+            messages.error(request, 'Password must contain 8 characters with lowercase, uppercase and '
+                           'symbols')
+            return render(request, 'form.html', {'form': form})
 
         else:
-            user = token.user
             user.set_password(password1)
             user.save()
-            token.delete()
+
+            # destroy the token
+            if token_instance:
+                token_instance.delete()
+
             callback = request.POST.get('callback', None)
             if callback is not None and callback != '':
                 return HttpResponseRedirect(redirect_to=request.POST.get('callback'))
             else:
                 return render(
                     request, 'message.html',
-                    {'message': 'You password has been reset successfully, you can close this window.'})
+                    {'MESSAGE': 'You password has been reset successfully, you can close this window.'})
 
     return render(request, 'form.html', {'form': form})
 

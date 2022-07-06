@@ -239,7 +239,9 @@ class AuthenticateTestSuite(AuthTestCase):
                              'role_id': 'potato',
                              'sent_at': None,
                              'status': 'ACCEPTED',
-                             'token': model1['user_invite'].token
+                             'token': model1['user_invite'].token,
+                             'process_message': '',
+                             'process_status': 'PENDING',
                          }, {
                              'academy_id': 1,
                              'author_id': 1,
@@ -252,7 +254,9 @@ class AuthenticateTestSuite(AuthTestCase):
                              'role_id': 'potato',
                              'sent_at': None,
                              'status': 'ACCEPTED',
-                             'token': model2['user_invite'].token
+                             'token': model2['user_invite'].token,
+                             'process_message': '',
+                             'process_status': 'PENDING',
                          }])
 
     def test_user_me_invite_status__to_accepted_invitations_not_matched(self):

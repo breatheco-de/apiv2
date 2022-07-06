@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import (AcademyView, CohortMeView, CohortUserView, AcademyCohortView, SyllabusVersionView,
-                    SyllabusView, get_timezones, UserView, UserMeView, AcademyCohortUserView, get_schedule,
-                    AcademySyllabusScheduleView, SyllabusScheduleView, get_all_academies, get_cohorts,
-                    AcademyCohortTimeSlotView, AcademySyllabusScheduleTimeSlotView,
-                    AcademySyncCohortTimeSlotView, AcademyReportView, get_public_syllabus, SyllabusAssetView)
+from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserView, AcademyCohortView,
+                    SyllabusVersionView, SyllabusView, get_timezones, UserView, UserMeView,
+                    AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView, SyllabusScheduleView,
+                    get_all_academies, get_cohorts, AcademyCohortTimeSlotView,
+                    AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
+                    get_public_syllabus, SyllabusAssetView)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -46,6 +47,7 @@ urlpatterns = [
     path('academy/', get_all_academies, name='academy'),
     path('academy/me', AcademyView.as_view(), name='academy_me'),
     path('academy/cohort', AcademyCohortView.as_view(), name='academy_cohort'),
+    path('academy/activate', AcademyActivateView.as_view(), name='academy_activate'),
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user', UserView.as_view(), name='user'),
     # 🔽 this endpoint is deprecated 🔽
