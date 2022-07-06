@@ -20,9 +20,9 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SyllabusSche
                           CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
                           GetSyllabusScheduleSerializer, GetSyllabusVersionSerializer,
                           SyllabusVersionSerializer, GetBigAcademySerializer, AcademyReportSerializer,
-                          PublicCohortSerializer, GetSyllabusSmallSerializer)
-from .models import (Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule, Cohort,
-                     STUDENT, DELETED, Syllabus, SyllabusVersion)
+                          PublicCohortSerializer, GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer)
+from .models import (ACTIVE, Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule,
+                     Cohort, STUDENT, DELETED, Syllabus, SyllabusVersion)
 
 from .actions import update_asset_on_json, find_asset_on_json
 from breathecode.authenticate.models import ProfileAcademy
@@ -114,6 +114,19 @@ class AcademyReportView(APIView):
 
         users = AcademyReportSerializer(academy)
         return Response(users.data)
+
+
+class AcademyActivateView(APIView):
+    @capable_of('academy_activate')
+    def put(self, request, academy_id=None):
+
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        academy.status = 'ACTIVE'
+        academy.save()
+
+        serializer = GetAcademyWithStatusSerializer(academy)
+        return Response(serializer.data)
 
 
 class UserMeView(APIView):

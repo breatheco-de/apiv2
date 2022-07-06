@@ -12,6 +12,10 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import FeedbackTestCase
+import breathecode.feedback.actions as actions
+from django.utils import timezone
+
+now = timezone.now()
 
 
 class SurveyTestSuite(FeedbackTestCase):
@@ -536,7 +540,7 @@ class SurveyTestSuite(FeedbackTestCase):
             'cohort': model['cohort_user'][0].cohort.id,
         }
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -574,7 +578,49 @@ class SurveyTestSuite(FeedbackTestCase):
             'cohort': model['cohort_user'][0].cohort.id,
         }
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    @patch('breathecode.feedback.actions.send_survey_group',
+           MagicMock(return_value={
+               'success': [],
+               'error': []
+           }))
+    def test_academy_survey__post__when_send_survey_group_is_called(self):
+        """Test /academy/sur."""
+
+        self.headers(academy=1)
+        cohort_user_kwargs = [{'role': 'STUDENT'}, {'role': 'TEACHER'}]
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='STUDENT',
+            capability='crud_survey',
+            cohort=True,
+            cohort_user=cohort_user_kwargs,
+        )
+
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.post(url, {'cohort': 1, 'duration': '3601', 'send_now': True})
+        json = response.json()
+        del json['created_at']
+        del json['updated_at']
+
+        expected = {
+            'id': model['cohort'].id,
+            'status': True,
+            'public_url': 'https://nps.breatheco.de/survey/1',
+            'lang': 'en',
+            'max_assistants_to_ask': 2,
+            'max_teachers_to_ask': 1,
+            'duration': '01:00:01',
+            'sent_at': None,
+            'cohort': model['cohort_user'][0].cohort.id,
+        }
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        survey = self.bc.database.get('feedback.Survey', 1, dict=False)
+        self.assertEqual(actions.send_survey_group.call_args_list, [call(survey=survey)])
 
     """DELETE Auth"""
 

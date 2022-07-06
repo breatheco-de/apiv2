@@ -28,7 +28,6 @@ class DailyClient:
         result = response.json()
 
         if result is None:
-            print('responseresponse', response)
             raise Exception('Unknown error when requesting meeting room')
 
         if ('status_code' in result and result['status_code'] >= 400) or 'error' in result:

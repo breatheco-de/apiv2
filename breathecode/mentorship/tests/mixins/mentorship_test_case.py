@@ -1,13 +1,10 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-import os
-from unittest.mock import call
 from rest_framework.test import APITestCase
 from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                                       HeadersMixin, DatetimeMixin, BreathecodeMixin)
 from breathecode.authenticate.models import Token
-from breathecode.notify.actions import get_template_content
 
 
 class MentorshipTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,

@@ -1,11 +1,11 @@
-import json, pytz, logging, requests, re
+import pytz, logging, requests, re
 from django.contrib import admin, messages
 from django import forms
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
-from .actions import generate_mentor_bills, mentor_is_ready
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
+import breathecode.mentorship.actions as actions
 
 timezones = [(x, x) for x in pytz.common_timezones]
 logger = logging.getLogger(__name__)
@@ -32,23 +32,61 @@ class MentorForm(forms.ModelForm):
 def generate_bill(modeladmin, request, queryset):
     mentors = queryset.all()
     for m in mentors:
-        generate_mentor_bills(m, reset=True)
+        actions.generate_mentor_bills(m, reset=True)
 
 
 def mark_as_active(modeladmin, request, queryset):
-    entries = queryset.all()
-    try:
-        for entry in entries:
-            mentor_is_ready(entry)
+    if not queryset:
+        return
 
-        messages.success(request, message='Mentor updated successfully')
-    except requests.exceptions.ConnectionError:
-        message = 'Error: Booking or meeting URL for mentor is failing'
-        logger.fatal(message)
-        messages.error(request, message)
-    except Exception as e:
-        logger.fatal(str(e))
-        messages.error(request, 'Error: ' + str(e))
+    entries = queryset.all()
+    connection_errors = []
+    exceptions = {}
+
+    connection_error_message = 'Booking or meeting URL for mentor is failing ({})'
+
+    for entry in entries:
+        try:
+            actions.mentor_is_ready(entry)
+
+        except requests.exceptions.ConnectionError:
+            message = 'Error: Booking or meeting URL for mentor is failing'
+            logger.fatal(message)
+            connection_errors.append(entry.slug)
+
+        except Exception as e:
+            error = str(e)
+            logger.fatal(error)
+
+            if error not in exceptions:
+                exceptions[error] = [entry.slug]
+            else:
+                exceptions[error].append(entry.slug)
+
+    if connection_errors and exceptions:
+        all_errors = 'Error:'
+
+        all_errors = f'{all_errors} {connection_error_message.format(", ".join(connection_errors))}.'
+
+        for error, slugs in exceptions.items():
+            all_errors = f'{all_errors} {error} ({", ".join(slugs)}).'
+
+        messages.error(request, all_errors)
+        return
+
+    if connection_errors:
+        messages.error(request, f'Error: {connection_error_message.format(", ".join(connection_errors))}.')
+
+    if exceptions:
+        all_errors = 'Error:'
+
+        for error, slugs in exceptions.items():
+            all_errors = f'{all_errors} {error} ({", ".join(slugs)}).'
+
+        messages.error(request, all_errors)
+
+    if not connection_errors and not exceptions:
+        messages.success(request, 'Mentor updated successfully')
 
 
 def generate_slug_based_on_calendly(modeladmin, request, queryset):
@@ -74,7 +112,7 @@ class MentorAdmin(admin.ModelAdmin):
     form = MentorForm
     list_display = ['slug', 'user', 'name', 'email', 'current_status', 'unique_url', 'meet_url']
     raw_id_fields = ['user', 'service']
-    search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email']
+    search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email', 'slug']
     list_filter = ['service__academy__slug', 'status', 'service__slug']
     readonly_fields = ('token', )
     actions = [generate_bill, mark_as_active, generate_slug_based_on_calendly] + change_field(

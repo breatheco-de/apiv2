@@ -141,6 +141,7 @@ class Answer(models.Model):
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
         if self.__old_status != self.status and self.status == 'ANSWERED':
+
             # signal the updated answer
             signals.survey_answered.send(instance=self, sender=Answer)
 

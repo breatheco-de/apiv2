@@ -27,7 +27,7 @@ class Message(str):
         return super().__new__(cls, *args, **kwargs)
 
 
-# IMPORTANT: the loader.render_to_string in a function is inside of funcion render
+# IMPORTANT: the loader.render_to_string in a function is inside of function render
 def render_page_without_invites():
     request = None
     APP_URL = os.getenv('APP_URL', '')

@@ -2,7 +2,7 @@
 Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
-from .utils import is_valid, create_models, just_one
+from .utils import is_valid, create_models, just_one, get_list
 
 
 class MentorshipModelsMixin(ModelsMixin):
@@ -33,6 +33,9 @@ class MentorshipModelsMixin(ModelsMixin):
 
             if 'mentorship_service' in models:
                 kargs['service'] = just_one(models['mentorship_service'])
+
+            if 'syllabus' in models:
+                kargs['syllabus'] = get_list(models['syllabus'])
 
             models['mentor_profile'] = create_models(mentor_profile, 'mentorship.MentorProfile', **kargs)
 

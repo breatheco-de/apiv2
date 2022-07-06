@@ -408,6 +408,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'author_id': model['user_invite'].author_id,
             'status': model['user_invite'].status,
             'phone': model['user_invite'].phone,
+            'process_message': model['user_invite'].process_message,
+            'process_status': model['user_invite'].process_status,
         }])
 
     def test_resend_invite_recently(self):
