@@ -350,8 +350,14 @@ def slug_to_lower_case(modeladmin, request, queryset):
     technologies = queryset.all()
 
     for t in technologies:
-        t.slug = t.slug.lower()
-        t.save()
+        lowercase_tech = AssetTechnology.objects.filter(slug=t.slug.lower()).first()
+        if lowercase_tech is not None:
+            for a in t.asset_set.all():
+                lowercase_tech.asset_set.add(a)
+            t.delete()
+        else:
+            t.slug = t.slug.lower()
+            t.save()
 
 
 class ParentFilter(admin.SimpleListFilter):
