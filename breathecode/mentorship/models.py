@@ -87,7 +87,7 @@ class MentorProfile(models.Model):
 
     bio = models.TextField(max_length=500, default=None, blank=True, null=True)
 
-    service = models.ForeignKey(MentorshipService, on_delete=models.CASCADE)
+    services = models.ManyToManyField(to=MentorshipService)
 
     timezone = models.CharField(max_length=50,
                                 null=True,

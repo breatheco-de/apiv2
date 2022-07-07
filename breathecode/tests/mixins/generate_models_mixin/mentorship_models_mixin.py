@@ -32,7 +32,7 @@ class MentorshipModelsMixin(ModelsMixin):
                 kargs['user'] = just_one(models['user'])
 
             if 'mentorship_service' in models:
-                kargs['service'] = just_one(models['mentorship_service'])
+                kargs['services'] = get_list(models['mentorship_service'])
 
             if 'syllabus' in models:
                 kargs['syllabus'] = get_list(models['syllabus'])

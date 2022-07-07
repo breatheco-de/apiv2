@@ -67,9 +67,12 @@ class GETMentorTinySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     user = GetUserSmallSerializer()
-    service = GETServiceSmallSerializer()
+    services = serpy.MethodField()
     status = serpy.Field()
     booking_url = serpy.Field()
+
+    def get_services(self, obj):
+        return GETServiceSmallSerializer(obj.services.all(), many=True).data
 
 
 class GETSessionSmallSerializer(serpy.Serializer):
@@ -112,7 +115,7 @@ class GETMentorSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     user = GetUserSmallSerializer()
-    service = GETServiceSmallSerializer()
+    services = serpy.MethodField()
     status = serpy.Field()
     price_per_hour = serpy.Field()
     booking_url = serpy.Field()
@@ -121,6 +124,9 @@ class GETMentorSmallSerializer(serpy.Serializer):
     email = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+    def get_services(self, obj):
+        return GETServiceSmallSerializer(obj.services.all(), many=True).data
 
 
 class GETBillSmallSerializer(serpy.Serializer):
@@ -174,7 +180,7 @@ class GETMentorBigSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     user = GetUserSmallSerializer()
-    service = GETServiceBigSerializer()
+    services = serpy.MethodField()
     status = serpy.Field()
     price_per_hour = serpy.Field()
     booking_url = serpy.Field()
@@ -187,6 +193,9 @@ class GETMentorBigSerializer(serpy.Serializer):
 
     def get_syllabus(self, obj):
         return GetSyllabusSmallSerializer(obj.syllabus.all(), many=True).data
+
+    def get_services(self, obj):
+        return GETServiceBigSerializer(obj.services.all(), many=True).data
 
 
 class GETSessionReportSerializer(serpy.Serializer):
@@ -386,6 +395,7 @@ class MentorSerializer(serializers.ModelSerializer):
 class MentorUpdateSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False)
     price_per_hour = serializers.FloatField(required=False)
+    #FIXME
     service = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(), required=False)
 
     class Meta:

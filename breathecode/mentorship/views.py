@@ -686,8 +686,8 @@ class ServiceSessionView(APIView, HeaderLimitOffsetPagination):
         if service_id is None:
             raise ValidationException('Missing service id', code=404)
 
-        items = MentorshipSession.objects.filter(mentor__service__id=service_id,
-                                                 mentor__service__academy__id=academy_id)
+        items = MentorshipSession.objects.filter(mentor__services__id=service_id,
+                                                 mentor__services__academy__id=academy_id)
         lookup = {}
 
         _status = request.GET.get('status', '')
