@@ -486,7 +486,7 @@ class MaskingUrlView(APIView):
         if media_id:
             lookups['id'] = media_id
         elif media_slug:
-            lookups['slug'] = media_slug.split('.')[0]  #ignore extesion
+            lookups['slug'] = media_slug.split('.')[0]  #ignore extension
 
         width = request.GET.get('width')
         height = request.GET.get('height')
@@ -516,12 +516,14 @@ class MaskingUrlView(APIView):
         if (width or height) and not resolution:
             func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
 
-            res = func.call({
+            request = func.call({
                 'width': width,
                 'height': height,
                 'filename': media.hash,
                 'bucket': media_gallery_bucket(),
             })
+
+            res = request.json()
 
             if not res['status_code'] == 200 or not res['message'] == 'Ok':
                 if 'message' in res:

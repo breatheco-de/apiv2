@@ -1,7 +1,15 @@
+import hashlib
 import logging
+import re
+from typing import Optional
 from celery import shared_task, Task
+
+from breathecode.media.models import Media, MediaResolution
+from breathecode.media.views import media_gallery_bucket
+from breathecode.services.google_cloud.function import Function
+from breathecode.services.google_cloud.storage import Storage
 from .models import Asset
-from .actions import pull_from_github, test_asset
+from .actions import pull_from_github, screenshots_bucket, test_asset
 
 logger = logging.getLogger(__name__)
 
@@ -32,3 +40,106 @@ def async_test_asset(asset_slug):
         logger.exception(f'Error testing asset {a.slug}')
 
     return False
+
+
+@shared_task
+def async_create_asset_thumbnail(asset_slug: str):
+    asset = Asset.objects.filter(slug=asset_slug).first()
+    if asset is None:
+        logger.error(f'Asset with slug {asset_slug} not found')
+        return
+
+    slug1 = 'learn-to-code'
+    slug2 = asset_slug
+    url = f'https://4geeksacademy.com/us/{slug1}/{slug2}/preview'
+    func = Function(region='us-central1', project_id='breathecode-197918', name='screenshots')
+
+    response = func.call({
+        'url': url,
+        'name': slug1 + slug2,
+        'dimension': '1200x630',
+        'delay': 1000,  # this should be fixed if the screenshots is taken without load the content properly
+        'includeDate': False,
+    })
+
+    if response.status_code >= 400:
+        logger.error('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
+                     f'returns status code {response.status_code}')
+        return
+
+    json = response.json()
+
+    url = json['url']
+    filename = json['filename']
+
+    storage = Storage()
+    cloud_file = storage.file(screenshots_bucket(), filename)
+
+    content_file = cloud_file.download()
+    hash = hashlib.sha256(content_file).hexdigest()
+
+    # file already exists for this academy
+    if Media.objects.filter(hash=hash, academy=asset.academy).exists():
+        # this prevent a screenshots duplicated
+        cloud_file.delete()
+        logger.warn(f'Media with hash {hash} already exists, skipping')
+        return
+
+    # file already exists for another academy
+    media = Media.objects.filter(hash=hash).first()
+    if media:
+        # this prevent a screenshots duplicated
+        cloud_file.delete()
+        media = Media(slug=f'asset-{asset_slug}',
+                      url=media.url,
+                      thumbnail=media.thumbnail,
+                      academy=asset.academy,
+                      mime=media.mime,
+                      hash=media.hash)
+        media.save()
+
+        logger.warn(f'Media was save with {hash} for academy {asset.academy}')
+        return
+
+    # if media does not exist too, keep the screenshots with other name
+    cloud_file.rename(hash)
+
+    media = Media(
+        slug=f'asset-{asset_slug}',
+        url=url,
+        thumbnail=f'{url}-thumbnail',
+        academy=asset.academy,
+        mime='image/png',  # this should change in a future, check the cloud function
+        hash=hash)
+    media.save()
+
+    logger.warn(f'Media was save with {hash} for academy {asset.academy}')
+
+
+@shared_task
+def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height: Optional[int] = 0):
+    media = Media.objects.filter(id=media_id).first()
+    if media is None:
+        logger.error(f'Media with id {media_id} not found')
+        return
+
+    if (width and not height) or (not width and height):
+        logger.error("async_resize_asset_thumbnail can't be used with width and height together")
+        return
+
+    kwargs = {'width': width} if width else {'height': height}
+
+    func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
+
+    res = func.call({
+        **kwargs,
+        'filename': media.hash,
+        'bucket': media_gallery_bucket(),
+    })
+
+    if not res['status_code'] == 200 or not res['message'] == 'Ok':
+        logger.error(f'Unhandled error with `resize-image` cloud function, response {res}')
+        return
+
+    resolution = MediaResolution(width=res['width'], height=res['height'], hash=media.hash)
+    resolution.save()

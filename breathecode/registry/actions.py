@@ -1,4 +1,8 @@
 import logging, json, os, re, pathlib
+from typing import Optional
+from breathecode.media.models import Media, MediaResolution
+from breathecode.media.views import media_gallery_bucket
+from breathecode.registry.tasks import async_create_asset_thumbnail, async_resize_asset_thumbnail
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -347,6 +351,73 @@ def clean_asset_readme(asset):
     replaced += content[startIndex:]
     asset.set_readme(replaced)
     return asset
+
+
+def screenshots_bucket():
+    return os.getenv('SCREENSHOTS_BUCKET', '')
+
+
+class AssetThumbnailGenerator:
+    asset: Asset
+    width: Optional[int]
+    height: Optional[int]
+
+    def __init__(self, asset: Asset, width: Optional[int] = 0, height: Optional[int] = 0) -> None:
+        self.asset = asset
+        self.width = width
+        self.height = height
+
+    def get_thumbnail_url(self) -> tuple[str, bool]:
+        """
+        Get thumbnail url for asset, the first element of tuple is the url, the second if is permanent
+        redirect.
+        """
+
+        if not self.asset:
+            return (self._get_default_url(), False)
+
+        media = self._get_media()
+        if not media:
+            async_create_asset_thumbnail.delay(self.asset.slug)
+            return (self._get_asset_url(), False)
+
+        if not self._the_client_want_resize():
+            # register click
+            media.hits += 1
+            media.save()
+
+            return (media.url, True)
+
+        media_resolution = self._get_media_resolution(media.hash)
+        if not media_resolution:
+            async_resize_asset_thumbnail.delay(self.asset.slug)
+            return (media.url, False)
+
+        # register click
+        media_resolution.hits += 1
+        media_resolution.save()
+
+        return (f'{media.url}-{media_resolution.width}x{media_resolution.height}', True)
+
+    def _get_default_url(self) -> str:
+        return os.getenv('DEFAULT_ASSET_PREVIEW_URL', '')
+
+    def _get_asset_url(self) -> str:
+        return self.asset.preview or self._get_default_url()
+
+    def _get_media(self) -> Optional[Media]:
+        slug = f'asset-{self.asset.slug}'
+        return Media.objects.filter(slug=slug).first()
+
+    def _get_media_resolution(self, hash: str) -> Optional[MediaResolution]:
+        return MediaResolution.objects.filter(Q(width=self.width) | Q(height=self.height), hash=hash).first()
+
+    def _the_client_want_resize(self) -> bool:
+        """
+        Check if the width of height value was provided, if both are provided return False
+        """
+
+        return (self.width and not self.height) or (not self.width and self.height)
 
 
 def sync_learnpack_asset(github, asset):
