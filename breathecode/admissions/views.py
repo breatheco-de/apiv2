@@ -1,4 +1,6 @@
 from breathecode.certificate.models import Specialty
+from breathecode.utils import APIViewExtensions
+
 from breathecode.admissions.actions import sync_cohort_timeslots
 from breathecode.admissions.caches import CohortCache
 import logging
@@ -159,7 +161,18 @@ class CohortUserView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
+    extensions = APIViewExtensions(cache=CohortCache,
+                                   cache_per_user=True,
+                                   sort='-kickoff_date',
+                                   paginate=True)
+
     def get(self, request, format=None):
+
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+
         items = CohortUser.objects.all()
 
         roles = request.GET.get('roles', None)
