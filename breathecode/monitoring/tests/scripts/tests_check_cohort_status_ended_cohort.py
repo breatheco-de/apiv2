@@ -97,9 +97,10 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         del script['title']
 
         expected = {
-            'severity_level': 5,
-            'status': 'MINOR',
-            'error_slug': None,
+            'btn': None,
+            'severity_level': 100,
+            'status': 'CRITICAL',
+            'error_slug': 'cohort-stage-should-be-ended',
         }
 
         self.assertEqual(script, expected)

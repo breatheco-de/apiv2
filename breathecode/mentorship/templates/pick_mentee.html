@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+body {
+  font-family: "Roboto", sans-serif;
+  background-color: #f9f9f9;
+  margin: 0;
+  padding: 0;
+}
+a{text-decoration: none;}
+.card {
+  background-color: white;
+  width: auto;
+  box-sizing: content-box;
+  padding: 20px 24px;
+  box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  margin: 0px auto;
+  max-width: 400px;
+}
+.card .card-title {
+  border-left: 8px solid #00aeef;
+  padding: 16px 30px;
+  margin-left: -24px;
+  font-size: 1.5em;
+  font-weight: 400;
+}
+
+.sh-list {
+  min-width: 340px;
+}
+.search-bar{
+  padding: 0 16px 10px 15px;
+}
+.search-bar input{
+  border: 1px solid #e8e8e8;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 3px;
+  width: 100%;
+  color: #2a2a2a;
+  font-size: 16px;
+}
+.sh-list .search-status{
+  border: none;
+}
+.sh-list .sh-list-item {
+  padding: 16px;
+  cursor: pointer;
+}
+.sh-list .sh-list-item:hover {
+  background-color: #f3f3f3;
+}
+.sh-list .sh-list-item .sh-list-content,
+.sh-list .sh-list-item .sh-list-icon {
+  vertical-align: middle;
+  display: table-cell;
+  background-size: contain;
+}
+.sh-list .sh-list-item .whitespace{
+  content: "a";
+  width: 10px;
+  background: transparent;
+  display: table-cell;
+}
+.sh-list .sh-list-item .sh-list-item-title {
+  color: #2c2d30;
+  padding: 2px 0;
+  font-weight: 600;
+  font-size: 16px;
+}
+.sh-list .sh-list-item .sh-list-item-sub-title {
+  color: #717274;
+  font-weight: 200;
+  font-size: 12px;
+}
+.sh-list .sh-list-item .sh-list-icon {
+  margin-right: 10px;
+  background-color: #d2d2d2;
+  width: 40px;
+  height: 40px;
+  display: table-cell;
+  text-align: center;
+  line-height: 42px;
+  font-size: 1.2em;
+  font-weight: 100;
+  color: white;
+  border-radius: 50%;
+}
+.sh-list .sh-list-item .sh-list-icon.add {
+  background-color: #00aeef;
+}
+.sh-list .sh-list-item .sufix {
+  display: inline-block;
+  font-size: 24px;
+  margin-right: 24px;
+  float: right;
+}
+.sh-list .sh-list-item .sufix i {
+  margin-top: 10px;
+}
+
+h4 {
+  display: block;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 16px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+</style>
+<div class="content text-center">
+    <tr>
+        <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+			padding-bottom: 5px;">
+            <div class=card>
+                <div class="card-title">Who are you mentoring?</div>
+                <div class="search-bar">
+                  The student has not arrived yet, please specify, and we will let <a href="https://www.straightdope.com/21341923/is-there-a-gender-neutral-substitute-for-his-or-her" target="_blank" rel="nofollow noopener noreferrer">they</a> know you are waiting:
+                </div>
+                <div class="search-bar">
+                  <input type="text" placeholder="Type name or email" />
+                  <small class="search-status">Waiting for student name or email</small>
+                </div>
+                <div class="sh-list">
+
+                </div>
+              </div>
+              </div>
+
+
+        </td>
+    </tr>
+</div>
+
+<script>
+  let listNode = null;
+  let statusNode = null;
+  let typingTimer; //timer
+  let inputNode = document.querySelector('input');
+  let previousQuery = null;
+
+  window.addEventListener('load', function() {
+    console.log("Window finshed loading");
+    listNode = document.querySelector('.sh-list');
+    statusNode = document.querySelector('.search-status');
+    inputNode.addEventListener("keydown", function(e){
+      clearTimeout(typingTimer); //start again doing the debounce
+      setStatus("loading",`Waiting until you stop typing`);
+      const query = e.target.value;
+      if(query.length < 2){
+        setStatus("error",`Please type at least 2 letters: ${query}`);
+      }
+      else typingTimer = setTimeout(loadStudents, 500); //amount of type to wait for the user to stop typing
+    })
+  }, false);
+
+  const setStatus = function(icon, message){
+    statusNode.innerHTML = message;
+  }
+
+  const loadStudents = async function(){
+    const query = inputNode.value;
+
+    if(query == previousQuery) return;
+    else previousQuery = query;
+
+    const students = await search(query);
+    listNode.innerHTML = students.map(props => Student(props)).join('')
+    listNode.innerHTML += `<div class="sh-list-item">
+      <a href="{{ baseUrl }}&mentee=undefined">
+      <div class="sh-list-icon add"><i class="fas fa-plus"></i></div>
+      <div class="whitespace"></div>
+      <div class="sh-list-content">
+        <div class="sh-list-item-title">Can't find it?</div>
+        <div class="sh-list-item-sub-title">Start the mentorship without saying</div>
+      </div>
+      </a>
+    </div>`;
+  }
+
+  let searchCache = {};
+  const search = async function(query){
+    if(query === "") return [];
+
+    if(searchCache[query] !== undefined){
+      setStatus("success",`Found ${searchCache[query].length} students`);
+      return searchCache[query];
+    }
+    setStatus("loading",`Fetching ${query}...`);
+
+    const options = {
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Token {{ token }}"
+      }
+    };
+
+    try{
+      const resp = await fetch(`/v1/auth/user?like=${query}&limit=10`, options);
+      console.log(`Fetching ${query}`);
+      if(resp.status === 200){
+        const students = await resp.json();
+        setStatus("success",`Found ${students.length} students`)
+        searchCache[query] = students;
+        return searchCache[query];
+      }
+      else throw Error('Error fetching students')
+    }
+    catch(err){
+      setStatus("error", 'Error fetching students');
+      console.error('Error fetching, check the network tab', err)
+      return [];
+    }
+  }
+
+  const Student = function(props){
+    const avatar = (props.profile && props.profile.avatar_url === "") ? props.profile.avatar_url : null;
+    return `<div class="sh-list-item">
+        <a href="{{ baseUrl }}&mentee=${props.id}">
+            <div class="sh-list-icon" style="background-image: url('${avatar}')">
+              ${!avatar ? `<i class="fas fa-user-friends"></i>` : ""}
+            </div>
+            <div class="whitespace"></div>
+            <div class="sh-list-content">
+                <div class="sh-list-item-title">${props.first_name} ${props.last_name}</div>
+                <div class="sh-list-item-sub-title">${props.email}</div>
+            </div>
+            <div class=sufix><i class="fas fa-angle-right"></i></div>
+        </a>
+      </div>`
+  }
+
+</script>
+{% endblock %}

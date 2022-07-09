@@ -7,18 +7,20 @@ from breathecode.authenticate.models import Token
 from unittest.mock import call
 from breathecode.notify.actions import get_template_content
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, DatetimeMixin
+from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
+                                      DatetimeMixin, BreathecodeMixin)
 from breathecode.feedback.actions import strings
 
 
 class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
-                        DatetimeMixin):
+                        DatetimeMixin, BreathecodeMixin):
     """MarketingTestCase with auth methods"""
     def tearDown(self):
         self.clear_cache()
 
     def setUp(self):
         self.generate_queries()
+        self.set_test_instance(self)
 
     def get_token_key(self, id=None):
         kwargs = {}
@@ -79,7 +81,7 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin
                 '\n'
                 '\n'
                 '\n'
-                'The BreatheCode Team'
+                'The 4Geeks Team'
             })
         self.assertToken(token)
         self.assertTrue(link in html)

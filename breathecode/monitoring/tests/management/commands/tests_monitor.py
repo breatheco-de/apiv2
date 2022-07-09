@@ -975,6 +975,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'aaaa\n',
             'status_code': 0,
+            'special_status_text': 'OK',
         }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
@@ -1104,6 +1105,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'aaaa\n',
             'status_code': 0,
+            'special_status_text': 'OK',
         }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])

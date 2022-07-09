@@ -1,5 +1,7 @@
 from rest_framework.views import exception_handler
 
+__all__ = ['breathecode_exception_handler']
+
 
 def breathecode_exception_handler(exc, context):
     # This is to be used with the Django REST Framework (DRF) as its

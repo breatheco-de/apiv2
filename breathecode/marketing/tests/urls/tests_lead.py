@@ -6,9 +6,10 @@ from datetime import timedelta
 import re, string
 from random import choice, choices, randint
 from mixer.main import Mixer
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, call
 from django.urls.base import reverse_lazy
 from rest_framework import status
+from faker import Faker
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -16,6 +17,8 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import MarketingTestCase
+
+fake = Faker()
 
 
 def random_string():
@@ -39,7 +42,7 @@ def generate_form_entry_kwargs():
         'client_comments': random_string(),
         'location': random_string(),
         'language': random_string(),
-        'utm_url': random_string(),
+        'utm_url': fake.url(),
         'utm_medium': random_string(),
         'utm_campaign': random_string(),
         'utm_source': random_string(),
@@ -59,6 +62,7 @@ def generate_form_entry_kwargs():
         'lead_type': choice(['STRONG', 'SOFT', 'DISCOVERY']),
         'deal_status': choice(['WON', 'LOST']),
         'sentiment': choice(['GOOD', 'BAD']),
+        'current_download': random_string(),
     }
 
 
@@ -99,6 +103,7 @@ class LeadTestSuite(MarketingTestCase):
                 'utm_url': None,
                 'utm_medium': None,
                 'utm_campaign': None,
+                'utm_content': None,
                 'utm_source': None,
                 'referral_key': None,
                 'gclid': None,
@@ -123,6 +128,7 @@ class LeadTestSuite(MarketingTestCase):
                 'contact': None,
                 'academy': None,
                 'user': None,
+                'lead_generation_app': None,
                 'tag_objects': [],
                 'automation_objects': []
             })
@@ -147,6 +153,7 @@ class LeadTestSuite(MarketingTestCase):
             'language': 'en',
             'utm_url': None,
             'utm_medium': None,
+            'utm_content': None,
             'utm_campaign': None,
             'utm_source': None,
             'referral_key': None,
@@ -170,6 +177,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': None,
             'ac_deal_id': None,
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': None
         }])
 
@@ -223,13 +231,14 @@ class LeadTestSuite(MarketingTestCase):
                 'phone': data['phone'],
                 'course': data['course'],
                 'client_comments': data['client_comments'],
-                'current_download': None,
+                'current_download': data['current_download'],
                 'location': data['location'],
                 'language': data['language'],
                 'utm_url': data['utm_url'],
                 'utm_medium': data['utm_medium'],
                 'utm_campaign': data['utm_campaign'],
                 'utm_source': data['utm_source'],
+                'utm_content': None,
                 'referral_key': data['referral_key'],
                 'gclid': data['gclid'],
                 'tags': data['tags'],
@@ -253,6 +262,7 @@ class LeadTestSuite(MarketingTestCase):
                 'contact': None,
                 'academy': None,
                 'user': None,
+                'lead_generation_app': None,
                 'tag_objects': [],
                 'automation_objects': []
             })
@@ -277,6 +287,7 @@ class LeadTestSuite(MarketingTestCase):
             'utm_url': json['utm_url'],
             'utm_medium': json['utm_medium'],
             'utm_campaign': json['utm_campaign'],
+            'utm_content': None,
             'utm_source': json['utm_source'],
             'referral_key': json['referral_key'],
             'gclid': json['gclid'],
@@ -299,6 +310,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
 
@@ -336,12 +348,13 @@ class LeadTestSuite(MarketingTestCase):
                 'phone': data['phone'],
                 'course': data['course'],
                 'client_comments': data['client_comments'],
-                'current_download': None,
+                'current_download': data['current_download'],
                 'location': data['location'],
                 'language': data['language'],
                 'utm_url': data['utm_url'],
                 'utm_medium': data['utm_medium'],
                 'utm_campaign': data['utm_campaign'],
+                'utm_content': None,
                 'utm_source': data['utm_source'],
                 'referral_key': data['referral_key'],
                 'gclid': data['gclid'],
@@ -367,6 +380,7 @@ class LeadTestSuite(MarketingTestCase):
                 'academy': 1,
                 'user': None,
                 'tag_objects': [],
+                'lead_generation_app': None,
                 'automation_objects': []
             })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -391,6 +405,7 @@ class LeadTestSuite(MarketingTestCase):
             'utm_medium': json['utm_medium'],
             'utm_campaign': json['utm_campaign'],
             'utm_source': json['utm_source'],
+            'utm_content': json['utm_content'],
             'referral_key': json['referral_key'],
             'gclid': json['gclid'],
             'tags': json['tags'],
@@ -412,6 +427,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
 
@@ -451,12 +467,13 @@ class LeadTestSuite(MarketingTestCase):
                 'phone': data['phone'],
                 'course': data['course'],
                 'client_comments': data['client_comments'],
-                'current_download': None,
+                'current_download': data['current_download'],
                 'location': data['location'],
                 'language': data['language'],
                 'utm_url': data['utm_url'],
                 'utm_medium': data['utm_medium'],
                 'utm_campaign': data['utm_campaign'],
+                'utm_content': None,
                 'utm_source': data['utm_source'],
                 'referral_key': data['referral_key'],
                 'gclid': data['gclid'],
@@ -482,6 +499,7 @@ class LeadTestSuite(MarketingTestCase):
                 'academy': 1,
                 'user': None,
                 'tag_objects': [],
+                'lead_generation_app': None,
                 'automation_objects': []
             })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -499,13 +517,14 @@ class LeadTestSuite(MarketingTestCase):
             'phone': json['phone'],
             'course': json['course'],
             'client_comments': json['client_comments'],
-            'current_download': None,
+            'current_download': json['current_download'],
             'location': json['location'],
             'language': json['language'],
             'utm_url': json['utm_url'],
             'utm_medium': json['utm_medium'],
             'utm_campaign': json['utm_campaign'],
             'utm_source': json['utm_source'],
+            'utm_content': json['utm_content'],
             'referral_key': json['referral_key'],
             'gclid': json['gclid'],
             'tags': json['tags'],
@@ -527,6 +546,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
 
@@ -568,12 +588,13 @@ class LeadTestSuite(MarketingTestCase):
                 'phone': data['phone'],
                 'course': data['course'],
                 'client_comments': data['client_comments'],
-                'current_download': None,
+                'current_download': data['current_download'],
                 'location': data['location'],
                 'language': data['language'],
                 'utm_url': data['utm_url'],
                 'utm_medium': data['utm_medium'],
                 'utm_campaign': data['utm_campaign'],
+                'utm_content': None,
                 'utm_source': data['utm_source'],
                 'referral_key': data['referral_key'],
                 'gclid': data['gclid'],
@@ -598,6 +619,7 @@ class LeadTestSuite(MarketingTestCase):
                 'contact': None,
                 'academy': 2,
                 'user': None,
+                'lead_generation_app': None,
                 'tag_objects': [],
                 'automation_objects': []
             })
@@ -622,6 +644,7 @@ class LeadTestSuite(MarketingTestCase):
             'utm_url': json['utm_url'],
             'utm_medium': json['utm_medium'],
             'utm_campaign': json['utm_campaign'],
+            'utm_content': json['utm_content'],
             'utm_source': json['utm_source'],
             'referral_key': json['referral_key'],
             'gclid': json['gclid'],
@@ -644,5 +667,128 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
+            'won_at': json['won_at']
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_lead__create_lead(self):
+        """Test /lead with create lead happening"""
+
+        model1 = self.generate_models(academy=True, academy_kwargs={'active_campaign_slug': 'midgard'})
+        model2 = self.generate_models(academy=True,
+                                      academy_alias=True,
+                                      academy_alias_kwargs={'active_campaign_slug': 'midgard'})
+
+        url = reverse_lazy('marketing:lead')
+
+        data = generate_form_entry_kwargs()
+        data['phone'] = '123456789'
+        data['language'] = 'en'
+        data['location'] = 'midgard'
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+        del json['created_at']
+        del json['updated_at']
+
+        self.assertEqual(
+            json, {
+                'id': 1,
+                'fb_leadgen_id': data['fb_leadgen_id'],
+                'fb_page_id': data['fb_page_id'],
+                'fb_form_id': data['fb_form_id'],
+                'fb_adgroup_id': data['fb_adgroup_id'],
+                'fb_ad_id': data['fb_ad_id'],
+                'first_name': data['first_name'],
+                'last_name': data['last_name'],
+                'email': data['email'],
+                'phone': data['phone'],
+                'course': data['course'],
+                'client_comments': data['client_comments'],
+                'current_download': data['current_download'],
+                'location': data['location'],
+                'language': data['language'],
+                'utm_url': data['utm_url'],
+                'utm_medium': data['utm_medium'],
+                'utm_campaign': data['utm_campaign'],
+                'utm_content': None,
+                'utm_source': data['utm_source'],
+                'referral_key': data['referral_key'],
+                'gclid': data['gclid'],
+                'tags': data['tags'],
+                'automations': data['automations'],
+                'street_address': data['street_address'],
+                'country': data['country'],
+                'city': data['city'],
+                'latitude': json['latitude'],
+                'longitude': json['longitude'],
+                'state': data['state'],
+                'zip_code': data['zip_code'],
+                'browser_lang': data['browser_lang'],
+                'storage_status': data['storage_status'],
+                'lead_type': data['lead_type'],
+                'deal_status': data['deal_status'],
+                'sentiment': data['sentiment'],
+                'ac_contact_id': None,
+                'ac_deal_id': None,
+                'ac_expected_cohort': None,
+                'won_at': None,
+                'contact': None,
+                'academy': 2,
+                'user': None,
+                'lead_generation_app': None,
+                'tag_objects': [],
+                'automation_objects': []
+            })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            'id': 1,
+            'contact_id': None,
+            'fb_leadgen_id': json['fb_leadgen_id'],
+            'fb_page_id': json['fb_page_id'],
+            'fb_form_id': json['fb_form_id'],
+            'fb_adgroup_id': json['fb_adgroup_id'],
+            'fb_ad_id': json['fb_ad_id'],
+            'first_name': json['first_name'],
+            'last_name': json['last_name'],
+            'email': json['email'],
+            'phone': json['phone'],
+            'course': json['course'],
+            'client_comments': json['client_comments'],
+            'current_download': json['current_download'],
+            'location': json['location'],
+            'language': json['language'],
+            'utm_url': json['utm_url'],
+            'utm_medium': json['utm_medium'],
+            'utm_campaign': json['utm_campaign'],
+            'utm_content': json['utm_content'],
+            'utm_source': json['utm_source'],
+            'referral_key': json['referral_key'],
+            'gclid': json['gclid'],
+            'tags': json['tags'],
+            'automations': json['automations'],
+            'street_address': json['street_address'],
+            'country': json['country'],
+            'city': json['city'],
+            'latitude': float(json['latitude']),
+            'longitude': float(json['longitude']),
+            'state': json['state'],
+            'zip_code': json['zip_code'],
+            'browser_lang': json['browser_lang'],
+            'storage_status': json['storage_status'],
+            'lead_type': json['lead_type'],
+            'deal_status': json['deal_status'],
+            'sentiment': json['sentiment'],
+            'academy_id': 2,
+            'user_id': None,
+            'ac_contact_id': json['ac_contact_id'],
+            'ac_deal_id': json['ac_deal_id'],
+            'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])

@@ -7,6 +7,7 @@ import re
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
+from breathecode.utils import DatetimeInteger
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -54,10 +55,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: read_cohort for academy 1",
-            'status_code': 403,
-        })
+        self.assertEqual(
+            json, {
+                'detail': "You (user: 1) don't have this capability: read_all_cohort for academy 1",
+                'status_code': 403,
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
@@ -69,7 +71,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         response = self.client.get(url)
@@ -90,7 +92,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      cohort_time_slot=True)
         model_dict = self.remove_dinamics_fields(model['cohort_time_slot'].__dict__)
@@ -98,14 +100,22 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': model.cohort_time_slot.id,
-            'cohort': model.cohort_time_slot.cohort.id,
-            'starting_at': self.datetime_to_iso(model.cohort_time_slot.starting_at),
-            'ending_at': self.datetime_to_iso(model.cohort_time_slot.ending_at),
-            'recurrent': model.cohort_time_slot.recurrent,
-            'recurrency_type': model.cohort_time_slot.recurrency_type,
-            'created_at': self.datetime_to_iso(model.cohort_time_slot.created_at),
-            'updated_at': self.datetime_to_iso(model.cohort_time_slot.updated_at),
+            'id':
+            model.cohort_time_slot.id,
+            'cohort':
+            model.cohort_time_slot.cohort.id,
+            'starting_at':
+            self.interger_to_iso(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+            'ending_at':
+            self.interger_to_iso(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
+            'recurrent':
+            model.cohort_time_slot.recurrent,
+            'recurrency_type':
+            model.cohort_time_slot.recurrency_type,
+            'created_at':
+            self.datetime_to_iso(model.cohort_time_slot.created_at),
+            'updated_at':
+            self.datetime_to_iso(model.cohort_time_slot.updated_at),
         }]
 
         self.assertEqual(json, expected)
@@ -113,6 +123,29 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_time_slot_dict(), [{
             **self.model_to_dict(model, 'cohort_time_slot'),
         }])
+
+    """
+    🔽🔽🔽 Without timezone
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_time_slot__post__without_timezone(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
+        data = {}
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'academy-without-timezone', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     """
     🔽🔽🔽 Post
@@ -123,10 +156,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_time_slot__post__without_ending_at_and_starting_at(self):
         self.headers(academy=1)
+        academy_kwargs = {'timezone': 'America/Caracas'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
-                                     role='potato')
+                                     role='potato',
+                                     academy_kwargs=academy_kwargs)
         url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         data = {}
         response = self.client.post(url, data, format='json')
@@ -145,10 +180,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_time_slot__post(self):
         self.headers(academy=1)
+        academy_kwargs = {'timezone': 'America/Caracas'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
-                                     role='potato')
+                                     role='potato',
+                                     academy_kwargs=academy_kwargs)
         url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
 
         starting_at = self.datetime_now()
@@ -161,21 +198,22 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'cohort': 1,
-            'ending_at': None,
             'id': 1,
             'recurrency_type': 'WEEKLY',
             'recurrent': True,
-            'starting_at': None,
-            **data,
+            'timezone': 'America/Caracas',
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_time_slot_dict(), [{
-            'cohort_id': 1,
-            'ending_at': ending_at,
-            'id': 1,
-            'recurrency_type': 'WEEKLY',
-            'recurrent': True,
-            'starting_at': starting_at,
-        }])
+        self.assertEqual(
+            self.all_cohort_time_slot_dict(),
+            [{
+                'cohort_id': 1,
+                'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
+                'id': 1,
+                'recurrency_type': 'WEEKLY',
+                'recurrent': True,
+                'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
+                'timezone': 'America/Caracas',
+            }])

@@ -1,11 +1,27 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+from random import choice, randint
+
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from breathecode.admissions.models import Cohort
-from django.utils import timezone
-from datetime import datetime, timedelta
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models, just_one
+
+TIMEZONES = [
+    'America/New_York', 'America/Bogota', 'America/Santiago', 'America/Buenos_Aires', 'Europe/Madrid',
+    'America/Caracas'
+]
+
+
+def random_datetime_interger():
+    year = '{:04d}'.format(randint(2021, 2999))
+    month = '{:02d}'.format(randint(1, 12))
+    day = '{:02d}'.format(randint(1, 28))
+    hour = '{:02d}'.format(randint(0, 23))
+    minute = '{:02d}'.format(randint(0, 59))
+
+    return int(year + month + day + hour + minute)
 
 
 class AdmissionsModelsMixin(ModelsMixin):
@@ -14,155 +30,161 @@ class AdmissionsModelsMixin(ModelsMixin):
         return cohort.stage
 
     def generate_admissions_models(self,
-                                   specialty_mode=False,
+                                   mentorship_service=False,
                                    academy=False,
                                    cohort=False,
                                    profile_academy=False,
                                    cohort_user=False,
                                    city=False,
+                                   syllabus_schedule=False,
                                    country=False,
                                    skip_cohort=False,
                                    syllabus=False,
-                                   academy_specialty_mode=False,
                                    cohort_time_slot=False,
-                                   time_slot=False,
                                    syllabus_version=False,
-                                   specialty_mode_time_slot=False,
+                                   syllabus_schedule_time_slot=False,
+                                   monitor_script=False,
+                                   mentor_profile=False,
+                                   user_specialty=False,
                                    country_kwargs={},
-                                   time_slot_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
                                    academy_kwargs={},
-                                   specialty_mode_kwargs={},
-                                   academy_specialty_mode_kwargs={},
+                                   syllabus_schedule_kwargs={},
                                    syllabus_kwargs={},
                                    cohort_kwargs={},
                                    cohort_user_kwargs={},
-                                   specialty_mode_time_slot_kwargs={},
+                                   syllabus_schedule_time_slot_kwargs={},
                                    syllabus_version_kwargs={},
                                    models={},
                                    **kwargs):
         models = models.copy()
 
-        if not 'country' in models and country:
+        if not 'country' in models and is_valid(country):
             kargs = {}
 
-            kargs = {**kargs, **country_kwargs}
-            models['country'] = mixer.blend('admissions.Country', **kargs)
+            models['country'] = create_models(country, 'admissions.Country', **{**kargs, **country_kwargs})
 
-        if not 'city' in models and (city or country):
-            kargs = {}
-
-            if 'country' in models:
-                kargs['country'] = models['country']
-
-            kargs = {**kargs, **city_kwargs}
-            models['city'] = mixer.blend('admissions.City', **kargs)
-
-        if not 'academy' in models and (academy or profile_academy or syllabus or academy_specialty_mode):
+        if not 'city' in models and (is_valid(city) or is_valid(country)):
             kargs = {}
 
             if 'country' in models:
-                kargs['country'] = models['country']
+                kargs['country'] = just_one(models['country'])
+
+            models['city'] = create_models(city, 'admissions.City', **{**kargs, **city_kwargs})
+
+        if not 'academy' in models and (is_valid(academy) or is_valid(profile_academy) or is_valid(syllabus)
+                                        or is_valid(cohort) or is_valid(monitor_script)
+                                        or is_valid(mentorship_service) or is_valid(mentor_profile)
+                                        or is_valid(user_specialty)):
+            kargs = {}
+
+            if 'country' in models:
+                kargs['country'] = just_one(models['country'])
 
             if 'city' in models:
-                kargs['city'] = models['city']
+                kargs['city'] = just_one(models['city'])
 
-            kargs = {**kargs, **academy_kwargs}
-            models['academy'] = mixer.blend('admissions.Academy', **kargs)
+            models['academy'] = create_models(academy, 'admissions.Academy', **{**kargs, **academy_kwargs})
 
-        if not 'syllabus' in models and (syllabus or syllabus_version):
+        if not 'syllabus' in models and (is_valid(syllabus) or is_valid(syllabus_version)):
             kargs = {}
 
             if 'academy' in models:
-                kargs['academy_owner'] = models['academy']
+                kargs['academy_owner'] = just_one(models['academy'])
 
-            kargs = {**kargs, **syllabus_kwargs}
-            models['syllabus'] = mixer.blend('admissions.Syllabus', **kargs)
+            models['syllabus'] = create_models(syllabus, 'admissions.Syllabus', **{
+                **kargs,
+                **syllabus_kwargs
+            })
 
-        if not 'syllabus_version' in models and syllabus_version:
+        if not 'syllabus_version' in models and is_valid(syllabus_version):
             kargs = {}
 
             if 'syllabus' in models:
-                kargs['syllabus'] = models['syllabus']
+                kargs['syllabus'] = just_one(models['syllabus'])
 
-            kargs = {**kargs, **syllabus_version_kwargs}
-            models['syllabus_version'] = mixer.blend('admissions.SyllabusVersion', **kargs)
+            models['syllabus_version'] = create_models(syllabus_version, 'admissions.SyllabusVersion', **{
+                **kargs,
+                **syllabus_version_kwargs
+            })
 
-        if not 'specialty_mode' in models and specialty_mode:
+        if not 'syllabus_schedule' in models and (is_valid(syllabus_schedule)
+                                                  or is_valid(syllabus_schedule_time_slot)):
             kargs = {}
 
             if 'syllabus' in models:
-                kargs['syllabus'] = models['syllabus']
-
-            kargs = {**kargs, **specialty_mode_kwargs}
-            models['specialty_mode'] = mixer.blend('admissions.SpecialtyMode', **kargs)
-
-        if not 'academy_specialty_mode' in models and academy_specialty_mode:
-            kargs = {}
-
-            if 'specialty_mode' in models:
-                kargs['specialty_mode'] = models['specialty_mode']
+                kargs['syllabus'] = just_one(models['syllabus'])
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
-            kargs = {**kargs, **academy_specialty_mode_kwargs}
-            models['academy_specialty_mode'] = mixer.blend('admissions.AcademySpecialtyMode', **kargs)
+            models['syllabus_schedule'] = create_models(syllabus_schedule, 'admissions.SyllabusSchedule', **{
+                **kargs,
+                **syllabus_schedule_kwargs
+            })
 
-        if not 'cohort' in models and not skip_cohort and (cohort or profile_academy or cohort_user
-                                                           or academy):
+        if not 'cohort' in models and not skip_cohort and (is_valid(cohort) or is_valid(profile_academy)
+                                                           or is_valid(cohort_user) or is_valid(academy)):
             kargs = {}
 
             if profile_academy or 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             if 'syllabus_version' in models or syllabus_version:
-                kargs['syllabus_version'] = models['syllabus_version']
+                kargs['syllabus_version'] = just_one(models['syllabus_version'])
 
-            if 'specialty_mode' in models or specialty_mode:
-                kargs['specialty_mode'] = models['specialty_mode']
+            if 'syllabus_schedule' in models or syllabus_schedule:
+                kargs['schedule'] = just_one(models['syllabus_schedule'])
 
-            kargs = {**kargs, **cohort_kwargs}
-            models['cohort'] = mixer.blend('admissions.Cohort', **kargs)
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
 
-        if not 'cohort_user' in models and not skip_cohort and cohort_user:
+            models['cohort'] = create_models(cohort, 'admissions.Cohort', **{**kargs, **cohort_kwargs})
+
+        if not 'cohort_user' in models and not skip_cohort and is_valid(cohort_user):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             if 'cohort' in models:
-                kargs['cohort'] = models['cohort']
+                kargs['cohort'] = just_one(models['cohort'])
 
-            kargs = {**kargs, **cohort_user_kwargs}
-            models['cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
+            models['cohort_user'] = create_models(cohort_user, 'admissions.CohortUser', **{
+                **kargs,
+                **cohort_user_kwargs
+            })
 
-        if not 'time_slot' in models and time_slot:
-            kargs = {}
+        if not 'syllabus_schedule_time_slot' in models and is_valid(syllabus_schedule_time_slot):
+            kargs = {
+                'starting_at': random_datetime_interger(),
+                'ending_at': random_datetime_interger(),
+                'timezone': choice(TIMEZONES),
+            }
 
-            kargs = {**kargs, **time_slot_kwargs}
-            models['time_slot'] = mixer.blend('admissions.TimeSlot', **kargs)
+            if 'syllabus_schedule' in models:
+                kargs['schedule'] = just_one(models['syllabus_schedule'])
 
-        if not 'specialty_mode_time_slot' in models and specialty_mode_time_slot:
-            kargs = {}
+            models['syllabus_schedule_time_slot'] = create_models(
+                syllabus_schedule_time_slot, 'admissions.SyllabusScheduleTimeSlot', **{
+                    **kargs,
+                    **syllabus_schedule_time_slot_kwargs
+                })
 
-            if 'academy' in models:
-                kargs['academy'] = models['academy']
-
-            if 'specialty_mode' in models:
-                kargs['specialty_mode'] = models['specialty_mode']
-
-            kargs = {**kargs, **specialty_mode_time_slot_kwargs}
-            models['specialty_mode_time_slot'] = mixer.blend('admissions.SpecialtyModeTimeSlot', **kargs)
-
-        if not 'cohort_time_slot' in models and cohort_time_slot:
-            kargs = {}
+        if not 'cohort_time_slot' in models and is_valid(cohort_time_slot):
+            kargs = {
+                'starting_at': random_datetime_interger(),
+                'ending_at': random_datetime_interger(),
+                'timezone': choice(TIMEZONES),
+            }
 
             if 'cohort' in models:
-                kargs['cohort'] = models['cohort']
+                kargs['cohort'] = just_one(models['cohort'])
 
-            kargs = {**kargs, **cohort_time_slot_kwargs}
-            models['cohort_time_slot'] = mixer.blend('admissions.CohortTimeSlot', **kargs)
+            models['cohort_time_slot'] = create_models(cohort_time_slot, 'admissions.CohortTimeSlot', **{
+                **kargs,
+                **cohort_time_slot_kwargs
+            })
 
         return models

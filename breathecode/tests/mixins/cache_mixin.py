@@ -3,11 +3,19 @@ Cache mixin
 """
 from django.core.cache import cache
 
+__all__ = ['CacheMixin']
+
 
 class CacheMixin():
     """Cache mixin"""
-    def clear_cache(self, **kargs):
-        cache.clear()
+    def clear_cache(self) -> None:
+        """
+        Clear the cache.
 
-    def tearDown(self):
-        self.clear_cache()
+        Usage:
+
+        ```py
+        self.bc.cache.clear()
+        ```
+        """
+        cache.clear()

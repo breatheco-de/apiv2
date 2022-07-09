@@ -11,7 +11,11 @@ class UserProxy(User):
 
 
 class Assessment(models.Model):
-    slug = models.SlugField(max_length=200, primary_key=True)
+    def __init__(self, *args, **kwargs):
+        super(Assessment, self).__init__(*args, **kwargs)
+        self.__old_slug = self.slug
+
+    slug = models.SlugField(max_length=200, unique=True)
     title = models.CharField(max_length=255, blank=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
 
@@ -38,12 +42,18 @@ class Assessment(models.Model):
         default=None,
         blank=True,
         null=True,
-        help_text='The original translation (will only be set if the quiz is a translation of anotherone)')
+        help_text='The original translation (will only be set if the quiz is a translation of another one)')
 
     comment = models.CharField(max_length=255, default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.slug} ({self.lang})'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
 
 
 TEXT = 'TEXT'
@@ -61,6 +71,25 @@ QUESTION_TYPE = (
 class Question(models.Model):
     title = models.TextField()
     help_text = models.CharField(max_length=255, default=None, blank=True, null=True)
+
+    # TODO: Add image and intro message to assessments
+    """
+        If we add intro message and image the questions will be able (for example) to show up
+        a sample of code and ask the student to answer qustions about it.
+    """
+    # image_url = models.URLField(blank=True,
+    #                             default=None,
+    #                             blank=True,
+    #                             null=True,
+    #                             help_text='You can add any image necessary to answer the questions')
+    # intro_message = models.TextField(
+    #     blank=True,
+    #     default=None,
+    #     blank=True,
+    #     null=True,
+    #     help_text=
+    #     'You can add any additional markdown message, instructions or code necessary to answer the questions')
+
     lang = models.CharField(max_length=3, blank=True, default='en')
 
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, default=None, blank=True, null=True)

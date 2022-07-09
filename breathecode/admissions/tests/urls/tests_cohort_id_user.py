@@ -154,8 +154,11 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -164,7 +167,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -253,8 +256,11 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -263,7 +269,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -282,6 +288,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 1,
+            'watching': False,
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -313,8 +320,11 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -323,7 +333,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -343,6 +353,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 2,
+            'watching': False
         }, {
             'cohort_id': 1,
             'educational_status': None,
@@ -350,6 +361,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 2,
             'role': 'STUDENT',
             'user_id': 3,
+            'watching': False
         }])
 
     """
@@ -368,7 +380,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                  profile_academy=True,
                                  cohort_user=True,
                                  syllabus=True,
-                                 specialty_mode=True)
+                                 syllabus_schedule=True)
         ]
 
         base = models[0].copy()
@@ -587,13 +599,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user__post__with_unsuccess_task(self):
         """Test /cohort/:id/user without auth"""
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
-                                     task=True,
-                                     task_status='PENDING',
-                                     task_type='PROJECT')
+                                     task=task)
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'user': model['user'].id,

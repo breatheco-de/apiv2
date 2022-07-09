@@ -16,12 +16,18 @@ from .freelance_models_mixin import FreelanceModelsMixin
 from .marketing_models_mixin import MarketingModelsMixin
 from .monitoring_models_mixin import MonitoringModelsMixin
 from .media_models_mixin import MediaModelsMixin
+from .mentorship_models_mixin import MentorshipModelsMixin
+from .career_models_mixin import CareerModelsMixin
+from .content_types_mixin import ContentTypesMixin
+
+__all__ = ['GenerateModelsMixin']
 
 
 class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMixin, AuthenticateMixin,
                           CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
                           AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin,
-                          MonitoringModelsMixin, MediaModelsMixin):
+                          MonitoringModelsMixin, MediaModelsMixin, MentorshipModelsMixin, CareerModelsMixin,
+                          ContentTypesMixin):
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
         for key in kwargs:
@@ -66,24 +72,36 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
         return models
 
     def generate_models(self, models={}, **kwargs):
+        if '_new_implementation' not in kwargs:
+            print(f'The method `generate_models` is deprecated, use `self.bc.database.create` instead')
+
+        else:
+            del kwargs['_new_implementation']
+
+        if 'authenticate' in kwargs:
+            print(f'The argument `authenticate` is deprecated, use `self.bc.request.authenticate` instead')
+
         self.maxDiff = None
         models = models.copy()
         models = self.__inject_models__(models, **kwargs)
 
         fn = self.__flow__(
+            self.generate_contenttypes_models,
             self.generate_credentials,
-            self.generate_assignments_models,
             self.generate_admissions_models,
+            self.generate_assignments_models,
             self.generate_media_models,
             self.generate_marketing_models,
             self.generate_events_models,
             # self.generate_assessment_models,
             self.generate_authenticate_models,
             self.generate_freelance_models,
+            self.generate_mentorship_models,
             self.generate_feedback_models,
             self.generate_notify_models,
             self.generate_monitoring_models,
             self.generate_certificate_models,
+            self.generate_career_models,
         )
 
         return fn(models=models, **kwargs)

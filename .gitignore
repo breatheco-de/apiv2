@@ -158,3 +158,10 @@ dump.rdb
 # Visual Studio Code
 .vscode/
 .theia/
+
+# mac
+.DS_Store
+
+# Test of render html
+/content.html
+/expected.html

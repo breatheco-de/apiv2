@@ -1,8 +1,10 @@
+import re
+import logging
+import os
+import urllib
 import breathecode.services.eventbrite.actions as actions
-import logging, re, os, json, inspect, urllib
-# from .decorator import commands, actions
-# from breathecode.services.eventbrite.commands import student, cohort
-# from breathecode.services.eventbrite.actions import monitoring
+import traceback
+
 logger = logging.getLogger(__name__)
 
 
@@ -97,14 +99,16 @@ class Eventbrite:
             raise Exception('Invalid webhook')
 
         if not webhook.action:
-            raise Exception('Imposible to determine action')
+            raise Exception('Impossible to determine action')
 
         if not webhook.api_url:
-            raise Exception('Imposible to determine api url')
+            raise Exception('Impossible to determine api url')
 
         action = webhook.action.replace('.', '_')
         api_url = webhook.api_url
-        # organization_id = webhook.organization_id
+
+        if (re.search('^https://www\.eventbriteapi\.com/v3/events/\d+/?$', api_url)):
+            api_url = api_url + '?expand=organizer,venue'
 
         logger.debug(f'Executing => {action}')
         if hasattr(actions, action):
@@ -121,18 +125,14 @@ class Eventbrite:
                 fn(self, webhook, json)
                 logger.debug('Mark action as done')
                 webhook.status = 'DONE'
+                webhook.status_text = 'OK'
                 webhook.save()
 
             except Exception as e:
-                logger.debug('Mark action with error')
-
-                # stack trace
-                # import traceback
-                # print(traceback.print_exc())
-                # print(e)
+                logger.error('Mark action with error')
 
                 webhook.status = 'ERROR'
-                webhook.status_text = str(e)
+                webhook.status_text = ''.join(traceback.format_exception(None, e, e.__traceback__))
                 webhook.save()
 
         else:

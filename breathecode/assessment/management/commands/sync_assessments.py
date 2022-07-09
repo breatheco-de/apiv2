@@ -2,6 +2,7 @@ import os, requests, sys, pytz
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Assessment, Question, Option
+from ...actions import create_from_json
 
 HOST_ASSETS = 'https://assets.breatheco.de/apis'
 API_URL = os.getenv('API_URL', '')
@@ -38,42 +39,5 @@ class Command(BaseCommand):
         quizzes = response.json()
 
         for quiz in quizzes:
-            if 'slug' not in quiz['info']:
-                self.stdout.write(self.style.ERROR(f'Ignoring quiz because it does not have a slug'))
-                continue
-
-            name = 'No name yet'
-            if 'name' not in quiz['info']:
-                self.stdout.write(self.style.ERROR(f"Quiz f{quiz['info']['slug']} needs a name"))
-            else:
-                name = quiz['info']['name']
-
-            a = Assessment.objects.filter(slug=quiz['info']['slug']).first()
-            if a is not None:
-                continue
-
-            a = Assessment(
-                slug=quiz['info']['slug'],
-                lang=quiz['info']['lang'],
-                title=name,
-                comment=quiz['info']['main'],
-            )
-            a.save()
-
-            for question in quiz['questions']:
-                q = Question(
-                    title=question['q'],
-                    lang=quiz['info']['lang'],
-                    assessment=a,
-                    question_type='SELECT',
-                )
-                q.save()
-                for option in question['a']:
-                    o = Option(
-                        title=option['option'],
-                        score=int(option['correct']),
-                        question=q,
-                    )
-                    o.save()
-
-            self.stdout.write(self.style.SUCCESS(f"Created assesment {quiz['info']['slug']}"))
+            a = create_from_json(payload=quiz)
+            self.stdout.write(self.style.SUCCESS(f"Creating assesment {quiz['info']['slug']}"))

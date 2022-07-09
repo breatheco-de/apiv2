@@ -1,15 +1,22 @@
-import urllib.parse, json, re, os
-from django.core.cache import cache, caches
+from __future__ import annotations
+import urllib.parse, json
+from django.core.cache import cache
 from datetime import datetime
 from breathecode.tests.mixins import DatetimeMixin
+
+__all__ = ['Cache', 'CACHE_DESCRIPTORS']
+CACHE_DESCRIPTORS: dict[int, Cache] = {}
 
 
 class Cache(DatetimeMixin):
     model: str
     parents: list[str]
 
+    def __init__(self):
+        CACHE_DESCRIPTORS[hash(self.model)] = self
+
     def __generate_key__(self, storage_key=False, parent='', **kwargs):
-        key = self.model if not parent else parent
+        key = self.model.__name__ if not parent else parent
 
         if storage_key:
             return f'{key}__keys'
@@ -60,6 +67,16 @@ class Cache(DatetimeMixin):
         for key in data.keys():
             if isinstance(data[key], datetime):
                 data[key] = self.datetime_to_iso(data[key])
+
+            if isinstance(data[key], dict):
+                data[key] = self.__fix_fields__(data[key])
+
+            if isinstance(data[key], list):
+                if data[key] and isinstance(data[key][0], dict):
+                    data[key] = [self.__fix_fields__(item) for item in data[key]]
+
+                if data[key] and isinstance(data[key][0], datetime):
+                    data[key] = [self.datetime_to_iso(item) for item in data[key]]
 
         return data
 

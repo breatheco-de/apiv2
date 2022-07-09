@@ -39,7 +39,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         try:
             send_question(model['user'])
         except Exception as e:
-            self.assertEquals(str(e), 'without-cohort-or-cannot-determine-cohort')
+            self.assertEqual(str(e), 'without-cohort-or-cannot-determine-cohort')
 
         self.assertEqual(self.all_answer_dict(), [])
         self.assertEqual(mock_mailgun.call_args_list, [])
@@ -74,7 +74,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         try:
             send_question(model1['user'])
         except Exception as e:
-            self.assertEquals(str(e), 'without-cohort-or-cannot-determine-cohort')
+            self.assertEqual(str(e), 'without-cohort-or-cannot-determine-cohort')
 
         self.assertEqual(self.all_answer_dict(), [])
         self.assertEqual(mock_mailgun.call_args_list, [])
@@ -121,6 +121,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'token_id': None,
             'score': None,
             'comment': None,
+            'mentorship_session_id': None,
+            'sent_at': None,
             'survey_id': None,
             'status': 'PENDING',
             'user_id': 1,
@@ -135,7 +137,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack.call_args_list = []
 
     """
-    🔽🔽🔽 Cohort without SpecialtyMode
+    🔽🔽🔽 Cohort without SyllabusSchedule
     """
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -143,7 +145,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    def test_send_question__cohort_without_specialty_mode(self):
+    def test_send_question__cohort_without_syllabus_schedule(self):
         mock_mailgun = MAILGUN_INSTANCES['post']
         mock_mailgun.call_args_list = []
 
@@ -172,6 +174,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'token_id': None,
             'score': None,
             'comment': None,
+            'mentorship_session_id': None,
+            'sent_at': None,
             'survey_id': None,
             'status': 'PENDING',
             'user_id': 1,
@@ -201,7 +205,11 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(user=True, cohort_user=True, syllabus_version=True, specialty_mode=True)
+        model = self.generate_models(user=True,
+                                     cohort_user=True,
+                                     syllabus_version=True,
+                                     syllabus_schedule=True,
+                                     syllabus={'name': self.bc.fake.name()})
 
         certificate = model.syllabus.name
         send_question(model['user'])
@@ -216,7 +224,9 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'lang': 'en',
             'lowest': 'not good',
             'mentor_id': None,
+            'mentorship_session_id': None,
             'opened_at': None,
+            'sent_at': None,
             'score': None,
             'status': 'SENT',
             'survey_id': None,
@@ -258,8 +268,9 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      credentials_slack=True,
                                      academy=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
-                                     cohort_kwargs=cohort_kwargs)
+                                     syllabus_schedule=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus={'name': self.bc.fake.name()})
 
         certificate = model.syllabus.name
         send_question(model['user'])
@@ -275,6 +286,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'mentor_id': None,
             'event_id': None,
             'token_id': 1,
+            'mentorship_session_id': None,
+            'sent_at': None,
             'score': None,
             'comment': None,
             'survey_id': None,
@@ -314,8 +327,9 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      academy=True,
                                      slack_team_owner=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
-                                     cohort_kwargs=cohort_kwargs)
+                                     syllabus_schedule=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus={'name': self.bc.fake.name()})
 
         certificate = model.syllabus.name
         send_question(model['user'])
@@ -330,6 +344,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'academy_id': None,
             'mentor_id': None,
             'event_id': None,
+            'mentorship_session_id': None,
+            'sent_at': None,
             'token_id': 1,
             'score': None,
             'comment': None,
@@ -370,8 +386,9 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      academy=True,
                                      slack_team_owner=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
-                                     cohort_kwargs=cohort_kwargs)
+                                     syllabus_schedule=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus={'name': self.bc.fake.name()})
 
         certificate = model.syllabus.name
         send_question(model['user'])
@@ -386,6 +403,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'lang': 'es',
             'lowest': 'mala',
             'mentor_id': None,
+            'mentorship_session_id': None,
+            'sent_at': None,
             'opened_at': None,
             'score': None,
             'status': 'SENT',

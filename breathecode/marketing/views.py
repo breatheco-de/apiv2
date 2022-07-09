@@ -1,11 +1,10 @@
-import os, re, datetime, logging, csv, pytz
+import os, re, datetime, logging, csv, pytz, secrets, json
 from urllib import parse
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
 from rest_framework.decorators import renderer_classes
-from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.response import Response
@@ -16,22 +15,27 @@ from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
                                GenerateLookupsMixin, HeaderLimitOffsetPagination)
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
     FormEntrySerializer,
     FormEntrySmallSerializer,
+    ShortlinkSmallSerializer,
     TagSmallSerializer,
     AutomationSmallSerializer,
     DownloadableSerializer,
     ShortLinkSerializer,
+    PUTTagSerializer,
+    UTMSmallSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
-from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
+from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
+import breathecode.marketing.tasks as tasks
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +49,7 @@ def get_downloadable(request, slug=None):
     if slug is not None:
         download = Downloadable.objects.filter(slug=slug).first()
         if download is None:
-            raise APIException(f'Document not found', 404)
+            raise ValidationException('Document not found', 404, slug='not-found')
 
         if request.GET.get('raw', None) == 'true':
             return HttpResponseRedirect(redirect_to=download.destination_url)
@@ -74,13 +78,81 @@ def get_downloadable(request, slug=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):
-    serializer = PostFormEntrySerializer(data=request.data)
+
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if 'phone' in data:
+        data['phone'] = data['phone'].replace(' ', '')
+
+    if 'referral_code' in data and 'referral_key' not in data:
+        data['referral_key'] = data['referral_code']
+
+    serializer = PostFormEntrySerializer(data=data)
     if serializer.is_valid():
         serializer.save()
 
         persist_single_lead.delay(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    print(serializer.errors)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_lead_from_app(request, app_slug=None):
+    app_id = request.GET.get('app_id', None)
+    if app_slug is None or app_id is None:
+        raise ValidationException(f'Invalid app slug and/or id', code=400, slug='without-app-slug-or-app-id')
+
+    app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
+    if app is None:
+        raise ValidationException(f'App not found with those credentials', code=401, slug='without-app-id')
+
+    app.hits += 1
+    app.last_call_at = timezone.now()
+    app.last_request_data = json.dumps(request.data)
+
+    ## apply defaults from the app
+    payload = {
+        'location': app.location,
+        'language': app.language,
+        'utm_url': app.utm_url,
+        'utm_medium': app.utm_medium,
+        'utm_campaign': app.utm_campaign,
+        'utm_source': app.utm_source,
+        'academy': app.academy.id,
+        'lead_generation_app': app.id
+    }
+    payload.update(request.data)
+
+    if 'automations' not in request.data:
+        payload['automations'] = ','.join([str(auto.slug) for auto in app.default_automations.all()])
+
+    if 'tags' not in request.data:
+        payload['tags'] = ','.join([tag.slug for tag in app.default_tags.all()])
+
+    # remove spaces from phone
+    if 'phone' in request.data:
+        payload['phone'] = payload['phone'].replace(' ', '')
+
+    serializer = PostFormEntrySerializer(data=payload)
+    if serializer.is_valid():
+        serializer.save()
+
+        tasks.persist_single_lead.delay(serializer.data)
+
+        app.last_call_status = 'OK'
+        app.save()
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    else:
+        app.last_call_status = 'ERROR'
+        app.last_call_log = json.dumps(serializer.errors)
+        app.save()
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -290,14 +362,39 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    @capable_of('crud_lead')
+    @capable_of('read_tag')
     def get(self, request, format=None, academy_id=None):
-
-        print('academy_id', academy_id)
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            tags = tags.filter(slug__icontains=like)
+
+        types = request.GET.get('type', None)
+        if types is not None:
+            _types = types.split(',')
+            tags = tags.filter(tag_type__in=[x.upper() for x in _types])
 
         serializer = TagSmallSerializer(tags, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_tag')
+    def put(self, request, tag_slug, academy_id=None):
+
+        tag = Tag.objects.filter(slug=tag_slug, ac_academy__academy__id=academy_id).first()
+        if tag is None:
+            raise ValidationException(f'Tag {tag_slug} not found for this academy', slug='tag-not-found')
+
+        serializer = PUTTagSerializer(tag,
+                                      data=request.data,
+                                      context={
+                                          'request': request,
+                                          'academy': academy_id
+                                      })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AcademyAutomationView(APIView, GenerateLookupsMixin):
@@ -313,6 +410,28 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class UTMView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_lead')
+    def get(self, request, format=None, academy_id=None):
+
+        utms = UTMField.objects.filter(academy__id=academy_id)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            utms = utms.filter(slug__icontains=like)
+
+        types = request.GET.get('type', None)
+        if types is not None:
+            _types = types.split(',')
+            utms = utms.filter(utm_type__in=[x.upper() for x in _types])
+
+        serializer = UTMSmallSerializer(utms, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -324,13 +443,13 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
         items = FormEntry.objects.filter(academy__id=academy.id, deal_status='WON')
         lookup = {}
 
-        start = request.GET.get('start', None)
-        if start is not None:
+        start = request.GET.get('start', '')
+        if start != '':
             start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
             lookup['created_at__gte'] = start_date
 
-        end = request.GET.get('end', None)
-        if end is not None:
+        end = request.GET.get('end', '')
+        if end != '':
             end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
             lookup['created_at__lte'] = end_date
 
@@ -338,13 +457,13 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
             param = self.request.GET.get('storage_status')
             lookup['storage_status'] = param
 
-        if 'course' in self.request.GET:
-            param = self.request.GET.get('course')
-            lookup['course'] = param
+        course = request.GET.get('course', '')
+        if course != '':
+            lookup['course__in'] = course.split(',')
 
-        if 'location' in self.request.GET:
-            param = self.request.GET.get('location')
-            lookup['location'] = param
+        location = request.GET.get('location', '')
+        if location != '':
+            lookup['location__in'] = location.split(',')
 
         sort_by = '-created_at'
         if 'sort' in self.request.GET and self.request.GET['sort'] != '':
@@ -365,12 +484,31 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
             return Response(serializer.data, status=200)
 
 
-class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademyProcessView(APIView, GenerateLookupsMixin):
+    @capable_of('crud_lead')
+    def put(self, request, academy_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id'])
+        if not lookups:
+            raise ValidationException('Missing id parameters in the querystring', code=400)
+
+        items = FormEntry.objects.filter(**lookups, academy__id=academy_id)
+        for item in items:
+            persist_single_lead.delay(item.toFormData())
+
+        return Response({'details': f'{items.count()} leads added to the processing queue'},
+                        status=status.HTTP_200_OK)
+
+
+class AcademyLeadView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
     @capable_of('read_lead')
-    def get(self, request, format=None, academy_id=None):
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
 
         academy = Academy.objects.get(id=academy_id)
         items = FormEntry.objects.filter(academy__id=academy.id)
@@ -402,23 +540,32 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             param = self.request.GET.get('location')
             lookup['location'] = param
 
-        sort_by = '-created_at'
-        if 'sort' in self.request.GET and self.request.GET['sort'] != '':
-            sort_by = self.request.GET.get('sort')
-
-        items = items.filter(**lookup).order_by(sort_by)
+        items = items.filter(**lookup)
 
         like = request.GET.get('like', None)
         if like is not None:
             items = query_like_by_full_name(like=like, items=items)
 
-        page = self.paginate_queryset(items, request)
-        serializer = FormEntrySmallSerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = FormEntrySmallSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
+
+    @capable_of('crud_lead')
+    def post(self, request, academy_id=None):
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(f'Academy {academy_id} not found', slug='academy-not-found')
+
+        # ignore the incoming location information and override with the session academy
+        data = {**request.data, 'location': academy.active_campaign_slug}
+
+        serializer = PostFormEntrySerializer(data=data, context={'request': request, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_lead')
     def delete(self, request, academy_id=None):
@@ -447,7 +594,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if slug is not None:
             link = ShortLink.objects.filter(slug=slug).first()
             if link is None or (link.private and link.academy.id != academy_id):
-                raise ValidationError(
+                raise ValidationException(
                     f'Shortlink with slug {slug} not found or its private and it belongs to another academy',
                     slug='shortlink-not-found')
 
@@ -505,7 +652,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                          })
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_shortlink')

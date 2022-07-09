@@ -149,14 +149,19 @@ class AcademyCohortTestSuite(MonitoringTestCase):
                                     monitor_script_kwargs=monitor_script_kwargs,
                                     cohort_kwargs={
                                         'ending_date': ending_date,
-                                        'kickoff_date': kickoff_date
+                                        'kickoff_date': kickoff_date,
+                                        'stage': 'STARTED',
                                     })
 
         sent_at = timezone.now() - timedelta(weeks=6)
 
         models = [
-            self.generate_models(survey=True, survey_kwargs={'sent_at': sent_at}, models=base)
-            for _ in range(0, 2)
+            self.generate_models(survey=True,
+                                 survey_kwargs={
+                                     'status': 'SENT',
+                                     'sent_at': sent_at
+                                 },
+                                 models=base) for _ in range(0, 2)
         ]
 
         script = run_script(models[1].monitor_script)
@@ -166,6 +171,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         del script['title']
 
         expected = {
+            'btn': None,
             'severity_level': 5,
             'error_slug': 'cohort-have-pending-surveys',
             'status': 'MINOR',
@@ -194,11 +200,15 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         models = [
             self.generate_models(survey=True,
                                  cohort=True,
-                                 survey_kwargs={'sent_at': sent_at},
+                                 survey_kwargs={
+                                     'status': 'SENT',
+                                     'sent_at': sent_at
+                                 },
                                  models=base,
                                  cohort_kwargs={
                                      'ending_date': ending_date,
-                                     'kickoff_date': kickoff_date
+                                     'kickoff_date': kickoff_date,
+                                     'stage': 'FINAL_PROJECT',
                                  }) for _ in range(0, 2)
         ]
 
@@ -208,6 +218,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         del script['title']
 
         expected = {
+            'btn': None,
             'severity_level': 5,
             'error_slug': 'cohort-have-pending-surveys',
             'status': 'MINOR',

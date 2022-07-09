@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponse
 from breathecode.admissions.models import CohortUser, Academy
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .models import Answer, Survey, ReviewPlatform, Review
 from .tasks import generate_user_cohort_survey_answers
 from rest_framework import serializers
@@ -64,57 +65,58 @@ def get_survey_questions(request, survey_id=None):
 
 
 # Create your views here.
-class GetAnswerView(APIView, HeaderLimitOffsetPagination):
+class GetAnswerView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
     @capable_of('read_nps_answers')
     def get(self, request, format=None, academy_id=None):
+        handler = self.extensions(request)
 
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}
 
-        if 'user' in self.request.GET:
-            param = self.request.GET.get('user')
-            lookup['user__id'] = param
+        users = request.GET.get('user', None)
+        if users is not None and users != '':
+            items = items.filter(user__id__in=users.split(','))
 
-        if 'cohort' in self.request.GET:
-            param = self.request.GET.get('cohort')
-            lookup['cohort__slug'] = param
+        cohorts = request.GET.get('cohort', None)
+        if cohorts is not None and cohorts != '':
+            items = items.filter(cohort__slug__in=cohorts.split(','))
 
-        if 'mentor' in self.request.GET:
-            param = self.request.GET.get('mentor')
-            lookup['mentor__id'] = param
+        mentors = request.GET.get('mentor', None)
+        if mentors is not None and mentors != '':
+            items = items.filter(mentor__id__in=mentors.split(','))
 
-        if 'event' in self.request.GET:
-            param = self.request.GET.get('event')
-            lookup['event__id'] = param
+        events = request.GET.get('event', None)
+        if events is not None and events != '':
+            items = items.filter(event__id__in=events.split(','))
 
-        if 'score' in self.request.GET:
-            param = self.request.GET.get('score')
-            lookup['score'] = param
+        score = request.GET.get('score', None)
+        if score is not None and score != '':
+            lookup['score'] = score
 
-        if 'status' in self.request.GET:
-            param = self.request.GET.get('status')
-            lookup['status'] = param
+        _status = request.GET.get('status', None)
+        if _status is not None and _status != '':
+            items = items.filter(status__in=_status.split(','))
 
-        if 'survey' in self.request.GET:
-            param = self.request.GET.get('survey')
-            lookup['survey__id'] = param
+        surveys = request.GET.get('survey', None)
+        if surveys is not None and surveys != '':
+            items = items.filter(survey__id__in=surveys.split(','))
 
-        items = items.filter(**lookup).order_by('-created_at')
+        items = items.filter(**lookup)
 
         like = request.GET.get('like', None)
         if like is not None:
             items = query_like_by_full_name(like=like, items=items, prefix='user__')
 
-        page = self.paginate_queryset(items, request)
-        serializer = AnswerSerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = AnswerSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
 
 class AnswerMeView(APIView):
@@ -170,7 +172,7 @@ class AcademyAnswerView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class SurveyView(APIView, HeaderLimitOffsetPagination):
+class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
@@ -184,7 +186,7 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
                                       })
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     """
@@ -238,7 +240,7 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
             param = self.request.GET.get('lang')
             lookup['lang'] = param
 
-        items = items.filter(**lookup).order_by('-created_at')
+        items = items.filter(**lookup).order_by('status', '-created_at')
 
         page = self.paginate_queryset(items, request)
         serializer = SurveySmallSerializer(page, many=True)
@@ -247,6 +249,53 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_survey')
+    def delete(self, request, academy_id=None, survey_id=None):
+
+        lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if lookups and survey_id:
+            raise ValidationException(
+                'survey_id was provided in url '
+                'in bulk mode request, use querystring style instead',
+                code=400,
+                slug='survey-id-and-lookups-together')
+
+        if not lookups and not survey_id:
+            raise ValidationException('survey_id was not provided in url',
+                                      code=400,
+                                      slug='without-survey-id-and-lookups')
+
+        if lookups:
+            items = Survey.objects.filter(**lookups, cohort__academy__id=academy_id).exclude(status='SENT')
+
+            ids = [item.id for item in items]
+
+            if answers := Answer.objects.filter(survey__id__in=ids, status='ANSWERED'):
+
+                slugs = set([answer.survey.cohort.slug for answer in answers])
+
+                raise ValidationException(
+                    f'Survey cannot be deleted because it has been answered for cohorts {", ".join(slugs)}',
+                    code=400,
+                    slug='survey-cannot-be-deleted')
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        sur = Survey.objects.filter(id=survey_id,
+                                    cohort__academy__id=academy_id).exclude(status='SENT').first()
+        if sur is None:
+            raise ValidationException('Survey not found', 404, slug='survey-not-found')
+
+        if Answer.objects.filter(survey__id=survey_id, status='ANSWERED'):
+            raise ValidationException('Survey cannot be deleted', code=400, slug='survey-cannot-be-deleted')
+
+        sur.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET'])
@@ -293,7 +342,7 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if 'platform' in self.request.GET:
             param = self.request.GET.get('platform')
-            lookup['platform__slug'] = param
+            items = items.filter(platform__name__icontains=param)
 
         if 'cohort' in self.request.GET:
             param = self.request.GET.get('cohort')
@@ -311,7 +360,7 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         like = request.GET.get('like', None)
         if like is not None:
-            items = query_like_by_full_name(like=like, items=items)
+            items = query_like_by_full_name(like=like, items=items, prefix='author__')
 
         page = self.paginate_queryset(items, request)
         serializer = ReviewSmallSerializer(page, many=True)

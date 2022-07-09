@@ -20,7 +20,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'status_code': status.HTTP_401_UNAUTHORIZED
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_syllabus_without_capability(self):
         """Test /certificate without auth"""
@@ -36,13 +36,13 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_syllabus_without_syllabus(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato')
@@ -59,7 +59,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato',
@@ -68,9 +68,14 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'main_technologies': None,
             'slug': model.syllabus.slug,
             'name': model.syllabus.name,
-            'academy_owner': model.syllabus.academy_owner.id,
+            'academy_owner': {
+                'id': model.syllabus.academy_owner.id,
+                'name': model.syllabus.academy_owner.name,
+                'slug': model.syllabus.academy_owner.slug
+            },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
             'week_hours': model.syllabus.week_hours,
@@ -170,6 +175,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_syllabus_dict(), [{
+            'main_technologies': None,
             'academy_owner_id': 1,
             'duration_in_days': None,
             'duration_in_hours': None,

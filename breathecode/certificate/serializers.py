@@ -1,5 +1,7 @@
 import serpy
-from breathecode.admissions.serializers import GetSmallSpecialtyModeSerializer
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.admissions.serializers import GetSmallSyllabusScheduleSerializer
+from breathecode.authenticate.serializers import GetProfileAcademyTinySerializer
 
 
 class ProfileSmallSerializer(serpy.Serializer):
@@ -89,7 +91,7 @@ class CohortSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
-    specialty_mode = GetSmallSpecialtyModeSerializer(required=False, many=False)
+    schedule = GetSmallSyllabusScheduleSerializer(required=False, many=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False, many=False)
 
 
@@ -101,7 +103,7 @@ class CohortMidSerializer(serpy.Serializer):
     name = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
-    specialty_mode = GetSmallSpecialtyModeSerializer(required=False, many=False)
+    schedule = GetSmallSyllabusScheduleSerializer(required=False, many=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False, many=False)
 
 
@@ -154,3 +156,13 @@ class UserSpecialtySerializer(serpy.Serializer):
     expires_at = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
+    issued_at = serpy.Field()
+
+    profile_academy = serpy.MethodField()
+
+    def get_profile_academy(self, obj):
+        profileAcademy = ProfileAcademy.objects.filter(academy__id=obj.academy.id,
+                                                       user__id=obj.user.id).first()
+        if profileAcademy is not None:
+            return GetProfileAcademyTinySerializer(profileAcademy).data
+        return None

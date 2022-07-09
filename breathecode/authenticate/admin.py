@@ -1,12 +1,19 @@
-import base64, os, urllib.parse, logging
+import base64, os, urllib.parse, logging, datetime
 from django.contrib import admin
+from django.utils import timezone
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
-from .actions import delete_tokens, generate_academy_token
+from django.contrib import messages
+from .actions import delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password
 from django.utils.html import format_html
-from .models import (CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, Role,
-                     CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy)
-from .actions import reset_password
+from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy,
+                     Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy,
+                     GitpodUser)
+from .tasks import async_set_gitpod_user_expiration
+from breathecode.utils.admin import change_field
+from breathecode.utils.datetime_interger import from_now
+from django.db.models import QuerySet
+from . import tasks
 
 logger = logging.getLogger(__name__)
 
@@ -74,12 +81,25 @@ class TokenAdmin(admin.ModelAdmin):
         return ['key']
 
 
+def accept_selected_users_from_waiting_list(modeladmin, request, queryset: QuerySet[UserInvite]):
+    queryset = queryset.exclude(process_status='DONE').order_by('id')
+    for x in queryset:
+        tasks.async_accept_user_from_waiting_list.delay(x.id)
+
+
+def accept_all_users_from_waiting_list(modeladmin, request, queryset: QuerySet[UserInvite]):
+    queryset = UserInvite.objects.all().exclude(process_status='DONE').order_by('id')
+    for x in queryset:
+        tasks.async_accept_user_from_waiting_list.delay(x.id)
+
+
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name']
-    list_filter = ['academy', 'cohort', 'role']
+    list_filter = ['academy', 'role', 'status', 'process_status']
     list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at',
                     'invite_url')
+    actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list]
 
     def invite_url(self, obj):
         params = {'callback': 'https://learn.breatheco.de'}
@@ -124,24 +144,12 @@ class CapabilityAdmin(admin.ModelAdmin):
     list_display = ('slug', 'description')
 
 
-def mark_as_active(modeladmin, request, queryset):
-    aca_profs = queryset.all()
-    for ap in aca_profs:
-        ap.status = 'ACTIVE'
-        ap.save()
-
-    logger.info(f'All AcademyProfiles marked as ACTIVE')
-
-
-mark_as_active.short_description = 'Mark as ACTIVE'
-
-
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
-    list_display = ('user', 'email', 'academy', 'role', 'status', 'created_at', 'slack', 'facebook')
+    list_display = ('user', 'stats', 'email', 'academy', 'role', 'created_at', 'slack', 'facebook')
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
     list_filter = ['academy__slug', 'status', 'role__slug']
-    actions = [mark_as_active]
+    actions = change_field(['ACTIVE', 'INVITED'], name='status')
     raw_id_fields = ['user']
 
     def get_queryset(self, request):
@@ -149,6 +157,17 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
         self.slack_callback = f'https://app.breatheco.de'
         self.slack_callback = str(base64.urlsafe_b64encode(self.slack_callback.encode('utf-8')), 'utf-8')
         return super(ProfileAcademyAdmin, self).get_queryset(request)
+
+    def stats(self, obj):
+
+        colors = {
+            'ACTIVE': 'bg-success',
+            'INVITED': 'bg-error',
+        }
+
+        return format_html(
+            f"<span class='badge {colors[obj.status]}'><a rel='noopener noreferrer' target='_blank' href='/v1/auth/academy/html/invite'>{obj.status}</a></span>"
+        )
 
     def slack(self, obj):
         if obj.user is not None:
@@ -199,3 +218,89 @@ class AcademyAdmin(admin.ModelAdmin):
 
     def token(self, obj):
         return Token.objects.filter(user__username=obj.slug).first()
+
+
+@admin.register(DeviceId)
+class DeviceIdAdmin(admin.ModelAdmin):
+    list_display = ('name', 'key')
+    search_fields = ['name']
+
+
+def async_recalculate_expiration(modeladmin, request, queryset):
+    queryset.update(expires_at=None)
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu = async_set_gitpod_user_expiration.delay(gpu.id)
+
+
+def recalculate_expiration(modeladmin, request, queryset):
+    queryset.update(expires_at=None)
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu = set_gitpod_user_expiration(gpu.id)
+        if gpu is None:
+            messages.add_message(
+                request, messages.ERROR,
+                f'Error: Gitpod user {gpu.github_username} {gpu.assignee_id} could not be processed')
+        else:
+            messages.add_message(
+                request, messages.INFO,
+                f'Success: Gitpod user {gpu.github_username} {gpu.assignee_id} was successfully processed')
+
+
+def async_recalculate_expiration(modeladmin, request, queryset):
+    queryset.update(expires_at=None)
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu = async_set_gitpod_user_expiration.delay(gpu.id)
+
+
+def extend_expiration_2_weeks(modeladmin, request, queryset):
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu.expires_at = gpu.expires_at + datetime.timedelta(days=17)
+        gpu.delete_status = gpu.delete_status + '. The expiration date was extend for 2 weeks days'
+        gpu.save()
+        messages.add_message(request, messages.INFO, f'Success: Expiration was successfully extended')
+
+
+def extend_expiration_4_months(modeladmin, request, queryset):
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu.expires_at = gpu.expires_at + datetime.timedelta(days=120)
+        gpu.delete_status = gpu.delete_status + '. The expiration date was extend for 4 months'
+        gpu.save()
+        messages.add_message(request, messages.INFO, f'Success: Expiration was successfully extended')
+
+
+def mark_as_expired(modeladmin, request, queryset):
+    gp_users = queryset.all()
+    for gpu in gp_users:
+        gpu.expires_at = timezone.now()
+        gpu.delete_status = gpu.delete_status + '. The user was expired by force.'
+        gpu.save()
+        messages.add_message(request, messages.INFO, f'Success: Gitpod user was expired')
+
+
+@admin.register(GitpodUser)
+class GitpodUserAdmin(admin.ModelAdmin):
+    list_display = ('github_username', 'expiration', 'user', 'assignee_id', 'expires_at')
+    search_fields = ['github_username', 'user__email', 'user__first_name', 'user__last_name', 'assignee_id']
+    actions = [
+        async_recalculate_expiration, recalculate_expiration, extend_expiration_2_weeks,
+        extend_expiration_4_months, mark_as_expired
+    ]
+
+    def expiration(self, obj):
+        now = timezone.now()
+
+        if obj.expires_at is None:
+            return format_html(f"<span class='badge bg-warning'>NEVER</span>")
+        elif now > obj.expires_at:
+            return format_html(f"<span class='badge bg-error'>EXPIRED</span>")
+        elif now > (obj.expires_at + datetime.timedelta(days=3)):
+            return format_html(
+                f"<span class='badge bg-warning'>In {from_now(obj.expires_at, include_days=True)}</span>")
+        else:
+            return format_html(
+                f"<span class='badge bg-success'>In {from_now(obj.expires_at, include_days=True)}</span>")

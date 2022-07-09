@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% load tz %}
+{% block content %}
+<style>
+    .invoice-box {
+        max-width: 800px;
+        margin: auto;
+        padding: 30px;
+        border: 1px solid #eee;
+        box-shadow: 0 0 10px rgba(0, 0, 0, .15);
+        font-size: 16px;
+        line-height: 24px;
+        font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+        color: #555;
+    }
+
+    .invoice-box table {
+        width: 100%;
+        line-height: inherit;
+        text-align: left;
+    }
+
+    .invoice-box table td {
+        padding: 5px;
+        vertical-align: top;
+    }
+
+    .invoice-box table tr td:nth-child(2) {
+        text-align: right;
+    }
+
+    .invoice-box table tr.top table td {
+        padding-bottom: 10px;
+    }
+
+    .invoice-box table tr.top table td.title {
+        font-size: 45px;
+        line-height: 45px;
+        color: #333;
+    }
+
+    .invoice-box table tr.information table td {
+        padding-bottom: 10px;
+    }
+
+    .invoice-box table tr.heading td {
+        background: #eee;
+        border-bottom: 1px solid #ddd;
+        font-weight: bold;
+    }
+
+    .invoice-box table tr.details td {
+        padding-bottom: 20px;
+    }
+
+    .invoice-box table tr.item td {
+        border-bottom: 1px solid #eee;
+    }
+
+    .invoice-box table tr.item.last td {
+        border-bottom: none;
+    }
+
+    .invoice-box table tr.total td:nth-child(2) {
+        border-top: 2px solid #eee;
+        font-weight: bold;
+    }
+
+    @media only screen and (max-width: 600px) {
+        .invoice-box table tr.top table td {
+            width: 100%;
+            display: block;
+            text-align: center;
+        }
+
+        .invoice-box table tr.information table td {
+            width: 100%;
+            display: block;
+            text-align: center;
+        }
+    }
+
+    /** RTL **/
+    .rtl {
+        direction: rtl;
+        font-family: Tahoma, 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+    }
+
+    .rtl table {
+        text-align: right;
+    }
+
+    .rtl table tr td:nth-child(2) {
+        text-align: left;
+    }
+
+    .capitalize {
+        text-transform: uppercase;
+    }
+
+    .UNDER_REVIEW {
+        color: rgb(153, 0, 0);
+    }
+
+    .READY_TO_PAY {
+        color: rgb(0, 100, 50);
+    }
+
+    .alert {
+        border: 1px solid;
+        border-radius: 10px;
+        background: #BDBDBD;
+        padding: 5px;
+    }
+
+    .alert td {
+        width: 100%;
+    }
+
+    .alert.alert-danger {
+        background: #ffb8b8;
+        color: rgb(92, 0, 0);
+        text-align: center;
+    }
+
+    .text-danger {
+        color: rgb(134, 0, 0);
+    }
+
+    .text-success {
+        color: rgb(13, 128, 0);
+    }
+</style>
+</head>
+
+<body>
+    <div class="invoice-box">
+        <table cellpadding="0" cellspacing="0">
+            <tr class="top">
+                <td colspan="3">
+                    <table>
+                        <tr>
+                            <td class="title">
+                                {{ academy.title }}
+                            </td>
+
+                            <td>
+
+                                Invoice #{{ id }}<br>
+                                Status: <span class="{{ status }}">{{ status }}</span><br>
+                                Created: {{ created_at }}<br>
+                                Paid: {{ paid_at }}<br>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+
+            <tr class="information">
+                <td colspan="3">
+                    <table>
+                        <tr>
+                            <td>
+                                {{ mentor.user.first_name }} {{ mentor.user.last_name }}<br>
+                                {{ mentor.user.email }}<br>
+                                Rate: ${{ mentor.price_per_hour }}
+                            </td>
+
+                            <!-- <td>
+                                {{ academy_name }}<br>
+                                John Doe<br>
+                                john@example.com
+                            </td> -->
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            {% if status == "UNDER_REVIEW" %}
+            <tr class="alert alert-danger {{ status }}" style="padding-top: -30px;">
+                <td colspan="3">This bill is not to be paid yet as it its still UNDER_REVIEW</td>
+            </tr>
+            {% endif %}
+
+            <tr class="heading">
+                <td align="left">
+                    Item
+                </td>
+
+                <td align="right">
+                    Notes
+                </td>
+
+                <td align="right">
+                    Billed
+                </td>
+            </tr>
+            {% if status == "UNDER_REVIEW" and unfinished_sessions|length > 0 %}
+            <tr class="item">
+                <td align="left" colspan="3" style="color: rgb(171, 158, 45);">
+                    The mentor has {{ unfinished_sessions|length }} unfinished sessions that are to included in this bill
+                </td>
+            </tr>
+            {% endif %}
+            {% if sessions|length == 0 %}
+            <tr class="item">
+                <td align="left" colspan="3">
+                    No mentoring sessions were found
+                </td>
+            </tr>
+            {% endif %}
+            {% for session in sessions %}
+            <tr class="item">
+                <td align="left">
+                    {{ session.mentor_joined_at|localtime }} with
+                    {% if session.mentee is not None %}
+                    <strong>{{ session.mentee.first_name }} {{ session.mentee.last_name }}</strong>
+                    {% else %}
+                    <strong>no one</strong>
+                    {% endif %}
+                    <small style="display: block;">Meeting lasted: {{ session.duration_string }}</small>
+                </td>
+
+                <td align="right">
+                    {% if session.status_message is not None and session.status_message != "" %}
+                    <span class="tooltip pointer" data-tippy-content="{{session.status_message}}"><i class="fas fa-comment-dollar"></i></span>
+                    {% endif %}
+                    {% if session.summary is not None and session.summary != "" %}
+                    <span class="tooltip pointer" data-tippy-content="{{session.summary}}"><i class="fas fa-user-graduate"></i></span>
+                    {% endif %}
+                    {% if session.extra_time is not None %}
+                    <span class="text-danger tooltip pointer" data-tippy-content="{{session.extra_time}}"><i class="far fa-clock"></i></span>
+                    {% endif %}
+                    {% if session.mentor_late is not None %}
+                    <span class="text-danger tooltip pointer" data-tippy-content="{{session.mentor_late}}"><i class="fas fa-running"></i></span>
+                    {% endif %}
+                    {% if session.mente_joined is not None %}
+                    <span class="tooltip pointer" data-tippy-content="{{session.mente_joined}}"><i class="fas fa-ghost"></i></span>
+                    {% endif %}
+                    {% if session.rating is not None and session.rating.score > 7 %}
+                    <span class="text-success tooltip pointer" data-tippy-content="Score: {{session.rating.score}} <br /> {{session.rating.comment}}"><i class="fas fa-smile"></i></span>
+                    {% elif session.rating is not None and session.rating.score <= 7 %}
+                    <span class="text-danger tooltip pointer" data-tippy-content="Score: {{session.rating.score}} <br /> {{session.rating.comment}}"><i class="fas fa-frown"></i></span>
+                    {% endif %}
+                </td>
+
+                <td align="right">
+                    <span>{{ session.billed_str }}</span>
+                    {% if session.extra_time is not None %}
+                    <small style="display: block; font-size: 8px;" class="text-danger">overtime</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+
+            <tr class="total">
+                <td></td>
+                <td></td>
+
+                <td align="right">
+                    Total Hours: {{ total_duration_in_hours }}
+                    {% if overtime_minutes is not None and overtime_minutes > 0 %}
+                    <small style="display: block; font-size: 8px;" class="text-danger">{{ overtime_hours }} hrs of overtime</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="total">
+                <td></td>
+                <td></td>
+
+                <td align="right">
+                    Total: ${{ total_price }}
+                </td>
+            </tr>
+        </table>
+    </div>
+    {% endblock %}

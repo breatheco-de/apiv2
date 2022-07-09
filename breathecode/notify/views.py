@@ -17,16 +17,9 @@ from .models import Device
 from .tasks import async_slack_action
 from .serializers import DeviceSerializer
 from breathecode.services.slack.client import Slack
+import traceback
 
 logger = logging.getLogger(__name__)
-
-
-@receiver(post_save, sender=Cohort)
-def post_save_cohort(sender, **kwargs):
-
-    instance = kwargs['instance']
-    logger.debug('New cohort was saved')
-    logger.debug(instance)
 
 
 @api_view(['GET'])
@@ -69,9 +62,10 @@ def slack_command(request):
 
     try:
         client = Slack()
-        response = client.execute_command(context=request.POST)
+        response = client.execute_command(context=request.data)
         logger.debug('Slack reponse')
         logger.debug(response)
         return Response(response, status=status.HTTP_200_OK)
     except Exception as e:
+
         return Response(str(e), status=status.HTTP_200_OK)
