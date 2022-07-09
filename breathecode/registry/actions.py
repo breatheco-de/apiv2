@@ -2,7 +2,6 @@ import logging, json, os, re, pathlib
 from typing import Optional
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
-from breathecode.registry.tasks import async_create_asset_thumbnail, async_resize_asset_thumbnail
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -18,6 +17,7 @@ from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
 from .serializers import AssetBigSerializer
 from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator, ArticleValidator
 from github import Github, GithubException
+from breathecode.registry import tasks
 
 logger = logging.getLogger(__name__)
 
@@ -378,7 +378,7 @@ class AssetThumbnailGenerator:
 
         media = self._get_media()
         if not media:
-            async_create_asset_thumbnail.delay(self.asset.slug)
+            tasks.async_create_asset_thumbnail.delay(self.asset.slug)
             return (self._get_asset_url(), False)
 
         if not self._the_client_want_resize():
@@ -390,7 +390,7 @@ class AssetThumbnailGenerator:
 
         media_resolution = self._get_media_resolution(media.hash)
         if not media_resolution:
-            async_resize_asset_thumbnail.delay(self.asset.slug)
+            tasks.async_resize_asset_thumbnail.delay(self.asset.slug)
             return (media.url, False)
 
         # register click
