@@ -2,10 +2,7 @@
 Test /answer
 """
 from random import randint
-from tkinter import W
-from turtle import width
 from unittest.mock import MagicMock, call, patch
-from breathecode.registry import tasks
 
 from breathecode.registry.tasks import async_resize_asset_thumbnail
 from breathecode.services.google_cloud import Function

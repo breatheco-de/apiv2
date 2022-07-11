@@ -2,7 +2,6 @@
 Test /answer
 """
 from random import randint
-from tkinter import W
 from unittest.mock import MagicMock, call, patch
 from breathecode.registry import tasks
 
