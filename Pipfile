@@ -35,7 +35,6 @@ docs_deploy="mkdocs gh-deploy -c"
 [dev-packages]
 pytest-cov = "*"
 coverage = "*"
-atomicwrites = "*"
 pytest = "*"
 coveralls = "*"
 yapf = "*"

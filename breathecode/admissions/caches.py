@@ -1,10 +1,19 @@
 from breathecode.utils import Cache
-from .models import Cohort
+from .models import Cohort, CohortUser
 
 MODULE = 'admissions'
 
 
 class CohortCache(Cache):
     model = Cohort
-    depends = ['Academy', 'Syllabus']
-    parents = ['CohortUser', 'Task', 'UserInvite', 'UserSpecialty', 'Survey', 'SlackChannel']
+    depends = ['Academy', 'SyllabusVersion', 'SyllabusSchedule']
+    parents = [
+        'CohortUser', 'Task', 'UserInvite', 'UserSpecialty', 'Survey', 'SlackChannel', 'CohortTimeSlot',
+        'FinalProject', 'GitpodUser', 'Answer', 'Review'
+    ]
+
+
+class CohortUserCache(Cache):
+    model = CohortUser
+    depends = ['User', 'Cohort']
+    parents = []
