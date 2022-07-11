@@ -10,7 +10,8 @@ from .database import Database
 from .check import Check
 from .format import Format
 
-__all__ = ['Breathecode']
+__all__ = ['Breathecode', 'fake']
+fake = Faker()
 
 
 def print_arguments(func: callable) -> str:
@@ -43,7 +44,7 @@ class Breathecode:
         self.database = Database(parent)
         self.check = Check(parent)
         self.format = Format(parent)
-        self.fake = Faker()
+        self.fake = fake
 
     def help(self, *args) -> None:
         """

@@ -5,7 +5,7 @@ from .views import (AssetThumbnailView, AssetView, get_keywords, get_clusters, g
                     handle_test_asset, forward_asset_url, get_alias_redirects, AcademyAssetView,
                     AcademyAssetActionView, AcademyAssetCommentView, AcademyTechnologyView)
 
-app_name = 'feedback'
+app_name = 'registry'
 urlpatterns = [
     path('asset', AssetView.as_view()),
     path('asset/test', handle_test_asset),

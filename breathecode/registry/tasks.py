@@ -54,9 +54,10 @@ def async_create_asset_thumbnail(asset_slug: str):
     url = f'https://4geeksacademy.com/us/{slug1}/{slug2}/preview'
     func = Function(region='us-central1', project_id='breathecode-197918', name='screenshots')
 
+    name = f'{slug1}-{slug2}.png'
     response = func.call({
         'url': url,
-        'name': slug1 + slug2,
+        'name': name,
         'dimension': '1200x630',
         'delay': 1000,  # this should be fixed if the screenshots is taken without load the content properly
         'includeDate': False,
@@ -91,6 +92,7 @@ def async_create_asset_thumbnail(asset_slug: str):
         # this prevent a screenshots duplicated
         cloud_file.delete()
         media = Media(slug=f'asset-{asset_slug}',
+                      name=media.name,
                       url=media.url,
                       thumbnail=media.thumbnail,
                       academy=asset.academy,
@@ -106,6 +108,7 @@ def async_create_asset_thumbnail(asset_slug: str):
 
     media = Media(
         slug=f'asset-{asset_slug}',
+        name=name,
         url=url,
         thumbnail=f'{url}-thumbnail',
         academy=asset.academy,
@@ -123,7 +126,11 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
         logger.error(f'Media with id {media_id} not found')
         return
 
-    if (width and not height) or (not width and height):
+    if not width and not height:
+        logger.error('async_resize_asset_thumbnail needs the width or height parameter')
+        return
+
+    if width and height:
         logger.error("async_resize_asset_thumbnail can't be used with width and height together")
         return
 
@@ -131,11 +138,13 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
 
     func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
 
-    res = func.call({
+    response = func.call({
         **kwargs,
         'filename': media.hash,
         'bucket': media_gallery_bucket(),
     })
+
+    res = response.json()
 
     if not res['status_code'] == 200 or not res['message'] == 'Ok':
         logger.error(f'Unhandled error with `resize-image` cloud function, response {res}')

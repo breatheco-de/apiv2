@@ -334,8 +334,8 @@ class AssetThumbnailView(APIView):
         Get asset thumbnail.
     """
     def get(self, request, asset_slug):
-        width = request.GET.get('width')
-        height = request.GET.get('height')
+        width = int(request.GET.get('width', '0'))
+        height = int(request.GET.get('height', '0'))
 
         asset = Asset.objects.filter(slug=asset_slug).first()
         generator = AssetThumbnailGenerator(asset, width, height)

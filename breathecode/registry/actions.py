@@ -390,7 +390,11 @@ class AssetThumbnailGenerator:
 
         media_resolution = self._get_media_resolution(media.hash)
         if not media_resolution:
-            tasks.async_resize_asset_thumbnail.delay(self.asset.slug)
+            # register click
+            media.hits += 1
+            media.save()
+
+            tasks.async_resize_asset_thumbnail.delay(media.id, width=self.width, height=self.height)
             return (media.url, False)
 
         # register click
@@ -403,9 +407,12 @@ class AssetThumbnailGenerator:
         return os.getenv('DEFAULT_ASSET_PREVIEW_URL', '')
 
     def _get_asset_url(self) -> str:
-        return self.asset.preview or self._get_default_url()
+        return (self.asset and self.asset.preview) or self._get_default_url()
 
     def _get_media(self) -> Optional[Media]:
+        if not self.asset:
+            return None
+
         slug = f'asset-{self.asset.slug}'
         return Media.objects.filter(slug=slug).first()
 
@@ -417,7 +424,7 @@ class AssetThumbnailGenerator:
         Check if the width of height value was provided, if both are provided return False
         """
 
-        return (self.width and not self.height) or (not self.width and self.height)
+        return bool((self.width and not self.height) or (not self.width and self.height))
 
 
 def sync_learnpack_asset(github, asset):

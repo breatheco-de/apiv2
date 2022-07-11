@@ -1,9 +1,9 @@
 """
 Global mixins
 """
-from .breathecode import Breathecode
+from .breathecode import Breathecode, fake
 
-__all__ = ['BreathecodeMixin']
+__all__ = ['BreathecodeMixin', 'fake']
 
 
 class BreathecodeMixin():
