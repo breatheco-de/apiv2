@@ -25,8 +25,8 @@ def help_command():
 if __name__ == '__main__':
     module = 'breathecode'
 
-    if len(sys.argv) > 1:
-        module = sys.argv[1]
+    if len(sys.argv) > 3:
+        module = sys.argv[3]
 
         if module == '--help' or module == '-h':
             help_command()
