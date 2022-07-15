@@ -207,7 +207,7 @@ def process_student_graduation(self, cohort_id, user_id):
 def process_answer_received(self, answer_id):
     """
     This task will be called every time a single NPS answer is received
-    the task will reivew the score, if we got less than 7 it will notify
+    the task will review the score, if we got less than 7 it will notify
     the school.
     """
 
