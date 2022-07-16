@@ -87,7 +87,6 @@ def send_question(user, cohort=None):
             slug='without-cohort-or-cannot-determine-cohort')
 
     answer.cohort = cu.cohort
-
     answer.lang = answer.cohort.language
     answer.save()
 
