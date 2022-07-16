@@ -3,7 +3,7 @@ Test /cohort/user
 """
 from random import choice
 import re
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.tests.mocks import (
@@ -12,7 +12,9 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import AdmissionsTestCase
+from breathecode.admissions.caches import CohortUserCache
 
 
 class CohortUserTestSuite(AdmissionsTestCase):
@@ -897,3 +899,18 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_cohort_user_dict(), [])
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_cohort_user_with_data(self):
+        """Test /cohort/user without auth"""
+        model = self.generate_models(authenticate=True, cohort_user=True)
+
+        url = reverse_lazy('admissions:cohort_user')
+        response = self.client.get(url)
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['CacheExtension', 'PaginationExtension']),
+        ])
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=CohortUserCache, paginate=True),
+        ])

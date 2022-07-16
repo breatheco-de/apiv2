@@ -3,7 +3,6 @@ import logging
 import pytz
 from django.db.models import Q
 from breathecode.utils import APIViewExtensions
-from breathecode.utils.decorators import has_permission
 from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import HeaderLimitOffsetPagination
@@ -34,6 +33,7 @@ from breathecode.utils import (localize_query, capable_of, ValidationException, 
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
 from breathecode.utils import DatetimeInteger
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+from breathecode.admissions.caches import CohortUserCache
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +187,17 @@ class CohortUserView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    def get(self, request, format=None):
+
+    extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
+
+    def get(self, request):
+
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
         items = CohortUser.objects.all()
 
         roles = request.GET.get('roles', None)
@@ -214,6 +224,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
         if users is not None:
             items = items.filter(user__id__in=users.split(','))
 
+        items = handler.queryset(items)
         serializer = GetCohortUserSerializer(items, many=True)
         return Response(serializer.data)
 
