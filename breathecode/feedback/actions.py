@@ -74,22 +74,22 @@ def send_survey_group(survey=None, cohort=None):
 
 def send_question(user, cohort=None):
     answer = Answer(user=user)
-    if cohort is not None:
-        answer.cohort = cohort
-    else:
-        cohorts = CohortUser.objects.filter(user__id=user.id).order_by('-cohort__kickoff_date')
-        _count = cohorts.count()
-        if _count == 1:
-            _cohort = cohorts.first().cohort
-            answer.cohort = _cohort
 
-    if answer.cohort is None:
+    # just can send the question if the user is active in the cohort
+    cu_kwargs = {'user': user, 'educational_status__in': ['ACTIVE', 'GRADUATED']}
+    if cohort:
+        cu_kwargs['cohort'] = cohort
+
+    cu = CohortUser.objects.filter(**cu_kwargs).order_by('-cohort__kickoff_date').first()
+    if not cu:
         raise ValidationException(
             'Impossible to determine the student cohort, maybe it has more than one, or cero.',
             slug='without-cohort-or-cannot-determine-cohort')
-    else:
-        answer.lang = answer.cohort.language
-        answer.save()
+
+    answer.cohort = cu.cohort
+
+    answer.lang = answer.cohort.language
+    answer.save()
 
     has_slackuser = hasattr(user, 'slackuser')
 

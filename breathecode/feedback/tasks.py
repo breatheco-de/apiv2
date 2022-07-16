@@ -75,7 +75,14 @@ def get_admin_url():
 
 def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
-    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role='TEACHER')
+    if not CohortUser.objects.filter(
+            cohort=survey.cohort, role='STUDENT', user=user, educational_status__in=['ACTIVE', 'GRADUATED'
+                                                                                     ]).exists():
+        raise ValidationException('This student does not belong to this cohort', 400)
+
+    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort,
+                                               role='TEACHER',
+                                               educational_status__in=['ACTIVE', 'GRADUATED'])
     if cohort_teacher.count() == 0:
         raise ValidationException('This cohort must have a teacher assigned to be able to survey it', 400)
 
@@ -112,7 +119,9 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
             cont = cont + 1
 
         # ask for the first TA
-        cohort_assistant = CohortUser.objects.filter(cohort=survey.cohort, role='ASSISTANT')
+        cohort_assistant = CohortUser.objects.filter(cohort=survey.cohort,
+                                                     role='ASSISTANT',
+                                                     educational_status__in=['ACTIVE', 'GRADUATED'])
         cont = 0
         for ca in cohort_assistant:
             if cont >= survey.max_assistants_to_ask:
@@ -154,7 +163,10 @@ def send_cohort_survey(self, user_id, survey_id):
         logger.error('This survey has already expired')
         return False
 
-    cu = CohortUser.objects.filter(cohort=survey.cohort, role='STUDENT', user=user).first()
+    cu = CohortUser.objects.filter(cohort=survey.cohort,
+                                   role='STUDENT',
+                                   user=user,
+                                   educational_status__in=['ACTIVE', 'GRADUATED']).first()
     if cu is None:
         logger.error('This student does not belong to this cohort')
         return False
