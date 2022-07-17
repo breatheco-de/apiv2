@@ -142,13 +142,19 @@ class AuthenticateTestSuite(AuthTestCase):
         expected = {
             'invites': [],
             'mentor_profiles': [{
-                'booking_url': model.mentor_profile.booking_url,
-                'online_meeting_url': None,
-                'created_at': self.bc.datetime.to_iso_string(model.mentor_profile.created_at),
-                'email': model.mentor_profile.email,
-                'id': model.mentor_profile.id,
-                'price_per_hour': model.mentor_profile.price_per_hour,
-                'service': {
+                'booking_url':
+                model.mentor_profile.booking_url,
+                'online_meeting_url':
+                None,
+                'created_at':
+                self.bc.datetime.to_iso_string(model.mentor_profile.created_at),
+                'email':
+                model.mentor_profile.email,
+                'id':
+                model.mentor_profile.id,
+                'price_per_hour':
+                model.mentor_profile.price_per_hour,
+                'services': [{
                     'academy': {
                         'icon_url': '/static/icons/picture.png',
                         'id': model.academy.id,
@@ -182,11 +188,15 @@ class AuthenticateTestSuite(AuthTestCase):
                     model.mentorship_service.status,
                     'updated_at':
                     self.bc.datetime.to_iso_string(model.mentorship_service.updated_at),
-                },
-                'slug': model.mentor_profile.slug,
-                'status': model.mentor_profile.status,
-                'timezone': model.mentor_profile.timezone,
-                'updated_at': self.bc.datetime.to_iso_string(model.mentor_profile.updated_at),
+                }],
+                'slug':
+                model.mentor_profile.slug,
+                'status':
+                model.mentor_profile.status,
+                'timezone':
+                model.mentor_profile.timezone,
+                'updated_at':
+                self.bc.datetime.to_iso_string(model.mentor_profile.updated_at),
                 'user': {
                     'email': model.user.email,
                     'first_name': model.user.first_name,
@@ -220,13 +230,19 @@ class AuthenticateTestSuite(AuthTestCase):
         expected = {
             'invites': [],
             'mentor_profiles': [{
-                'booking_url': mentor_profile.booking_url,
-                'online_meeting_url': None,
-                'created_at': self.bc.datetime.to_iso_string(mentor_profile.created_at),
-                'email': mentor_profile.email,
-                'id': mentor_profile.id,
-                'price_per_hour': mentor_profile.price_per_hour,
-                'service': {
+                'booking_url':
+                mentor_profile.booking_url,
+                'online_meeting_url':
+                None,
+                'created_at':
+                self.bc.datetime.to_iso_string(mentor_profile.created_at),
+                'email':
+                mentor_profile.email,
+                'id':
+                mentor_profile.id,
+                'price_per_hour':
+                mentor_profile.price_per_hour,
+                'services': [{
                     'academy': {
                         'icon_url': '/static/icons/picture.png',
                         'id': model.academy.id,
@@ -260,11 +276,15 @@ class AuthenticateTestSuite(AuthTestCase):
                     model.mentorship_service.status,
                     'updated_at':
                     self.bc.datetime.to_iso_string(model.mentorship_service.updated_at),
-                },
-                'slug': mentor_profile.slug,
-                'status': mentor_profile.status,
-                'timezone': mentor_profile.timezone,
-                'updated_at': self.bc.datetime.to_iso_string(mentor_profile.updated_at),
+                }],
+                'slug':
+                mentor_profile.slug,
+                'status':
+                mentor_profile.status,
+                'timezone':
+                mentor_profile.timezone,
+                'updated_at':
+                self.bc.datetime.to_iso_string(mentor_profile.updated_at),
                 'user': {
                     'email': model.user.email,
                     'first_name': model.user.first_name,

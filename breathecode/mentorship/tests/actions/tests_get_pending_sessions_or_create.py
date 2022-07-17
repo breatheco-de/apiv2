@@ -1,9 +1,7 @@
 """
 Test mentorhips
 """
-import random
 from unittest.mock import patch
-from django.db.models.query import QuerySet
 from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
@@ -34,6 +32,7 @@ def format_mentorship_session_attrs(attrs={}):
         'latitude': None,
         'longitude': None,
         'mentee_id': None,
+        'service_id': None,
         'mentee_left_at': None,
         'mentor_id': 0,
         'mentor_joined_at': None,
@@ -62,12 +61,15 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         if should create a room with status 'pending'
         """
 
-        models = self.bc.database.create(mentor_profile=1, user=1)
+        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_service=1)
 
         mentor = models.mentor_profile
         mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
 
-        pending_sessions = get_pending_sessions_or_create(mentor_token, mentor, mentee=None)
+        pending_sessions = get_pending_sessions_or_create(mentor_token,
+                                                          mentor,
+                                                          models.mentorship_service,
+                                                          mentee=None)
 
         self.bc.check.queryset_of(pending_sessions, MentorshipSession)
         self.bc.check.queryset_with_pks(pending_sessions, [1])
@@ -78,6 +80,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'status': 'PENDING',
                 'mentor_id': 1,
                 'mentee_id': None,
+                'service_id': 1,
                 'is_online': True,
                 'name': 'asdasd',
                 'online_meeting_url': 'https://4geeks.daily.com/asdasd',
@@ -98,13 +101,18 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         """
 
         mentorship_session = {'mentee_id': None}
-        models = self.bc.database.create(mentor_profile=1, mentorship_session=mentorship_session)
+        models = self.bc.database.create(mentor_profile=1,
+                                         mentorship_session=mentorship_session,
+                                         mentorship_service=1)
         mentor = models.mentor_profile
 
         mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
 
         # since there is a previous session without mentee, it should re use it
-        pending_sessions = get_pending_sessions_or_create(mentor_token, mentor, mentee=None)
+        pending_sessions = get_pending_sessions_or_create(mentor_token,
+                                                          mentor,
+                                                          models.mentorship_service,
+                                                          mentee=None)
 
         self.bc.check.queryset_of(pending_sessions, MentorshipSession)
         self.bc.check.queryset_with_pks(pending_sessions, [1])
@@ -114,6 +122,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'id': 1,
                 'status': 'PENDING',
                 'mentor_id': 1,
+                'service_id': 1,
                 'mentee_id': None,
                 'is_online': False,
                 'ends_at': None,
@@ -133,13 +142,16 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         """
 
         mentorship_session = {'status': 'PENDING'}
-        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_session=mentorship_session)
+        models = self.bc.database.create(mentor_profile=1,
+                                         user=1,
+                                         mentorship_session=mentorship_session,
+                                         mentorship_service=1)
 
         mentor = models.mentor_profile
         session = models.mentorship_session
 
         mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
-        sessions = get_pending_sessions_or_create(mentor_token, mentor)
+        sessions = get_pending_sessions_or_create(mentor_token, mentor, models.mentorship_service)
 
         self.bc.check.queryset_of(sessions, MentorshipSession)
         self.bc.check.queryset_with_pks(sessions, [1])
@@ -150,6 +162,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'status': 'PENDING',
                 'mentor_id': 1,
                 'mentee_id': 1,
+                'service_id': 1,
                 'is_online': False,
                 'ends_at': None,
             }),
@@ -169,11 +182,14 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         """
 
         mentorship_session = {'status': 'STARTED', 'started_at': timezone.now(), 'mentee_id': None}
-        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_session=mentorship_session)
+        models = self.bc.database.create(mentor_profile=1,
+                                         user=1,
+                                         mentorship_session=mentorship_session,
+                                         mentorship_service=1)
         mentor = models.mentor_profile
 
         mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
-        sessions = get_pending_sessions_or_create(mentor_token, mentor)
+        sessions = get_pending_sessions_or_create(mentor_token, mentor, models.mentorship_service)
 
         self.bc.check.queryset_of(sessions, MentorshipSession)
         self.bc.check.queryset_with_pks(sessions, [1])
@@ -184,6 +200,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'status': 'STARTED',
                 'mentor_id': 1,
                 'mentee_id': None,
+                'service_id': 1,
                 'is_online': False,
                 'ends_at': None,
                 'started_at': ENDS_AT,
@@ -202,12 +219,12 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         it should return a brand new sessions with started at already started
         """
 
-        models = self.bc.database.create(mentor_profile=1, user=2)
+        models = self.bc.database.create(mentor_profile=1, user=2, mentorship_service=1)
         mentor = models.mentor_profile
         mentee = models.user[1]
 
         mentee_token, created = Token.get_or_create(mentee, token_type='permanent')
-        sessions = get_pending_sessions_or_create(mentee_token, mentor, mentee)
+        sessions = get_pending_sessions_or_create(mentee_token, mentor, models.mentorship_service, mentee)
 
         self.bc.check.queryset_of(sessions, MentorshipSession)
         self.bc.check.queryset_with_pks(sessions, [1])
@@ -218,6 +235,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'status': 'PENDING',
                 'mentor_id': 1,
                 'mentee_id': 2,
+                'service_id': 1,
                 'is_online': True,
                 'ends_at': ENDS_AT + timedelta(seconds=3600),
                 'name': 'asdasd',
@@ -238,11 +256,17 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         """
 
         mentorship_session = {'status': 'PENDING', 'mentee_id': None}
-        models = self.bc.database.create(mentor_profile=1, user=2, mentorship_session=mentorship_session)
+        models = self.bc.database.create(mentor_profile=1,
+                                         user=2,
+                                         mentorship_session=mentorship_session,
+                                         mentorship_service=1)
         new_mentee = models.user[1]
 
         mentee_token, created = Token.get_or_create(new_mentee, token_type='permanent')
-        sessions = get_pending_sessions_or_create(mentee_token, models.mentor_profile, mentee=new_mentee)
+        sessions = get_pending_sessions_or_create(mentee_token,
+                                                  models.mentor_profile,
+                                                  models.mentorship_service,
+                                                  mentee=new_mentee)
 
         self.bc.check.queryset_of(sessions, MentorshipSession)
         self.bc.check.queryset_with_pks(sessions, [1])
@@ -252,6 +276,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'id': 1,
                 'status': 'PENDING',
                 'mentor_id': 1,
+                'service_id': 1,
                 'mentee_id': None,
                 'is_online': False,
             }),
@@ -274,12 +299,16 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         mentorship_session = {'status': 'PENDING'}
         self.bc.database.create(mentor_profile=1, user=1, mentorship_session=mentorship_session)
 
-        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_session=mentorship_session)
+        models = self.bc.database.create(mentor_profile=1,
+                                         user=1,
+                                         mentorship_session=mentorship_session,
+                                         mentorship_service=1)
         new_mentee = self.bc.database.create(user=1).user
 
         mentee_token, created = Token.get_or_create(new_mentee, token_type='permanent')
         sessions_to_render = get_pending_sessions_or_create(mentee_token,
                                                             models.mentor_profile,
+                                                            models.mentorship_service,
                                                             mentee=new_mentee)
 
         self.bc.check.queryset_of(sessions_to_render, MentorshipSession)
@@ -291,12 +320,14 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'ends_at': None,
                 'mentee_id': 1,
                 'mentor_id': 1,
+                'service_id': 1,
             }),
             format_mentorship_session_attrs({
                 'id': 2,
                 'ends_at': None,
                 'mentee_id': 2,
                 'mentor_id': 2,
+                'service_id': 2,
             }),
             format_mentorship_session_attrs({
                 'id': 3,
@@ -307,6 +338,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'ends_at': ENDS_AT + timedelta(seconds=3600),
                 'name': 'asdasd',
                 'online_meeting_url': 'https://4geeks.daily.com/asdasd',
+                'service_id': 2,
             }),
         ])
 
@@ -323,7 +355,10 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         """
 
         # some old meeting with another mentee, should be ignored
-        self.bc.database.create(mentor_profile=1, user=1, mentorship_session={'status': 'PENDING'})
+        self.bc.database.create(mentor_profile=1,
+                                user=1,
+                                mentorship_session={'status': 'PENDING'},
+                                mentorship_service=1)
 
         # old meeting with SAME mentee, should be re-used
         models = self.bc.database.create(mentor_profile=1, user=1, mentorship_session={'status': 'PENDING'})
@@ -332,6 +367,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         mentee_token, created = Token.get_or_create(same_mentee, token_type='permanent')
         sessions_to_render = get_pending_sessions_or_create(mentee_token,
                                                             models.mentor_profile,
+                                                            models.mentorship_service,
                                                             mentee=same_mentee)
 
         self.bc.check.queryset_of(sessions_to_render, MentorshipSession)
@@ -343,6 +379,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'ends_at': None,
                 'mentee_id': 1,
                 'mentor_id': 1,
+                'service_id': 1,
             }),
             format_mentorship_session_attrs({
                 'id': 2,
@@ -351,6 +388,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                 'mentee_id': 2,
                 'is_online': False,
                 'ends_at': None,
+                'service_id': 2,
             }),
         ])
 

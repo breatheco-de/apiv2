@@ -47,13 +47,15 @@ def render(message,
            mentor_profile=None,
            token=None,
            mentorship_session=None,
+           mentorship_service=None,
            fix_logo=False,
            start_session=False,
            session_expired=False):
-    slug = mentor_profile.slug if mentor_profile else 'asd'
+    mentor_profile_slug = mentor_profile.slug if mentor_profile else 'asd'
+    mentorship_service_slug = mentorship_service.slug if mentorship_service else 'asd'
     environ = {
         'HTTP_COOKIE': '',
-        'PATH_INFO': f'/mentor/{slug}',
+        'PATH_INFO': f'/mentor/{mentor_profile_slug}/service/{mentorship_service_slug}',
         'REMOTE_ADDR': '127.0.0.1',
         'REQUEST_METHOD': 'GET',
         'SCRIPT_NAME': '',
@@ -219,7 +221,7 @@ def session_serializer(mentor_profile, user, academy, mentorship_service):
 
 def render_pick_session(mentor_profile, user, token, academy, mentorship_service, fix_logo=False):
     request = None
-    base_url = f'/mentor/meet/{mentor_profile.slug}?token={token.key}'
+    base_url = f'/mentor/meet/{mentor_profile.slug}/service/{mentorship_service.slug}?token={token.key}'
     booking_url = mentor_profile.booking_url
     if not booking_url.endswith('?'):
         booking_url += '?'
@@ -242,7 +244,7 @@ def render_pick_session(mentor_profile, user, token, academy, mentorship_service
 
 def render_pick_mentee(mentor_profile, user, token, academy, mentorship_service, fix_logo=False):
     request = None
-    base_url = f'/mentor/meet/{mentor_profile.slug}?token={token.key}&session={academy.id}'
+    base_url = f'/mentor/meet/{mentor_profile.slug}/service/{mentorship_service.slug}?token={token.key}&session={academy.id}'
     booking_url = mentor_profile.booking_url
     if not booking_url.endswith('?'):
         booking_url += '?'
@@ -328,7 +330,13 @@ def get_mentorship_session_serializer(mentorship_session, mentor_profile, user, 
     }
 
 
-def render_session(mentorship_session, mentor_profile, user, mentorship_service, academy, token):
+def render_session(mentorship_session,
+                   mentor_profile,
+                   user,
+                   mentorship_service,
+                   academy,
+                   token,
+                   fix_logo=False):
     request = None
 
     data = {
@@ -349,7 +357,12 @@ def render_session(mentorship_session, mentor_profile, user, mentorship_service,
     else:
         data['leave_url'] = 'close'
 
-    return loader.render_to_string('daily.html', data, request)
+    string = loader.render_to_string('daily.html', data, request)
+
+    if fix_logo:
+        string = string.replace('src="/static/icons/picture.png"', 'src="/static/assets/icon.png"')
+
+    return string
 
 
 class AuthenticateTestSuite(MentorshipTestCase):
@@ -358,10 +371,14 @@ class AuthenticateTestSuite(MentorshipTestCase):
     🔽🔽🔽 Auth
     """
     def test_without_auth(self):
-        url = reverse_lazy('mentorship_shortner:meet_slug', kwargs={'mentor_slug': 'asd'})
+        url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                           kwargs={
+                               'mentor_slug': 'asd',
+                               'service_slug': 'asd'
+                           })
         response = self.client.get(url)
 
-        hash = self.bc.format.to_base64('/mentor/meet/asd')
+        hash = self.bc.format.to_base64('/mentor/meet/asd/service/asd')
         content = self.bc.format.from_bytes(response.content)
         expected = ''
 
@@ -378,7 +395,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1, token=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('mentorship_shortner:meet_slug', kwargs={'mentor_slug': 'asd'}) + f'?{querystring}'
+        url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                           kwargs={
+                               'mentor_slug': 'asd',
+                               'service_slug': 'asd'
+                           }) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -401,11 +422,14 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     def test_with_mentor_profile(self):
-        model = self.bc.database.create(user=1, token=1, mentor_profile=1)
+        model = self.bc.database.create(user=1, token=1, mentor_profile=1, mentorship_service=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('mentorship_shortner:meet_slug', kwargs={'mentor_slug': model.mentor_profile.slug
-                                                                    }) + f'?{querystring}'
+        url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                           kwargs={
+                               'mentor_slug': model.mentor_profile.slug,
+                               'service_slug': model.mentorship_service.slug
+                           }) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -436,11 +460,17 @@ class AuthenticateTestSuite(MentorshipTestCase):
         cases = [{'status': x} for x in ['INVITED', 'INNACTIVE']]
 
         for mentor_profile in cases:
-            model = self.bc.database.create(user=1, token=1, mentor_profile=mentor_profile)
+            model = self.bc.database.create(user=1,
+                                            token=1,
+                                            mentor_profile=mentor_profile,
+                                            mentorship_service=1)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
-            url = reverse_lazy('mentorship_shortner:meet_slug',
-                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
@@ -475,11 +505,17 @@ class AuthenticateTestSuite(MentorshipTestCase):
         cases = [{'status': x} for x in ['ACTIVE', 'UNLISTED']]
 
         for mentor_profile in cases:
-            model = self.bc.database.create(user=1, token=1, mentor_profile=mentor_profile)
+            model = self.bc.database.create(user=1,
+                                            token=1,
+                                            mentor_profile=mentor_profile,
+                                            mentorship_service=1)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
-            url = reverse_lazy('mentorship_shortner:meet_slug',
-                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
@@ -528,11 +564,17 @@ class AuthenticateTestSuite(MentorshipTestCase):
         } for x in ['ACTIVE', 'UNLISTED']]
 
         for mentor_profile in cases:
-            model = self.bc.database.create(user=1, token=1, mentor_profile=mentor_profile)
+            model = self.bc.database.create(user=1,
+                                            token=1,
+                                            mentor_profile=mentor_profile,
+                                            mentorship_service=1)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
-            url = reverse_lazy('mentorship_shortner:meet_slug',
-                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
@@ -589,11 +631,17 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             mentor_profile = {**args, 'user_id': 1}
-            model = self.bc.database.create(user=1, token=1, mentor_profile=mentor_profile)
+            model = self.bc.database.create(user=1,
+                                            token=1,
+                                            mentor_profile=mentor_profile,
+                                            mentorship_service=1)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
-            url = reverse_lazy('mentorship_shortner:meet_slug',
-                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
@@ -654,7 +702,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             mentorship_session = {'mentee_id': None}
             model = self.bc.database.create(mentor_profile=mentor_profile,
-                                            mentorship_session=mentorship_session)
+                                            mentorship_session=mentorship_session,
+                                            mentorship_service=1)
 
             model.mentorship_session.mentee = None
             model.mentorship_session.save()
@@ -663,8 +712,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 'token': base.token.key,
                 'session': model.mentorship_session.id,
             })
-            url = reverse_lazy('mentorship_shortner:meet_slug',
-                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
@@ -724,7 +776,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             mentorship_session = {'mentee_id': None}
             model = self.bc.database.create(mentor_profile=mentor_profile,
-                                            mentorship_session=mentorship_session)
+                                            mentorship_session=mentorship_session,
+                                            mentorship_service=1)
 
             model.mentorship_session.mentee = None
             model.mentorship_session.save()
@@ -734,13 +787,16 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 'session': model.mentorship_session.id,
                 'mentee': 10,
             })
-            url = reverse_lazy('mentorship_shortner:meet_slug',
-                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            url = (f'/mentor/meet/{model.mentor_profile.slug}?token={base.token.key}&session='
-                   f'{model.academy.id}&mentee=10')
+            url = (f'/mentor/meet/{model.mentor_profile.slug}/service/{model.mentorship_service.slug}?'
+                   f'token={base.token.key}&session={model.academy.id}&mentee=10')
             expected = render(
                 f'Mentee with user id 10 was not found, <a href="{url}&mentee=undefined">click '
                 'here to start the session anyway.</a>',
@@ -804,7 +860,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 base = self.bc.database.create(user=1, token=1)
 
                 model = self.bc.database.create(mentor_profile=mentor_profile,
-                                                mentorship_session=mentorship_session)
+                                                mentorship_session=mentorship_session,
+                                                mentorship_service=1)
 
                 model.mentorship_session.mentee = None
                 model.mentorship_session.save()
@@ -814,8 +871,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     'session': model.mentorship_session.id,
                     'mentee': base.user.id,
                 })
-                url = reverse_lazy('mentorship_shortner:meet_slug',
-                                   kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+                url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                                   kwargs={
+                                       'mentor_slug': model.mentor_profile.slug,
+                                       'service_slug': model.mentorship_service.slug
+                                   }) + f'?{querystring}'
                 response = self.client.get(url)
 
                 content = self.bc.format.from_bytes(response.content)
@@ -876,7 +936,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             mentorship_session = {'mentee_id': None}
             model = self.bc.database.create(mentor_profile=mentor_profile,
-                                            mentorship_session=mentorship_session)
+                                            mentorship_session=mentorship_session,
+                                            mentorship_service=1)
 
             model.mentorship_session.mentee = None
             model.mentorship_session.save()
@@ -887,13 +948,21 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 'mentee': base.user.id,
                 'redirect': 'true',
             })
-            url = reverse_lazy('mentorship_shortner:meet_slug',
-                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render_session(model.mentorship_session, model.mentor_profile, base.user,
-                                      model.mentorship_service, model.academy, base.token)
+            expected = render_session(model.mentorship_session,
+                                      model.mentor_profile,
+                                      base.user,
+                                      model.mentorship_service,
+                                      model.academy,
+                                      base.token,
+                                      fix_logo=True)
 
             # dump error in external files
             if content != expected:
@@ -945,7 +1014,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             mentorship_session = {'mentee_id': None}
             model = self.bc.database.create(mentor_profile=mentor_profile,
                                             mentorship_session=mentorship_session,
-                                            user=user)
+                                            user=user,
+                                            mentorship_service=1)
 
             model.mentorship_session.mentee = None
             model.mentorship_session.save()
@@ -953,8 +1023,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
             querystring = self.bc.format.to_querystring({
                 'token': base.token.key,
             })
-            url = reverse_lazy('mentorship_shortner:meet_slug',
-                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
@@ -1017,7 +1090,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             mentorship_session = {'mentee_id': None, 'ends_at': ends_at}
             model = self.bc.database.create(mentor_profile=mentor_profile,
                                             mentorship_session=mentorship_session,
-                                            user=user)
+                                            user=user,
+                                            mentorship_service=1)
 
             model.mentorship_session.mentee = None
             model.mentorship_session.save()
@@ -1025,12 +1099,16 @@ class AuthenticateTestSuite(MentorshipTestCase):
             querystring = self.bc.format.to_querystring({
                 'token': base.token.key,
             })
-            url = reverse_lazy('mentorship_shortner:meet_slug',
-                               kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            url = f'/mentor/meet/{model.mentor_profile.slug}?token={base.token.key}&extend=true'
+            url = (f'/mentor/meet/{model.mentor_profile.slug}/service/{model.mentorship_service.slug}?'
+                   f'token={base.token.key}&extend=true')
             expected = render(
                 f'The mentoring session expired {timeago.format(ends_at, UTC_NOW)}: You can <a href="{url}">'
                 'extend it for another 30 minutes</a> or end the session right now.',
@@ -1105,7 +1183,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 model = self.bc.database.create(mentor_profile=mentor_profile,
                                                 mentorship_session=mentorship_session,
                                                 user=user,
-                                                token=token)
+                                                token=token,
+                                                mentorship_service=1)
 
                 model.mentorship_session.mentee = None
                 model.mentorship_session.save()
@@ -1118,13 +1197,19 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     'mentee': base.user.id,
                     'session': model.mentorship_session.id,
                 })
-                url = reverse_lazy('mentorship_shortner:meet_slug',
-                                   kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+                url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                                   kwargs={
+                                       'mentor_slug': model.mentor_profile.slug,
+                                       'service_slug': model.mentorship_service.slug
+                                   }) + f'?{querystring}'
                 response = self.client.get(url)
 
                 content = self.bc.format.from_bytes(response.content)
-                url = (f'/mentor/meet/{model.mentor_profile.slug}?token={token.key}&extend=true&'
-                       f'mentee={base.user.id}&session={model.mentorship_session.id}')
+
+                url = (
+                    f'/mentor/meet/{model.mentor_profile.slug}/service/{model.mentorship_service.slug}?'
+                    f'token={token.key}&extend=true&mentee={base.user.id}&session={model.mentorship_session.id}'
+                )
                 expected = render(
                     f'The mentoring session expired {timeago.format(ends_at, UTC_NOW)}: You can '
                     f'<a href="{url}">extend it for another 30 minutes</a> or end the session right now.',
@@ -1211,8 +1296,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     'mentee': base.user.id,
                     'session': model.mentorship_session.id,
                 })
-                url = reverse_lazy('mentorship_shortner:meet_slug',
-                                   kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+                url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                                   kwargs={
+                                       'mentor_slug': model.mentor_profile.slug,
+                                       'service_slug': model.mentorship_service.slug
+                                   }) + f'?{querystring}'
                 response = self.client.get(url)
 
                 content = self.bc.format.from_bytes(response.content)
@@ -1306,8 +1394,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     'mentee': base.user.id,
                     'session': model.mentorship_session.id,
                 })
-                url = reverse_lazy('mentorship_shortner:meet_slug',
-                                   kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+                url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                                   kwargs={
+                                       'mentor_slug': model.mentor_profile.slug,
+                                       'service_slug': model.mentorship_service.slug
+                                   }) + f'?{querystring}'
                 response = self.client.get(url)
 
                 content = self.bc.format.from_bytes(response.content)
@@ -1383,7 +1474,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 model = self.bc.database.create(mentor_profile=mentor_profile,
                                                 mentorship_session=mentorship_session,
                                                 user=user,
-                                                token=token)
+                                                token=token,
+                                                mentorship_service=1)
 
                 model.mentorship_session.mentee = None
                 model.mentorship_session.save()
@@ -1396,8 +1488,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     'mentee': base.user.id,
                     'session': model.mentorship_session.id,
                 })
-                url = reverse_lazy('mentorship_shortner:meet_slug',
-                                   kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+                url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                                   kwargs={
+                                       'mentor_slug': model.mentor_profile.slug,
+                                       'service_slug': model.mentorship_service.slug
+                                   }) + f'?{querystring}'
                 response = self.client.get(url)
 
                 content = self.bc.format.from_bytes(response.content)
@@ -1415,8 +1510,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
                 self.assertEqual(content, expected)
                 expired_at = timeago.format(model.mentorship_session.ends_at, UTC_NOW)
-                minutes = round(
-                    ((model.mentorship_session.mentor.service.duration.total_seconds() / 3600) * 60) / 2)
+                minutes = round(((model.mentorship_session.service.duration.total_seconds() / 3600) * 60) / 2)
                 message = (
                     f'You have a session that expired {expired_at}. Only sessions with less than '
                     f'{minutes}min from expiration can be extended (if allowed by the academy)').replace(
@@ -1481,7 +1575,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 mentorship_session = {'mentee_id': None, 'ends_at': ends_at}
                 model = self.bc.database.create(mentor_profile=mentor_profile,
                                                 mentorship_session=mentorship_session,
-                                                user=user)
+                                                user=user,
+                                                mentorship_service=1)
 
                 model.mentorship_session.mentee = None
                 model.mentorship_session.save()
@@ -1489,8 +1584,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 querystring = self.bc.format.to_querystring({
                     'token': base.token.key,
                 })
-                url = reverse_lazy('mentorship_shortner:meet_slug',
-                                   kwargs={'mentor_slug': model.mentor_profile.slug}) + f'?{querystring}'
+                url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                                   kwargs={
+                                       'mentor_slug': model.mentor_profile.slug,
+                                       'service_slug': model.mentorship_service.slug
+                                   }) + f'?{querystring}'
                 response = self.client.get(url)
 
                 content = self.bc.format.from_bytes(response.content)

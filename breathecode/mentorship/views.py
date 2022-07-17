@@ -75,7 +75,7 @@ def forward_booking_url(request, mentor_slug, token):
         return render_message(request, f'No mentor found with slug {mentor_slug}')
 
     # add academy to session, will be available on html templates
-    request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
+    request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
     if mentor.status not in ['ACTIVE', 'UNLISTED']:
         return render_message(request, f'This mentor is not active')
@@ -99,9 +99,10 @@ def forward_booking_url(request, mentor_slug, token):
 
 
 class ForwardMeetUrl:
-    def __init__(self, request, mentor_slug, token):
+    def __init__(self, request, mentor_slug, service_slug, token):
         self.request = request
         self.mentor_slug = mentor_slug
+        self.service_slug = service_slug
         self.token = token
         self.baseUrl = request.get_full_path()
         self.now = timezone.now()
@@ -179,7 +180,7 @@ class ForwardMeetUrl:
                 'MESSAGE': message,
             })
 
-    def get_pending_sessions_or_create(self, mentor, mentee):
+    def get_pending_sessions_or_create(self, mentor, service, mentee):
         # if specific sessions is being loaded
         if self.query_params['session'] is not None:
             sessions = MentorshipSession.objects.filter(id=self.query_params['session'])
@@ -187,7 +188,7 @@ class ForwardMeetUrl:
                 return render_message(self.request,
                                       f'Session with id {self.query_params["session"]} not found')
         else:
-            sessions = actions.get_pending_sessions_or_create(self.token, mentor, mentee)
+            sessions = actions.get_pending_sessions_or_create(self.token, mentor, service, mentee)
             logger.debug(f'Found {sessions.count()} sessions to close or create')
 
         return sessions
@@ -212,6 +213,10 @@ class ForwardMeetUrl:
         if mentor is None:
             return render_message(self.request, f'No mentor found with slug {self.mentor_slug}')
 
+        service = MentorshipService.objects.filter(slug=self.service_slug).first()
+        if service is None:
+            return render_message(self.request, f'No service found with slug {self.service_slug}')
+
         # add academy to session, will be available on html templates
         self.request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
@@ -228,7 +233,7 @@ class ForwardMeetUrl:
 
         # if the mentor is not the user, then we assume is the mentee
         mentee = self.token.user if is_token_of_mentee else None
-        sessions = self.get_pending_sessions_or_create(mentor, mentee)
+        sessions = self.get_pending_sessions_or_create(mentor, service, mentee)
 
         if not is_token_of_mentee and sessions.count() > 0 and str(
                 sessions.first().id) != self.query_params['session']:
@@ -286,7 +291,7 @@ class ForwardMeetUrl:
                 redirect_to=
                 f'/mentor/session/{str(session.id)}?token={self.token.key}&message=You have a session that '
                 f'expired {timeago.format(session.ends_at, self.now)}. Only sessions with less than '
-                f'{round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from '
+                f'{round(((session.service.duration.total_seconds() / 3600) * 60)/2)}min from '
                 'expiration can be extended (if allowed by the academy)')
 
         if session_ends_in_the_pass and ((is_token_of_mentee and service.allow_mentee_to_extend) or
@@ -327,8 +332,8 @@ class ForwardMeetUrl:
 
 
 @private_view()
-def forward_meet_url(request, mentor_slug, token):
-    handler = ForwardMeetUrl(request, mentor_slug, token)
+def forward_meet_url(request, mentor_slug, service_slug, token):
+    handler = ForwardMeetUrl(request, mentor_slug, service_slug, token)
     return handler()
 
 
@@ -374,7 +379,8 @@ def end_mentoring_session(request, session_id, token):
             return render_message(request, f'Session not found with id {str(session_id)}')
 
         # add academy to session, will be available on html templates
-        request.session['academy'] = GetAcademySmallSerializer(session.mentor.service.academy).data
+        request.session['academy'] = (GetAcademySmallSerializer(session.service.academy).data
+                                      if session.service else None)
 
         # this GET request occurs when the mentor leaves the session
         session.mentor_left_at = now
