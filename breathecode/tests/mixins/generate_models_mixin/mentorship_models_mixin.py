@@ -31,6 +31,9 @@ class MentorshipModelsMixin(ModelsMixin):
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
             if 'mentorship_service' in models:
                 kargs['services'] = get_list(models['mentorship_service'])
 
@@ -64,6 +67,9 @@ class MentorshipModelsMixin(ModelsMixin):
 
             if 'mentorship_bill' in models:
                 kargs['bill'] = just_one(models['mentorship_bill'])
+
+            if 'mentorship_service' in models:
+                kargs['service'] = just_one(models['mentorship_service'])
 
             models['mentorship_session'] = create_models(mentorship_session, 'mentorship.MentorshipSession',
                                                          **kargs)

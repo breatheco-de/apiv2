@@ -294,11 +294,16 @@ def send_mentorship_session_survey(self, session_id):
                      slug='mentorship-session-duration-less-or-equal-than-five-minutes')
         return False
 
+    if not session.service:
+        logger.error('Mentorship session not have a service associated with it',
+                     slug='mentorship-session-not-have-a-service-associated-with-it')
+        return False
+
     answer = Answer.objects.filter(mentorship_session__id=session.id).first()
     if answer is None:
         answer = Answer(mentorship_session=session,
-                        academy=session.mentor.service.academy,
-                        lang=session.mentor.service.language)
+                        academy=session.mentor.academy,
+                        lang=session.service.language)
         question = build_question(answer)
         answer.title = question['title']
         answer.lowest = question['lowest']

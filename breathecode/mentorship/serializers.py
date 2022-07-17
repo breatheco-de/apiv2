@@ -166,10 +166,8 @@ class BigBillSerializer(GETBillSmallSerializer):
 
     def get_unfinished_sessions(self, obj):
         _sessions = MentorshipSession.objects.filter(
-            mentor=obj.mentor,
-            bill__isnull=True,
-            allow_billing=True,
-            bill__academy=obj.mentor.service.academy).exclude(status__in=['COMPLETED', 'FAILED'])
+            mentor=obj.mentor, bill__isnull=True, allow_billing=True,
+            bill__academy=obj.mentor.academy).exclude(status__in=['COMPLETED', 'FAILED'])
         return BillSessionSerializer(_sessions, many=True).data
 
     def get_public_url(self, obj):
@@ -260,8 +258,9 @@ class BillSessionSerializer(serpy.Serializer):
     rating = serpy.MethodField()
 
     def get_tooltip(self, obj):
+        service = obj.service
 
-        message = f'This mentorship should last no longer than {int(obj.mentor.service.duration.seconds/60)} min. <br />'
+        message = f'This mentorship should last no longer than {int(service.duration.seconds/60)} min. <br />'
         if obj.started_at is None:
             message += 'The mentee never joined the session. <br />'
         else:
@@ -275,8 +274,8 @@ class BillSessionSerializer(serpy.Serializer):
 
             if obj.ended_at is not None:
                 message += f'The mentorship lasted {duration_to_str(obj.ended_at - obj.started_at)}. <br />'
-                if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
-                    extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
+                if (obj.ended_at - obj.started_at) > service.duration:
+                    extra_time = (obj.ended_at - obj.started_at) - service.duration
                     message += f'With extra time of {duration_to_str(extra_time)}. <br />'
                 else:
                     message += f'No extra time detected <br />'
@@ -395,8 +394,10 @@ class MentorSerializer(serializers.ModelSerializer):
 class MentorUpdateSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False)
     price_per_hour = serializers.FloatField(required=False)
-    #FIXME
-    service = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(), required=False)
+
+    services = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(),
+                                                  required=False,
+                                                  many=True)
 
     class Meta:
         model = MentorProfile

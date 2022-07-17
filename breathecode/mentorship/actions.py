@@ -120,7 +120,7 @@ def extend_session(session: MentorshipSession, duration_in_minutes=None, exp_in_
 def render_session(request, session, token):
     from .serializers import GETSessionReportSerializer
     data = {
-        'subject': session.mentor.service.name,
+        'subject': session.service.name,
         'room_url': session.online_meeting_url,
         'session': GETSessionReportSerializer(session, many=False).data,
         'userName': (token.user.first_name + ' ' + token.user.last_name).strip(),
@@ -240,8 +240,8 @@ def get_accounted_time(_session):
             return response
 
     _duration = get_duration(_session)
-    if _duration['accounted_duration'] > _session.mentor.service.max_duration:
-        _duration['accounted_duration'] = _session.mentor.service.max_duration
+    if _duration['accounted_duration'] > _session.service.max_duration:
+        _duration['accounted_duration'] = _session.service.max_duration
         _duration['status_message'] += (' The session accounted duration was limited to the maximum allowed '
                                         f'{duration_to_str(_duration["accounted_duration"])}.')
     return _duration
@@ -270,7 +270,7 @@ def generate_mentor_bills(mentor, reset=False):
 
     def get_unpaid_sessions():
         return MentorshipSession.objects.filter(
-            Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.service.academy),
+            Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.academy),
             allow_billing=True,
             mentor__id=mentor.id,
             status__in=['COMPLETED', 'FAILED'],
@@ -278,7 +278,7 @@ def generate_mentor_bills(mentor, reset=False):
         ).order_by('started_at')
 
     previous_bill = MentorshipBill.objects.filter(mentor__id=mentor.id,
-                                                  academy__id=mentor.service.academy.id,
+                                                  academy__id=mentor.academy.id,
                                                   status='DUE').order_by('-started_at').first()
 
     if (previous_bill is not None and previous_bill.started_at and previous_bill.ended_at
@@ -302,7 +302,7 @@ def generate_mentor_bills(mentor, reset=False):
             # raise Exception(f"Starting from {start_at} to {end_at}")
 
         open_bill = MentorshipBill(mentor=mentor,
-                                   academy=mentor.service.academy,
+                                   academy=mentor.academy,
                                    started_at=start_at,
                                    ended_at=end_at)
         open_bill.save()
@@ -338,8 +338,8 @@ def generate_mentor_bill(mentor, bill, sessions, reset=False):
                 session.accounted_duration = _result['accounted_duration']
 
         extra_minutes = 0
-        if session.accounted_duration > session.mentor.service.duration:
-            extra_minutes = (session.accounted_duration - session.mentor.service.duration).seconds / 60
+        if session.accounted_duration > session.service.duration:
+            extra_minutes = (session.accounted_duration - session.service.duration).seconds / 60
 
         total['minutes'] = total['minutes'] + (session.accounted_duration.seconds / 60)
         total['overtime_minutes'] = total['overtime_minutes'] + extra_minutes

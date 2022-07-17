@@ -333,7 +333,7 @@ def render_session(mentorship_session, mentor_profile, user, mentorship_service,
 
     data = {
         'subject':
-        mentorship_session.mentor.service.name,
+        mentorship_session.service.name,
         'room_url':
         mentorship_session.online_meeting_url,
         'session':

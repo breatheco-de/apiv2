@@ -18,13 +18,19 @@ UTC_NOW = timezone.now()
 
 def get_serializer(self, mentor_profile, mentorship_service, user, data={}):
     return {
-        'booking_url': mentor_profile.booking_url,
-        'created_at': self.bc.datetime.to_iso_string(mentor_profile.created_at),
-        'email': mentor_profile.email,
-        'id': mentor_profile.id,
-        'online_meeting_url': mentor_profile.online_meeting_url,
-        'price_per_hour': mentor_profile.price_per_hour,
-        'service': {
+        'booking_url':
+        mentor_profile.booking_url,
+        'created_at':
+        self.bc.datetime.to_iso_string(mentor_profile.created_at),
+        'email':
+        mentor_profile.email,
+        'id':
+        mentor_profile.id,
+        'online_meeting_url':
+        mentor_profile.online_meeting_url,
+        'price_per_hour':
+        mentor_profile.price_per_hour,
+        'services': [{
             'academy': {
                 'icon_url': mentorship_service.academy.icon_url,
                 'id': mentorship_service.academy.id,
@@ -32,27 +38,44 @@ def get_serializer(self, mentor_profile, mentorship_service, user, data={}):
                 'name': mentorship_service.academy.name,
                 'slug': mentorship_service.academy.slug,
             },
-            'description': mentorship_service.description,
-            'allow_mentee_to_extend': mentorship_service.allow_mentee_to_extend,
-            'allow_mentors_to_extend': mentorship_service.allow_mentors_to_extend,
-            'created_at': self.bc.datetime.to_iso_string(mentorship_service.created_at),
-            'duration': self.bc.datetime.from_timedelta(mentorship_service.duration),
-            'id': mentorship_service.id,
-            'language': mentorship_service.language,
-            'logo_url': mentorship_service.logo_url,
-            'max_duration': self.bc.datetime.from_timedelta(mentorship_service.max_duration),
+            'description':
+            mentorship_service.description,
+            'allow_mentee_to_extend':
+            mentorship_service.allow_mentee_to_extend,
+            'allow_mentors_to_extend':
+            mentorship_service.allow_mentors_to_extend,
+            'created_at':
+            self.bc.datetime.to_iso_string(mentorship_service.created_at),
+            'duration':
+            self.bc.datetime.from_timedelta(mentorship_service.duration),
+            'id':
+            mentorship_service.id,
+            'language':
+            mentorship_service.language,
+            'logo_url':
+            mentorship_service.logo_url,
+            'max_duration':
+            self.bc.datetime.from_timedelta(mentorship_service.max_duration),
             'missed_meeting_duration':
             self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
-            'name': mentorship_service.name,
-            'slug': mentorship_service.slug,
-            'status': mentorship_service.status,
-            'updated_at': self.bc.datetime.to_iso_string(mentorship_service.updated_at),
-        },
-        'slug': mentor_profile.slug,
-        'status': mentor_profile.status,
-        'timezone': mentor_profile.timezone,
+            'name':
+            mentorship_service.name,
+            'slug':
+            mentorship_service.slug,
+            'status':
+            mentorship_service.status,
+            'updated_at':
+            self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+        }],
+        'slug':
+        mentor_profile.slug,
+        'status':
+        mentor_profile.status,
+        'timezone':
+        mentor_profile.timezone,
         'syllabus': [],
-        'updated_at': self.bc.datetime.to_iso_string(mentor_profile.updated_at),
+        'updated_at':
+        self.bc.datetime.to_iso_string(mentor_profile.updated_at),
         'user': {
             'email': user.email,
             'first_name': user.first_name,
@@ -65,19 +88,25 @@ def get_serializer(self, mentor_profile, mentorship_service, user, data={}):
 
 def put_serializer(self, mentor_profile, mentorship_service, user, syllabus=[], data={}):
     return {
-        'id': mentor_profile.id,
-        'slug': mentor_profile.slug,
+        'id':
+        mentor_profile.id,
+        'slug':
+        mentor_profile.slug,
         'user': {
             'id': user.id,
             'first_name': user.first_name,
             'last_name': user.last_name,
             'email': user.email,
         },
-        'service': {
-            'id': mentorship_service.id,
-            'slug': mentorship_service.slug,
-            'name': mentorship_service.name,
-            'status': mentorship_service.status,
+        'services': [{
+            'id':
+            mentorship_service.id,
+            'slug':
+            mentorship_service.slug,
+            'name':
+            mentorship_service.name,
+            'status':
+            mentorship_service.status,
             'academy': {
                 'id': mentorship_service.academy.id,
                 'slug': mentorship_service.academy.slug,
@@ -85,32 +114,49 @@ def put_serializer(self, mentor_profile, mentorship_service, user, syllabus=[], 
                 'logo_url': mentorship_service.academy.logo_url,
                 'icon_url': mentorship_service.academy.icon_url,
             },
-            'logo_url': mentorship_service.logo_url,
-            'duration': self.bc.datetime.from_timedelta(mentorship_service.duration),
-            'language': mentorship_service.language,
-            'allow_mentee_to_extend': mentorship_service.allow_mentee_to_extend,
-            'allow_mentors_to_extend': mentorship_service.allow_mentors_to_extend,
-            'max_duration': self.bc.datetime.from_timedelta(mentorship_service.max_duration),
+            'logo_url':
+            mentorship_service.logo_url,
+            'duration':
+            self.bc.datetime.from_timedelta(mentorship_service.duration),
+            'language':
+            mentorship_service.language,
+            'allow_mentee_to_extend':
+            mentorship_service.allow_mentee_to_extend,
+            'allow_mentors_to_extend':
+            mentorship_service.allow_mentors_to_extend,
+            'max_duration':
+            self.bc.datetime.from_timedelta(mentorship_service.max_duration),
             'missed_meeting_duration':
             self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
-            'created_at': self.bc.datetime.to_iso_string(mentorship_service.created_at),
-            'updated_at': self.bc.datetime.to_iso_string(mentorship_service.updated_at),
-            'description': mentorship_service.description,
-        },
-        'status': mentor_profile.status,
-        'price_per_hour': mentor_profile.price_per_hour,
-        'booking_url': mentor_profile.booking_url,
-        'online_meeting_url': mentor_profile.online_meeting_url,
-        'timezone': mentor_profile.timezone,
+            'created_at':
+            self.bc.datetime.to_iso_string(mentorship_service.created_at),
+            'updated_at':
+            self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+            'description':
+            mentorship_service.description,
+        }],
+        'status':
+        mentor_profile.status,
+        'price_per_hour':
+        mentor_profile.price_per_hour,
+        'booking_url':
+        mentor_profile.booking_url,
+        'online_meeting_url':
+        mentor_profile.online_meeting_url,
+        'timezone':
+        mentor_profile.timezone,
         'syllabus': [{
             'id': x.id,
             'logo': x.logo,
             'name': x.name,
             'slug': x.slug
         } for x in syllabus],
-        'email': mentor_profile.email,
-        'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-        'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        'email':
+        mentor_profile.email,
+        'created_at':
+        self.bc.datetime.to_iso_string(UTC_NOW),
+        'updated_at':
+        self.bc.datetime.to_iso_string(UTC_NOW),
         **data,
     }
 
@@ -427,7 +473,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.request.set_headers(academy=model.academy.id)
             self.bc.request.authenticate(model.user)
 
-            url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': model.profile_academy.id})
+            url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': model.mentor_profile.id})
 
             good_statuses = [x for x in statuses if x != db_status and x in valid_statuses]
             for current_status in good_statuses:
@@ -454,7 +500,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
                 # teardown
                 actions.mentor_is_ready.call_args_list = []
-                self.bc.database.delete('mentorship.MentorProfile')
+
+            # teardown
+            self.bc.database.delete('mentorship.MentorProfile')
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock(side_effect=Exception('hello')))
@@ -474,7 +522,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.request.set_headers(academy=model.academy.id)
             self.bc.request.authenticate(model.user)
 
-            url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': model.profile_academy.id})
+            url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': model.mentor_profile.id})
 
             good_statuses = [x for x in statuses if x != db_status and x in valid_statuses]
             for current_status in good_statuses:
@@ -497,7 +545,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
                 # teardown
                 actions.mentor_is_ready.call_args_list = []
-                self.bc.database.delete('mentorship.MentorProfile')
+
+            # teardown
+            self.bc.database.delete('mentorship.MentorProfile')
 
     """
     🔽🔽🔽 PUT with one MentorProfile changing to a failure status
@@ -550,7 +600,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
                 # teardown
                 actions.mentor_is_ready.call_args_list = []
-                self.bc.database.delete('mentorship.MentorProfile')
+
+            # teardown
+            self.bc.database.delete('mentorship.MentorProfile')
 
     """
     🔽🔽🔽 PUT with one MentorProfile changing all the values
@@ -573,7 +625,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': model.profile_academy.id})
+        url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': model.mentor_profile.id})
 
         name = self.bc.fake.name()
         bio = self.bc.fake.text()
@@ -587,14 +639,14 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             'online_meeting_url': self.bc.fake.url(),
             'timezone': self.bc.fake.name(),
             'price_per_hour': random() * 100,
-            'service': 2,
+            'services': [2],
             'syllabus': [2],
         }
         response = self.client.put(url, data, format='json')
 
         json = response.json()
 
-        del data['service']
+        del data['services']
         del data['syllabus']
         del data['bio']
         del data['name']
@@ -611,9 +663,10 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                          [{
                              **self.bc.format.to_dict(model.mentor_profile),
                              **data,
-                             'service_id': 2,
                              'name': name,
                              'bio': bio,
                          }])
+
+        self.bc.check.queryset_with_pks(model.mentor_profile.services.all(), [2])
 
         self.assertEqual(actions.mentor_is_ready.call_args_list, [])

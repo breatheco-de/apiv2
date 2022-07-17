@@ -167,7 +167,7 @@ class ForwardMeetUrl:
         student_name = self.get_user_name(session.mentee, 'student')
         mentor_name = self.get_user_name(session.mentor.user, 'a mentor')
         link = set_query_parameter('?' + self.request.GET.urlencode(), 'redirect', 'true')
-        message = (f'Hello {student_name}, you are about to start a {session.mentor.service.name} '
+        message = (f'Hello {student_name}, you are about to start a {session.service.name} '
                    f'with {mentor_name}.')
 
         return render(
@@ -213,7 +213,7 @@ class ForwardMeetUrl:
             return render_message(self.request, f'No mentor found with slug {self.mentor_slug}')
 
         # add academy to session, will be available on html templates
-        self.request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
+        self.request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
         if mentor.status not in ['ACTIVE', 'UNLISTED']:
             return render_message(self.request, f'This mentor is not active at the moment')
@@ -276,7 +276,7 @@ class ForwardMeetUrl:
                 session.status = 'STARTED'
 
         # if it expired already you could extend it
-        service = session.mentor.service
+        service = session.service
 
         session_ends_in_the_pass = session.ends_at is not None and session.ends_at < self.now
         # can extend this session?
@@ -503,19 +503,19 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         handler = self.extensions(request)
 
         if mentor_id is not None:
-            mentor = MentorProfile.objects.filter(id=mentor_id, service__academy__id=academy_id).first()
+            mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
             if mentor is None:
                 raise ValidationException('This mentor does not exist on this academy', code=404)
 
             serializer = GETMentorBigSerializer(mentor)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        items = MentorProfile.objects.filter(service__academy__id=academy_id)
+        items = MentorProfile.objects.filter(services__academy__id=academy_id)
         lookup = {}
 
-        if 'service' in self.request.GET:
-            param = self.request.GET.get('service')
-            lookup['service__slug'] = param
+        if 'services' in self.request.GET:
+            param = self.request.GET.get('services', '').split(',')
+            lookup['services__slug__in'] = param
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status', 'ACTIVE')
@@ -563,7 +563,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         if mentor_id is None:
             raise ValidationException('Missing mentor ID on the URL', 404)
 
-        mentor = MentorProfile.objects.filter(id=mentor_id, service__academy__id=academy_id).first()
+        mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
         if mentor is None:
             raise ValidationException('This mentor does not exist for this academy',
                                       code=404,
@@ -576,8 +576,12 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         if 'token' in request.data:
             raise ValidationException('Mentor token cannot be updated', slug='token-read-only')
 
+        data = {}
+        for key in request.data.keys():
+            data[key] = request.data[key]
+
         serializer = MentorUpdateSerializer(mentor,
-                                            data=request.data,
+                                            data=data,
                                             context={
                                                 'request': request,
                                                 'academy_id': academy_id
@@ -585,6 +589,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         if serializer.is_valid():
             mentor = serializer.save()
             _serializer = GETMentorBigSerializer(mentor)
+
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -598,7 +603,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
 
         if session_id is not None:
             session = MentorshipSession.objects.filter(id=session_id,
-                                                       mentor__service__academy__id=academy_id).first()
+                                                       mentor__services__academy__id=academy_id).first()
             if session is None:
                 raise ValidationException('This session does not exist on this academy',
                                           code=404,
@@ -607,7 +612,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
             serializer = SessionSerializer(session)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        items = MentorshipSession.objects.filter(mentor__service__academy__id=academy_id)
+        items = MentorshipSession.objects.filter(mentor__services__academy__id=academy_id)
         lookup = {}
 
         _status = request.GET.get('status', '')
@@ -732,7 +737,7 @@ class MentorSessionView(APIView, HeaderLimitOffsetPagination):
             raise ValidationException('Missing mentor id', code=404)
 
         items = MentorshipSession.objects.filter(mentor__id=mentor_id,
-                                                 mentor__service__academy__id=academy_id)
+                                                 mentor__services__academy__id=academy_id)
         lookup = {}
 
         _status = request.GET.get('status', '')
@@ -812,7 +817,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
         if mentor_id is None:
             raise ValidationException('Missing mentor ID on the URL', code=404, slug='argument-not-provided')
 
-        mentor = MentorProfile.objects.filter(id=mentor_id, service__academy__id=academy_id).first()
+        mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
         if mentor is None:
             raise ValidationException('This mentor does not exist for this academy',
                                       code=404,
