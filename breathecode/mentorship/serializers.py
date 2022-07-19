@@ -2,7 +2,7 @@ import serpy
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
 import breathecode.mentorship.actions as actions
-from .actions import mentor_is_ready, generate_mentor_bill
+from .actions import generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from breathecode.utils.datetime_interger import duration_to_str
@@ -386,6 +386,8 @@ class ServicePUTSerializer(serializers.ModelSerializer):
 
 
 class MentorSerializer(serializers.ModelSerializer):
+    academy = serializers.PrimaryKeyRelatedField(queryset=Academy.objects.all(), required=True)
+
     class Meta:
         model = MentorProfile
         exclude = ('created_at', 'updated_at')
@@ -414,7 +416,7 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
         return data
 
 
-class SessionSerializer(serializers.ModelSerializer):
+class SessionPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = MentorshipSession
         exclude = (
@@ -454,6 +456,10 @@ class SessionSerializer(serializers.ModelSerializer):
         generate_mentor_bill(mentor, bill, bill.mentorshipsession_set.all())
 
         return result
+
+
+class SessionSerializer(SessionPUTSerializer):
+    service = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(), required=True)
 
 
 class MentorshipBillPUTListSerializer(serializers.ListSerializer):

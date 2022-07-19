@@ -894,7 +894,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.post(url)
 
         json = response.json()
-        expected = {'mentor': ['This field is required.']}
+        expected = {'mentor': ['This field is required.'], 'service': ['This field is required.']}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -909,22 +909,23 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_session')
-        data = {'mentor': 1}
+        data = {'mentor': 1, 'service': 1}
         response = self.client.post(url, data)
 
         json = response.json()
-        expected = post_serializer()
+        expected = post_serializer({'service': 1})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
-            mentorship_session_columns(),
+            mentorship_session_columns({'service_id': 1}),
         ])
 
     """
@@ -937,6 +938,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -944,6 +946,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         data = {
             'mentor': 1,
+            'service': 1,
             # readonly fields
             'created_at': utc_now,
             'updated_at': utc_now,
@@ -955,12 +958,12 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.post(url, data)
 
         json = response.json()
-        expected = post_serializer()
+        expected = post_serializer({'service': 1})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
-            mentorship_session_columns(),
+            mentorship_session_columns({'service_id': 1}),
         ])
 
     """
@@ -973,6 +976,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -982,6 +986,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         for field in fields:
             data = {
                 'mentor': 1,
+                'service': 1,
                 'is_online': True,
                 # readonly fields
                 field: self.bc.datetime.to_iso_string(append_delta_to_datetime(utc_now)),
@@ -1003,6 +1008,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -1015,6 +1021,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             date = append_delta_to_datetime(utc_now)
             data = {
                 'mentor': 1,
+                'service': 1,
                 'is_online': False,
                 # readonly fields
                 field: self.bc.datetime.to_iso_string(date),
@@ -1026,6 +1033,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             json = response.json()
             expected = post_serializer({
                 'id': id,
+                'service': 1,
                 field: self.bc.datetime.to_iso_string(date),
             })
 
@@ -1034,6 +1042,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
                 mentorship_session_columns({
                     'id': id,
+                    'service_id': 1,
                     field: date,
                 }),
             ])
@@ -1052,6 +1061,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
                                         mentorship_bill=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -1062,6 +1072,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         ends_at = append_delta_to_datetime(utc_now)
         data = {
             'mentor': 1,
+            'service': 1,
             'mentee': 1,
             'bill': 1,
             'name': self.bc.fake.name(),
@@ -1089,7 +1100,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        fields = ['bill', 'mentee', 'mentor']
+        fields = ['bill', 'mentee', 'mentor', 'service']
         for field in fields:
             data[f'{field}_id'] = data[field]
             del data[field]

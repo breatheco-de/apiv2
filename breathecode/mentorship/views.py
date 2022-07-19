@@ -24,6 +24,7 @@ from .serializers import (
     GETMentorSmallSerializer,
     MentorSerializer,
     MentorUpdateSerializer,
+    SessionPUTSerializer,
     SessionSerializer,
     ServicePOSTSerializer,
     GETMentorBigSerializer,
@@ -213,6 +214,9 @@ class ForwardMeetUrl:
             if sessions.count() == 0:
                 return render_message(self.request,
                                       f'Session with id {self.query_params["session"]} not found')
+
+            # set service if is null
+            sessions.filter(service__isnull=True).update(service=service)
         else:
             sessions = actions.get_pending_sessions_or_create(self.token, mentor, service, mentee)
             logger.debug(f'Found {sessions.count()} sessions to close or create')
@@ -701,12 +705,12 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         for key in request.data.keys():
             data[key] = request.data.get(key)
 
-        serializer = SessionSerializer(session,
-                                       data=data,
-                                       context={
-                                           'request': request,
-                                           'academy_id': academy_id
-                                       })
+        serializer = SessionPUTSerializer(session,
+                                          data=data,
+                                          context={
+                                              'request': request,
+                                              'academy_id': academy_id
+                                          })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

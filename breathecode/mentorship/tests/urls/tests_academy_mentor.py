@@ -609,6 +609,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         json = response.json()
         expected = {
+            'academy': ['This field is required.'],
             'price_per_hour': ['This field is required.'],
             'services': ['This field is required.'],
             'user': ['This field is required.'],
@@ -640,6 +641,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             'price_per_hour': 20,
             'services': [1],
             'user': 1,
+            'academy': 1,
         }
         response = self.client.post(url, data, format='json')
 
@@ -661,7 +663,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                 'slug': 'mirai-nikki',
                 'bio': None,
                 'user_id': 1,
-                'academy_id': None,
+                'academy_id': 1,
                 'price_per_hour': 20.0,
             }),
         ])

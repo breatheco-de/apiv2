@@ -275,6 +275,7 @@ def generate_mentor_bills(mentor, reset=False):
     def get_unpaid_sessions():
         return MentorshipSession.objects.filter(
             Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.academy),
+            service__isnull=False,
             allow_billing=True,
             mentor__id=mentor.id,
             status__in=['COMPLETED', 'FAILED'],
