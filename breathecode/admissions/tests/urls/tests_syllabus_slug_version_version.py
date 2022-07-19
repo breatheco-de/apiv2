@@ -117,6 +117,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'id': model['syllabus'].academy_owner.id,
                 'name': model['syllabus'].academy_owner.name,
                 'slug': model['syllabus'].academy_owner.slug,
+                'white_labeled': model['syllabus'].academy_owner.white_labeled,
+                'icon_url': model['syllabus'].academy_owner.icon_url,
             },
             'syllabus': 1,
             'version': model['syllabus_version'].version,
