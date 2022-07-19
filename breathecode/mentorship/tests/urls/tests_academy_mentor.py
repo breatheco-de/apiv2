@@ -259,6 +259,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='read_mentorship_mentor',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -287,6 +288,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='read_mentorship_mentor',
                                         mentor_profile=2,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -424,6 +426,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             role=1,
                                             capability='read_mentorship_mentor',
                                             mentor_profile=mentor_profiles,
+                                            mentorship_service=1,
                                             profile_academy=1)
 
             self.bc.request.set_headers(academy=model.academy.id)
@@ -493,6 +496,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='read_mentorship_mentor',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         syllabus=syllabus,
                                         profile_academy=1)
 

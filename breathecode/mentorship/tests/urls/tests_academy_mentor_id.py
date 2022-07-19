@@ -269,6 +269,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='read_mentorship_mentor',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)

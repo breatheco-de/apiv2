@@ -1,3 +1,4 @@
+from email.mime import base
 import hashlib, timeago, logging
 import re
 from django.shortcuts import render
@@ -95,6 +96,31 @@ def forward_booking_url(request, mentor_slug, token):
         'mentor': mentor,
         'mentee': token.user,
         'booking_url': booking_url,
+    })
+
+
+@private_view()
+def pick_mentorship_service(request, token, mentor_slug):
+    base_url = request.get_full_path().split('?')[0]
+    mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
+    if mentor is None:
+        return render_message(request, f'No mentor found with slug {mentor_slug}')
+
+    try:
+        actions.mentor_is_ready(mentor)
+
+    except:
+        return render_message(request, f'This mentor is not ready too')
+
+    services = mentor.services.all()
+    if not services:
+        return render_message(request, f'This mentor is not available')
+
+    return render(request, 'pick_service.html', {
+        'token': token.key,
+        'services': services,
+        'mentor': mentor,
+        'baseUrl': base_url,
     })
 
 

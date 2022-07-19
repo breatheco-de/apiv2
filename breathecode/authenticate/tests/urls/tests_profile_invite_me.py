@@ -132,7 +132,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('os.getenv', MagicMock(return_value='https://dot.dot'))
     def test_profile_invite_me__with_one_mentor_profile(self):
-        model = self.bc.database.create(user=1, mentor_profile=1)
+        model = self.bc.database.create(user=1, mentor_profile=1, mentorship_service=1)
 
         self.bc.request.authenticate(model.user)
         url = reverse_lazy('authenticate:profile_invite_me')
@@ -220,7 +220,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('os.getenv', MagicMock(return_value='https://dot.dot'))
     def test_profile_invite_me__with_two_mentor_profiles(self):
-        model = self.bc.database.create(user=1, mentor_profile=2)
+        model = self.bc.database.create(user=1, mentor_profile=2, mentorship_service=1)
 
         self.bc.request.authenticate(model.user)
         url = reverse_lazy('authenticate:profile_invite_me')

@@ -297,7 +297,10 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         # other random mentoring session precreated just for better testing
 
         mentorship_session = {'status': 'PENDING'}
-        self.bc.database.create(mentor_profile=1, user=1, mentorship_session=mentorship_session)
+        self.bc.database.create(mentor_profile=1,
+                                user=1,
+                                mentorship_session=mentorship_session,
+                                mentorship_service=1)
 
         models = self.bc.database.create(mentor_profile=1,
                                          user=1,
@@ -361,7 +364,10 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                                 mentorship_service=1)
 
         # old meeting with SAME mentee, should be re-used
-        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_session={'status': 'PENDING'})
+        models = self.bc.database.create(mentor_profile=1,
+                                         user=1,
+                                         mentorship_session={'status': 'PENDING'},
+                                         mentorship_service=1)
         same_mentee = models.user
 
         mentee_token, created = Token.get_or_create(same_mentee, token_type='permanent')

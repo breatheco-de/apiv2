@@ -293,6 +293,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_bill',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -329,6 +330,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             capability='crud_mentorship_bill',
                                             mentor_profile=1,
                                             mentorship_session=mentorship_session,
+                                            mentorship_service=1,
                                             profile_academy=1)
 
             self.bc.request.set_headers(academy=model.academy.id)

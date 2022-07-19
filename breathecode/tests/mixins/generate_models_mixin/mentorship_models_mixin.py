@@ -15,7 +15,7 @@ class MentorshipModelsMixin(ModelsMixin):
                                    **kwargs):
         models = models.copy()
 
-        if not 'mentorship_service' in models and (is_valid(mentorship_service) or is_valid(mentor_profile)):
+        if not 'mentorship_service' in models and (is_valid(mentorship_service)):
             kargs = {}
 
             if 'academy' in models:
