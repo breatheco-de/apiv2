@@ -4,9 +4,7 @@ Test /eventbrite/webhook
 from unittest.mock import MagicMock, call, patch
 from rest_framework import status
 from django.urls.base import reverse_lazy
-from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock,
-                                     apply_google_cloud_bucket_mock, apply_google_cloud_blob_mock,
-                                     EVENTBRITE_PATH, apply_eventbrite_requests_post_mock,
+from breathecode.tests.mocks import (EVENTBRITE_PATH, apply_eventbrite_requests_post_mock,
                                      EVENTBRITE_ORDER_URL, OLD_BREATHECODE_PATH,
                                      apply_old_breathecode_requests_request_mock)
 from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_get_mock
@@ -28,9 +26,6 @@ def update_or_create_event_mock(raise_error=False):
 
 class EventbriteWebhookTestSuite(EventTestCase):
     """Test /eventbrite/webhook"""
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     def test_eventbrite_webhook_without_data(self):
         """Test /eventbrite/webhook without auth"""
@@ -48,9 +43,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
     🔽🔽🔽 order.placed
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
     def test_eventbrite_webhook_without_organization(self):
@@ -80,9 +72,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.check_old_breathecode_calls({}, [])
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
     def test_eventbrite_webhook_without_academy(self):
@@ -115,9 +104,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.check_old_breathecode_calls(model, [])
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
     def test_eventbrite_webhook_without_event(self):
@@ -150,9 +136,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.check_old_breathecode_calls(model, [])
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
     def test_eventbrite_webhook_with_event_without_eventbrite_id(self):
@@ -185,9 +168,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.check_old_breathecode_calls(model, [])
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
     def test_eventbrite_webhook_without_active_campaign_academy(self):
@@ -233,9 +213,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.check_old_breathecode_calls(model, [])
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
@@ -281,9 +258,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.check_old_breathecode_calls(model, [])
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
@@ -340,9 +314,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
             call(model.event.id, email=model.user.email),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
@@ -408,7 +379,8 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
-    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock(raise_error=True))
+    @patch.object(actions, 'update_or_create_event',
+                  MagicMock(side_effect=Exception('Random error in creating')))
     def test_eventbrite_webhook__event_created__raise_error(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True)
@@ -478,7 +450,8 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
-    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock(raise_error=True))
+    @patch.object(actions, 'update_or_create_event',
+                  MagicMock(side_effect=Exception('Random error in creating')))
     def test_eventbrite_webhook__event_updated__raise_error(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True)

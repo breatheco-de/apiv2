@@ -42,7 +42,7 @@ class File:
         # TODO Private url
         return self.blob.public_url
 
-    def download(self) -> str:
+    def download(self) -> bytes:
         """Delete Blob from Bucker"""
         if self.blob:
             return self.blob.download_as_string()
@@ -67,3 +67,9 @@ class File:
         blob = self.bucket.blob(self.file_name)
         blob.download_to_file(streamer)
         return streamer
+
+    def rename(self, file_name: str) -> None:
+        """Renames a blob."""
+
+        blob = self.bucket.blob(self.file_name)
+        self.bucket.rename_blob(blob, file_name)
