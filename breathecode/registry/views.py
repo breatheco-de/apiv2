@@ -1,3 +1,4 @@
+import re
 import requests, logging, os
 from pathlib import Path
 from django.shortcuts import redirect, render
@@ -113,6 +114,10 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
     """
     extensions = APIViewExtensions(cache=TechnologyCache, sort='-slug', paginate=True)
 
+    def _has_valid_parent(self):
+        regex = r'^(?:\d+,)*(?:\d+)$'
+        return bool(re.findall(regex, self.request.GET.get('parent', '')))
+
     @capable_of('read_technology')
     def get(self, request, academy_id=None):
         handler = self.extensions(request)
@@ -123,7 +128,8 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         items = AssetTechnology.objects.all()
         lookup = {}
 
-        if 'include_children' not in self.request.GET or self.request.GET['include_children'] != 'true':
+        has_valid_parent = self._has_valid_parent()
+        if self.request.GET.get('include_children') != 'true' and not has_valid_parent:
             items = items.filter(parent__isnull=True)
 
         if 'language' in self.request.GET:
@@ -138,13 +144,22 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         else:
             lookup['visibility'] = 'PUBLIC'
 
-        if 'parent' in self.request.GET:
-            parents = self.request.GET.get('parent')
-            lookup['parent__id__in'] = [p.upper() for p in param.split(',')]
+        if has_valid_parent:
+            param = self.request.GET.get('parent')
+            lookup['parent__id__in'] = [int(p) for p in param.split(',')]
 
         like = request.GET.get('like', None)
         if like is not None and like != 'undefined' and like != '':
             items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        if slug := request.GET.get('slug'):
+            lookup['slug__in'] = slug.split(',')
+
+        if asset_slug := request.GET.get('asset_slug'):
+            lookup['featured_asset__slug__in'] = asset_slug.split(',')
+
+        if asset_type := request.GET.get('asset_type'):
+            lookup['featured_asset__asset_type__in'] = asset_type.split(',')
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -169,7 +184,6 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         elif tech_slug is not None:
             lookups['slug__in'] = [tech_slug]
 
-        print(lookups)
         techs = AssetTechnology.objects.filter(**lookups)
         _count = techs.count()
         if _count == 0:
