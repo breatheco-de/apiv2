@@ -2,7 +2,7 @@
 
 This API uses Google DataStore as storage, there is not local storage on Heroku or Postgres.
 
-We need Google DataStore because we plan to store hugh amounts of activities that the user can do inside breathecode.
+We need Google DataStore because we plan to store huge amounts of activities that the user can do inside breathecode.
 
 Possible activities (so far):
 ```
