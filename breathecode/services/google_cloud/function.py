@@ -1,6 +1,6 @@
 import logging, json, requests
 from google.auth.transport.requests import Request as GCRequest
-from .credentials import resolve_credentials
+from . import credentials
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,8 @@ class Function:
                 project_id (str): Google Cloud Function project id
                 name (str): Google Cloud Function name
         """
-        resolve_credentials()
+
+        credentials.resolve_credentials()
         self.service_url = f'{region}-{project_id}.cloudfunctions.net/{name}'
 
     def call(self, data=None) -> requests.models.Response:

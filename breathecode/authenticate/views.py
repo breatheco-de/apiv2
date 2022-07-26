@@ -1,3 +1,4 @@
+import hashlib
 import os, requests, base64, logging
 import re
 import urllib.parse
@@ -25,9 +26,11 @@ from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import datetime
 from django.db.models.functions import Now
+from rest_framework.parsers import FileUploadParser, MultiPartParser
 
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
+from breathecode.services.google_cloud.function import Function
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils import response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -88,6 +91,12 @@ PATTERNS = {
     'CONTAINS_UPPERCASE': r'[A-Z]',
     'CONTAINS_SYMBOLS': r'[^a-zA-Z]',
 }
+
+PROFILE_MIME_ALLOWED = ['image/png']
+
+
+def get_profile_bucket():
+    return os.getenv('PROFILE_BUCKET', '')
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -1888,6 +1897,87 @@ class ProfileMeView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileMePictureView(APIView):
+    """
+    put:
+        Upload a file to Google Cloud.
+    """
+    parser_classes = [MultiPartParser, FileUploadParser]
+
+    @has_permission('update_my_profile')
+    def put(self, request):
+        from ..services.google_cloud import Storage
+
+        profile = Profile.objects.filter(user=request.user).first()
+        if not profile:
+            profile = Profile(user=request.user)
+            profile.save()
+
+        files = request.data.getlist('file')
+        file = request.data.get('file')
+
+        if not file:
+            raise ValidationException('Missing file in request', slug='missing-file')
+
+        if not len(files):
+            raise ValidationException('empty files in request')
+
+        elif len(files) > 1:
+            raise ValidationException('Just can upload one file at a time')
+
+        # files validation below
+        if file.content_type not in PROFILE_MIME_ALLOWED:
+            raise ValidationException(
+                f'You can upload only files on the following formats: {",".join(PROFILE_MIME_ALLOWED)}',
+                slug='bad-file-format')
+
+        file_bytes = file.read()
+        hash = hashlib.sha256(file_bytes).hexdigest()
+
+        storage = Storage()
+        cloud_file = storage.file(get_profile_bucket(), hash)
+
+        if not cloud_file.exists():
+            cloud_file.upload(file, content_type=file.content_type)
+            func = Function(region='us-central1', project_id='breathecode-197918', name='shape_of')
+
+            res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
+            json = res.json()
+
+            if json['shape'] != 'Square':
+                raise ValidationException(f'just can upload square images', slug='not-square-image')
+
+            func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
+
+            res = func.call({
+                'width': 100,
+                'filename': hash,
+                'bucket': get_profile_bucket(),
+            })
+
+        previous_avatar_url = profile.avatar_url or ''
+        profile.avatar_url = f'{cloud_file.url()}-100x100'
+        profile.save()
+
+        if previous_avatar_url != profile.avatar_url:
+            result = re.search(r'/(.{64})-100x100$', previous_avatar_url)
+            print(result, previous_avatar_url)
+
+            if result:
+                previous_hash = result[1]
+
+                # remove the file when the last user remove their copy of the same image
+                if not Profile.objects.filter(avatar_url__contains=previous_hash).exists():
+                    cloud_file = storage.file(get_profile_bucket(), hash)
+                    cloud_file.delete()
+
+                    cloud_file = storage.file(get_profile_bucket(), f'{hash}-100x100')
+                    cloud_file.delete()
+
+        serializer = GetProfileSerializer(profile, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class GithubMeView(APIView):

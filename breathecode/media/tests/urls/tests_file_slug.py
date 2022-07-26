@@ -5,14 +5,7 @@ from breathecode.tests.mocks.requests import apply_requests_post_mock
 from unittest.mock import call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-    REQUESTS_PATH,
-    apply_requests_get_mock,
-)
+from breathecode.tests.mocks import REQUESTS_PATH, apply_requests_get_mock
 from ..mixins import MediaTestCase
 
 RESIZE_IMAGE_URL = 'https://us-central1-breathecode-197918.cloudfunctions.net/resize-image'
