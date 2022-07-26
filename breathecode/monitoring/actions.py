@@ -4,7 +4,7 @@ import json, re, os, subprocess, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Academy
-from .models import Endpoint, CSVDownload
+from .models import CSVUpload, Endpoint, CSVDownload
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
 logger = logging.getLogger(__name__)
@@ -360,4 +360,54 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
         download.status = 'ERROR'
         download.status_message = str(e)
         download.save()
+        return False
+
+
+def upload_csv(module, model_name, file_content, academy_id=None):
+
+    upload = CSVUpload()
+
+    try:
+        downloads_bucket = os.getenv('DOWNLOADS_BUCKET', None)
+        if downloads_bucket is None:
+            raise Exception('Unknown DOWNLOADS_BUCKET configuration, please set env variable')
+
+        # separated downloads by academy
+        academy = Academy.objects.filter(id=academy_id).first()
+        upload.name = ''
+        if academy is not None:
+            upload.academy = academy
+            upload.name += academy.slug
+
+        # import model (table) being downloaded
+        import importlib
+        model = getattr(importlib.import_module(module), model_name)
+
+        # finish the file name with <academy_slug>+<model_name>+<epoc_time>.csv
+        upload.name = model_name + str(int(time.time())) + '.csv'
+        upload.save()
+
+        meta = model._meta
+        field_names = [field.name for field in meta.fields]
+
+        #write csv
+        buffer = StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(field_names)
+        for obj in file_content:
+            writer.writerow((getattr(obj, field) for field in field_names))
+
+        # upload to google cloud bucket
+        from ..services.google_cloud import Storage
+        storage = Storage()
+        cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), upload.name)
+        cloud_file.upload(buffer.getvalue(), content_type='text/csv')
+        upload.url = cloud_file.url()
+        upload.status = 'DONE'
+        upload.save()
+        return True
+    except Exception as e:
+        upload.status = 'ERROR'
+        upload.status_message = str(e)
+        upload.save()
         return False
