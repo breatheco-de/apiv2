@@ -22,6 +22,7 @@ DEBIAN_BASE = ['Debian GNU/Linux', 'Ubuntu']
 
 # notify the command will be executed
 def system(command):
+    print(command)
     return os.system(command)
 
 

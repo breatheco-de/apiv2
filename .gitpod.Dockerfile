@@ -12,3 +12,6 @@ RUN pip install pdm yapf
 # remove PIP_USER environment
 USER gitpod
 RUN if ! grep -q "export PIP_USER=no" "$HOME/.bashrc"; then printf '%s\n' "export PIP_USER=no" >> "$HOME/.bashrc"; fi
+RUN echo "" >> $HOME/.bashrc
+RUN echo "unset DATABASE_URL" >> $HOME/.bashrc
+RUN echo "export DATABASE_URL" >> $HOME/.bashrc
