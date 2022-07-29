@@ -339,6 +339,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "exceptiongroup"
+version = "1.0.0rc8"
+requires_python = ">=3.7"
+summary = "Backport of PEP 654 (exception groups)"
+
+[[package]]
 name = "execnet"
 version = "1.9.0"
 requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
@@ -512,6 +518,17 @@ name = "hiredis"
 version = "2.0.0"
 requires_python = ">=3.6"
 summary = "Python wrapper for hiredis"
+
+[[package]]
+name = "hypothesis"
+version = "6.53.0"
+requires_python = ">=3.7"
+summary = "A library for property-based testing"
+dependencies = [
+    "attrs>=19.2.0",
+    "exceptiongroup>=1.0.0rc8; python_version < \"3.11\"",
+    "sortedcontainers<3.0.0,>=2.1.0",
+]
 
 [[package]]
 name = "icalendar"
@@ -1140,6 +1157,11 @@ requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 summary = "Python 2 and 3 compatibility utilities"
 
 [[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+summary = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
+
+[[package]]
 name = "soupsieve"
 version = "2.3.2.post1"
 requires_python = ">=3.6"
@@ -1297,7 +1319,7 @@ summary = "Backport of pathlib-compatible object wrapper for zip files"
 
 [metadata]
 lock_version = "4.0"
-content_hash = "sha256:ef53578a7257e4e06d3661ecd1dc3effbb85c8848d6905e4d38096fa02b80fba"
+content_hash = "sha256:252060a32942fd22e52b8c04fccbffe3e7819a158f2d1458e14a4034ef2d4f30"
 
 [metadata.files]
 "activecampaign-python 1.0.4" = [
@@ -1612,6 +1634,10 @@ content_hash = "sha256:ef53578a7257e4e06d3661ecd1dc3effbb85c8848d6905e4d38096fa0
 "eventbrite 3.3.5" = [
     {url = "https://files.pythonhosted.org/packages/2b/a2/a876d8f2f041683a00285762b04b02548337a6db78ed90c7a40c1d721283/eventbrite-3.3.5.tar.gz", hash = "sha256:ddc495520b1df80528b51fc42451f3101c0b00ffd0b2bb48f370980a571caa02"},
 ]
+"exceptiongroup 1.0.0rc8" = [
+    {url = "https://files.pythonhosted.org/packages/94/e0/2f58a7e00e28cd57f8239bd8d16963c2810142af58028cf5b0681ed9fdfd/exceptiongroup-1.0.0rc8.tar.gz", hash = "sha256:6990c24f06b8d33c8065cfe43e5e8a4bfa384e0358be036af9cc60b6321bd11a"},
+    {url = "https://files.pythonhosted.org/packages/9a/8e/21e73923dabbf1b4bb36bc1c0f8f6da5c7d6becd0902213dbefa386ca8dc/exceptiongroup-1.0.0rc8-py3-none-any.whl", hash = "sha256:ab0a968e1ef769e55d9a596f4a89f7be9ffedbc9fdefdb77cc68cf5c33ce1035"},
+]
 "execnet 1.9.0" = [
     {url = "https://files.pythonhosted.org/packages/7a/3c/b5ac9fc61e1e559ced3e40bf5b518a4142536b34eb274aa50dff29cb89f5/execnet-1.9.0.tar.gz", hash = "sha256:8f694f3ba9cc92cab508b152dcfe322153975c29bda272e2fd7f3f00f36e47c5"},
     {url = "https://files.pythonhosted.org/packages/81/c0/3072ecc23f4c5e0a1af35e3a222855cfd9c80a1a105ca67be3b6172637dd/execnet-1.9.0-py2.py3-none-any.whl", hash = "sha256:a295f7cc774947aac58dde7fdc85f4aa00c42adf5d8f5468fc630c1acf30a142"},
@@ -1807,6 +1833,10 @@ content_hash = "sha256:ef53578a7257e4e06d3661ecd1dc3effbb85c8848d6905e4d38096fa0
     {url = "https://files.pythonhosted.org/packages/ed/33/290cea35b09c80b4634773ad5572a8030a87b5d39736719f698f521d2a13/hiredis-2.0.0-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:04026461eae67fdefa1949b7332e488224eac9e8f2b5c58c98b54d29af22093e"},
     {url = "https://files.pythonhosted.org/packages/ee/ae/9163ea3b43070eb58e46db9f4e7a2debb589b25938e1bc4674091d7afab6/hiredis-2.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:a4ee8000454ad4486fb9f28b0cab7fa1cd796fc36d639882d0b34109b5b3aec9"},
     {url = "https://files.pythonhosted.org/packages/ff/77/fbe04e04047e542209a6c2fd787afcebb585419b1caa5609019705dc891c/hiredis-2.0.0-cp37-cp37m-win_amd64.whl", hash = "sha256:f8196f739092a78e4f6b1b2172679ed3343c39c61a3e9d722ce6fcf1dac2824a"},
+]
+"hypothesis 6.53.0" = [
+    {url = "https://files.pythonhosted.org/packages/04/dd/0d1662a163ef9494ae4c9f23c2689cb5ec72128c8664aaf00280312d4117/hypothesis-6.53.0.tar.gz", hash = "sha256:39f225530c28fe484a59c39839c8a2fb414f2ecfd4743f75d82f55e0f09268c0"},
+    {url = "https://files.pythonhosted.org/packages/dd/d5/d2ffcc07c93b18cafa41e334e66c33d4cf86809d3998787fb421816b90fb/hypothesis-6.53.0-py3-none-any.whl", hash = "sha256:9c2b073731010cc00bcf060e71bd8f9507f6fe8f6d173f454634d1b91c537412"},
 ]
 "icalendar 4.1.0" = [
     {url = "https://files.pythonhosted.org/packages/32/26/f6d896b78f21a6eb640dac940abb7617f5a910fd7c9b4c213d7b4261f253/icalendar-4.1.0.tar.gz", hash = "sha256:9748b7c02efcc43e58d0615ae0976ac4f265e90dadee9b4f884de29905c1b395"},
@@ -2491,6 +2521,10 @@ content_hash = "sha256:ef53578a7257e4e06d3661ecd1dc3effbb85c8848d6905e4d38096fa0
 "six 1.16.0" = [
     {url = "https://files.pythonhosted.org/packages/71/39/171f1c67cd00715f190ba0b100d606d440a28c93c7714febeca8b79af85e/six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
     {url = "https://files.pythonhosted.org/packages/d9/5a/e7c31adbe875f2abbb91bd84cf2dc52d792b5a01506781dbcf25c91daf11/six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
+]
+"sortedcontainers 2.4.0" = [
+    {url = "https://files.pythonhosted.org/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
+    {url = "https://files.pythonhosted.org/packages/e8/c4/ba2f8066cceb6f23394729afe52f3bf7adec04bf9ed2c820b39e19299111/sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
 ]
 "soupsieve 2.3.2.post1" = [
     {url = "https://files.pythonhosted.org/packages/16/e3/4ad79882b92617e3a4a0df1960d6bce08edfb637737ac5c3f3ba29022e25/soupsieve-2.3.2.post1-py3-none-any.whl", hash = "sha256:3b2503d3c7084a42b1ebd08116e5f81aadfaea95863628c80a3b774a11b7c759"},

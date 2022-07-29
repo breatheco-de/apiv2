@@ -3,7 +3,7 @@ image:
 
 # List the ports you want to expose and what to do when they are served. See https://www.gitpod.io/docs/config-ports/
 ports:
-  - port: 8001
+  - port: 8000
     visibility: public
 
 # List the start up tasks. You can start them in parallel in multiple terminals. See https://www.gitpod.io/docs/config-start-tasks/
@@ -12,15 +12,15 @@ tasks:
   - init: |
       python -m scripts.install
       gp sync-done deps
-    command: pipenv run celery
+    command: pdm run celery
   - init: gp sync-await deps
     command: >
       (psql -U gitpod -c 'CREATE DATABASE breathecode;' || true) &&
       (psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode || true) &&
-      pipenv run migrate &&
-      pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
-      pipenv run python manage.py create_academy_roles &&
-      pipenv run start;
+      pdm run migrate &&
+      pdm run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
+      pdm run python manage.py create_academy_roles &&
+      pdm run start;
   - init: gp sync-await deps
 
 vscode:
@@ -34,3 +34,4 @@ vscode:
     - tabnine.tabnine-vscode
     - gruntfuggly.todo-tree
     - redhat.vscode-yaml
+    - bungcip.better-toml
