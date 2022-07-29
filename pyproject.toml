@@ -1,5 +1,5 @@
 [tool.pdm.scripts]
-start = "python manage.py runserver 0.0.0.0:8001"
+start = "python manage.py runserver 0.0.0.0:8000"
 format = "pre-commit run --all-files"
 migrate = "python manage.py migrate"
 makemigrations = "python manage.py makemigrations"

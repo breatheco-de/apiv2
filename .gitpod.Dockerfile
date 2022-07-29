@@ -7,7 +7,7 @@ RUN sudo apt-get update \
     && sudo rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
 RUN pyenv update && pyenv install 3.10.2 && pyenv global 3.10.2
-RUN pip install pipenv yapf
+RUN pip install pdm yapf
 
 # remove PIP_USER environment
 USER gitpod

@@ -17,7 +17,7 @@ def resolve_credentials():
 
 def help_command():
     print('Usage:')
-    print('   `pipenv run create_bucket BUCKET_NAME` where BUCKET_NAME is the name of new bucket')
+    print('   `pdm run create_bucket BUCKET_NAME` where BUCKET_NAME is the name of new bucket')
     print('')
     print('commands:')
     print('   --help see this help message.')

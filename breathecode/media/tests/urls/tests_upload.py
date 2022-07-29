@@ -4,7 +4,7 @@ Test /v1/media/upload
 import tempfile
 import os
 import hashlib
-from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins import MediaTestCase

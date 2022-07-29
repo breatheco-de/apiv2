@@ -19,11 +19,11 @@ def preinstall_hook():
 
 def install():
     print('')
-    print('--- Running pipenv install ---')
+    print('--- Running pdm install ---')
     print('')
 
     python_path = which('python')
-    os.system(f'pipenv install --dev --python "{python_path}"')
+    os.system(f'pdm install --dev --python "{python_path}"')
 
 
 def postinstall_hook():

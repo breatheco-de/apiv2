@@ -23,9 +23,9 @@ jobs:
         run: |
           PYTHONUNBUFFERED=1
           python -m pip install --upgrade pip
-          python -m pip install pipenv
-          pipenv install --system --deploy --ignore-pipfile --dev
+          python -m pip install pdm
+          pdm install --system --deploy --ignore-pipfile --dev
 
       - name: Linter
         run: |
-          pipenv run format
+          pdm run format
