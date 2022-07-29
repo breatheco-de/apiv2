@@ -13,17 +13,21 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v2
 
-      - name: Set up Python 3.10.2
+      - name: Set up Python 3.10.5
         uses: actions/setup-python@v2
         with:
-          python-version: 3.10.2
+          python-version: 3.10.5
+
+      - uses: pdm-project/setup-pdm@main
+        name: Setup PDM
+        with:
+          python-version: 3.10.5  # Version range or exact version of a Python version to use, the same as actions/setup-python
+          architecture: x64    # The target architecture (x86, x64) of the Python interpreter. the same as actions/setup-python
+          prerelease: false     # Allow prerelease versions to be installed
+          enable-pep582: true  # Enable PEP 582 package loading globally
 
       - name: Install dependencies
-        run: |
-          PYTHONUNBUFFERED=1
-          python -m pip install --upgrade pip
-          python -m pip install pdm
-          pdm install --system --deploy --ignore-pipfile --dev
+        run: pdm install       # Then you can use pdm in the following steps.
 
       - name: Deploy docs
         run: mkdocs gh-deploy --force
