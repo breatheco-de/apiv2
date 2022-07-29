@@ -7,11 +7,13 @@ __all__ = ['UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'Slac
 
 
 class UserProxy(User):
+
     class Meta:
         proxy = True
 
 
 class CohortProxy(Cohort):
+
     class Meta:
         proxy = True
 

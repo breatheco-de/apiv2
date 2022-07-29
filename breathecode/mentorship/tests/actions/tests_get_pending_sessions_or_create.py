@@ -52,6 +52,7 @@ def format_mentorship_session_attrs(attrs={}):
 
 
 class GetOrCreateSessionTestSuite(MentorshipTestCase):
+
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))

@@ -13,6 +13,7 @@ from breathecode.media.views import MIME_ALLOW
 
 class MediaTestSuite(MediaTestCase):
     """Test /answer"""
+
     def test_upload_without_auth(self):
         from breathecode.services.google_cloud import Storage, File
 

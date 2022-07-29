@@ -8,6 +8,7 @@ from ..mixins import MarketingTestCase
 
 
 class AcademyCohortTestSuite(MarketingTestCase):
+
     def test_googleads_data__without_entries(self):
         """Test /academy/cohort without auth"""
 

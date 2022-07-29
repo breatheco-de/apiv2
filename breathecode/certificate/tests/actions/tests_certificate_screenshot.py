@@ -27,6 +27,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """
     🔽🔽🔽 Zero UserSpecialty
     """
+
     @patch('requests.get',
            apply_requests_get_mock([
                (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),

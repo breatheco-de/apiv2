@@ -105,6 +105,7 @@ def get_cohorts(request, id=None):
 
 
 class AcademyReportView(APIView):
+
     @capable_of('academy_reporting')
     def get(self, request, academy_id=None):
 
@@ -117,6 +118,7 @@ class AcademyReportView(APIView):
 
 
 class AcademyActivateView(APIView):
+
     @capable_of('academy_activate')
     def put(self, request, academy_id=None):
 
@@ -130,6 +132,7 @@ class AcademyActivateView(APIView):
 
 
 class UserMeView(APIView):
+
     def get(self, request, format=None):
 
         try:
@@ -150,6 +153,7 @@ class AcademyView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_my_academy')
     def get(self, request, format=None, academy_id=None):
         item = Academy.objects.get(id=academy_id)
@@ -269,7 +273,8 @@ class CohortUserView(APIView, GenerateLookupsMixin):
                         CohortUser.objects.filter(user__id=x['user'], cohort__id=x['cohort']).first())
 
                 else:
-                    raise ValidationException('Cannot determine CohortUser in ' f'index {index}')
+                    raise ValidationException('Cannot determine CohortUser in '
+                                              f'index {index}')
 
         serializer = CohortUserPUTSerializer(current, data=request.data, context=context, many=many)
         if serializer.is_valid():
@@ -313,6 +318,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_all_cohort')
     def get(self, request, format=None, cohort_id=None, user_id=None, academy_id=None):
         if user_id is not None:
@@ -423,7 +429,8 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
                         CohortUser.objects.filter(user__id=x['user'], cohort__id=x['cohort']).first())
 
                 else:
-                    raise ValidationException('Cannot determine CohortUser in ' f'index {index}')
+                    raise ValidationException('Cannot determine CohortUser in '
+                                              f'index {index}')
 
         serializer = CohortUserPUTSerializer(current, data=request.data, context=context, many=many)
         if serializer.is_valid():
@@ -463,6 +470,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
 
 
 class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
+
     @capable_of('read_all_cohort')
     def get(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
 
@@ -572,6 +580,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
 
 
 class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
+
     @capable_of('crud_certificate')
     def post(self, request, academy_id=None):
         cohort_ids = request.GET.get('cohort', '')
@@ -622,6 +631,7 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
 
 
 class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
+
     @capable_of('read_certificate')
     def get(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
         if timeslot_id:
@@ -1008,6 +1018,7 @@ class SyllabusScheduleView(APIView):
 
 
 class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
         items = SyllabusSchedule.objects.filter(academy__id=academy_id)
@@ -1233,6 +1244,7 @@ class SyllabusVersionView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_syllabus')
     def get(self, request, syllabus_id=None, syllabus_slug=None, version=None, academy_id=None):
         if academy_id is None:

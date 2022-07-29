@@ -347,6 +347,7 @@ class AssetThumbnailView(APIView):
     get:
         Get asset thumbnail.
     """
+
     def get(self, request, asset_slug):
         width = int(request.GET.get('width', '0'))
         height = int(request.GET.get('height', '0'))
@@ -477,6 +478,7 @@ class AcademyAssetActionView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('crud_asset')
     def put(self, request, asset_slug, action_slug, academy_id=None):
 

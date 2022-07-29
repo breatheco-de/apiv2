@@ -355,12 +355,14 @@ class GroupSerializer(serpy.Serializer):
 
 
 class StaffSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = ProfileAcademy
         fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'address', 'phone', 'status')
 
 
 class UserMeProfileSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Profile
         exclude = ()
@@ -568,6 +570,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
 # This method is almost repeated but now for students instead of academy members.
 class StudentPOSTListSerializer(serializers.ListSerializer):
+
     def create(self, validated_data):
 
         result = [self.child.create(attrs) for attrs in validated_data]
@@ -754,6 +757,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
 
 class MemberPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = ProfileAcademy
         fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'phone', 'address')
@@ -808,6 +812,7 @@ class AuthSerializer(serializers.Serializer):
 
 
 class UserInvitePUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = UserInvite
         fields = ('status', 'id')
@@ -821,6 +826,7 @@ class UserInvitePUTSerializer(serializers.ModelSerializer):
 
 
 class GetGitpodUserSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = GitpodUser
         exclude = ('updated_at', 'created_at', 'user', 'academy', 'assignee_id', 'github_username',
@@ -828,12 +834,14 @@ class GetGitpodUserSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Profile
         exclude = ()
 
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = UserInvite
 

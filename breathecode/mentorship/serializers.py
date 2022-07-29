@@ -343,6 +343,7 @@ class BillSessionSerializer(serpy.Serializer):
 
 
 class ServicePOSTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorshipService
         exclude = ('created_at', 'updated_at', 'academy')
@@ -378,6 +379,7 @@ class ServicePUTSerializer(serializers.ModelSerializer):
 
 
 class MentorSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorProfile
         exclude = ('created_at', 'updated_at')
@@ -404,6 +406,7 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
 
 
 class SessionSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorshipSession
         exclude = (
@@ -446,6 +449,7 @@ class SessionSerializer(serializers.ModelSerializer):
 
 
 class MentorshipBillPUTListSerializer(serializers.ListSerializer):
+
     def update(self, instances, validated_data):
 
         instance_hash = {index: instance for index, instance in enumerate(instances)}
@@ -458,6 +462,7 @@ class MentorshipBillPUTListSerializer(serializers.ListSerializer):
 
 
 class MentorshipBillPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorshipBill
         exclude = ('created_at', 'updated_at', 'academy', 'mentor', 'reviewer', 'total_duration_in_minutes',

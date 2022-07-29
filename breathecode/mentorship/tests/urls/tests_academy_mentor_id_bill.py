@@ -195,6 +195,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__post__without_auth(self):
         url = reverse_lazy('mentorship:academy_mentor_id_bill', kwargs={'mentor_id': 1})
         response = self.client.post(url)

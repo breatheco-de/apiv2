@@ -99,6 +99,7 @@ def forward_booking_url(request, mentor_slug, token):
 
 
 class ForwardMeetUrl:
+
     def __init__(self, request, mentor_slug, token):
         self.request = request
         self.mentor_slug = mentor_slug
@@ -888,6 +889,7 @@ class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
+
     @has_permission('get_my_mentoring_sessions')
     def get(self, request):
 
@@ -930,6 +932,7 @@ class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
 
 
 class UserMeBillView(APIView, HeaderLimitOffsetPagination):
+
     @has_permission('get_my_mentoring_sessions')
     def get(self, request, bill_id=None):
 

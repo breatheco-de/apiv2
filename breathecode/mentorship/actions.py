@@ -148,6 +148,7 @@ def close_mentoring_session(session: MentorshipSession, data: dict):
 
 
 def get_accounted_time(_session):
+
     def get_duration(session):
         response = {'accounted_duration': 0, 'status_message': ''}
         if session.started_at is None and session.mentor_joined_at is not None:

@@ -242,6 +242,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__get__without_auth(self):
         url = reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': 1})
         response = self.client.get(url)

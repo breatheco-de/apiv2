@@ -22,6 +22,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     """
     🔽🔽🔽 Without Cohort
     """
+
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question__without_cohort(self):

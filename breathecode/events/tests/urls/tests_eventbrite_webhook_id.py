@@ -17,6 +17,7 @@ eventbrite_url_with_query = eventbrite_url + '?expand=organizer,venue'
 
 
 def update_or_create_event_mock(raise_error=False):
+
     def update_or_create_event(self, *args, **kwargs):
         if raise_error:
             raise Exception('Random error in creating')
@@ -26,6 +27,7 @@ def update_or_create_event_mock(raise_error=False):
 
 class EventbriteWebhookTestSuite(EventTestCase):
     """Test /eventbrite/webhook"""
+
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     def test_eventbrite_webhook_without_data(self):
         """Test /eventbrite/webhook without auth"""

@@ -7,6 +7,7 @@ from django.http.request import HttpRequest
 
 
 class RunSpiderAdminTestSuite(CareerTestCase):
+
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('logging.Logger.error', MagicMock())

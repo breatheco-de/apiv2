@@ -22,8 +22,7 @@ def install():
     print('--- Running pdm install ---')
     print('')
 
-    python_path = which('python')
-    os.system(f'pdm install --dev --python "{python_path}"')
+    os.system(f'pdm install')
 
 
 def postinstall_hook():

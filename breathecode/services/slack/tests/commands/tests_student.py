@@ -9,6 +9,7 @@ from ...commands.student import execute
 
 
 class SlackTestSuite(SlackTestCase):
+
     def test_slack_command___context_is_not_provide_or_is_none(self):
         """Testing  ."""
 

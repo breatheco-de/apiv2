@@ -362,6 +362,7 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_tag')
     def get(self, request, format=None, academy_id=None):
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
@@ -401,6 +402,7 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
 
@@ -414,6 +416,7 @@ class UTMView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
 
@@ -436,6 +439,7 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_won_lead')
     def get(self, request, format=None, academy_id=None):
 
@@ -485,6 +489,7 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
 
 
 class AcademyProcessView(APIView, GenerateLookupsMixin):
+
     @capable_of('crud_lead')
     def put(self, request, academy_id=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
@@ -588,6 +593,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_shortlink')
     def get(self, request, slug=None, academy_id=None):
 

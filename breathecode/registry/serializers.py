@@ -196,6 +196,7 @@ class AssetKeywordSerializer(serpy.Serializer):
 
 
 class TechSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetTechnology
 
@@ -259,12 +260,14 @@ class TechnologyPUTSerializer(serializers.ModelSerializer):
 
 
 class PostAssetCommentSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetComment
         exclude = ()
 
 
 class PutAssetCommentSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetComment
         exclude = ('text', 'asset', 'author')

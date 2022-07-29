@@ -7,6 +7,7 @@ from breathecode.services import datetime_to_iso_format
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_academy_token_without_auth(self):
         """Test /academy/:id/member/:id without auth"""
         url = reverse_lazy('authenticate:academy_token')

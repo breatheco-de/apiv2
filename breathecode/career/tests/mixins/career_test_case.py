@@ -7,6 +7,7 @@ from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQ
 class CareerTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
                      DatetimeMixin, BreathecodeMixin):
     """CertificateTestCase with auth methods"""
+
     def setUp(self):
         self.generate_queries()
         self.set_test_instance(self)

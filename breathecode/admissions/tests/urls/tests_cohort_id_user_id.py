@@ -16,6 +16,7 @@ from ..mixins import AdmissionsTestCase
 
 class CohortIdUserIdTestSuite(AdmissionsTestCase):
     """Test /cohort/:id/user/:id"""
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

@@ -15,6 +15,7 @@ from breathecode.feedback.actions import strings
 class CommonsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                       DatetimeMixin, BreathecodeMixin):
     """MarketingTestCase with auth methods"""
+
     def tearDown(self):
         self.clear_cache()
 

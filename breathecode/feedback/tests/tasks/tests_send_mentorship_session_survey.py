@@ -38,6 +38,7 @@ def build_answer_dict(attrs={}):
 
 
 def apply_get_env(envs={}):
+
     def get_env(key, default=None):
         return envs.get(key, default)
 
@@ -49,6 +50,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
     🔽🔽🔽 Without MentorshipSession
     """
+
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())

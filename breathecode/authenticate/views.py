@@ -296,6 +296,7 @@ class MemberView(APIView, GenerateLookupsMixin):
 
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     def get(self, request):
         invites = UserInvite.objects.filter(email=request.user.email)
 
@@ -344,6 +345,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 
 class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     @capable_of('read_invite')
     def get(self, request, academy_id=None, profileacademy_id=None, invite_id=None):
 
@@ -650,6 +652,7 @@ def get_token_info(request, token):
 
 
 class UserMeView(APIView):
+
     def get(self, request, format=None):
         # TODO: This should be not accessible because this endpoint require auth
         try:
@@ -1247,6 +1250,7 @@ def change_password(request, token):
 
 
 class TokenTemporalView(APIView):
+
     @capable_of('generate_temporal_token')
     def post(self, request, profile_academy_id=None, academy_id=None):
         profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id).first()
@@ -1372,6 +1376,7 @@ def pick_password(request, token):
 
 
 class PasswordResetView(APIView):
+
     @capable_of('send_reset_password')
     def post(self, request, profileacademy_id=None, academy_id=None):
 
@@ -1388,6 +1393,7 @@ class PasswordResetView(APIView):
 
 
 class ProfileInviteMeView(APIView):
+
     def get(self, request):
         invites = UserInvite.objects.filter(email=request.user.email)
         profile_academies = ProfileAcademy.objects.filter(user=request.user, status='INVITED')
@@ -1850,6 +1856,7 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
 
 
 class ProfileMeView(APIView, GenerateLookupsMixin):
+
     @has_permission('get_my_profile')
     def get(self, request):
         item = Profile.objects.filter(user=request.user).first()
@@ -1981,6 +1988,7 @@ class ProfileMePictureView(APIView):
 
 
 class GithubMeView(APIView):
+
     def delete(self, request):
         instance = CredentialsGithub.objects.filter(user=request.user).first()
         if not instance:

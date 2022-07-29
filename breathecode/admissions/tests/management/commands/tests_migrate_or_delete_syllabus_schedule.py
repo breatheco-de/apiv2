@@ -10,6 +10,7 @@ from ....management.commands.migrate_or_delete_syllabus_schedule import Command
 
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
+
     @patch('django.core.management.base.OutputWrapper.write', MagicMock())
     def test_migrate_or_delete_syllabus_schedule__without_schedules(self):
         from django.core.management.base import OutputWrapper

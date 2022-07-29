@@ -84,6 +84,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     @patch('os.getenv', MagicMock(return_value='https://dot.dot'))
     def test__without_auth(self):
         url = reverse_lazy('authenticate:profile_me_picture')

@@ -11,6 +11,7 @@ from ..mixins import RegistryTestCase
 
 
 class Response:
+
     def __init__(self, response, status_code):
         self.response = response
         self.status_code = status_code
@@ -31,6 +32,7 @@ FUNCTION_BAD_RESPONSE = Response({'status_code': 400, 'message': 'Bad response'}
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -41,6 +43,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
     🔽🔽🔽 GET without Media
     """
+
     @patch('logging.Logger.error', MagicMock())
     def test__without_media(self):
         # model = self.bc.database.create(asset=1)

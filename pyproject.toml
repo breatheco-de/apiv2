@@ -28,9 +28,9 @@ doctor = "python -m scripts.doctor"
 docs_deploy = "mkdocs gh-deploy -c"
 
 [project]
-name = "apiv2"
-version = ""
-description = ""
+name = "" # keep blank
+version = "" # keep blank
+description = "" # keep blank
 authors = [
     {name = "breatheco-de", email = "aalejo@gmail.com"},
 ]
@@ -79,6 +79,7 @@ dependencies = [
     "lxml",
     "nbconvert~=6.5.0",
     "numpy>=1.23.1",
+    "toml>=0.10.2",
 ]
 [project.optional-dependencies]
 
@@ -109,3 +110,6 @@ dev = [
     "pytest-xdist",
     "hypothesis>=6.53.0",
 ]
+
+[tool.yapf]
+column_limit = 110

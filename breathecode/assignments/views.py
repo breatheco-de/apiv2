@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class TaskTeacherView(APIView):
+
     def get(self, request, task_id=None, user_id=None):
         items = Task.objects.all()
         logger.debug(f'Found {items.count()} tasks')
@@ -120,6 +121,7 @@ class FinalProjectMeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, project_id=None, user_id=None):
         if not user_id:
             user_id = request.user.id
@@ -189,6 +191,7 @@ class FinalProjectMeView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, project_id=None):
+
         def update(_req, data, _id=None, only_validate=True):
             if _id is None:
                 raise ValidationException('Missing project id to update', slug='missing-project-id')
@@ -285,6 +288,7 @@ class TaskMeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, task_id=None, user_id=None):
         if not user_id:
             user_id = request.user.id
@@ -325,6 +329,7 @@ class TaskMeView(APIView):
         return Response(serializer.data)
 
     def put(self, request, task_id=None):
+
         def update(_req, data, _id=None, only_validate=True):
             if _id is None:
                 raise ValidationException('Missing task id to update', slug='missing=task-id')
@@ -414,6 +419,7 @@ class TaskMeDeliverView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('task_delivery_details')
     def get(self, request, task_id, academy_id):
 

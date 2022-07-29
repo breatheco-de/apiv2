@@ -14,6 +14,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_without_auth(self):
         url = reverse_lazy('registry:asset_thumbnail_slug', kwargs={'asset_slug': 'slug'})
         response = self.client.get(url)

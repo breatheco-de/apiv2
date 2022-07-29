@@ -7,6 +7,7 @@ from .utils import is_valid, create_models, just_one
 
 
 class AssignmentsModelsMixin(ModelsMixin):
+
     def generate_assignments_models(self,
                                     task=False,
                                     task_status='',

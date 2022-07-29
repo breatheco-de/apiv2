@@ -10,6 +10,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Empty data
     """
+
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=now))

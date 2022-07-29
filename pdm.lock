@@ -1319,7 +1319,7 @@ summary = "Backport of pathlib-compatible object wrapper for zip files"
 
 [metadata]
 lock_version = "4.0"
-content_hash = "sha256:252060a32942fd22e52b8c04fccbffe3e7819a158f2d1458e14a4034ef2d4f30"
+content_hash = "sha256:f315172a2b9124d4d5ad8ce316359b48ef72c478cd407add355404bee7919508"
 
 [metadata.files]
 "activecampaign-python 1.0.4" = [

@@ -1,14 +1,7 @@
 repos:
-  # - repo: local
-  #   hooks:
-  #     - id: yapf
-  #       name: yapf
-  #       language: python
-  #       entry: yapf
-  #       args: [-i, -vv]
-  #       types: [python]
-  - repo: https://github.com/pre-commit/mirrors-yapf
-    rev: "v0.31.0" # Use the sha / tag you want to point at
+  # - repo: https://github.com/pre-commit/mirrors-yapf
+  - repo: https://github.com/jefer94/mirrors-yapf
+    rev: "208a008f7bb1bdaecbf07085a93eecd5cc12029f" # Use the sha / tag you want to point at
     hooks:
       - id: yapf
         language: python
@@ -16,7 +9,8 @@ repos:
         args: [-i, -vv]
         types: [python]
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v4.3.0
+    # docs https://pre-commit.com/hooks.html
     hooks:
       - id: trailing-whitespace
       - id: check-docstring-first
@@ -28,6 +22,7 @@ repos:
       - id: double-quote-string-fixer
       - id: end-of-file-fixer
       - id: detect-private-key
+      - id: check-toml
   - repo: meta
     hooks:
       - id: check-hooks-apply

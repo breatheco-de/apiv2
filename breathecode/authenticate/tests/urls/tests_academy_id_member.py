@@ -21,6 +21,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Check decorator
     """
+
     def test_academy_id_member_without_auth(self):
         """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
@@ -93,6 +94,7 @@ class MemberPostDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Check decorator
     """
+
     def test_academy_id_member_without_auth(self):
         """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
@@ -168,6 +170,7 @@ class MemberDeleteDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Check decorator
     """
+
     def test_academy_id_member_without_auth(self):
         """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})

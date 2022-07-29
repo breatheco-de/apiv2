@@ -16,6 +16,7 @@ from breathecode.feedback.tasks import process_answer_received
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -24,6 +25,7 @@ def apply_get_env(configuration={}):
 
 class SurveyAnsweredTestSuite(FeedbackTestCase):
     """Test /academy/survey"""
+
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())

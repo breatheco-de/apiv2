@@ -37,6 +37,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 GET check the param is being passed
     """
+
     @patch('breathecode.authenticate.views.MeInviteView.get', MagicMock(side_effect=view_method_mock))
     def test_duck_test__get__with_auth___mock_view(self):
         model = self.bc.database.create(user=3)
@@ -75,6 +76,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
 
 
 class AuthenticateTestSuite(AuthTestCase):
+
     def test_user_me_invite__without_auth(self):
         """Test /academy/user/invite without auth"""
         url = reverse_lazy('authenticate:user_me_invite')

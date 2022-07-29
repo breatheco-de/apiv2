@@ -23,6 +23,7 @@ platform1 = {'name': 'indeed'}
 
 
 class ActionRunSpiderTestCase(CareerTestCase):
+
     def test_run_spider__without_spider(self):
         try:
             run_spider(None)

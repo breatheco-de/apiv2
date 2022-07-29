@@ -84,6 +84,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_without_auth(self):
         url = reverse_lazy('mentorship_shortner:slug', kwargs={'mentor_slug': 'asd'})
         response = self.client.get(url)

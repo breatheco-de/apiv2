@@ -12,6 +12,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     @patch('os.getenv', MagicMock(return_value='https://dot.dot'))
     def test_profile_invite_me__without_auth(self):
         url = reverse_lazy('authenticate:profile_invite_me')
