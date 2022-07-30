@@ -6,7 +6,6 @@ from rest_framework.test import APITestCase
 from faker import Faker
 import numpy as np
 from PIL import Image
-from faker import Faker
 import tempfile
 
 __all__ = ['Check']
