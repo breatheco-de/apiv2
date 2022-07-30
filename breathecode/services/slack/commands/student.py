@@ -9,6 +9,7 @@ Possible parameters for this command:
 
 """
 import os
+import random
 
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Profile
@@ -44,13 +45,24 @@ def execute(users, academies, **context):
 
 def render_student(user, cohort_users):
 
-    avatar_url = os.getenv('API_URL', '') + '/static/img/avatar.png'
+    avatar_number = random.randint(1, 31)
+    avatar_url = os.getenv('API_URL', '') + f'/static/img/avatar-{avatar_number}.png'
     github_username = 'not set'
     phone = 'not set'
     try:
-        github_username = user.profile.github_username
-        avatar_url = user.profile.avatar_url
-        phone = user.profile.phone
+        if user.profile.github_username:
+            github_username = user.profile.github_username
+
+        if user.profile.phone:
+            phone = user.profile.phone
+
+        if user.profile.avatar_url:
+            avatar_url = user.profile.avatar_url
+
+        else:
+            user.profile.avatar_url = avatar_url
+            user.profile.save()
+
     except Profile.DoesNotExist:
         pass
 
