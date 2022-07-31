@@ -81,9 +81,13 @@ psycopg2-binary = "*"
 django-sql-explorer = {extras = ["xls"], version = "*"}
 google-cloud-ndb = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
+channels = "*"
+channels-redis = "*"
 timeago = "*"
 markdown = "*"
 python-frontmatter = "*"
 beautifulsoup4 = "*"
 lxml = "*"
+daphne = "*"
+twisted = {extras = ["http2", "tls"], version = "*"}
 nbconvert = "~=6.4.5"

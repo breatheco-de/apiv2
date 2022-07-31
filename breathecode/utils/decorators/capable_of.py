@@ -22,6 +22,10 @@ def capable_of(capability=None):
                 elif hasattr(args[0], 'user') and hasattr(args[0].user, 'has_perm'):
                     request = args[0]
 
+                # websocket support
+                elif hasattr(args[0], 'ws_request'):
+                    request = args[0]
+
                 else:
                     raise IndexError()
 
