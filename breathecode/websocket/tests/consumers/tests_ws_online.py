@@ -94,7 +94,7 @@ class ConsumerTestSuite(WebsocketTestCase):
         model = await self.bc.database.async_create(user=1, token=1)
 
         communicator = WebsocketCommunicator(ROUTER, '/testws/test/',
-                                             {'authorization': f'Token {model.token.key}'})
+                                             [('authorization', f'Token {model.token.key}')])
         connected, subprotocol = await communicator.connect()
 
         self.assertTrue(connected)
@@ -114,7 +114,7 @@ class ConsumerTestSuite(WebsocketTestCase):
         cache.set('breathecode-online-status', [2, 3])
 
         communicator = WebsocketCommunicator(ROUTER, '/testws/test/',
-                                             {'authorization': f'Token {model.token.key}'})
+                                             [('authorization', f'Token {model.token.key}')])
         connected, subprotocol = await communicator.connect()
 
         from channels.layers import get_channel_layer
