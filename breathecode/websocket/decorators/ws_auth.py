@@ -13,7 +13,9 @@ __all__ = ['ws_auth']
 class SyncWsAuth:
     """This class contain the handlers to the JsonWebsocketConsumer"""
     def sync_wrapper(self, cls: JsonWebsocketConsumer, connect: callable):
-        found_headers = [x for x in self.scope['headers'] if x[0] == b'authorization']
+        found_headers = [
+            x for x in self.scope['headers'] if x[0] == b'authorization' or x[0] == 'authorization'
+        ]
         if not found_headers:
             self.accept()
             self.send_json({'details': 'No credentials provided.', 'status_code': 401}, close=True)
@@ -47,7 +49,9 @@ class SyncWsAuth:
 class AsyncWsAuth:
     """This class contain the handlers to the AsyncJsonWebsocketConsumer"""
     async def async_wrapper(self, cls: AsyncJsonWebsocketConsumer, connect: callable):
-        found_headers = [x for x in self.scope['headers'] if x[0] == b'authorization']
+        found_headers = [
+            x for x in self.scope['headers'] if x[0] == b'authorization' or x[0] == 'authorization'
+        ]
         if not found_headers:
             await self.accept()
             await self.send_json({'details': 'No credentials provided.', 'status_code': 401}, close=True)

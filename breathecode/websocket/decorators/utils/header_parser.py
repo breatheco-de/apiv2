@@ -17,6 +17,12 @@ def header_parser(headers: list[tuple[bytes, bytes]], allowed=[]):
             key = header[0]
             value = header[1]
 
+            if isinstance(key, bytes):
+                key = key.decode(HTTP_HEADER_ENCODING)
+
+            if isinstance(value, bytes):
+                value = value.decode(HTTP_HEADER_ENCODING)
+
             result[key] = value
 
     return result

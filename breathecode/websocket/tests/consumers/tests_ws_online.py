@@ -10,7 +10,7 @@ from django.urls import path
 from channels.testing import WebsocketCommunicator
 
 # Alder Lake 12900H timeout
-ALDER_LAKE_TIMEOUT = 0.0004
+ALDER_LAKE_TIMEOUT = 0.006
 
 # double of minimum time * 3 (3 is the diff between Intel 7700HQ and 12900H)
 # if you want give support to a processor more slower, calculate the diff using

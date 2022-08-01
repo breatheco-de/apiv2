@@ -48,8 +48,8 @@ def get_academy_from_capability(kwargs, request, capability):
 
     academy_id = None
 
-    if 'academy_id' not in kwargs and ('Academy' not in request.headers
-                                       or 'academy' not in request.headers) and 'academy' not in request.GET:
+    if ('academy_id' not in kwargs and 'Academy' not in request.headers and 'academy' not in request.headers
+            and 'academy' not in request.GET):
         raise PermissionDenied(
             "Missing academy_id parameter expected for the endpoint url or 'Academy' header")
 

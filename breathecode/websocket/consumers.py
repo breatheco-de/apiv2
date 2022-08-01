@@ -1,13 +1,11 @@
 # chat/consumers.py
 from .utils import AsyncJsonWebsocketConsumer
 from django.core.cache import cache
+from rest_framework.permissions import AllowAny
 
-from breathecode.websocket.decorators import ws_auth, ws_can_auth, ws_capable_of, ws_has_permission
+from breathecode.websocket.decorators import ws_can_auth
 
 
-# @ws_auth
-# @ws_capable_of('read_student')
-# @ws_has_permission('delete_assetalias')
 @ws_can_auth
 class CohortConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
@@ -17,6 +15,8 @@ class CohortConsumer(AsyncJsonWebsocketConsumer):
 
 @ws_can_auth
 class OnlineStatusConsumer(AsyncJsonWebsocketConsumer):
+    permission_classes = [AllowAny]
+
     async def connect(self):
         await self.setup()
         await self.accept()
