@@ -179,7 +179,7 @@ CAPABILITIES = [
         'description': 'List all the assigments'
     },
     {
-        'slug': 'crud_assigment',
+        'slug': 'crud_assignment',
         'description': 'Create, update or delete a assigment'
     },
     {
@@ -695,7 +695,7 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'List all the assigments'
             },
             {
-                'slug': 'crud_assigment',
+                'slug': 'crud_assignment',
                 'description': 'Create, update or delete a assigment'
             },
             {
