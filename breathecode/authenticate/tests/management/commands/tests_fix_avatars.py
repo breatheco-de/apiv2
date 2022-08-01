@@ -75,7 +75,7 @@ class AcademyCohortTestSuite(AuthTestCase):
         profiles = [{'avatar_url': latest_avatar_url} for _ in range(0, 2)]
         model = self.bc.database.create(profile=profiles)
 
-        random_numbers = [random.randint(1, 31) for _ in range(0, 2)]
+        random_numbers = [random.randint(1, 21) for _ in range(0, 2)]
         with patch('random.randint') as randint_mock:
             randint_mock.side_effect = random_numbers
 
@@ -87,7 +87,7 @@ class AcademyCohortTestSuite(AuthTestCase):
 
                 self.assertEqual(os.getenv.call_args_list, [call('API_URL', '')])
 
-            self.assertEqual(random.randint.call_args_list, [call(1, 31), call(1, 31)])
+            self.assertEqual(random.randint.call_args_list, [call(1, 21), call(1, 21)])
 
         self.assertEqual(result, None)
         self.assertEqual(

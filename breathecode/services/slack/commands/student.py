@@ -45,7 +45,7 @@ def execute(users, academies, **context):
 
 def render_student(user, cohort_users):
 
-    avatar_number = random.randint(1, 31)
+    avatar_number = random.randint(1, 21)
     avatar_url = os.getenv('API_URL', '') + f'/static/img/avatar-{avatar_number}.png'
     github_username = 'not set'
     phone = 'not set'

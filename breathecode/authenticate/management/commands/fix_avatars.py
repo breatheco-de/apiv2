@@ -16,7 +16,7 @@ class Command(BaseCommand):
 
         pending = Profile.objects.filter(avatar_url=current_avatar_url)
         for profile in pending:
-            avatar_number = random.randint(1, 31)
+            avatar_number = random.randint(1, 21)
             avatar_url = api_url + f'/static/img/avatar-{avatar_number}.png'
             profile.avatar_url = avatar_url
             profile.save()

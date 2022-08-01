@@ -117,7 +117,7 @@ class SlackTestSuite(SlackTestCase):
             'channel_id': 'test'
         }
 
-        avatar_number = random.randint(1, 31)
+        avatar_number = random.randint(1, 21)
         expected = {
             'blocks': [{
                 'type': 'section',
@@ -141,7 +141,7 @@ class SlackTestSuite(SlackTestCase):
             mock.return_value = avatar_number
             result = execute(users=['percybrown'], context=data)
 
-            self.assertEqual(random.randint.call_args_list, [call(1, 31)])
+            self.assertEqual(random.randint.call_args_list, [call(1, 21)])
 
         self.assertEqual(result, expected)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
@@ -180,7 +180,7 @@ class SlackTestSuite(SlackTestCase):
             'channel_id': 'test'
         }
 
-        avatar_number = random.randint(1, 31)
+        avatar_number = random.randint(1, 21)
         expected = {
             'blocks': [{
                 'type': 'section',
@@ -206,7 +206,7 @@ class SlackTestSuite(SlackTestCase):
             mock.return_value = avatar_number
             result = execute(users=['percybrown'], context=data)
 
-            self.assertEqual(random.randint.call_args_list, [call(1, 31)])
+            self.assertEqual(random.randint.call_args_list, [call(1, 21)])
 
         self.assertEqual(result, expected)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
@@ -245,7 +245,7 @@ class SlackTestSuite(SlackTestCase):
             'channel_id': 'test'
         }
 
-        avatar_number = random.randint(1, 31)
+        avatar_number = random.randint(1, 21)
         expected = {
             'blocks': [{
                 'type': 'section',
@@ -271,7 +271,7 @@ class SlackTestSuite(SlackTestCase):
             mock.return_value = avatar_number
             result = execute(users=['percybrown'], context=data)
 
-            self.assertEqual(random.randint.call_args_list, [call(1, 31)])
+            self.assertEqual(random.randint.call_args_list, [call(1, 21)])
 
         self.assertEqual(result, expected)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
@@ -317,7 +317,7 @@ class SlackTestSuite(SlackTestCase):
             'channel_id': 'test'
         }
 
-        avatar_number = random.randint(1, 31)
+        avatar_number = random.randint(1, 21)
         expected = {
             'blocks': [{
                 'type': 'section',
@@ -343,7 +343,7 @@ class SlackTestSuite(SlackTestCase):
             mock.return_value = avatar_number
             result = execute(users=['percybrown'], context=data)
 
-            self.assertEqual(random.randint.call_args_list, [call(1, 31)])
+            self.assertEqual(random.randint.call_args_list, [call(1, 21)])
 
         self.assertEqual(result, expected)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
@@ -402,7 +402,7 @@ class SlackTestSuite(SlackTestCase):
             'channel_id': 'test'
         }
 
-        avatar_number = random.randint(1, 31)
+        avatar_number = random.randint(1, 21)
         expected = {
             'blocks': [{
                 'type': 'section',
@@ -428,7 +428,7 @@ class SlackTestSuite(SlackTestCase):
             mock.return_value = avatar_number
             result = execute(users=['percybrown'], context=data)
 
-            self.assertEqual(random.randint.call_args_list, [call(1, 31)])
+            self.assertEqual(random.randint.call_args_list, [call(1, 21)])
 
         self.assertEqual(result, expected)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [

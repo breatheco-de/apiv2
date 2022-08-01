@@ -214,7 +214,7 @@ class Command(BaseCommand):
                 try:
                     profile = user.profile
                 except Profile.DoesNotExist:
-                    avatar_number = randint(1, 31)
+                    avatar_number = randint(1, 21)
                     profile = Profile(user=user)
                     profile.avatar_url = API_URL + f'/static/img/avatar-{avatar_number}.png'
                     profile.bio = _student['bio']
