@@ -12,7 +12,7 @@ def python_module_to_dir(module: str) -> str:
 
 def help_command():
     print('Usage:')
-    print('   `pdm run cov breathecode.events` where events is the name of module and accept '
+    print('   `pipenv run cov breathecode.events` where events is the name of module and accept '
           'add submodules using the dot(.) character as delimiter.')
     print('')
     print('commands:')

@@ -2,14 +2,14 @@
 FROM python
 
 ENV PYTHONUNBUFFERED=1
-RUN pip install pdm
+RUN pip install pipenv
 
 WORKDIR /usr/src
 
 COPY Pipfile Pipfile
 COPY Pipfile.lock Pipfile.lock
 
-RUN pdm install --system --deploy --ignore-pipfile
+RUN pipenv install --system --deploy --ignore-pipfile
 COPY . .
 
 EXPOSE 8000

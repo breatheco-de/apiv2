@@ -1,1 +1,1 @@
-["docker", "docker-compose", "pdm"]
+["docker", "docker-compose", "pipenv"]

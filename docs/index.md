@@ -21,16 +21,16 @@ docker-compose build bc-dev
 docker-compose run bc-dev fish
 
 # Testing
-pdm run test ./breathecode/activity  # path
+pipenv run test ./breathecode/activity  # path
 
 # Testing in parallel
-pdm run ptest ./breathecode/activity  # path
+pipenv run ptest ./breathecode/activity  # path
 
 # Coverage
-pdm run cov breathecode.activity  # python module path
+pipenv run cov breathecode.activity  # python module path
 
 # Coverage in parallel
-pdm run pcov breathecode.activity  # python module path
+pipenv run pcov breathecode.activity  # python module path
 ```
 
 ### `Run BreatheCode API as docker service`
@@ -43,7 +43,7 @@ docker-compose up -d bc-dev
 docker-compose run bc-dev fish
 
 # create super user
-pdm run python manage.py createsuperuser
+pipenv run python manage.py createsuperuser
 
 # Close the BreatheCode Dev
 exit
@@ -76,35 +76,35 @@ python -m scripts.install
 
 ```bash
 # Testing
-pdm run test ./breathecode/activity  # path
+pipenv run test ./breathecode/activity  # path
 
 # Testing in parallel
-pdm run ptest ./breathecode/activity  # path
+pipenv run ptest ./breathecode/activity  # path
 
 # Coverage
-pdm run cov breathecode.activity  # python module path
+pipenv run cov breathecode.activity  # python module path
 
 # Coverage in parallel
-pdm run pcov breathecode.activity  # python module path
+pipenv run pcov breathecode.activity  # python module path
 ```
 
 ### `Run BreatheCode API in your local machine`
 
 ```bash
 # Collect statics
-pdm run python manage.py collectstatic --noinput
+pipenv run python manage.py collectstatic --noinput
 
 # Run migrations
-pdm run python manage.py migrate
+pipenv run python manage.py migrate
 
 # Load fixtures (populate the database)
-pdm run python manage.py loaddata breathecode/*/fixtures/dev_*.json
+pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
 
 # Create super user
-pdm run python manage.py createsuperuser
+pipenv run python manage.py createsuperuser
 
 # Run server
-pdm run start
+pipenv run start
 
 # open localhost:8000 to view the api
 # open localhost:8000/admin to view the admin

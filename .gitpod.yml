@@ -12,15 +12,15 @@ tasks:
   - init: |
       python -m scripts.install
       gp sync-done deps
-    command: pdm run celery
+    command: pipenv run celery
   - init: gp sync-await deps
     command: >
       (psql -U gitpod -c 'CREATE DATABASE breathecode;' || true) &&
       (psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode || true) &&
-      pdm run migrate &&
-      pdm run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
-      pdm run python manage.py create_academy_roles &&
-      pdm run start;
+      pipenv run migrate &&
+      pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
+      pipenv run python manage.py create_academy_roles &&
+      pipenv run start;
   - init: gp sync-await deps
 
 vscode:
