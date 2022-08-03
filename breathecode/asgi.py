@@ -8,23 +8,24 @@ https://docs.djangoproject.com/en/3.0/howto/deployment/asgi/
 """
 
 import os
+from django.core.asgi import get_asgi_application
+import django
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'breathecode.settings')
+
+django.setup()
+app = get_asgi_application()
+
 from django.conf import settings
 import breathecode.settings as app_settings
 
 from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
-from django.core.asgi import get_asgi_application
 from breathecode.websocket.urls import websocket_urlpatterns
 
-settings.configure(INSTALLED_APPS=app_settings.INSTALLED_APPS, DATABASES=app_settings.DATABASES)
-
-import django
-
-django.setup()
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'breathecode.settings')
+# settings.configure(INSTALLED_APPS=app_settings.INSTALLED_APPS, DATABASES=app_settings.DATABASES)
 
 application = ProtocolTypeRouter({
-    'http': get_asgi_application(),
+    'http': app,
     'websocket': AuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
 })
