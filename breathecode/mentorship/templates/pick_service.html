@@ -53,11 +53,6 @@ a{text-decoration: none;}
   font-weight: 600;
   font-size: 16px;
 }
-.sh-list .sh-list-item .days-ago {
-  margin: 0;
-  font-weight: 100;
-}
-
 .sh-list .sh-list-item .sh-list-item-sub-title {
   color: #717274;
   font-weight: 200;
@@ -68,8 +63,8 @@ a{text-decoration: none;}
   background-color: #d2d2d2;
   width: 40px;
   height: 40px;
-  text-align: center;
   display: table-cell;
+  text-align: center;
   line-height: 42px;
   font-size: 1.2em;
   font-weight: 100;
@@ -79,15 +74,21 @@ a{text-decoration: none;}
 .sh-list .sh-list-item .sh-list-icon.add {
   background-color: #00aeef;
 }
+.sh-list .sh-list-item > a {
+  display: block;
+  position: relative;
+}
 .sh-list .sh-list-item .sufix {
   display: inline-block;
   font-size: 24px;
-  margin-right: 24px;
-  float: right;
+  position: absolute;
+  right: 20;
+  top: 0;
 }
 .sh-list .sh-list-item .sufix i {
   margin-top: 10px;
 }
+
 h4 {
   display: block;
   box-sizing: border-box;
@@ -98,49 +99,51 @@ h4 {
   font-weight: 500;
   color: rgba(0, 0, 0, 0.54);
 }
-.m-0{ margin: 0; }
+
 </style>
 <div class="content text-center">
     <tr>
-        <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+        <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; width: 87.5%;
 			padding-bottom: 5px;">
             <div class=card>
-                <div class="card-title">Close session</div>
+              <div class="card-title">Choose service</div>
                 <div class="sh-list">
+                  {% if services|length == 0 %}
                   <div class="sh-list-item">
-                  {{ message|safe }}
-                  </div>
-                  {% if sessions|length > 0 %}
-                  <div class="sh-list-item">
-                    We also found the following sessions that need to be resolved:
+                    This mentor not have service too.
                   </div>
                   {% endif %}
-                  {% for s in sessions %}
+
+                  {% for s in services %}
                   <div class="sh-list-item">
-                    <a href="/mentor/meet/{{ s.mentor.slug }}?token={{ token }}&session={{s.id}}">
-                        <div class="sh-list-icon" style="background-image: url('{{s.mentee.user.profile.avatar_url}}')">
-                          {% if not s.mentee.user.profile.avatar_url or s.mentee.user.profile.avatar_url != '' %}
+                    <a href="{{ baseUrl }}/service/{{s.slug}}?token={{token}}"
+                       style="display: block;">
+                        {% if s.logo_url %}
+                          <div class="sh-list-icon"
+                               style="background-image: url('{{ s.logo_url }}')">
+                        {% else %}
+                          <div class="sh-list-icon">
+                        {% endif %}
+
+                        {% if s.logo_url %}
                           <i class="fas fa-user-friends"></i>
-                          {% endif %}
+                        {% endif %}
                         </div>
                         <div class="whitespace"></div>
                         <div class="sh-list-content">
-                          {% if s.mentee %}
-                            <div class="sh-list-item-title">{{ s.mentee.first_name }} {{ s.mentee.last_name }}</div>
-                          {% else %}
-                            <div class="sh-list-item-title">No student ever joined</div>
-                          {% endif %}
-                          <div class="sh-list-item-sub-title">
-                            <p class="days-ago"><small>joined {{ s.ends_at|timesince }} ago</small></p>
-                            {{ s.service.name }}
+                          <div class="sh-list-item-title">
+                            {{ s.name }}
                           </div>
+                          {% if s.academy %}
+                            <div class="sh-list-item-sub-title">{{ s.academy.name }}</div>
+                          {% endif %}
                         </div>
-                        <div class=sufix><i class="fas fa-angle-right"></i></div>
+                        <div class="sufix"><i class="fas fa-angle-right"></i></div>
                     </a>
                   </div>
                   {% endfor %}
               </div>
-              </div>
+            </div>
 
 
         </td>
