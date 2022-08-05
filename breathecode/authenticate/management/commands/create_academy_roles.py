@@ -45,7 +45,7 @@ CAPABILITIES = [
     },
     {
         'slug': 'read_assignment',
-        'description': 'Read assigment information'
+        'description': 'Read assignment information'
     },
     {
         'slug':
@@ -194,12 +194,12 @@ CAPABILITIES = [
         'description': 'Create, update or delete a user activities'
     },
     {
-        'slug': 'read_assigment',
-        'description': 'List all the assigments'
+        'slug': 'read_assignment',
+        'description': 'List all the assignments'
     },
     {
-        'slug': 'crud_assigment',
-        'description': 'Create, update or delete a assigment'
+        'slug': 'crud_assignment',
+        'description': 'Create, update or delete a assignment'
     },
     {
         'slug':
@@ -426,7 +426,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Teacher Assistant',
         'caps':
         extend(roles, ['staff']) + [
-            'read_assigment',
+            'read_assignment',
             'crud_assignment',
             'read_cohort_activity',
             'read_nps_answers',
