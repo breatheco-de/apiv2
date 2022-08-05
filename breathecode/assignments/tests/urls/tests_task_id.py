@@ -13,6 +13,26 @@ from breathecode.services.google_cloud import Datastore
 from ..mixins import AssignmentsTestCase
 
 
+def get_serializer(self, task, user):
+    return {
+        'associated_slug': task.associated_slug,
+        'created_at': self.bc.datetime.to_iso_string(task.created_at),
+        'github_url': task.github_url,
+        'id': task.id,
+        'live_url': task.live_url,
+        'revision_status': task.revision_status,
+        'task_status': task.task_status,
+        'task_type': task.task_type,
+        'title': task.title,
+        'description': task.description,
+        'user': {
+            'first_name': user.first_name,
+            'id': user.id,
+            'last_name': user.last_name
+        }
+    }
+
+
 class MediaTestSuite(AssignmentsTestCase):
     """Test /answer"""
     """
@@ -59,22 +79,7 @@ class MediaTestSuite(AssignmentsTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = {
-            'associated_slug': model.task.associated_slug,
-            'github_url': model.task.github_url,
-            'id': model.task.id,
-            'live_url': model.task.live_url,
-            'revision_status': model.task.revision_status,
-            'task_status': model.task.task_status,
-            'task_type': model.task.task_type,
-            'title': model.task.title,
-            'description': model.task.description,
-            'user': {
-                'first_name': model.user.first_name,
-                'id': model.user.id,
-                'last_name': model.user.last_name
-            }
-        }
+        expected = get_serializer(self, model.task, model.user)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
