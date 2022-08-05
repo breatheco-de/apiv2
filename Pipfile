@@ -45,9 +45,8 @@ mkdocstrings = "*"
 pytest-xdist = "*"
 
 [packages]
-django = "~=3.2.13"
-djangorestframework = "~=3.11.1"
-setuptools="~=62.0.0"
+django = "~=3.2.15"
+djangorestframework = "~=3.13.1"
 serpy = "*"
 gunicorn = "*"
 requests = "*"
@@ -90,4 +89,4 @@ beautifulsoup4 = "*"
 lxml = "*"
 daphne = "*"
 twisted = {extras = ["http2", "tls"], version = "*"}
-nbconvert = "~=6.4.5"
+nbconvert = "~=6.5.0"
