@@ -43,7 +43,7 @@ class CohortSerializer(CohortSerializerMixin):
 
 ## Receiving a signal
 
-All django applications can subscribe to recieve a signal, even if those signals are coming from another app, but you should always add your receiving code inside the receivers.py of the app that will react to the signal.
+All django applications can subscribe to receive a signal, even if those signals are coming from another app, but you should always add your receiving code inside the receivers.py of the app that will react to the signal.
 
 The following code will receive the `cohort_saved` signal and print on the screen if its being created or updated.
 

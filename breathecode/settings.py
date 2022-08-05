@@ -327,9 +327,6 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 SITE_ID = 1
 
-_locals = locals()
-django_heroku.settings(_locals)
-
 # Change 'default' database configuration with $DATABASE_URL.
 # https://github.com/jacobian/dj-database-url#url-schema
 DATABASES = {
@@ -367,7 +364,7 @@ else:
     # found.group(2) == 6379
     found = re.search(REDIS_URL_PATTERN, REDIS_URL)
     if not found:
-        raise ValueError('The environment variable `REDIS_URL` is setted')
+        raise ValueError('The environment variable `REDIS_URL` is not setted')
 
     CHANNEL_LAYERS = {
         'default': {
@@ -377,3 +374,6 @@ else:
             },
         },
     }
+
+# keep last part of the file
+django_heroku.settings(locals())
