@@ -56,7 +56,7 @@ CAPABILITIES = [
     },
     {
         'slug': 'crud_assignment',
-        'description': 'Update assignments'
+        'description': 'Create, update or delete a assigment'
     },
     {
         'slug': 'task_delivery_details',
@@ -177,10 +177,6 @@ CAPABILITIES = [
     {
         'slug': 'read_assigment',
         'description': 'List all the assigments'
-    },
-    {
-        'slug': 'crud_assignment',
-        'description': 'Create, update or delete a assigment'
     },
     {
         'slug':
@@ -571,7 +567,7 @@ class AcademyEventTestSuite(CypressTestCase):
             },
             {
                 'slug': 'crud_assignment',
-                'description': 'Update assignments'
+                'description': 'Create, update or delete a assigment'
             },
             {
                 'description': ('Get delivery URL for a task, that url can be sent to '
@@ -693,10 +689,6 @@ class AcademyEventTestSuite(CypressTestCase):
             {
                 'slug': 'read_assigment',
                 'description': 'List all the assigments'
-            },
-            {
-                'slug': 'crud_assignment',
-                'description': 'Create, update or delete a assigment'
             },
             {
                 'slug':
