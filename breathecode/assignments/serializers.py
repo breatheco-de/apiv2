@@ -36,6 +36,8 @@ class TaskGETSerializer(serpy.Serializer):
     task_type = serpy.Field()
     user = UserSmallSerializer()
 
+    created_at = serpy.Field()
+
 
 class TaskGETDeliverSerializer(TaskGETSerializer):
     """The serializer schema definition."""
