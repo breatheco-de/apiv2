@@ -22,7 +22,7 @@ class FakeRequest:
                 k = k.decode(HTTP_HEADER_ENCODING)
 
             self.META[f'HTTP_{k.upper()}'] = obj[key]
-            self.headers[k] = obj[k]
+            self.headers[k] = obj[key]
 
             if isinstance(self.headers[k], bytes):
                 self.headers[k] = self.headers[k].decode(HTTP_HEADER_ENCODING)
