@@ -360,17 +360,11 @@ if IS_TEST_ENV:
     }
 
 else:
-    # found.group(1) == 'locahost'
-    # found.group(2) == 6379
-    found = re.search(REDIS_URL_PATTERN, REDIS_URL)
-    if not found:
-        raise ValueError('The environment variable `REDIS_URL` is not setted')
-
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                'hosts': [(found.group(1), found.group(2))],
+                'hosts': [(REDIS_URL)],
             },
         },
     }
