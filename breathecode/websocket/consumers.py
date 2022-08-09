@@ -44,14 +44,16 @@ class OnlineStatusConsumer(AsyncJsonWebsocketConsumer):
 
     async def disconnect(self, close_code):
         currents = cache.get(self.groups['breathecode'])
-        currents.remove(self.scope['user'].id)
-        cache.set(self.groups['breathecode'], currents)
+        if self.scope['user'].id:
+            currents.remove(self.scope['user'].id)
+            cache.set(self.groups['breathecode'], currents)
 
         await self.channel_layer.group_discard(self.groups['user'], self.channel_name)
-        await self.channel_layer.group_send(self.groups['breathecode'], {
-            'type': 'disconnected',
-            'id': self.user_id
-        })
+        if self.scope['user'].id:
+            await self.channel_layer.group_send(self.groups['breathecode'], {
+                'type': 'disconnected',
+                'id': self.user_id
+            })
 
     async def history(self, event):
         currents = cache.get(self.groups['breathecode']) or []
