@@ -3,6 +3,8 @@ from rest_framework.response import Response
 
 __all__ = ['response_207']
 
+#TODO implement 404 case
+
 
 def format_response(data, key):
     response = {}
@@ -13,13 +15,20 @@ def format_response(data, key):
     if 'status_code' in data:
         response['status_code'] = data['status_code']
 
-    if 'queryset' in data:
+    if 'queryset' in data and 'status_code' in data and data['status_code'] == 404:
+        response['resources'] = [{
+            'pk': x,
+            'display_field': 'pk',
+            'display_value': x,
+        } for x in data['queryset']]
+
+    elif 'queryset' in data:
+
         response['resources'] = [{
             'pk': x.pk,
             'display_field': key,
             'display_value': getattr(x, key) if hasattr(x, key) else None,
         } for x in data['queryset']]
-
     return response
 
 

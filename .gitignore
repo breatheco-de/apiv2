@@ -165,3 +165,5 @@ dump.rdb
 # Test of render html
 /content.html
 /expected.html
+
+/core.*

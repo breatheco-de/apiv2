@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
 from django.contrib import messages
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils import ValidationException, capable_of, localize_query, GenerateLookupsMixin
+from breathecode.utils import ValidationException, capable_of, localize_query, GenerateLookupsMixin, response_207
 from breathecode.admissions.models import Academy, CohortUser, Cohort
 from breathecode.authenticate.models import Token
 from rest_framework.decorators import api_view, permission_classes
@@ -23,6 +23,7 @@ from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializ
                           FinalProjectGETSerializer, PostFinalProjectSerializer, PUTFinalProjectSerializer)
 from .actions import sync_cohort_tasks
 import breathecode.assignments.tasks as tasks
+from breathecode.utils.multi_status_response import MultiStatusResponse
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ class TaskTeacherView(APIView):
         if user is not None:
             items = items.filter(user__id__in=user.split(','))
 
-        # tasks these cohorts (not the users, but the tasts belong to the cohort)
+        # tasks these cohorts (not the users, but the tasks belong to the cohort)
         cohort = request.GET.get('cohort', None)
         if cohort is not None:
             cohorts = cohort.split(',')
@@ -331,7 +332,7 @@ class TaskMeView(APIView):
 
             item = Task.objects.filter(id=_id).first()
             if item is None:
-                raise ValidationException('Task not found', slug='task-not-found')
+                raise ValidationException('Task not found', slug='task-not-found', code=404)
             serializer = PUTTaskSerializer(item, data=data, context={'request': _req})
             if serializer.is_valid():
                 if not only_validate:
@@ -393,9 +394,14 @@ class TaskMeView(APIView):
     def delete(self, request, task_id=None):
 
         if task_id is not None:
-            item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+            item = Task.objects.filter(id=task_id).first()
             if item is None:
-                raise ValidationException('Task not found for this user', slug='task-not-found')
+                raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+            if item.user.id != request.user.id:
+                raise ValidationException('Task not found for this user',
+                                          code=400,
+                                          slug='task-not-found-for-this-user')
 
             item.delete()
 
@@ -404,8 +410,44 @@ class TaskMeView(APIView):
             if ids == '':
                 raise ValidationException('Missing querystring propery id for bulk delete tasks',
                                           slug='missing-id')
-            ids_to_delete = [id.strip() for id in ids.split(',')]
-            Task.objects.filter(id__in=ids_to_delete, user__id=request.user.id).delete()
+
+            ids_to_delete = [
+                int(id.strip()) if id.strip().isnumeric() else id.strip() for id in ids.split(',')
+            ]
+
+            all = Task.objects.filter(id__in=ids_to_delete)
+            do_not_belong = all.exclude(user__id=request.user.id)
+            belong = all.filter(user__id=request.user.id)
+
+            responses = []
+
+            for task in all:
+                if task.id in ids_to_delete:
+                    ids_to_delete.remove(task.id)
+
+            if belong:
+                responses.append(MultiStatusResponse(code=204, queryset=belong))
+
+            if do_not_belong:
+                responses.append(
+                    MultiStatusResponse('Task not found for this user',
+                                        code=400,
+                                        slug='task-not-found-for-this-user',
+                                        queryset=do_not_belong))
+
+            if ids_to_delete:
+                responses.append(
+                    MultiStatusResponse('Task not found',
+                                        code=404,
+                                        slug='task-not-found',
+                                        queryset=ids_to_delete))
+
+            if do_not_belong or ids_to_delete:
+                response = response_207(responses, 'associated_slug')
+                belong.delete()
+                return response
+
+            belong.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 

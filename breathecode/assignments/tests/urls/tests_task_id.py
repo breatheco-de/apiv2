@@ -116,10 +116,10 @@ class MediaTestSuite(AssignmentsTestCase):
         response = self.client.put(url)
 
         json = response.json()
-        expected = {'detail': 'task-not-found', 'status_code': 400}
+        expected = {'detail': 'task-not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
@@ -540,3 +540,73 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+    def test_delete_task_not_found(self):
+
+        model = self.bc.database.create(user=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
+        response = self.client.delete(url)
+
+        json = response.json()
+        expected = {'detail': 'task-not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+
+    def test_delete_task_found_and_deleted(self):
+
+        model = self.bc.database.create(user=1, task=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+
+    def test_delete_task_associated_with_another_user(self):
+
+        model = self.bc.database.create(user=2, task=1)
+        self.bc.request.authenticate(model.user[1])
+
+        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
+        response = self.client.delete(url)
+
+        json = response.json()
+        expected = {'detail': 'task-not-found-for-this-user', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+
+    # def test_update_task_not_found(self):
+    #     model = self.bc.database.create(user=1)
+    #     self.bc.request.authenticate(model.user)
+
+    #     url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
+    #     response = self.client.put(url)
+
+    #     json = response.json()
+    #     expected = {'detail': 'task-not-found', 'status_code': 404}
+
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    #     self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+
+    # def test_update_task_found_and_updated(self):
+    #     model = self.bc.database.create(user=1, task=1)
+    #     self.bc.request.authenticate(model.user)
+
+    #     url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
+    #     response = self.client.put(url)
+
+    #     json = response.json()
+    #     expected = {'detail': '', 'status_code': 200}
+
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+    #     self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
