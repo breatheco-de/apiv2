@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 from pathlib import Path
+import re
 import django_heroku
 import dj_database_url
 import json
@@ -68,7 +69,9 @@ INSTALLED_APPS = [
     'breathecode.mentorship',
     'breathecode.career',
     'breathecode.commons',
+    'breathecode.websocket',
     'explorer',
+    'channels',
 ]
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
@@ -306,13 +309,13 @@ def cache_opts(is_test_env):
         }
 
 
-is_test_env = os.getenv('ENV') == 'test'
+IS_TEST_ENV = os.getenv('ENV') == 'test'
 CACHES = {
     'default': {
         'BACKEND':
-        'django.core.cache.backends.locmem.LocMemCache' if is_test_env else 'django_redis.cache.RedisCache',
-        'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
-        # **cache_opts(is_test_env),
+        'django.core.cache.backends.locmem.LocMemCache' if IS_TEST_ENV else 'django_redis.cache.RedisCache',
+        'LOCATION': 'breathecode' if IS_TEST_ENV else [REDIS_URL],
+        # **cache_opts(IS_TEST_ENV),
     },
 }
 
@@ -323,9 +326,6 @@ CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 SITE_ID = 1
-
-_locals = locals()
-django_heroku.settings(_locals)
 
 # Change 'default' database configuration with $DATABASE_URL.
 # https://github.com/jacobian/dj-database-url#url-schema
@@ -347,3 +347,27 @@ with open(sql_keywords_path, 'r') as f:
     # breathecode/sql_keywords.json
 
     EXPLORER_SQL_BLACKLIST = tuple(sql_keywords['blacklist'])
+
+# Websocket
+ASGI_APPLICATION = 'breathecode.asgi.application'
+REDIS_URL_PATTERN = r'^redis://(.+):(\d+)$'
+
+if IS_TEST_ENV:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
+
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [(REDIS_URL)],
+            },
+        },
+    }
+
+# keep last part of the file
+django_heroku.settings(locals())

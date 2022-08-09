@@ -3,27 +3,24 @@ import re
 import urllib.parse
 import breathecode.notify.actions as notify_actions
 from datetime import timezone, timedelta
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import update_session_auth_hash
 from rest_framework.response import Response
 from django.db.models import Q
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
-from django.urls import resolve
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status, serializers
-from django.contrib.auth.models import User, Group, AnonymousUser
+from django.contrib.auth.models import User, AnonymousUser
 from django.contrib import messages
 from rest_framework.authtoken.views import ObtainAuthToken
-from urllib.parse import urlencode, parse_qs, urlparse, parse_qsl
+from urllib.parse import urlencode, parse_qs
 from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 from django.utils import timezone
-from datetime import datetime
 from django.db.models.functions import Now
 
 from breathecode.mentorship.models import MentorProfile
@@ -50,7 +47,6 @@ from .models import (
 from .actions import reset_password, resend_invite, generate_academy_token, update_gitpod_users, set_gitpod_user_expiration
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.notify.actions import send_email_message
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from breathecode.utils.views import private_view, render_message, set_query_parameter
