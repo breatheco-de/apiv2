@@ -298,6 +298,8 @@ CORS_ALLOW_HEADERS = [
 REDIS_URL = os.getenv('REDIS_URL', '')
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
+IS_REDIS_WITH_SSL = REDIS_URL.startswith('rediss://')
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -318,6 +320,9 @@ if IS_TEST_ENV:
         'LOCATION': 'breathecode',
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
+
+elif not IS_REDIS_WITH_SSL:
+    del CACHES['default']['OPTIONS']
 
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
@@ -359,6 +364,9 @@ heroku_redis_ssl_host = {
     'address': REDIS_URL,  # The 'rediss' schema denotes a SSL connection.
     'ssl': ssl_context
 }
+
+if not IS_REDIS_WITH_SSL:
+    del heroku_redis_ssl_host['ssl']
 
 CHANNEL_LAYERS = {
     'default': {
