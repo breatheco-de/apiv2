@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import os
 from pathlib import Path
 import re
+import ssl
 import django_heroku
 import dj_database_url
 import json
@@ -351,11 +352,19 @@ with open(sql_keywords_path, 'r') as f:
 ASGI_APPLICATION = 'breathecode.asgi.application'
 REDIS_URL_PATTERN = r'^redis://(.+):(\d+)$'
 
+ssl_context = ssl.SSLContext()
+ssl_context.check_hostname = False
+
+heroku_redis_ssl_host = {
+    'address': REDIS_URL,  # The 'rediss' schema denotes a SSL connection.
+    'ssl': ssl_context
+}
+
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [(REDIS_URL)],
+            'hosts': (heroku_redis_ssl_host, ),
         },
     },
 }
