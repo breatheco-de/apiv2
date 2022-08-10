@@ -7,7 +7,7 @@ from celery.signals import task_failure
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'breathecode.settings')
-REDIS_URL = os.getenv('REDIS_URL', None)
+REDIS_URL = os.getenv('REDIS_URL', '')
 
 # fix ssl error
 kwargs = {} if REDIS_URL.startswith('redis://') else {
@@ -34,7 +34,7 @@ app.conf.update(BROKER_URL=REDIS_URL, CELERY_RESULT_BACKEND=REDIS_URL, namespace
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 
-if bool(os.environ.get('CELERY_WORKER_RUNNING', False)) and REDIS_URL is not None:
+if bool(os.environ.get('CELERY_WORKER_RUNNING', False)) and REDIS_URL:
     from django.conf import settings
     import rollbar
     rollbar.init(**settings.ROLLBAR)
