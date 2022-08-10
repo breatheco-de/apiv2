@@ -298,6 +298,8 @@ CORS_ALLOW_HEADERS = [
 REDIS_URL = os.getenv('REDIS_URL', '')
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
+IS_REDIS_WITH_SSL = REDIS_URL.startswith('rediss://')
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -319,6 +321,9 @@ if IS_TEST_ENV:
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
 
+elif not IS_REDIS_WITH_SSL:
+    del CACHES['default']['OPTIONS']
+
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
 # Simplified static file serving.
@@ -330,7 +335,7 @@ SITE_ID = 1
 # Change 'default' database configuration with $DATABASE_URL.
 # https://github.com/jacobian/dj-database-url#url-schema
 DATABASES = {
-    'default': dj_database_url.config(default=DATABASE_URL),
+    'default': dj_database_url.config(default=DATABASE_URL, ssl_require=False),
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
@@ -360,6 +365,9 @@ heroku_redis_ssl_host = {
     'ssl': ssl_context
 }
 
+if not IS_REDIS_WITH_SSL:
+    del heroku_redis_ssl_host['ssl']
+
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -377,4 +385,4 @@ if IS_TEST_ENV:
     }
 
 # keep last part of the file
-django_heroku.settings(locals())
+django_heroku.settings(locals(), databases=False)
