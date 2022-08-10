@@ -296,28 +296,27 @@ CORS_ALLOW_HEADERS = [
 
 REDIS_URL = os.getenv('REDIS_URL', '')
 
-
-def cache_opts(is_test_env):
-    if is_test_env:
-        return {'OPTIONS': {}}
-    else:
-        return {
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                'PARSER_CLASS': 'redis.connection.HiredisParser',
-            }
-        }
-
-
 IS_TEST_ENV = os.getenv('ENV') == 'test'
 CACHES = {
     'default': {
-        'BACKEND':
-        'django.core.cache.backends.locmem.LocMemCache' if IS_TEST_ENV else 'django_redis.cache.RedisCache',
-        'LOCATION': 'breathecode' if IS_TEST_ENV else [REDIS_URL],
-        # **cache_opts(IS_TEST_ENV),
-    },
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'ssl_cert_reqs': None
+            },
+        }
+    }
 }
+
+if IS_TEST_ENV:
+    del CACHES['default']['options']
+    CACHES['default'] = {
+        **CACHES['default'],
+        'LOCATION': 'breathecode',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
 
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
@@ -352,21 +351,20 @@ with open(sql_keywords_path, 'r') as f:
 ASGI_APPLICATION = 'breathecode.asgi.application'
 REDIS_URL_PATTERN = r'^redis://(.+):(\d+)$'
 
-if IS_TEST_ENV:
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(REDIS_URL)],
         },
-    }
+    },
+}
 
-else:
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                'hosts': [(REDIS_URL)],
-            },
-        },
+if IS_TEST_ENV:
+    del CHANNEL_LAYERS['default']['CONFIG']
+    CHANNEL_LAYERS['default'] = {
+        **CHANNEL_LAYERS['default'],
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
     }
 
 # keep last part of the file
