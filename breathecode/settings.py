@@ -311,7 +311,7 @@ CACHES = {
 }
 
 if IS_TEST_ENV:
-    del CACHES['default']['options']
+    del CACHES['default']['OPTIONS']
     CACHES['default'] = {
         **CACHES['default'],
         'LOCATION': 'breathecode',
