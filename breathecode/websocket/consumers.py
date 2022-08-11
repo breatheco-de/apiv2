@@ -43,6 +43,7 @@ class OnlineStatusConsumer(AsyncJsonWebsocketConsumer):
         })
 
     async def disconnect(self, close_code):
+        print("self.groups['breathecode']", type(self.groups['breathecode']), self.groups['breathecode'])
         currents = cache.get(self.groups['breathecode'])
         if self.scope['user'].id:
             currents.remove(self.scope['user'].id)
