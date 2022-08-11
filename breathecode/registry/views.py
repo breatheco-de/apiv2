@@ -1,12 +1,17 @@
+import re
 import requests, logging, os
 from pathlib import Path
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
+
+from breathecode.media.models import Media, MediaResolution
+from breathecode.media.views import media_gallery_bucket
+from breathecode.services.google_cloud.function import Function
 from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword, AssetComment
-from .actions import test_syllabus, test_asset, pull_from_github, test_asset
+from .actions import AssetThumbnailGenerator, test_syllabus, test_asset, pull_from_github, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
@@ -109,6 +114,10 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
     """
     extensions = APIViewExtensions(cache=TechnologyCache, sort='-slug', paginate=True)
 
+    def _has_valid_parent(self):
+        regex = r'^(?:\d+,)*(?:\d+)$'
+        return bool(re.findall(regex, self.request.GET.get('parent', '')))
+
     @capable_of('read_technology')
     def get(self, request, academy_id=None):
         handler = self.extensions(request)
@@ -119,7 +128,8 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         items = AssetTechnology.objects.all()
         lookup = {}
 
-        if 'include_children' not in self.request.GET or self.request.GET['include_children'] != 'true':
+        has_valid_parent = self._has_valid_parent()
+        if self.request.GET.get('include_children') != 'true' and not has_valid_parent:
             items = items.filter(parent__isnull=True)
 
         if 'language' in self.request.GET:
@@ -134,13 +144,22 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         else:
             lookup['visibility'] = 'PUBLIC'
 
-        if 'parent' in self.request.GET:
-            parents = self.request.GET.get('parent')
-            lookup['parent__id__in'] = [p.upper() for p in param.split(',')]
+        if has_valid_parent:
+            param = self.request.GET.get('parent')
+            lookup['parent__id__in'] = [int(p) for p in param.split(',')]
 
         like = request.GET.get('like', None)
         if like is not None and like != 'undefined' and like != '':
             items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        if slug := request.GET.get('slug'):
+            lookup['slug__in'] = slug.split(',')
+
+        if asset_slug := request.GET.get('asset_slug'):
+            lookup['featured_asset__slug__in'] = asset_slug.split(',')
+
+        if asset_type := request.GET.get('asset_type'):
+            lookup['featured_asset__asset_type__in'] = asset_type.split(',')
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -165,7 +184,6 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         elif tech_slug is not None:
             lookups['slug__in'] = [tech_slug]
 
-        print(lookups)
         techs = AssetTechnology.objects.filter(**lookups)
         _count = techs.count()
         if _count == 0:
@@ -322,6 +340,22 @@ def get_config(request, asset_slug):
         raise ValidationException(f'Config file invalid or not found for {asset.url}',
                                   code=404,
                                   slug='config_not_found')
+
+
+class AssetThumbnailView(APIView):
+    """
+    get:
+        Get asset thumbnail.
+    """
+    def get(self, request, asset_slug):
+        width = int(request.GET.get('width', '0'))
+        height = int(request.GET.get('height', '0'))
+
+        asset = Asset.objects.filter(slug=asset_slug).first()
+        generator = AssetThumbnailGenerator(asset, width, height)
+
+        url, permanent = generator.get_thumbnail_url()
+        return redirect(url, permanent=permanent)
 
 
 # Create your views here.
