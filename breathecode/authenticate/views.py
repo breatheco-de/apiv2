@@ -463,7 +463,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
 
 class StudentView(APIView, GenerateLookupsMixin):
-    extensions = APIViewExtensions(paginate=True)
+    extensions = APIViewExtensions(paginate=True, sort='-created_at')
 
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id_or_email=None):
