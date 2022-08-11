@@ -60,6 +60,7 @@ class AsyncWsCanAuth:
             user, token = await WsCanAuth.async_get_token(request)
 
         except Exception as e:
+            print(e)
             await self.accept()
             await self.send_json({'details': e.detail, 'status_code': e.status_code}, close=True)
             return
