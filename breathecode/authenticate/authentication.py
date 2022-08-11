@@ -15,6 +15,11 @@ class ExpiringTokenAuthentication(TokenAuthentication):
     def authenticate_credentials(self, key, request=None):
         print('request', request)
         print('key', key)
+        x = Token.objects.filter(key=key).first()
+        if x:
+            print('token data', vars(Token.objects.filter(key=key).first()))
+        else:
+            print('token not found')
         token = Token.objects.select_related('user').filter(key=key).first()
         print('token', token)
         if token is None:
