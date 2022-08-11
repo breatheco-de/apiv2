@@ -16,16 +16,14 @@ class CohortConsumer(AsyncJsonWebsocketConsumer):
 @ws_can_auth
 class OnlineStatusConsumer(AsyncJsonWebsocketConsumer):
     permission_classes = [AllowAny]
+    groups = {'breathecode': f'breathecode-online-status'}
 
     async def connect(self):
         await self.setup()
         await self.accept()
 
         self.user_id = self.scope['user'].id
-        self.groups = {
-            'breathecode': f'breathecode-online-status',
-            'user': self.get_user_group_name(scopes=['breathecode']),
-        }
+        self.groups['user'] = self.get_user_group_name(scopes=['breathecode'])
 
         # Join room group
         for room_name in self.groups.values():
