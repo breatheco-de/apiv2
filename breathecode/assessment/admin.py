@@ -1,11 +1,8 @@
 import logging
 from django.contrib import admin, messages
-from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import CohortAdmin
-from .models import Assessment, UserAssessment, UserProxy, Question, Option, Answer
+from .models import Assessment, UserAssessment, UserProxy, Question, Option
 from .actions import send_assestment
-# from .tasks import send_cohort_survey
 
 logger = logging.getLogger(__name__)
 

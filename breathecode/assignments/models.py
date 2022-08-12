@@ -19,6 +19,7 @@ REVISION_STATUS = (
     (PENDING, 'Pending'),
     (APPROVED, 'Approved'),
     (REJECTED, 'Rejected'),
+    (IGNORED, 'Ignored'),
 )
 
 PROJECT = 'PROJECT'

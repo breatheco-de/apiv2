@@ -21,13 +21,13 @@ class Function:
         resolve_credentials()
         self.service_url = f'{region}-{project_id}.cloudfunctions.net/{name}'
 
-    def call(self, data=None):
+    def call(self, data=None) -> requests.models.Response:
         """Call a Google Cloud Function
             Args:
-                data (dict): Arguments of Google Cloud Function
+                data (dict): Arguments of Google Cloud Function.
 
             Returns:
-                Response (dict): Google Cloud Function response
+                Response: Google Cloud Function response.
         """
         from google.oauth2.id_token import fetch_id_token
 
@@ -45,5 +45,4 @@ class Function:
         logger.info(f'Cloud function {self.service_url}')
         logger.info(request.content.decode('utf-8'))
 
-        res = request.json()
-        return res
+        return request

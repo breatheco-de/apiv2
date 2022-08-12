@@ -21,7 +21,7 @@ def format_datetime(self, date):
     return self.bc.datetime.to_iso_string(date)
 
 
-def get_serializer(self, mentorship_session, mentor_profile, mentorship_service, user, data={}):
+def get_serializer(self, mentorship_session, mentor_profile, mentorship_service, user, academy, data={}):
     return {
         'accounted_duration': mentorship_session.accounted_duration,
         'allow_billing': mentorship_session.allow_billing,
@@ -35,19 +35,32 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
         },
         'mentee_left_at': mentorship_session.mentee_left_at,
         'mentor': {
-            'booking_url': mentor_profile.booking_url,
-            'id': mentor_profile.id,
-            'service': {
+            'booking_url':
+            mentor_profile.booking_url,
+            'id':
+            mentor_profile.id,
+            'services': [{
+                'academy': {
+                    'icon_url': academy.icon_url,
+                    'id': academy.id,
+                    'logo_url': academy.logo_url,
+                    'name': academy.name,
+                    'slug': academy.slug,
+                },
                 'allow_mentee_to_extend':
                 mentorship_service.allow_mentee_to_extend,
                 'allow_mentors_to_extend':
                 mentorship_service.allow_mentors_to_extend,
                 'duration':
                 self.bc.datetime.from_timedelta(mentorship_service.duration),
+                'created_at':
+                self.bc.datetime.to_iso_string(mentorship_service.created_at),
                 'id':
                 mentorship_service.id,
                 'language':
                 mentorship_service.language,
+                'logo_url':
+                mentorship_service.logo_url,
                 'max_duration':
                 self.bc.datetime.from_timedelta(mentorship_service.max_duration),
                 'missed_meeting_duration':
@@ -58,9 +71,13 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
                 mentorship_service.slug,
                 'status':
                 mentorship_service.status,
-            },
-            'slug': mentor_profile.slug,
-            'status': mentor_profile.status,
+                'updated_at':
+                self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+            }],
+            'slug':
+            mentor_profile.slug,
+            'status':
+            mentor_profile.status,
             'user': {
                 'email': user.email,
                 'first_name': user.first_name,
@@ -92,6 +109,7 @@ def post_serializer(data={}):
         'mentee': None,
         'mentee_left_at': None,
         'mentor': 1,
+        'service': None,
         'mentor_joined_at': None,
         'mentor_left_at': None,
         'name': None,
@@ -118,6 +136,7 @@ def mentorship_session_columns(data={}):
         'latitude': None,
         'longitude': None,
         'mentee_id': None,
+        'service_id': None,
         'mentee_left_at': None,
         'mentor_id': 1,
         'mentor_joined_at': None,
@@ -247,6 +266,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                            model.mentor_profile,
                            model.mentorship_service,
                            model.user,
+                           model.academy,
                            data={}),
         ]
 
@@ -283,6 +303,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                            model.mentor_profile,
                            model.mentorship_service,
                            model.user,
+                           model.academy,
                            data={}) for mentorship_session in mentorship_session_list
         ]
 
@@ -370,12 +391,14 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                model.mentor_profile,
                                model.mentorship_service,
                                model.user,
+                               model.academy,
                                data={'status': second_status}),
                 get_serializer(self,
                                mentorship_session_list[1],
                                model.mentor_profile,
                                model.mentorship_service,
                                model.user,
+                               model.academy,
                                data={'status': first_status}),
             ]
 
@@ -444,6 +467,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                            model.mentor_profile,
                            model.mentorship_service,
                            model.user,
+                           model.academy,
                            data={}),
         ]
 
@@ -504,6 +528,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                            model.mentor_profile,
                            model.mentorship_service,
                            model.user,
+                           model.academy,
                            data={}),
         ]
 
@@ -571,6 +596,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                            model.mentor_profile,
                            model.mentorship_service,
                            model.user,
+                           model.academy,
                            data={}),
         ]
 
@@ -610,6 +636,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                model.mentor_profile,
                                model.mentorship_service,
                                model.user,
+                               model.academy,
                                data={}),
             ]
 
@@ -677,6 +704,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                            model.mentor_profile,
                            model.mentorship_service,
                            model.user,
+                           model.academy,
                            data={}),
         ]
 
@@ -717,6 +745,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                model.mentor_profile,
                                model.mentorship_service,
                                model.user,
+                               model.academy,
                                data={}),
             ]
 
@@ -732,7 +761,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
     def test__get__with_four_elements__padding_bad_mentor(self):
         mentorship_sessions = [{'mentee_id': x, 'mentor_id': x} for x in range(1, 5)]
-        mentor_profiles = [{'user_id': x, 'service_id': x} for x in range(1, 5)]
+        mentor_profiles = [{'user_id': x, 'services': [x]} for x in range(1, 5)]
         model = self.bc.database.create(user=4,
                                         role=1,
                                         capability='read_mentorship_session',
@@ -759,7 +788,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
     def test__get__with_four_elements__padding_mentor(self):
         mentorship_sessions = [{'mentee_id': x, 'mentor_id': x} for x in range(1, 5)]
-        mentor_profiles = [{'user_id': x, 'service_id': x} for x in range(1, 5)]
+        mentor_profiles = [{'user_id': x, 'services': [x]} for x in range(1, 5)]
         model = self.bc.database.create(user=4,
                                         role=1,
                                         capability='read_mentorship_session',
@@ -781,12 +810,14 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                            model.mentor_profile[2],
                            model.mentorship_service[2],
                            model.user[2],
+                           model.academy,
                            data={}),
             get_serializer(self,
                            model.mentorship_session[0],
                            model.mentor_profile[0],
                            model.mentorship_service[0],
                            model.user[0],
+                           model.academy,
                            data={}),
         ]
 
@@ -863,7 +894,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.post(url)
 
         json = response.json()
-        expected = {'mentor': ['This field is required.']}
+        expected = {'mentor': ['This field is required.'], 'service': ['This field is required.']}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -878,22 +909,23 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_session')
-        data = {'mentor': 1}
+        data = {'mentor': 1, 'service': 1}
         response = self.client.post(url, data)
 
         json = response.json()
-        expected = post_serializer()
+        expected = post_serializer({'service': 1})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
-            mentorship_session_columns(),
+            mentorship_session_columns({'service_id': 1}),
         ])
 
     """
@@ -906,6 +938,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -913,6 +946,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         data = {
             'mentor': 1,
+            'service': 1,
             # readonly fields
             'created_at': utc_now,
             'updated_at': utc_now,
@@ -924,12 +958,12 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.post(url, data)
 
         json = response.json()
-        expected = post_serializer()
+        expected = post_serializer({'service': 1})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
-            mentorship_session_columns(),
+            mentorship_session_columns({'service_id': 1}),
         ])
 
     """
@@ -942,6 +976,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -951,6 +986,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         for field in fields:
             data = {
                 'mentor': 1,
+                'service': 1,
                 'is_online': True,
                 # readonly fields
                 field: self.bc.datetime.to_iso_string(append_delta_to_datetime(utc_now)),
@@ -972,6 +1008,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -984,6 +1021,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             date = append_delta_to_datetime(utc_now)
             data = {
                 'mentor': 1,
+                'service': 1,
                 'is_online': False,
                 # readonly fields
                 field: self.bc.datetime.to_iso_string(date),
@@ -995,6 +1033,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             json = response.json()
             expected = post_serializer({
                 'id': id,
+                'service': 1,
                 field: self.bc.datetime.to_iso_string(date),
             })
 
@@ -1003,6 +1042,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
                 mentorship_session_columns({
                     'id': id,
+                    'service_id': 1,
                     field: date,
                 }),
             ])
@@ -1021,6 +1061,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
                                         mentorship_bill=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -1031,6 +1072,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         ends_at = append_delta_to_datetime(utc_now)
         data = {
             'mentor': 1,
+            'service': 1,
             'mentee': 1,
             'bill': 1,
             'name': self.bc.fake.name(),
@@ -1058,7 +1100,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        fields = ['bill', 'mentee', 'mentor']
+        fields = ['bill', 'mentee', 'mentor', 'service']
         for field in fields:
             data[f'{field}_id'] = data[field]
             del data[field]

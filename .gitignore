@@ -4,6 +4,7 @@
 
 ### Django ###
 *.log
+core.[0-9]*
 *.pot
 *.pyc
 .temp

@@ -1,16 +1,31 @@
 """
 Test /answer
 """
-from django.utils import timezone
-from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
 from rest_framework import status
-
-from breathecode.services.google_cloud import Datastore
-
 from ..mixins import AssignmentsTestCase
+
+
+def get_serializer(self, task, user):
+    return {
+        'associated_slug': task.associated_slug,
+        'created_at': self.bc.datetime.to_iso_string(task.created_at),
+        'github_url': task.github_url,
+        'id': task.id,
+        'live_url': task.live_url,
+        'revision_status': task.revision_status,
+        'task_status': task.task_status,
+        'task_type': task.task_type,
+        'title': task.title,
+        'description': task.description,
+        'user': {
+            'first_name': user.first_name,
+            'id': user.id,
+            'last_name': user.last_name
+        }
+    }
 
 
 class MediaTestSuite(AssignmentsTestCase):
@@ -59,22 +74,7 @@ class MediaTestSuite(AssignmentsTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = {
-            'associated_slug': model.task.associated_slug,
-            'github_url': model.task.github_url,
-            'id': model.task.id,
-            'live_url': model.task.live_url,
-            'revision_status': model.task.revision_status,
-            'task_status': model.task.task_status,
-            'task_type': model.task.task_type,
-            'title': model.task.title,
-            'description': model.task.description,
-            'user': {
-                'first_name': model.user.first_name,
-                'id': model.user.id,
-                'last_name': model.user.last_name
-            }
-        }
+        expected = get_serializer(self, model.task, model.user)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -311,53 +311,70 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
 
-        task = {'revision_status': 'PENDING', 'user_id': 1, 'task_status': 'DONE'}
-        cohort_users = [{'role': 'STUDENT', 'user_id': 1}, {'role': 'TEACHER', 'user_id': 2}]
-        model = self.bc.database.create(user=2, task=task, cohort=1, cohort_user=cohort_users)
-        model2 = self.bc.database.create(cohort=1)
-        self.bc.request.authenticate(model.user[1])
+        statuses = ['PENDING', 'APPROVED', 'REJECTED', 'IGNORED']
+        for index in range(0, 4):
+            current_status = statuses[index]
+            next_status = statuses[index - 1 if index > 0 else 3]
+            task = {'revision_status': current_status, 'user_id': (index * 2) + 1, 'task_status': 'DONE'}
+            cohort_users = [
+                {
+                    'role': 'STUDENT',
+                    'user_id': (index * 2) + 1,
+                },
+                {
+                    'role': 'TEACHER',
+                    'user_id': (index * 2) + 2,
+                },
+            ]
+            model = self.bc.database.create(user=2, task=task, cohort=1, cohort_user=cohort_users)
+            model2 = self.bc.database.create(cohort=1)
+            self.bc.request.authenticate(model.user[1])
 
-        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
-        data = {
-            'title': 'They killed kenny',
-            'revision_status': 'APPROVED',
-        }
-        start = self.bc.datetime.now()
-        response = self.client.put(url, data, format='json')
-        end = self.bc.datetime.now()
+            url = reverse_lazy('assignments:task_id', kwargs={'task_id': index + 1})
+            data = {
+                'title': 'They killed kenny',
+                'revision_status': next_status,
+            }
+            start = self.bc.datetime.now()
+            response = self.client.put(url, data, format='json')
+            end = self.bc.datetime.now()
 
-        json = response.json()
-        updated_at = self.bc.datetime.from_iso_string(json['updated_at'])
-        self.bc.check.datetime_in_range(start, end, updated_at)
-        del json['updated_at']
-        del json['cohort']
+            json = response.json()
+            updated_at = self.bc.datetime.from_iso_string(json['updated_at'])
+            self.bc.check.datetime_in_range(start, end, updated_at)
+            del json['updated_at']
+            del json['cohort']
 
-        expected = {
-            'github_url': model.task.github_url,
-            'created_at': self.bc.datetime.to_iso_string(model.task.created_at),
-            'id': model.task.id,
-            'task_type': model.task.task_type,
-            'associated_slug': model.task.associated_slug,
-            'description': model.task.description,
-            'live_url': model.task.live_url,
-            'revision_status': model.task.revision_status,
-            'task_status': model.task.task_status,
-            **data,
-            'associated_slug': model.task.associated_slug,
-            'task_type': model.task.task_type,
-        }
+            expected = {
+                'github_url': model.task.github_url,
+                'created_at': self.bc.datetime.to_iso_string(model.task.created_at),
+                'id': model.task.id,
+                'task_type': model.task.task_type,
+                'associated_slug': model.task.associated_slug,
+                'description': model.task.description,
+                'live_url': model.task.live_url,
+                'revision_status': next_status,
+                'task_status': model.task.task_status,
+                **data,
+                'associated_slug': model.task.associated_slug,
+                'task_type': model.task.task_type,
+            }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'),
-                         [{
-                             **self.bc.format.to_dict(model.task),
-                             **data,
-                             'associated_slug': model.task.associated_slug,
-                         }])
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                             [{
+                                 **self.bc.format.to_dict(model.task),
+                                 **data,
+                                 'associated_slug': model.task.associated_slug,
+                             }])
 
-        self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
-        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+            self.assertEqual(student_task_notification.delay.call_args_list, [call(index + 1)])
+            self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+            # teardown
+            self.bc.database.delete('assignments.Task')
+            student_task_notification.delay.call_args_list = []
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
