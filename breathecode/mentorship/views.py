@@ -696,21 +696,37 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('read_mentorship_session')
     def put(self, request, academy_id=None, session_id=None):
-        session = MentorshipSession.objects.filter(id=session_id,
-                                                   mentor__service__academy__id=academy_id).first()
-        if session is None:
-            raise ValidationException('This session does not exist on this academy', code=404)
 
-        data = {}
-        for key in request.data.keys():
-            data[key] = request.data.get(key)
+        many = isinstance(request.data, list)
+        if not many:
+            current = MentorshipSession.objects.filter(id=session_id,
+                                                       mentor__service__academy__id=academy_id).first()
+            if current is None:
+                raise ValidationException('This session does not exist on this academy', code=404)
 
-        serializer = SessionPUTSerializer(session,
+            data = {}
+            for key in request.data.keys():
+                data[key] = request.data.get(key)
+        else:
+            data = request.data
+            current = []
+            index = -1
+            for x in request.data:
+                index = index + 1
+
+                if 'id' in x:
+                    current.append(MentorshipSession.objects.filter(id=x['id']).first())
+
+                else:
+                    raise ValidationException('Cannot determine session in ' f'index {index}')
+
+        serializer = SessionPUTSerializer(current,
                                           data=data,
                                           context={
                                               'request': request,
                                               'academy_id': academy_id
-                                          })
+                                          },
+                                          many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
