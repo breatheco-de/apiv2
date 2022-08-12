@@ -110,7 +110,7 @@ def generate_slug_based_on_calendly(modeladmin, request, queryset):
 @admin.register(MentorProfile)
 class MentorAdmin(admin.ModelAdmin):
     form = MentorForm
-    list_display = ['slug', 'user', 'name', 'email', 'current_status', 'unique_url', 'meet_url']
+    list_display = ['slug', 'user', 'name', 'email', 'current_status', 'unique_url', 'meet_url', 'academy']
     raw_id_fields = ['user', 'services']
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email', 'slug']
     list_filter = ['services__academy__slug', 'status', 'services__slug']
