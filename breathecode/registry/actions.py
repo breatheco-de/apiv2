@@ -496,6 +496,7 @@ def sync_learnpack_asset(github, asset):
             for tech_slug in config['technologies']:
                 technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
+
     return asset
 
 
