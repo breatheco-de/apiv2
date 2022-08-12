@@ -88,7 +88,9 @@ class PostTaskSerializer(serializers.ModelSerializer):
         if _task is not None:
             return _task
 
-        return Task.objects.create(**validated_data)
+        instance = Task.objects.create(**validated_data)
+
+        return instance
 
 
 class PUTTaskSerializer(serializers.ModelSerializer):
