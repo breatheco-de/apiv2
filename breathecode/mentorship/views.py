@@ -546,7 +546,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
             serializer = GETMentorBigSerializer(mentor)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        items = MentorProfile.objects.filter(services__academy__id=academy_id)
+        items = MentorProfile.objects.filter(academy__id=academy_id)
         lookup = {}
 
         if 'services' in self.request.GET:

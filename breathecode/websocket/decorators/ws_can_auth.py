@@ -50,16 +50,22 @@ class AsyncWsCanAuth:
         found_headers = [
             x for x in self.scope['headers'] if x[0] == b'authorization' or x[0] == 'authorization'
         ]
+        print(found_headers)
         if not found_headers:
             return await connect(self)
 
         key, value = found_headers[0]
+        print('before fake request')
         request = FakeRequest({key: value})
+        print('after fake request')
 
         try:
+            print('before call async_get_token')
             user, token = await WsCanAuth.async_get_token(request)
+            print('after call async_get_token')
 
         except Exception as e:
+            print(e)
             await self.accept()
             await self.send_json({'details': e.detail, 'status_code': e.status_code}, close=True)
             return
@@ -69,6 +75,7 @@ class AsyncWsCanAuth:
 
     @database_sync_to_async
     def async_get_token(self, request: FakeRequest) -> tuple[Token, bool]:
+        print('in async_get_token')
         return ExpiringTokenAuthentication().authenticate(request)
 
 
@@ -85,11 +92,14 @@ class WsCanAuth(SyncWsCanAuth, AsyncWsCanAuth):
         self.connect = cls.connect
         connect = cls.connect
 
+        print('is async', self.is_async)
+
         if self.is_async:
             cls.connect = lambda self: WsCanAuth.async_wrapper(self, cls, connect)
         else:
             cls.connect = lambda self: WsCanAuth.sync_wrapper(self, cls, connect)
 
+        print('after connect', self.is_async)
         WsCanAuth.as_asgi = self.cls.as_asgi
 
 
