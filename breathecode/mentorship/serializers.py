@@ -260,6 +260,9 @@ class BillSessionSerializer(serpy.Serializer):
     def get_tooltip(self, obj):
         service = obj.service
 
+        if service is None:
+            return 'Please ser service for this mentorship'
+
         message = f'This mentorship should last no longer than {int(service.duration.seconds/60)} min. <br />'
         if obj.started_at is None:
             message += 'The mentee never joined the session. <br />'
@@ -318,6 +321,9 @@ class BillSessionSerializer(serpy.Serializer):
 
         if (obj.ended_at - obj.started_at).days > 1:
             return f'Many days of extra time, probably it was never closed'
+
+        if obj.service is None:
+            return 'Please setup service for this session'
 
         if (obj.ended_at - obj.started_at) > obj.service.duration:
             extra_time = (obj.ended_at - obj.started_at) - obj.service.duration
