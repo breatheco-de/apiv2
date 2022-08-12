@@ -167,7 +167,7 @@ class BigBillSerializer(GETBillSmallSerializer):
     def get_unfinished_sessions(self, obj):
         _sessions = MentorshipSession.objects.filter(
             mentor=obj.mentor, bill__isnull=True, allow_billing=True,
-            bill__academy=obj.service.academy).exclude(status__in=['COMPLETED', 'FAILED'])
+            bill__academy=obj.academy).exclude(status__in=['COMPLETED', 'FAILED'])
         return BillSessionSerializer(_sessions, many=True).data
 
     def get_public_url(self, obj):
