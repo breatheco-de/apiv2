@@ -1,4 +1,4 @@
-import base64, frontmatter, markdown, pathlib, logging
+import base64, frontmatter, markdown, pathlib, logging, re, hashlib, json
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
@@ -361,6 +361,24 @@ class Asset(models.Model):
                               path=self.slug)
         error.save()
         return error
+
+    def get_tasks(self):
+
+        if self.readme is None:
+            return []
+
+        regex = r'\-\s\[(?P<status>[\sxX-])\]\s(?P<label>.+)'
+        findings = list(re.finditer(regex, self.get_readme()['decoded']))
+        tasks = []
+        while len(findings) > 0:
+            task_find = findings.pop(0)
+            task = task_find.groupdict()
+            task['id'] = int(hashlib.sha1(task['label'].encode('utf-8')).hexdigest(), 16) % (10**8)
+            task['status'] = 'DONE' if 'status' in task and task['status'].strip().lower(
+            ) == 'x' else 'PENDING'
+
+            tasks.append(task)
+        return tasks
 
     @staticmethod
     def get_by_slug(asset_slug, request=None, asset_type=None):

@@ -1,4 +1,4 @@
-import logging, json, os, re, pathlib
+import logging, json, os, re, pathlib, hashlib
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -418,6 +418,7 @@ def sync_learnpack_asset(github, asset):
             for tech_slug in config['technologies']:
                 technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
+
     return asset
 
 

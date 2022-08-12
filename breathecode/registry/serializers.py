@@ -1,4 +1,4 @@
-from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology
+from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework import serializers
@@ -14,6 +14,14 @@ class ProfileSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     github_username = serpy.Field()
+
+
+class KeywordSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
 
 
 class UserSerializer(serpy.Serializer):
@@ -173,6 +181,12 @@ class _Keyword(serpy.Serializer):
 class KeywordClusterSerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
+    lang = serpy.Field()
+
+
+class KeywordClusterBigSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
     academy = AcademySmallSerializer()
     lang = serpy.Field()
 
@@ -216,6 +230,12 @@ class PostAssetSerializer(serializers.ModelSerializer):
             raise ValidationException('Asset alias already exists with this slug')
 
         return validated_data
+
+
+class PostKeywordClusterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KeywordCluster
+        exclude = ()
 
 
 class TechnologyPUTSerializer(serializers.ModelSerializer):

@@ -160,10 +160,8 @@ class BigBillSerializer(GETBillSmallSerializer):
 
     def get_unfinished_sessions(self, obj):
         _sessions = MentorshipSession.objects.filter(
-            mentor=obj.mentor,
-            bill__isnull=True,
-            allow_billing=True,
-            bill__academy=obj.mentor.service.academy).exclude(status__in=['COMPLETED', 'FAILED'])
+            mentor=obj.mentor, bill__isnull=True, allow_billing=True,
+            bill__academy=obj.service.academy).exclude(status__in=['COMPLETED', 'FAILED'])
         return BillSessionSerializer(_sessions, many=True).data
 
     def get_public_url(self, obj):
@@ -252,7 +250,7 @@ class BillSessionSerializer(serpy.Serializer):
 
     def get_tooltip(self, obj):
 
-        message = f'This mentorship should last no longer than {int(obj.mentor.service.duration.seconds/60)} min. <br />'
+        message = f'This mentorship should last no longer than {int(obj.service.duration.seconds/60)} min. <br />'
         if obj.started_at is None:
             message += 'The mentee never joined the session. <br />'
         else:
@@ -266,8 +264,8 @@ class BillSessionSerializer(serpy.Serializer):
 
             if obj.ended_at is not None:
                 message += f'The mentorship lasted {duration_to_str(obj.ended_at - obj.started_at)}. <br />'
-                if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
-                    extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
+                if (obj.ended_at - obj.started_at) > obj.service.duration:
+                    extra_time = (obj.ended_at - obj.started_at) - obj.service.duration
                     message += f'With extra time of {duration_to_str(extra_time)}. <br />'
                 else:
                     message += f'No extra time detected <br />'
@@ -309,9 +307,9 @@ class BillSessionSerializer(serpy.Serializer):
         if (obj.ended_at - obj.started_at).days > 1:
             return f'Many days of extra time, probably it was never closed'
 
-        if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
-            extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
-            return f'Extra time of {duration_to_str(extra_time)}, the expected duration was {duration_to_str(obj.mentor.service.duration)}'
+        if (obj.ended_at - obj.started_at) > obj.service.duration:
+            extra_time = (obj.ended_at - obj.started_at) - obj.service.duration
+            return f'Extra time of {duration_to_str(extra_time)}, the expected duration was {duration_to_str(obj.service.duration)}'
         else:
             return None
 
