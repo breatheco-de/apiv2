@@ -13,20 +13,10 @@ class ExpiringTokenAuthentication(TokenAuthentication):
     and password for new one to be created.
     '''
     def authenticate_credentials(self, key, request=None):
-        print('request', request)
-        print('key', key)
-        x = Token.objects.filter(key=key).first()
-        if x:
-            print('token data', vars(Token.objects.filter(key=key).first()))
-        else:
-            print('token not found')
         token = Token.objects.select_related('user').filter(key=key).first()
-        print('token', token)
         if token is None:
             raise AuthenticationFailed({'error': 'Invalid or Inactive Token', 'is_authenticated': False})
 
-        print('after Invalid or Inactive Token')
-        print('user is active', token.user.is_active)
         if not token.user.is_active:
             raise AuthenticationFailed({'error': 'Invalid or inactive user', 'is_authenticated': False})
 

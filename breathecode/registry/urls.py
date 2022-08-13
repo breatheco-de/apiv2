@@ -25,7 +25,7 @@ urlpatterns = [
     path('academy/keyword', AcademyKeywordView.as_view()),
     path('academy/keyword/<str:keyword_slug>', AcademyKeywordView.as_view()),
     path('academy/keywordcluster', AcademyKeywordClusterView.as_view()),
-    path('academy/keywordcluster/<str:keyword_slug>', AcademyKeywordClusterView.as_view()),
+    path('academy/keywordcluster/<str:cluster_slug>', AcademyKeywordClusterView.as_view()),
     path('category', get_categories),
     path('technology', get_technologies),
     path('academy/technology', AcademyTechnologyView.as_view(), name='academy_technology'),
