@@ -28,7 +28,6 @@ class SyncWsCanAuth:
         except Exception as e:
             if not hasattr(e, 'detail'):
                 print(traceback.print_exc())
-
                 self.accept()
                 self.send_json({'details': str(e), 'status_code': 500}, close=True)
                 return
