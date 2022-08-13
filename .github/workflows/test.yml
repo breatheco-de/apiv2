@@ -20,6 +20,21 @@ jobs:
         with:
           python-version: 3.10.2
 
+      - name: Python cache
+        id: python_cache
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: pip-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('Pipfile.lock') }}
+
+      - if: steps.python_cache.outputs.cache-hit != 'true'
+        run: |
+          python3 -m venv .venv
+
+      - name: Activate Virtual Environment
+        run: |
+          source .venv/bin/activate
+
       - name: Install dependencies
         run: |
           PYTHONUNBUFFERED=1
