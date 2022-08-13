@@ -23,7 +23,9 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
                           KeywordClusterSerializer, AcademyAssetSerializer, AssetPUTSerializer,
                           AcademyCommentSerializer, PostAssetCommentSerializer, PutAssetCommentSerializer,
-                          AssetBigTechnologySerializer, TechnologyPUTSerializer, KeywordSmallSerializer)
+                          AssetBigTechnologySerializer, TechnologyPUTSerializer, KeywordSmallSerializer,
+                          KeywordClusterBigSerializer, PostKeywordClusterSerializer, PostKeywordSerializer,
+                          PUTKeywordSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
@@ -753,12 +755,15 @@ class AcademyKeywordView(APIView, GenerateLookupsMixin):
         if cache is not None:
             return Response(cache, status=status.HTTP_200_OK)
 
-        items = AssetKeyword.objects.filter(asset__academy__id=academy_id)
+        items = AssetKeyword.objects.filter(academy__id=academy_id)
         lookup = {}
 
         if 'cluster' in self.request.GET:
             param = self.request.GET.get('cluster')
-            lookup['cluster__slug__in'] = [p.lower() for p in param.split(',')]
+            if param == 'null':
+                lookup['cluster'] = None
+            else:
+                lookup['cluster__slug__in'] = [p.lower() for p in param.split(',')]
 
         like = request.GET.get('like', None)
         if like is not None and like != 'undefined' and like != '':
@@ -770,47 +775,38 @@ class AcademyKeywordView(APIView, GenerateLookupsMixin):
         serializer = KeywordSmallSerializer(items, many=True)
         return handler.response(serializer.data)
 
-    # @capable_of('crud_keyword')
-    # def post(self, request, academy_id=None):
+    @capable_of('crud_keyword')
+    def post(self, request, academy_id=None):
 
-    #     payload = {**request.data, 'author': request.user.id}
+        payload = {**request.data}
 
-    #     serializer = PostAssetCommentSerializer(data=payload,
-    #                                             context={
-    #                                                 'request': request,
-    #                                                 'academy': academy_id
-    #                                             })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         serializer = AcademyCommentSerializer(serializer.instance)
-    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = PostKeywordSerializer(data=payload, context={'request': request, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            serializer = AssetKeywordSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # @capable_of('crud_keyword')
-    # def put(self, request, comment_id, academy_id=None):
+    @capable_of('crud_keyword')
+    def put(self, request, keyword_slug, academy_id=None):
 
-    #     if comment_id is None:
-    #         raise ValidationException('Missing comment_id')
+        keywd = AssetKeyword.objects.filter(slug=keyword_slug, academy__id=academy_id).first()
+        if keywd is None:
+            raise ValidationException('This keyword does not exist for this academy', 404)
 
-    #     comment = AssetComment.objects.filter(id=comment_id, asset__academy__id=academy_id).first()
-    #     if comment is None:
-    #         raise ValidationException('This comment does not exist for this academy', 404)
+        data = {**request.data}
 
-    #     data = {**request.data}
-    #     if 'status' in request.data and request.data['status'] == 'UNASSIGNED':
-    #         data['author'] = None
-
-    #     serializer = PutAssetCommentSerializer(comment,
-    #                                            data=data,
-    #                                            context={
-    #                                                'request': request,
-    #                                                'academy': academy_id
-    #                                            })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         serializer = AcademyCommentSerializer(serializer.instance)
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = PUTKeywordSerializer(keywd,
+                                          data=data,
+                                          context={
+                                              'request': request,
+                                              'academy': academy_id
+                                          })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = AssetKeywordSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # @capable_of('crud_keyword')
     # def delete(self, request, comment_id=None, academy_id=None):
@@ -875,31 +871,27 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # @capable_of('crud_keyword')
-    # def put(self, request, comment_id, academy_id=None):
+    @capable_of('crud_keywordcluster')
+    def put(self, request, cluster_slug, academy_id=None):
 
-    #     if comment_id is None:
-    #         raise ValidationException('Missing comment_id')
+        cluster = KeywordCluster.objects.filter(slug=cluster_slug, academy__id=academy_id).first()
+        if cluster is None:
+            raise ValidationException('This cluster does not exist for this academy', 404)
 
-    #     comment = AssetComment.objects.filter(id=comment_id, asset__academy__id=academy_id).first()
-    #     if comment is None:
-    #         raise ValidationException('This comment does not exist for this academy', 404)
+        data = {**request.data}
+        remove_academy = data.pop('academy', False)
 
-    #     data = {**request.data}
-    #     if 'status' in request.data and request.data['status'] == 'UNASSIGNED':
-    #         data['author'] = None
-
-    #     serializer = PutAssetCommentSerializer(comment,
-    #                                            data=data,
-    #                                            context={
-    #                                                'request': request,
-    #                                                'academy': academy_id
-    #                                            })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         serializer = AcademyCommentSerializer(serializer.instance)
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = PostKeywordClusterSerializer(cluster,
+                                                  data=data,
+                                                  context={
+                                                      'request': request,
+                                                      'academy': academy_id
+                                                  })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = KeywordClusterBigSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # @capable_of('crud_keyword')
     # def delete(self, request, comment_id=None, academy_id=None):

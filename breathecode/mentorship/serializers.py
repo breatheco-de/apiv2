@@ -50,6 +50,12 @@ class GetUserSmallSerializer(serpy.Serializer):
     profile = ProfileSerializer(required=False)
 
 
+class GETServiceTinySerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
 class GETServiceSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -79,6 +85,7 @@ class GETSessionSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     mentor = GETMentorTinySerializer()
+    service = GETServiceTinySerializer(required=False)
     mentee = GetUserSmallSerializer(required=False)
     started_at = serpy.Field()
     ended_at = serpy.Field()

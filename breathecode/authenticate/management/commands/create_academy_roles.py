@@ -288,6 +288,14 @@ CAPABILITIES = [
         'description': 'Update, create and delete asset technologies'
     },
     {
+        'slug': 'read_keyword',
+        'description': 'Read SEO keywords'
+    },
+    {
+        'slug': 'crud_keyword',
+        'description': 'Update, create and delete SEO keywords'
+    },
+    {
         'slug': 'read_keywordcluster',
         'description': 'Update, create and delete asset technologies'
     },
@@ -368,6 +376,7 @@ ROLES = [
             'read_keywordcluster',
             'read_member',
             'read_media',
+            'read_keyword',
             'read_my_academy',
             'read_asset',
             'crud_asset',
@@ -484,10 +493,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Syllabus Coordinator',
         'caps':
-        extend(roles, ['staff']) + [
-            'crud_syllabus', 'crud_media', 'crud_asset', 'read_asset', 'read_keywordcluster',
-            'crud_keywordcluster'
-        ]
+        extend(roles, ['staff']) +
+        ['crud_syllabus', 'crud_media', 'crud_asset', 'read_asset', 'read_keywordcluster', 'read_keyword']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
@@ -502,8 +509,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset', 'read_keywordcluster',
-            'crud_keywordcluster'
+            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset', 'read_keywordcluster', 'read_keyword'
         ]
     })
     roles.append({
@@ -514,7 +520,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff', 'community_manager']) + [
             'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
-            'crud_tag'
+            'crud_tag', 'crud_keyword', 'crud_keywordcluster'
         ]
     })
     roles.append({
