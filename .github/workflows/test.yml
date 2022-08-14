@@ -27,15 +27,17 @@ jobs:
       - name: Install dependencies
         run: pipenv install --dev
 
-      - name: Install dependencies
-        run: |
-          PYTHONUNBUFFERED=1
-          python -m pip install --upgrade pip
-          python -m pip install pipenv
-          pipenv install --dev --system --deploy --ignore-pipfile
+      # - name: Install dependencies
+      #   run: |
+      #     PYTHONUNBUFFERED=1
+      #     python -m pip install --upgrade pip
+      #     python -m pip install pipenv
+      #     pipenv install --dev --system --deploy --ignore-pipfile
+
       - name: Test with pytest
         run: |
           pipenv run pcov_ci
+
       - uses: codecov/codecov-action@v3
         if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
         with:
