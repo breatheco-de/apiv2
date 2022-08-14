@@ -25,22 +25,9 @@ jobs:
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
 
       - name: Install dependencies
-        run: pipenv install --dev
-
-      - run: |
-          ls .
-          ls ..
-          ls ../..
-          which python
-          which pipenv
-          pipenv requirements --dev
-
-      # - name: Install dependencies
-      #   run: |
-      #     PYTHONUNBUFFERED=1
-      #     python -m pip install --upgrade pip
-      #     python -m pip install pipenv
-      #     pipenv install --dev --system --deploy --ignore-pipfile
+        run: |
+          PYTHONUNBUFFERED=1
+          pipenv install --dev --system --deploy --ignore-pipfile
 
       - name: Test with pytest
         run: |
