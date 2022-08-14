@@ -13,12 +13,19 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - name: Set up Python 3.10.2
-        uses: actions/setup-python@v2
+      - name: Set up Python 3.10.5
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.10.2
+          python-version: 3.10.5
+          cache: 'pipenv' # caching pip dependencies
+
+      - name: Install pipenv
+        run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
+
+      - name: Install dependencies
+        run: pipenv install --dev
 
       - name: Install dependencies
         run: |
@@ -29,7 +36,7 @@ jobs:
       - name: Test with pytest
         run: |
           pipenv run pcov_ci
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v3
         if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
