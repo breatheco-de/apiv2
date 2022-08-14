@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
-from .signals import assignment_created
+from . import signals
 from breathecode.admissions.models import Cohort
 
 __all__ = ['UserProxy', 'CohortProxy', 'Task']
@@ -66,7 +66,7 @@ class Task(models.Model):
         super().save(*args, **kwargs)
         # only validate this on creation
         if creating:
-            assignment_created.send(instance=self, sender=Task)
+            signals.assignment_created.send(instance=self, sender=Task)
 
 
 class UserProxy(User):

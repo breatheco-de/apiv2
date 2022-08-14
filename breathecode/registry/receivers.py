@@ -30,7 +30,7 @@ def post_asset_slug_modified(sender, instance: Asset, **kwargs):
         instance.lang = 'us'
 
     # create a new slug alias but keep the old one for redirection purposes
-    alias = AssetAlias.objects.create(slug=instance.slug, asset=instance)
+    AssetAlias.objects.get_or_create(slug=instance.slug, asset=instance)
 
     # add the asset as the first translation
     a = Asset.objects.get(id=instance.id)
