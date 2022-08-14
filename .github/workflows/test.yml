@@ -27,6 +27,14 @@ jobs:
       - name: Install dependencies
         run: pipenv install --dev
 
+      - run: |
+          cd .
+          cd ..
+          cd ../..
+          which python
+          which pipenv
+          pipenv requirements --dev
+
       # - name: Install dependencies
       #   run: |
       #     PYTHONUNBUFFERED=1
