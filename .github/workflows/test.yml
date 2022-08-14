@@ -28,9 +28,9 @@ jobs:
         run: pipenv install --dev
 
       - run: |
-          cd .
-          cd ..
-          cd ../..
+          ls .
+          ls ..
+          ls ../..
           which python
           which pipenv
           pipenv requirements --dev
