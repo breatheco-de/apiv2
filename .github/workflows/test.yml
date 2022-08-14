@@ -24,6 +24,8 @@ jobs:
       - name: Install pipenv
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
 
+      - run: pip freeze
+
       - name: Install dependencies
         run: |
           PYTHONUNBUFFERED=1
