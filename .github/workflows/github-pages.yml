@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           PYTHONUNBUFFERED=1
-          pipenv sync --dev
+          pipenv install --dev --system --deploy --ignore-pipfile
 
       - name: Deploy docs
         run: pipenv run mkdocs gh-deploy --force
