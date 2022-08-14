@@ -24,12 +24,6 @@ jobs:
       - name: Install pipenv
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
 
-      - run: ls ~/.cache
-      # - run: ~/.cache/pipenv
-      - run: python -m site
-      # - run: ls ~/.local/lib
-      # - run: ls ~/.local/lib/python3.10/site-packages
-
       - name: Install dependencies
         run: |
           PYTHONUNBUFFERED=1
