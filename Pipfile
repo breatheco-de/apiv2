@@ -90,3 +90,4 @@ lxml = "*"
 daphne = "*"
 twisted = {extras = ["http2", "tls"], version = "*"}
 nbconvert = "~=6.5.0"
+certifi = "*"
