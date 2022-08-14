@@ -24,14 +24,14 @@ jobs:
       - name: Install pipenv
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
 
-      - name: Install dependencies
+      - name: Install dependencies and run tests
         run: |
           PYTHONUNBUFFERED=1
           pipenv sync --dev
-
-      - name: Run tests
-        run: |
           pipenv run pcov_ci
+
+      # - name: Run tests
+      #   run: |
 
       - uses: codecov/codecov-action@v3
         if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
