@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           PYTHONUNBUFFERED=1
-          pipenv install --dev --system --deploy --ignore-pipfile
+          pipenv sync --dev
 
       - name: Linter
         run: |
