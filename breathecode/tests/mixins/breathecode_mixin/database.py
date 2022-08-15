@@ -91,7 +91,7 @@ class Database:
 
         return self.list_of(path, dict)
 
-    def delete(self, path: str, pk: Optional[int or str] = None) -> tuple[int, dict[str, int]]:
+    def delete(self, path: str, pk: Optional[int | str] = None) -> tuple[int, dict[str, int]]:
         """
         This is a wrapper for `Model.objects.filter(pk=pk).delete()`, delete a element if `pk` is provided else
         all the entries.
@@ -158,7 +158,7 @@ class Database:
         return result
 
     @database_sync_to_async
-    def async_get(self, path: str, pk: int or str, dict: bool = True) -> Model | dict[str, Any]:
+    def async_get(self, path: str, pk: int | str, dict: bool = True) -> Model | dict[str, Any]:
         """
         This is a wrapper for `Model.objects.filter(pk=pk).first()`, get the values of model as `dict` if
         `dict=True` else get the `Model` instance.
