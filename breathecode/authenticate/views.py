@@ -1931,7 +1931,7 @@ class ProfileMePictureView(APIView):
         if not len(files):
             raise ValidationException('empty files in request')
 
-        elif len(files) > 1:
+        if len(files) > 1:
             raise ValidationException('Just can upload one file at a time')
 
         # files validation below
@@ -1945,8 +1945,9 @@ class ProfileMePictureView(APIView):
 
         storage = Storage()
         cloud_file = storage.file(get_profile_bucket(), hash)
+        cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
 
-        if not cloud_file.exists():
+        if not cloud_file_thumbnail.exists():
             cloud_file.upload(file, content_type=file.content_type)
             func = FunctionV2(get_shape_of_image_url())
 
@@ -1965,8 +1966,10 @@ class ProfileMePictureView(APIView):
                 'bucket': get_profile_bucket(),
             })
 
+            cloud_file.delete()
+
         previous_avatar_url = profile.avatar_url or ''
-        profile.avatar_url = f'{cloud_file.url()}-100x100'
+        profile.avatar_url = cloud_file_thumbnail.url()
         profile.save()
 
         if previous_avatar_url != profile.avatar_url:
@@ -1977,9 +1980,6 @@ class ProfileMePictureView(APIView):
 
                 # remove the file when the last user remove their copy of the same image
                 if not Profile.objects.filter(avatar_url__contains=previous_hash).exists():
-                    cloud_file = storage.file(get_profile_bucket(), hash)
-                    cloud_file.delete()
-
                     cloud_file = storage.file(get_profile_bucket(), f'{hash}-100x100')
                     cloud_file.delete()
 

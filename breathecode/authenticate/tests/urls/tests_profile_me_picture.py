@@ -93,6 +93,12 @@ class AuthenticateTestSuite(AuthTestCase):
     🔽🔽🔽 Auth
     """
 
+    filename = ''
+
+    def tearDown(self):
+        if self.filename:
+            os.remove(self.filename)
+
     @patch('os.getenv',
            MagicMock(side_effect=apply_get_env({
                'PROFILE_BUCKET': 'https://dot.dot',
@@ -149,7 +155,8 @@ class AuthenticateTestSuite(AuthTestCase):
         file_name=PropertyMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+        url=MagicMock(
+            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch('os.getenv',
            MagicMock(side_effect=apply_get_env({
@@ -197,7 +204,8 @@ class AuthenticateTestSuite(AuthTestCase):
         file_name=PropertyMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+        url=MagicMock(
+            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch('os.getenv',
            MagicMock(side_effect=apply_get_env({
@@ -206,14 +214,14 @@ class AuthenticateTestSuite(AuthTestCase):
            })))
     def test__passing_file__file_exists(self):
         # random_image
-        file, filename = self.bc.random.file()
+        file, self.filename = self.bc.random.file()
 
         permission = {'codename': 'update_my_profile'}
         model = self.bc.database.create(user=1, permission=permission)
 
         self.bc.request.authenticate(model.user)
         url = reverse_lazy('authenticate:profile_me_picture')
-        response = self.client.put(url, {'name': filename, 'file': file})
+        response = self.client.put(url, {'name': self.filename, 'file': file})
 
         json = response.json()
         expected = {'detail': 'bad-file-format', 'status_code': 400}
@@ -232,9 +240,6 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(File.exists.call_args_list, [])
         self.assertEqual(File.url.call_args_list, [])
 
-        # teardown
-        os.remove(filename)
-
     """
     🔽🔽🔽 Put with Profile, passing file and exists in google cloud
     """
@@ -250,7 +255,8 @@ class AuthenticateTestSuite(AuthTestCase):
         file_name=PropertyMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+        url=MagicMock(
+            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch('os.getenv',
            MagicMock(side_effect=apply_get_env({
@@ -258,7 +264,7 @@ class AuthenticateTestSuite(AuthTestCase):
                'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
            })))
     def test__passing_file__with_profile__file_exists(self):
-        file, filename = self.bc.random.image(2, 2)
+        file, self.filename = self.bc.random.image(2, 2)
 
         permission = {'codename': 'update_my_profile'}
         model = self.bc.database.create(user=1, permission=permission, profile=1)
@@ -291,9 +297,6 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(File.exists.call_args_list, [call()])
         self.assertEqual(File.url.call_args_list, [call()])
 
-        # teardown
-        os.remove(filename)
-
     """
     🔽🔽🔽 Put with Profile, passing file and does'nt exists in google cloud, shape is square
     """
@@ -310,7 +313,8 @@ class AuthenticateTestSuite(AuthTestCase):
         delete=MagicMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=False),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+        url=MagicMock(
+            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch('os.getenv',
            MagicMock(side_effect=apply_get_env({
@@ -321,7 +325,7 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('requests.post', apply_requests_post_mock([(200, SHAPE_OF_URL, {'shape': 'Square'})]))
     @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
     def test__passing_file__with_profile__file_does_not_exists__shape_is_square(self):
-        file, filename = self.bc.random.image(2, 2)
+        file, self.filename = self.bc.random.image(2, 2)
 
         permission = {'codename': 'update_my_profile'}
         profile = {'avatar_url': f'https://blabla.bla/{self.bc.random.string(size=64, lower=True)}-100x100'}
@@ -356,9 +360,6 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(File.url.call_args_list, [call()])
         self.assertEqual(File.delete.call_args_list, [call(), call()])
 
-        # teardown
-        os.remove(filename)
-
     """
     🔽🔽🔽 Put with Profile, passing file and does'nt exists in google cloud, shape is not square
     """
@@ -375,7 +376,8 @@ class AuthenticateTestSuite(AuthTestCase):
         delete=MagicMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=False),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+        url=MagicMock(
+            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch('os.getenv',
            MagicMock(side_effect=apply_get_env({
@@ -392,7 +394,7 @@ class AuthenticateTestSuite(AuthTestCase):
         options.remove(width)
         height = options[0]
 
-        file, filename = self.bc.random.image(width, height)
+        file, self.filename = self.bc.random.image(width, height)
 
         permission = {'codename': 'update_my_profile'}
         profile = {'avatar_url': f'https://blabla.bla/{self.bc.random.string(size=64, lower=True)}-100x100'}
@@ -416,6 +418,3 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(File.exists.call_args_list, [call()])
         self.assertEqual(File.url.call_args_list, [])
         self.assertEqual(File.delete.call_args_list, [call()])
-
-        # teardown
-        os.remove(filename)
