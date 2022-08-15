@@ -1947,7 +1947,10 @@ class ProfileMePictureView(APIView):
         cloud_file = storage.file(get_profile_bucket(), hash)
         cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
 
-        if not cloud_file_thumbnail.exists():
+        if cloud_file_thumbnail.exists():
+            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+
+        else:
             cloud_file.upload(file, content_type=file.content_type)
             func = FunctionV2(get_shape_of_image_url())
 
@@ -1966,10 +1969,13 @@ class ProfileMePictureView(APIView):
                 'bucket': get_profile_bucket(),
             })
 
+            cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
+            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+
             cloud_file.delete()
 
         previous_avatar_url = profile.avatar_url or ''
-        profile.avatar_url = cloud_file_thumbnail.url()
+        profile.avatar_url = cloud_file_thumbnail_url
         profile.save()
 
         if previous_avatar_url != profile.avatar_url:
