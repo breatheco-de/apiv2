@@ -1956,7 +1956,7 @@ class ProfileMePictureView(APIView):
             logger.info(1111111111)
             logger.info(1111111111)
             if res.headers['Content-Type'].startswith('text/html'):
-                return Response(res.content, headers={'Content-Type': res.headers['Content-Type']})
+                return Response(res.content, content_type=res.headers['Content-Type'])
 
             json = res.json()
 
