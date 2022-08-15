@@ -1948,6 +1948,10 @@ class ProfileMePictureView(APIView):
 
             res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
             print(1111111111, res.content)
+            print(1111111111, res.headers)
+            if res.headers['content-type'] == 'text/html':
+                return Response(res.content, headers=res.headers)
+
             json = res.json()
 
             if json['shape'] != 'Square':
