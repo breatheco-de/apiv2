@@ -8,6 +8,7 @@ from breathecode.websocket.decorators import ws_can_auth
 
 @ws_can_auth
 class CohortConsumer(AsyncJsonWebsocketConsumer):
+
     async def connect(self):
         self.setup()
         await self.accept()
