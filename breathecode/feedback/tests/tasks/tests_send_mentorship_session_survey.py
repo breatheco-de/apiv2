@@ -202,6 +202,40 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         send_mentorship_session_survey.delay(1)
 
         self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
+        self.assertEqual(Logger.error.call_args_list, [
+            call('mentorship-session-not-have-a-service-associated-with-it'),
+        ])
+
+        fullname_of_mentor = (model.mentorship_session.mentor.user.first_name + ' ' +
+                              model.mentorship_session.mentor.user.last_name)
+
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+        self.assertEqual(self.bc.database.list_of('authenticate.Token'), [])
+
+    """
+    🔽🔽🔽 With MentorshipSession, User (mentee) and MentorshipService
+    """
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    def test_send_mentorship_session_survey__with_mentorship_session__with_mentee__with_mentorship_service(
+            self):
+        from logging import Logger
+
+        mentorship_session = {
+            'started_at': UTC_NOW,
+            'ended_at': UTC_NOW + timedelta(minutes=5, seconds=1),
+        }
+        model = self.bc.database.create(mentorship_session=mentorship_session, user=1, mentorship_service=1)
+
+        send_mentorship_session_survey.delay(1)
+
+        self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [])
 
         fullname_of_mentor = (model.mentorship_session.mentor.user.first_name + ' ' +
@@ -256,7 +290,10 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
             'started_at': UTC_NOW,
             'ended_at': UTC_NOW + timedelta(minutes=5, seconds=1),
         }
-        model = self.bc.database.create(mentorship_session=mentorship_session, user=1, answer=1)
+        model = self.bc.database.create(mentorship_session=mentorship_session,
+                                        user=1,
+                                        answer=1,
+                                        mentorship_service=1)
 
         send_mentorship_session_survey.delay(1)
 
@@ -307,7 +344,10 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
             'started_at': UTC_NOW,
             'ended_at': UTC_NOW + timedelta(minutes=5, seconds=1),
         }
-        model = self.bc.database.create(mentorship_session=mentorship_session, user=1, answer=answer)
+        model = self.bc.database.create(mentorship_session=mentorship_session,
+                                        user=1,
+                                        answer=answer,
+                                        mentorship_service=1)
 
         send_mentorship_session_survey.delay(1)
 

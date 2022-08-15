@@ -36,6 +36,8 @@ class TaskGETSerializer(serpy.Serializer):
     task_type = serpy.Field()
     user = UserSmallSerializer()
 
+    created_at = serpy.Field()
+
 
 class TaskGETDeliverSerializer(TaskGETSerializer):
     """The serializer schema definition."""
@@ -86,7 +88,9 @@ class PostTaskSerializer(serializers.ModelSerializer):
         if _task is not None:
             return _task
 
-        return Task.objects.create(**validated_data)
+        instance = Task.objects.create(**validated_data)
+
+        return instance
 
 
 class PUTTaskSerializer(serializers.ModelSerializer):

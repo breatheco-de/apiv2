@@ -243,7 +243,10 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             param = self.request.GET.get('lang')
             lookup['lang'] = param
 
-        items = items.filter(**lookup).order_by('status', '-created_at')
+        sort = self.request.GET.get('sort')
+        if sort is None:
+            sort = '-created_at'
+        items = items.filter(**lookup).order_by(sort)
 
         page = self.paginate_queryset(items, request)
         serializer = SurveySmallSerializer(page, many=True)

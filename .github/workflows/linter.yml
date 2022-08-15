@@ -12,19 +12,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Python 3.10.5
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.10.5
+          cache: 'pipenv' # caching pip dependencies
+
+      - name: Install pipenv
+        run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
 
       - name: Install dependencies
         run: |
           PYTHONUNBUFFERED=1
-          python -m pip install --upgrade pip
-          python -m pip install pipenv
-          pipenv install --system --deploy --ignore-pipfile --dev
+          pipenv install --dev --system --deploy --ignore-pipfile
 
       - name: Linter
         run: |

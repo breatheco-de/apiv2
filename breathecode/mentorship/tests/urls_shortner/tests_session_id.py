@@ -372,7 +372,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_form(self, model.mentorship_session, model.token, fix_logo=True)
+        expected = render_form(self, model.mentorship_session, model.token, fix_logo=False)
 
         # dump error in external files
         if content != expected:
@@ -412,7 +412,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_form(self, model.mentorship_session, model.token, fix_logo=True)
+        expected = render_form(self, model.mentorship_session, model.token, fix_logo=False)
 
         # dump error in external files
         if content != expected:

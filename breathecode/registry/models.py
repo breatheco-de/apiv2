@@ -1,4 +1,4 @@
-import base64, frontmatter, markdown, pathlib, logging
+import base64, frontmatter, markdown, pathlib, logging, re, hashlib, json
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
@@ -81,11 +81,28 @@ class KeywordCluster(models.Model):
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
+    landing_page_url = models.URLField(blank=True,
+                                       null=True,
+                                       default=None,
+                                       help_text='All keyword articles must point to this page')
     is_deprecated = models.BooleanField(
         default=False,
         help_text=
         'Used when you want to stop using this cluster, all previous articles will be kept but no new articles will be assigned'
     )
+
+    is_important = models.BooleanField(default=True)
+    is_urgent = models.BooleanField(default=True)
+
+    internal_description = models.TextField(default=None,
+                                            null=True,
+                                            blank=True,
+                                            help_text='How will be this cluster be used in the SEO strategy')
+
+    optimization_rating = models.FloatField(null=True,
+                                            blank=True,
+                                            default=None,
+                                            help_text='Automatically filled (1 to 100)')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -105,7 +122,20 @@ class AssetKeyword(models.Model):
                                 blank=True,
                                 null=True)
 
+    expected_monthly_traffic = models.FloatField(null=True,
+                                                 blank=True,
+                                                 default=None,
+                                                 help_text='You can get this info from Ahrefs or GKP')
+    difficulty = models.FloatField(null=True, blank=True, default=None, help_text='From 1 to 100')
+    is_important = models.BooleanField(default=True)
+    is_urgent = models.BooleanField(default=True)
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    optimization_rating = models.FloatField(null=True,
+                                            blank=True,
+                                            default=None,
+                                            help_text='Automatically filled (1 to 100)')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -362,6 +392,24 @@ class Asset(models.Model):
                               path=self.slug)
         error.save()
         return error
+
+    def get_tasks(self):
+
+        if self.readme is None:
+            return []
+
+        regex = r'\-\s\[(?P<status>[\sxX-])\]\s(?P<label>.+)'
+        findings = list(re.finditer(regex, self.get_readme()['decoded']))
+        tasks = []
+        while len(findings) > 0:
+            task_find = findings.pop(0)
+            task = task_find.groupdict()
+            task['id'] = int(hashlib.sha1(task['label'].encode('utf-8')).hexdigest(), 16) % (10**8)
+            task['status'] = 'DONE' if 'status' in task and task['status'].strip().lower(
+            ) == 'x' else 'PENDING'
+
+            tasks.append(task)
+        return tasks
 
     @staticmethod
     def get_by_slug(asset_slug, request=None, asset_type=None):

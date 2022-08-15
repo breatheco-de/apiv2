@@ -638,7 +638,7 @@ class StudentGetTestSuite(AuthTestCase):
             json = response.json()
             expected = [
                 format_profile_academy(self, profile_academy, model.role, model.academy)
-                for profile_academy in model.profile_academy
+                for profile_academy in reversed(model.profile_academy)
             ]
 
             self.assertEqual(json, expected)
@@ -662,7 +662,7 @@ class StudentGetTestSuite(AuthTestCase):
             json = response.json()
             expected = [
                 format_profile_academy(self, profile_academy, model.role, model.academy)
-                for profile_academy in model.profile_academy
+                for profile_academy in reversed(model.profile_academy)
             ]
 
             self.assertEqual(json, expected)
@@ -689,7 +689,7 @@ class StudentGetTestSuite(AuthTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['PaginationExtension']),
+            call(['PaginationExtension', 'SortExtension']),
         ])
 
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
@@ -706,7 +706,7 @@ class StudentGetTestSuite(AuthTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
-            call(paginate=True),
+            call(paginate=True, sort='-created_at'),
         ])
 
 
