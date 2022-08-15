@@ -1947,6 +1947,7 @@ class ProfileMePictureView(APIView):
             func = Function(region='us-central1', project_id='breathecode-197918', name='shape_of')
 
             res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
+            print(1111111111, res.content)
             json = res.json()
 
             if json['shape'] != 'Square':
