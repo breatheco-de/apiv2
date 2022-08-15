@@ -44,7 +44,7 @@ class FunctionV1:
         request = requests.post('https://' + self.service_url, data=data, headers=headers)
 
         logger.info(f'Cloud function {self.service_url}')
-        # logger.info(request.content.decode('utf-8'))
+        logger.info(request.content.decode('utf-8'))
 
         return request
 
