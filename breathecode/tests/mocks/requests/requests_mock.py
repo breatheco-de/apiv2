@@ -13,10 +13,6 @@ def request_mock(endpoints=[]):
                 or url == 'HEAD' or url == 'REQUEST'):
             url = args[0]
 
-        print('endpoints')
-        print(endpoints)
-        print(url)
-        print('endpoints')
         match = [(status, data) for (status, endpoint, data) in endpoints if url == endpoint]
 
         if match:

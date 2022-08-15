@@ -415,7 +415,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(len(File.upload.call_args_list), 1)
         self.assertEqual(File.exists.call_args_list, [call()])
         self.assertEqual(File.url.call_args_list, [])
-        self.assertEqual(File.delete.call_args_list, [])
+        self.assertEqual(File.delete.call_args_list, [call()])
 
         # teardown
         os.remove(filename)

@@ -1951,23 +1951,10 @@ class ProfileMePictureView(APIView):
             func = FunctionV2(get_shape_of_image_url())
 
             res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
-            # # print(1111111111, res.content)
-            # logger.info(1111111111)
-            # logger.info(1111111111)
-            # logger.info(1111111111)
-            # logger.info(res.headers)
-            # logger.info(1111111111)
-            # logger.info(1111111111)
-            # logger.info(1111111111)
-            if res.headers['Content-Type'].startswith('text/html'):
-                return Response(res.content.decode('utf-8'), content_type=res.headers['Content-Type'])
-
             json = res.json()
 
-            print(res.status_code)
-            print(get_shape_of_image_url(), res, json)
-
             if json['shape'] != 'Square':
+                cloud_file.delete()
                 raise ValidationException(f'just can upload square images', slug='not-square-image')
 
             func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='resize-image')
@@ -1984,7 +1971,6 @@ class ProfileMePictureView(APIView):
 
         if previous_avatar_url != profile.avatar_url:
             result = re.search(r'/(.{64})-100x100$', previous_avatar_url)
-            print(result, previous_avatar_url)
 
             if result:
                 previous_hash = result[1]
