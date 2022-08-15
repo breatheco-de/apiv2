@@ -43,6 +43,7 @@ mkdocs = "*"
 mkdocs-material = "*"
 mkdocstrings = "*"
 pytest-xdist = "*"
+mkdocstrings-python = "*"
 
 [packages]
 django = "~=3.2.15"
