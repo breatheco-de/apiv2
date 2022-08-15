@@ -1948,7 +1948,13 @@ class ProfileMePictureView(APIView):
 
             res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
             # print(1111111111, res.content)
-            print(1111111111, res.headers)
+            logger.info(1111111111)
+            logger.info(1111111111)
+            logger.info(1111111111)
+            logger.info(res.headers)
+            logger.info(1111111111)
+            logger.info(1111111111)
+            logger.info(1111111111)
             if res.headers['content-type'] == 'text/html':
                 return Response(res.content, headers=res.headers)
 
