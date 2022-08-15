@@ -16,7 +16,7 @@ from breathecode.tests.mocks.requests import apply_requests_post_mock
 from ..mixins.new_auth_test_case import AuthTestCase
 import numpy as np
 
-SHAPE_OF_URL = 'https://us-central1-breathecode-197918.cloudfunctions.net/shape_of'
+SHAPE_OF_URL = 'https://us-central1-breathecode-197918.cloudfunctions.net/shape-of-image'
 
 
 def put_serializer_creating(user, data={}):

@@ -1944,7 +1944,7 @@ class ProfileMePictureView(APIView):
 
         if not cloud_file.exists():
             cloud_file.upload(file, content_type=file.content_type)
-            func = Function(region='us-central1', project_id='breathecode-197918', name='shape_of')
+            func = Function(region='us-central1', project_id='breathecode-197918', name='shape-of-image')
 
             res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
             print(1111111111, res.content)
