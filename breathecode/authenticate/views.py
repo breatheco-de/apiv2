@@ -1947,7 +1947,7 @@ class ProfileMePictureView(APIView):
             func = Function(region='us-central1', project_id='breathecode-197918', name='shape-of-image')
 
             res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
-            print(1111111111, res.content)
+            # print(1111111111, res.content)
             print(1111111111, res.headers)
             if res.headers['content-type'] == 'text/html':
                 return Response(res.content, headers=res.headers)
