@@ -2,32 +2,26 @@ import re
 import requests, logging, os
 from pathlib import Path
 from django.shortcuts import redirect, render
-from django.utils import timezone
 from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
 
-from breathecode.media.models import Media, MediaResolution
-from breathecode.media.views import media_gallery_bucket
-from breathecode.services.google_cloud.function import Function
-from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword, AssetComment
+from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
+                     AssetKeyword, AssetComment)
 from .actions import AssetThumbnailGenerator, test_syllabus, test_asset, pull_from_github, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
 from .caches import AssetCache, AssetCommentCache, TechnologyCache, KeywordCache, KeywordClusterCache
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
-                          KeywordClusterSerializer, AcademyAssetSerializer, AssetPUTSerializer,
-                          AcademyCommentSerializer, PostAssetCommentSerializer, PutAssetCommentSerializer,
-                          AssetBigTechnologySerializer, TechnologyPUTSerializer, KeywordSmallSerializer,
-                          KeywordClusterBigSerializer, PostKeywordClusterSerializer, PostKeywordSerializer,
-                          PUTKeywordSerializer)
+                          AcademyAssetSerializer, AssetPUTSerializer, AcademyCommentSerializer,
+                          PostAssetCommentSerializer, PutAssetCommentSerializer, AssetBigTechnologySerializer,
+                          TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
+                          PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
-from breathecode.utils.views import private_view, render_message, set_query_parameter
+from breathecode.utils.views import render_message
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView

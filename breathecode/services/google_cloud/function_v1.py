@@ -4,10 +4,10 @@ from . import credentials
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['Function']
+__all__ = ['Function', 'FunctionV1']
 
 
-class Function:
+class FunctionV1:
     """Google Cloud Function handler"""
     client = None
 
@@ -47,3 +47,6 @@ class Function:
         # logger.info(request.content.decode('utf-8'))
 
         return request
+
+
+Function = FunctionV1

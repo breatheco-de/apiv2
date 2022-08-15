@@ -27,7 +27,7 @@ from rest_framework.parsers import FileUploadParser, MultiPartParser
 
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
-from breathecode.services.google_cloud.function import Function
+from breathecode.services.google_cloud import FunctionV1, FunctionV2
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils import response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -93,6 +93,10 @@ PROFILE_MIME_ALLOWED = ['image/png']
 
 def get_profile_bucket():
     return os.getenv('PROFILE_BUCKET', '')
+
+
+def get_shape_of_image_url():
+    return os.getenv('GCLOUD_SHAPE_OF_IMAGE', '')
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -1944,26 +1948,29 @@ class ProfileMePictureView(APIView):
 
         if not cloud_file.exists():
             cloud_file.upload(file, content_type=file.content_type)
-            func = Function(region='us-central1', project_id='breathecode-197918', name='shape-of-image')
+            func = FunctionV2(get_shape_of_image_url())
 
             res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
-            # print(1111111111, res.content)
-            logger.info(1111111111)
-            logger.info(1111111111)
-            logger.info(1111111111)
-            logger.info(res.headers)
-            logger.info(1111111111)
-            logger.info(1111111111)
-            logger.info(1111111111)
+            # # print(1111111111, res.content)
+            # logger.info(1111111111)
+            # logger.info(1111111111)
+            # logger.info(1111111111)
+            # logger.info(res.headers)
+            # logger.info(1111111111)
+            # logger.info(1111111111)
+            # logger.info(1111111111)
             if res.headers['Content-Type'].startswith('text/html'):
                 return Response(res.content.decode('utf-8'), content_type=res.headers['Content-Type'])
 
             json = res.json()
 
+            print(res.status_code)
+            print(get_shape_of_image_url(), res, json)
+
             if json['shape'] != 'Square':
                 raise ValidationException(f'just can upload square images', slug='not-square-image')
 
-            func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
+            func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='resize-image')
 
             res = func.call({
                 'width': 100,
