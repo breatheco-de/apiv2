@@ -110,10 +110,10 @@ def generate_slug_based_on_calendly(modeladmin, request, queryset):
 @admin.register(MentorProfile)
 class MentorAdmin(admin.ModelAdmin):
     form = MentorForm
-    list_display = ['slug', 'user', 'name', 'email', 'current_status', 'unique_url', 'meet_url']
-    raw_id_fields = ['user', 'service']
+    list_display = ['slug', 'user', 'name', 'email', 'current_status', 'unique_url', 'meet_url', 'academy']
+    raw_id_fields = ['user', 'services']
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email', 'slug']
-    list_filter = ['service__academy__slug', 'status', 'service__slug']
+    list_filter = ['services__academy__slug', 'status', 'services__slug']
     readonly_fields = ('token', )
     actions = [generate_bill, mark_as_active, generate_slug_based_on_calendly] + change_field(
         ['INNACTIVE', 'INVITED'], name='status')
@@ -177,7 +177,7 @@ class SessionAdmin(admin.ModelAdmin):
         'mentor__user__last_name', 'mentor__user__email'
     ]
     list_filter = [
-        BilledFilter, 'allow_billing', 'status', 'mentor__service__academy', 'mentor__service__slug'
+        BilledFilter, 'allow_billing', 'status', 'mentor__services__academy', 'mentor__services__slug'
     ]
     actions = [avoid_billing_this_session, allow_billing_this_session] + change_field(
         ['COMPLETED', 'FAILED', 'STARTED', 'PENDING'], name='status')

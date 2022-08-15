@@ -15,7 +15,7 @@ class MentorshipModelsMixin(ModelsMixin):
                                    **kwargs):
         models = models.copy()
 
-        if not 'mentorship_service' in models and (is_valid(mentorship_service) or is_valid(mentor_profile)):
+        if not 'mentorship_service' in models and (is_valid(mentorship_service)):
             kargs = {}
 
             if 'academy' in models:
@@ -31,8 +31,11 @@ class MentorshipModelsMixin(ModelsMixin):
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
             if 'mentorship_service' in models:
-                kargs['service'] = just_one(models['mentorship_service'])
+                kargs['services'] = get_list(models['mentorship_service'])
 
             if 'syllabus' in models:
                 kargs['syllabus'] = get_list(models['syllabus'])
@@ -64,6 +67,9 @@ class MentorshipModelsMixin(ModelsMixin):
 
             if 'mentorship_bill' in models:
                 kargs['bill'] = just_one(models['mentorship_bill'])
+
+            if 'mentorship_service' in models:
+                kargs['service'] = just_one(models['mentorship_service'])
 
             models['mentorship_session'] = create_models(mentorship_session, 'mentorship.MentorshipSession',
                                                          **kargs)

@@ -18,7 +18,7 @@ class ExpiringTokenAuthentication(TokenAuthentication):
             raise AuthenticationFailed({'error': 'Invalid or Inactive Token', 'is_authenticated': False})
 
         if not token.user.is_active:
-            raise AuthenticationFailed({'error': 'Invalid or innactive user', 'is_authenticated': False})
+            raise AuthenticationFailed({'error': 'Invalid or inactive user', 'is_authenticated': False})
 
         now = timezone.now()
         if token.expires_at is not None and token.expires_at < now:

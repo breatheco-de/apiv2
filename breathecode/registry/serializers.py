@@ -1,6 +1,7 @@
-from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology
+from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
@@ -14,6 +15,14 @@ class ProfileSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     github_username = serpy.Field()
+
+
+class KeywordSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
 
 
 class UserSerializer(serpy.Serializer):
@@ -171,6 +180,14 @@ class _Keyword(serpy.Serializer):
 
 
 class KeywordClusterSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+
+
+class KeywordClusterBigSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     academy = AcademySmallSerializer()
@@ -192,7 +209,7 @@ class AssetKeywordSerializer(serpy.Serializer):
     title = serpy.Field()
     lang = serpy.Field()
     academy = AcademySmallSerializer()
-    cluster = KeywordClusterSmallSerializer()
+    cluster = KeywordClusterSmallSerializer(required=False)
 
 
 class TechSerializer(serializers.ModelSerializer):
@@ -216,6 +233,53 @@ class PostAssetSerializer(serializers.ModelSerializer):
             raise ValidationException('Asset alias already exists with this slug')
 
         return validated_data
+
+
+class PostKeywordClusterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KeywordCluster
+        exclude = ('academy', )
+
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super(PostKeywordClusterSerializer, self).create({
+            **validated_data,
+            'academy': academy,
+        })
+
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
+class PostKeywordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetKeyword
+        exclude = ('academy', )
+
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super(PostKeywordSerializer, self).create({
+            **validated_data,
+            'academy': academy,
+        })
+
+
+class PUTKeywordSerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=False)
+    title = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
+
+    class Meta:
+        model = AssetKeyword
+        exclude = ('academy', )
+
+    def update(self, instance, validated_data):
+        print('update keyword serializer', validated_data)
+        return super().update(instance, validated_data)
 
 
 class TechnologyPUTSerializer(serializers.ModelSerializer):

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
 from .views import (TaskMeView, sync_cohort_tasks_view, TaskTeacherView, deliver_assignment_view,
-                    TaskMeDeliverView, FinalProjectMeView, CohortTaskView)
+                    TaskMeDeliverView, FinalProjectMeView, CohortTaskView, SubtaskMeView)
 
 app_name = 'assignments'
 urlpatterns = [
@@ -11,6 +11,7 @@ urlpatterns = [
     path('user/me/final_project', FinalProjectMeView.as_view(), name='user_me_final_project'),
     path('user/me/final_project/<int:project_id>', FinalProjectMeView.as_view(), name='user_me_project'),
     path('user/me/task/<int:task_id>', TaskMeView.as_view(), name='user_me_task_id'),
+    path('user/me/task/<int:task_id>/subtasks', SubtaskMeView.as_view(), name='user_me_task_id'),
     path('user/<int:user_id>/task', TaskMeView.as_view(), name='user_id_task'),
     path('user/<int:user_id>/task/<int:task_id>', TaskMeView.as_view(), name='user_id_task_id'),
     path('academy/cohort/<int:cohort_id>/task', CohortTaskView.as_view()),

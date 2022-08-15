@@ -218,7 +218,7 @@ class ActionGetScrapedDataOfPlatformTestCase(CareerTestCase):
         try:
             get_scraped_data_of_platform(None, DATA)
         except Exception as e:
-            self.assertEquals(str(e), ('without-spider'))
+            self.assertEqual(str(e), ('without-spider'))
             self.assertEqual(Logger.error.call_args_list, [
                 call('First you must specify a spider (get_scraped_data_of_platform)'),
                 call('Status 400 - without-spider')
@@ -234,7 +234,7 @@ class ActionGetScrapedDataOfPlatformTestCase(CareerTestCase):
         try:
             get_scraped_data_of_platform(model.spider, None)
         except Exception as e:
-            self.assertEquals(str(e), ('no-return-json-data'))
+            self.assertEqual(str(e), ('no-return-json-data'))
             self.assertEqual(Logger.error.call_args_list, [
                 call('I did not receive results from the API (get_scraped_data_of_platform)'),
                 call('Status 400 - no-return-json-data')
@@ -294,7 +294,7 @@ class ActionGetScrapedDataOfPlatformTestCase(CareerTestCase):
                 [call('https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json')])
 
         except Exception as e:
-            self.assertEquals(str(e), ('bad-response-fetch'))
+            self.assertEqual(str(e), ('bad-response-fetch'))
             self.assertEqual(Logger.error.call_args_list, [
                 call('There was a 400 error fetching spider 3 job 3 (get_scraped_data_of_platform)'),
                 call('Status 400 - bad-response-fetch')

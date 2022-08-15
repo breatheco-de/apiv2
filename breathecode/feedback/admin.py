@@ -1,11 +1,11 @@
 import logging
 import json
 from django.contrib import admin, messages
-from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin, AcademyAdmin
+from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
 from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey, Review, ReviewPlatform
-from .actions import send_question, send_survey_group, create_user_graduation_reviews
+from .actions import send_survey_group, create_user_graduation_reviews
+from . import actions
 from django.utils.html import format_html
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
@@ -22,7 +22,7 @@ def send_bulk_survey(modeladmin, request, queryset):
 
     for u in user:
         try:
-            send_question(u)
+            actions.send_question(u)
         except Exception as e:
             error = str(e)
 
@@ -57,7 +57,7 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
 
     for cu in cus:
         try:
-            send_question(cu.user, cu.cohort)
+            actions.send_question(cu.user, cu.cohort)
         except Exception as e:
             error = str(e)
 
