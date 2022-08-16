@@ -8,11 +8,13 @@ from django.core.validators import URLValidator
 
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment)
+
 from .actions import AssetThumbnailGenerator, test_syllabus, test_asset, pull_from_github, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
-from .caches import AssetCache, AssetCommentCache, TechnologyCache, KeywordCache, KeywordClusterCache
+from .caches import AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache
+
 from rest_framework.permissions import AllowAny
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
@@ -329,6 +331,8 @@ class AssetThumbnailView(APIView):
         Get asset thumbnail.
     """
 
+    permission_classes = [AllowAny]
+    
     def get(self, request, asset_slug):
         width = int(request.GET.get('width', '0'))
         height = int(request.GET.get('height', '0'))
