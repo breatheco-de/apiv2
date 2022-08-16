@@ -9,6 +9,7 @@ from ....management.commands.delete_duplicates import Command
 
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
+
     def test_delete_duplicates(self):
         """Test /academy/cohort without auth"""
         model = self.generate_models(cohort=True, user=True)

@@ -12,6 +12,7 @@ from ..mixins import RegistryTestCase
 
 
 class Response:
+
     def __init__(self, response, status_code):
         self.response = response
         self.status_code = status_code
@@ -31,6 +32,7 @@ FUNCTION_BAD_RESPONSE = Response({'status_code': 400, 'message': 'Bad response'}
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -41,6 +43,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
     🔽🔽🔽 Without Asset
     """
+
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test__without_asset(self):
@@ -56,8 +59,8 @@ class RegistryTestSuite(RegistryTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.function.Function.__init__', MagicMock(return_value=None))
-    @patch('breathecode.services.google_cloud.function.Function.call',
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_BAD_RESPONSE))
     def test__with_asset__bad_function_response(self):
         model = self.bc.database.create(asset=1)
@@ -76,8 +79,8 @@ class RegistryTestSuite(RegistryTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.function.Function.__init__', MagicMock(return_value=None))
-    @patch('breathecode.services.google_cloud.function.Function.call',
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_GOOD_RESPONSE))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
@@ -117,8 +120,8 @@ class RegistryTestSuite(RegistryTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.function.Function.__init__', MagicMock(return_value=None))
-    @patch('breathecode.services.google_cloud.function.Function.call',
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_GOOD_RESPONSE))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
@@ -149,8 +152,8 @@ class RegistryTestSuite(RegistryTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.function.Function.__init__', MagicMock(return_value=None))
-    @patch('breathecode.services.google_cloud.function.Function.call',
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_GOOD_RESPONSE))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),

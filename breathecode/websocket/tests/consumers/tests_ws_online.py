@@ -22,6 +22,7 @@ ROUTER = URLRouter([
 
 
 class ConsumerTestSuite(WebsocketTestCase):
+
     async def test__anonymous_user__not_emit_responses(self):
 
         communicator = WebsocketCommunicator(ROUTER, '/testws/test/')

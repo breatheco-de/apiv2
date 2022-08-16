@@ -26,6 +26,7 @@ permission2 = fake.slug()
 
 @ws_has_permission(permission1)
 class AsyncConsumer(AsyncJsonWebsocketConsumer):
+
     async def connect(self):
         await self.setup()
         await self.accept()
@@ -34,6 +35,7 @@ class AsyncConsumer(AsyncJsonWebsocketConsumer):
 
 @ws_has_permission(permission2)
 class SyncConsumer(SyncJsonWebsocketConsumer):
+
     def connect(self):
         self.setup()
         self.accept()
@@ -47,6 +49,7 @@ ROUTER = URLRouter([
 
 
 class ConsumerTestSuite(WebsocketTestCase):
+
     async def test__async__without_token(self):
 
         communicator = WebsocketCommunicator(ROUTER, 'testws/async/')

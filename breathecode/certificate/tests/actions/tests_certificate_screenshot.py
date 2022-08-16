@@ -27,6 +27,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """
     🔽🔽🔽 Zero UserSpecialty
     """
+
     @patch('requests.get',
            apply_requests_get_mock([
                (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
@@ -111,7 +112,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
             ])
 
-        self.assertEqual(File.upload.call_args_list, [call('mailgun response', public=True)])
+        self.assertEqual(File.upload.call_args_list, [call(b'mailgun response', public=True)])
         self.assertEqual(File.url.call_args_list, [call()])
 
     """
@@ -163,7 +164,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
             ])
 
-        self.assertEqual(File.upload.call_args_list, [call('mailgun response', public=True)])
+        self.assertEqual(File.upload.call_args_list, [call(b'mailgun response', public=True)])
         self.assertEqual(File.url.call_args_list, [call()])
 
     """

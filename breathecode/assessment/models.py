@@ -6,11 +6,13 @@ __all__ = ['UserProxy', 'Assessment', 'Question', 'Option', 'UserAssessment', 'A
 
 
 class UserProxy(User):
+
     class Meta:
         proxy = True
 
 
 class Assessment(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(Assessment, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug

@@ -13,6 +13,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     """
     🔽🔽🔽 With zero MentorshipBill
     """
+
     def test_with_zero_mentorship_bills(self):
         MentorshipBill = self.bc.database.get_model('mentorship.MentorshipBill')
         queryset = MentorshipBill.objects.filter()

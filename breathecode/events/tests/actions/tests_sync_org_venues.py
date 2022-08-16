@@ -12,6 +12,7 @@ sync_org_venues = actions.sync_org_venues
 
 
 def create_or_update_venue_mock(raise_error=False):
+
     def create_or_update_venue(self, *args, **kwargs):
         if raise_error:
             raise Exception('Random error getting')
@@ -23,6 +24,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without academy
     """
+
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([(200, get_eventbrite_venues_url('1'), EVENTBRITE_VENUES)]))

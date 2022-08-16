@@ -38,6 +38,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_task__without_auth(self):
         url = reverse_lazy('assignments:task')
         response = self.client.get(url)

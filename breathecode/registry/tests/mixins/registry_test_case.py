@@ -7,6 +7,7 @@ from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, Breathecod
 
 class RegistryTestCase(APITestCase, GenerateModelsMixin, CacheMixin, BreathecodeMixin):
     """FeedbackTestCase with auth methods"""
+
     def tearDown(self):
         self.clear_cache()
 

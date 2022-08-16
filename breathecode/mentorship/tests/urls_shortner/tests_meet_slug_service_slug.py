@@ -26,6 +26,7 @@ API_KEY = random.randint(1, 1000000000)
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -143,8 +144,8 @@ def mentor_serializer(mentor_profile, user, academy):
             'allow_mentors_to_extend': True,
             'max_duration': timedelta(seconds=7200),
             'missed_meeting_duration': timedelta(seconds=600),
-            'created_at':...,
-            'updated_at':...,
+            'created_at': ...,
+            'updated_at': ...,
             'description': None
         },
         'status': mentor_profile.status,
@@ -166,7 +167,7 @@ def session_serializer(mentor_profile, user, academy, mentorship_service):
         'started_at': None,
         'ended_at': None,
         'starts_at': None,
-        'ends_at':...,
+        'ends_at': ...,
         'mentor_joined_at': None,
         'mentor_left_at': None,
         'mentee_left_at': None,
@@ -370,6 +371,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_without_auth(self):
         url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
                            kwargs={

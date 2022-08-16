@@ -7,6 +7,7 @@ class LeadTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Create with ActiveCampaignAcademy
     """
+
     @patch('breathecode.marketing.tasks.add_downloadable_slug_as_acp_tag.delay', MagicMock())
     def test_downloadable_saved__create__with_active_campaign_academy(self):
         """Test /downloadable/:id/user without auth"""

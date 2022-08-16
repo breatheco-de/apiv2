@@ -9,6 +9,7 @@ from ..mixins import MarketingTestCase
 
 class DownloadableTestSuite(MarketingTestCase):
     """Test /downloadable"""
+
     def test_downloadable_slug_without_data(self):
         """Test /downloadable to check if it returns an empty list"""
         url = reverse_lazy('marketing:single_downloadable', kwargs={'slug': 'test'})

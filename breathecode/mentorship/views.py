@@ -126,6 +126,7 @@ def pick_mentorship_service(request, token, mentor_slug):
 
 
 class ForwardMeetUrl:
+
     def __init__(self, request, mentor_slug, service_slug, token):
         self.request = request
         self.mentor_slug = mentor_slug
@@ -718,7 +719,8 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
                     current.append(MentorshipSession.objects.filter(id=x['id']).first())
 
                 else:
-                    raise ValidationException('Cannot determine session in ' f'index {index}')
+                    raise ValidationException('Cannot determine session in '
+                                              f'index {index}')
 
         serializer = SessionPUTSerializer(current,
                                           data=data,
@@ -945,6 +947,7 @@ class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
+
     @has_permission('get_my_mentoring_sessions')
     def get(self, request):
 
@@ -987,6 +990,7 @@ class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
 
 
 class UserMeBillView(APIView, HeaderLimitOffsetPagination):
+
     @has_permission('get_my_mentoring_sessions')
     def get(self, request, bill_id=None):
 

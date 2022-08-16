@@ -222,6 +222,7 @@ class ActiveCampaign:
 
 
 class Contacts(object):
+
     def __init__(self, client):
         self.client = client
 
@@ -333,6 +334,7 @@ class Contacts(object):
 
 
 class AC_Old_Client(object):
+
     def __init__(self, url, apikey):
 
         if url is None:

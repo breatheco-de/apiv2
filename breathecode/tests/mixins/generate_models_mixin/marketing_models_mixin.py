@@ -7,6 +7,7 @@ from .utils import is_valid, create_models, just_one, get_list
 
 
 class MarketingModelsMixin(ModelsMixin):
+
     def generate_marketing_models(self,
                                   active_campaign_academy=False,
                                   automation=False,

@@ -20,6 +20,7 @@ __all__ = [
 
 
 class UserAdmissions(User):
+
     class Meta:
         proxy = True
 
@@ -304,6 +305,7 @@ EDU_STATUS = (
 
 
 class CohortUser(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(CohortUser, self).__init__(*args, **kwargs)
         self.__old_edu_status = self.educational_status

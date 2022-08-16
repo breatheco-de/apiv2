@@ -11,6 +11,7 @@ def delay():
 
 
 def decorator(func, with_self=True):
+
     def wrapper(*args, **kwargs):
         if with_self:
             func(None, *args, **kwargs)
@@ -22,6 +23,7 @@ def decorator(func, with_self=True):
 
 
 def shared_task(func=None, *args, **kwargs):
+
     def inner(func):
         return decorator(func)
 

@@ -10,6 +10,7 @@ class AcademyEventTestSuite(CertificateTestCase):
     """
     🔽🔽🔽 Status ERROR
     """
+
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_error(self):

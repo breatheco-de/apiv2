@@ -6,6 +6,7 @@ from .utils import is_valid, create_models, just_one
 
 
 class NotifyModelsMixin(ModelsMixin):
+
     def generate_notify_models(self,
                                device=False,
                                user=False,

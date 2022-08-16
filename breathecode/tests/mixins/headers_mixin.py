@@ -7,6 +7,7 @@ __all__ = ['HeadersMixin']
 
 class HeadersMixin():
     """Headers mixin"""
+
     def headers(self, **kargs: str) -> None:
         """
         Set headers.

@@ -10,7 +10,9 @@ __all__ = ['capable_of']
 
 
 def capable_of(capability=None):
+
     def decorator(function):
+
         def wrapper(*args, **kwargs):
             if isinstance(capability, str) == False:
                 raise ProgramingError('Capability must be a string')

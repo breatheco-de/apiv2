@@ -114,6 +114,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
 
 
 class PostFormEntrySerializer(serializers.ModelSerializer):
+
     class Meta:
         model = FormEntry
         exclude = ()
@@ -193,6 +194,7 @@ class ShortLinkSerializer(serializers.ModelSerializer):
 
 
 class PUTTagSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Tag
         exclude = ('slug', 'acp_id', 'subscribers', 'ac_academy', 'created_at', 'updated_at')

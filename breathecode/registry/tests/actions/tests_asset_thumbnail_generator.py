@@ -10,6 +10,7 @@ from ..mixins import RegistryTestCase
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -20,6 +21,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
     🔽🔽🔽 GET without and with Asset
     """
+
     def test__constructor(self):
         width = randint(1, 2000)
         height = randint(1, 2000)

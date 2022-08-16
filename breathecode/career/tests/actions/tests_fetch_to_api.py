@@ -79,6 +79,7 @@ DATA = {
 
 
 class ActionTestfetchToApiTestCase(CareerTestCase):
+
     @patch('logging.Logger.debug', MagicMock())
     def test_fetch_to_api__without_spider(self):
         from logging import Logger

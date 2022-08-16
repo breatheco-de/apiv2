@@ -24,6 +24,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 GET check the param is being passed
     """
+
     @patch('breathecode.authenticate.views.MemberView.get', MagicMock(side_effect=view_method_mock))
     def test_academy_member__get__with_auth___mock_view(self):
         profile_academies = [{'academy_id': id} for id in range(1, 4)]
@@ -101,6 +102,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id_without_auth(self):
         """Test /academy/:id/member/:id without auth"""

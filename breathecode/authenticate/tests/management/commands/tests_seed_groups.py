@@ -17,6 +17,7 @@ class TokenTestSuite(AuthTestCase):
     """
     🔽🔽🔽 With three User
     """
+
     def test__execute__with_three_users(self):
         model = self.bc.database.create(user=3)
         command = Command()
