@@ -16,6 +16,7 @@ class TokenTestSuite(AuthTestCase):
     """
     🔽🔽🔽 get_or_create bad arguments
     """
+
     def test_get_or_create__bad_arguments(self):
         with self.assertRaises(InvalidTokenType) as _:
             Token.get_or_create(None, None)

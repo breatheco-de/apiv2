@@ -1,7 +1,7 @@
 # from breathecode.media.schemas import MediaSchema
 from breathecode.media.schemas import FileSchema, MediaSchema
 import os, hashlib, requests, logging
-from breathecode.services.google_cloud.function import Function
+from breathecode.services.google_cloud import FunctionV1
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category, MediaResolution
 from breathecode.utils import GenerateLookupsMixin, num_to_roman
@@ -514,7 +514,7 @@ class MaskingUrlView(APIView):
                                                     | Q(height=height), hash=media.hash).first()
 
         if (width or height) and not resolution:
-            func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
+            func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='resize-image')
 
             func_request = func.call({
                 'width': width,
@@ -578,6 +578,7 @@ class ResolutionView(ViewSet):
     delete:
         Delete a Resolution by id.
     """
+
     @capable_of('read_media_resolution')
     def get_id(self, request, resolution_id: int, academy_id=None):
         resolutions = MediaResolution.objects.filter(id=resolution_id).first()

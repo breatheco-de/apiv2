@@ -7,6 +7,7 @@ from .utils import is_valid, create_models, just_one
 
 
 class MonitoringModelsMixin(ModelsMixin):
+
     def generate_monitoring_models(self,
                                    application=False,
                                    academy=False,

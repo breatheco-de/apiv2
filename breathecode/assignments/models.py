@@ -70,11 +70,13 @@ class Task(models.Model):
 
 
 class UserProxy(User):
+
     class Meta:
         proxy = True
 
 
 class CohortProxy(Cohort):
+
     class Meta:
         proxy = True
 

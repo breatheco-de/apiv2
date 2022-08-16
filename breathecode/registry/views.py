@@ -6,20 +6,22 @@ from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
 
-from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword, AssetComment
+from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
+                     AssetKeyword, AssetComment)
+
 from .actions import AssetThumbnailGenerator, test_syllabus, test_asset, pull_from_github, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
 from .caches import AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache
+
 from rest_framework.permissions import AllowAny
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
-                          KeywordClusterSerializer, AcademyAssetSerializer, AssetPUTSerializer,
-                          AcademyCommentSerializer, PostAssetCommentSerializer, PutAssetCommentSerializer,
-                          AssetBigTechnologySerializer, TechnologyPUTSerializer, KeywordSmallSerializer,
-                          KeywordClusterBigSerializer, PostKeywordClusterSerializer, PostKeywordSerializer,
-                          PUTKeywordSerializer)
+                          AcademyAssetSerializer, AssetPUTSerializer, AcademyCommentSerializer,
+                          PostAssetCommentSerializer, PutAssetCommentSerializer, AssetBigTechnologySerializer,
+                          TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
+                          PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -330,7 +332,7 @@ class AssetThumbnailView(APIView):
     """
 
     permission_classes = [AllowAny]
-
+    
     def get(self, request, asset_slug):
         width = int(request.GET.get('width', '0'))
         height = int(request.GET.get('height', '0'))
@@ -461,6 +463,7 @@ class AcademyAssetActionView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('crud_asset')
     def put(self, request, asset_slug, action_slug, academy_id=None):
 

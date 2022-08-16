@@ -23,6 +23,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     """
     🔽🔽🔽 with MentorProfile without online_meeting_url
     """
+
     @patch('requests.head',
            apply_requests_head_mock([
                (400, BOOKING_URL, None),

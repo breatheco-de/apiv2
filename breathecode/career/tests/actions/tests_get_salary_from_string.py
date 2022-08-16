@@ -9,6 +9,7 @@ from breathecode.tests.mocks import (
 
 
 class ActionGetSalaryFromStringTestCase(CareerTestCase):
+
     def test_get_salary_from_string__with_salary_month(self):
         platform = 'getonboard'
         salary = '$2700 - 3700 USD/month'

@@ -40,6 +40,7 @@ def answer(data={}):
 
 
 class SendCohortSurvey(FeedbackTestCase):
+
     def test_when_student_is_not_assigned(self):
 
         model = self.generate_models(cohort=1, user=1, survey=1)

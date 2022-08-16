@@ -5,6 +5,10 @@ import sys
 import json
 import re
 from pathlib import Path
+from shutil import which
+
+if which('gp'):
+    exit()
 
 api_path = os.getcwd()
 

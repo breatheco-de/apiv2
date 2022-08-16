@@ -8,6 +8,7 @@ from ..mixins import AdmissionsTestCase
 
 class academyTestSuite(AdmissionsTestCase):
     """Test /academy"""
+
     def test_academy_without_auth_should_be_ok(self):
         """Test /academy without auth"""
         url = reverse_lazy('admissions:academy')

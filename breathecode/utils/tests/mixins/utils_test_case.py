@@ -7,6 +7,7 @@ from breathecode.tests.mixins import BreathecodeMixin, GenerateModelsMixin
 
 class UtilsTestCase(APITestCase, BreathecodeMixin, GenerateModelsMixin):
     """UtilsTestCase with auth methods"""
+
     def setUp(self):
         self.set_test_instance(self)
 

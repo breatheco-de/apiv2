@@ -94,6 +94,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 GET with bad token
     """
+
     def test__get__bad_token(self):
         url = reverse_lazy('authenticate:password_token', kwargs={'token': 'token'})
         response = self.client.get(url)

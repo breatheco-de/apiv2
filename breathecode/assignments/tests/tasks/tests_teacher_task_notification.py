@@ -13,6 +13,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
     🔽🔽🔽 Without env
     """
+
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())

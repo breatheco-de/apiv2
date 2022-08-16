@@ -1,3 +1,4 @@
+import hashlib
 import os, requests, base64, logging
 import re
 import urllib.parse
@@ -22,9 +23,11 @@ from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 from django.utils import timezone
 from django.db.models.functions import Now
+from rest_framework.parsers import FileUploadParser, MultiPartParser
 
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
+from breathecode.services.google_cloud import FunctionV1, FunctionV2
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils import response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -84,6 +87,16 @@ PATTERNS = {
     'CONTAINS_UPPERCASE': r'[A-Z]',
     'CONTAINS_SYMBOLS': r'[^a-zA-Z]',
 }
+
+PROFILE_MIME_ALLOWED = ['image/png']
+
+
+def get_profile_bucket():
+    return os.getenv('PROFILE_BUCKET', '')
+
+
+def get_shape_of_image_url():
+    return os.getenv('GCLOUD_SHAPE_OF_IMAGE', '')
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -283,6 +296,7 @@ class MemberView(APIView, GenerateLookupsMixin):
 
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     def get(self, request):
         invites = UserInvite.objects.filter(email=request.user.email)
 
@@ -331,6 +345,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 
 class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     @capable_of('read_invite')
     def get(self, request, academy_id=None, profileacademy_id=None, invite_id=None):
 
@@ -637,6 +652,7 @@ def get_token_info(request, token):
 
 
 class UserMeView(APIView):
+
     def get(self, request, format=None):
         # TODO: This should be not accessible because this endpoint require auth
         try:
@@ -1234,6 +1250,7 @@ def change_password(request, token):
 
 
 class TokenTemporalView(APIView):
+
     @capable_of('generate_temporal_token')
     def post(self, request, profile_academy_id=None, academy_id=None):
         profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id).first()
@@ -1359,6 +1376,7 @@ def pick_password(request, token):
 
 
 class PasswordResetView(APIView):
+
     @capable_of('send_reset_password')
     def post(self, request, profileacademy_id=None, academy_id=None):
 
@@ -1375,6 +1393,7 @@ class PasswordResetView(APIView):
 
 
 class ProfileInviteMeView(APIView):
+
     def get(self, request):
         invites = UserInvite.objects.filter(email=request.user.email)
         profile_academies = ProfileAcademy.objects.filter(user=request.user, status='INVITED')
@@ -1837,6 +1856,7 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
 
 
 class ProfileMeView(APIView, GenerateLookupsMixin):
+
     @has_permission('get_my_profile')
     def get(self, request):
         item = Profile.objects.filter(user=request.user).first()
@@ -1886,7 +1906,95 @@ class ProfileMeView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ProfileMePictureView(APIView):
+    """
+    put:
+        Upload a file to Google Cloud.
+    """
+    parser_classes = [MultiPartParser, FileUploadParser]
+
+    @has_permission('update_my_profile')
+    def put(self, request):
+        from ..services.google_cloud import Storage
+
+        profile = Profile.objects.filter(user=request.user).first()
+        if not profile:
+            profile = Profile(user=request.user)
+            profile.save()
+
+        files = request.data.getlist('file')
+        file = request.data.get('file')
+
+        if not file:
+            raise ValidationException('Missing file in request', slug='missing-file')
+
+        if not len(files):
+            raise ValidationException('empty files in request')
+
+        if len(files) > 1:
+            raise ValidationException('Just can upload one file at a time')
+
+        # files validation below
+        if file.content_type not in PROFILE_MIME_ALLOWED:
+            raise ValidationException(
+                f'You can upload only files on the following formats: {",".join(PROFILE_MIME_ALLOWED)}',
+                slug='bad-file-format')
+
+        file_bytes = file.read()
+        hash = hashlib.sha256(file_bytes).hexdigest()
+
+        storage = Storage()
+        cloud_file = storage.file(get_profile_bucket(), hash)
+        cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
+
+        if cloud_file_thumbnail.exists():
+            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+
+        else:
+            cloud_file.upload(file, content_type=file.content_type)
+            func = FunctionV2(get_shape_of_image_url())
+
+            res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
+            json = res.json()
+
+            if json['shape'] != 'Square':
+                cloud_file.delete()
+                raise ValidationException(f'just can upload square images', slug='not-square-image')
+
+            func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='resize-image')
+
+            res = func.call({
+                'width': 100,
+                'filename': hash,
+                'bucket': get_profile_bucket(),
+            })
+
+            cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
+            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+
+            cloud_file.delete()
+
+        previous_avatar_url = profile.avatar_url or ''
+        profile.avatar_url = cloud_file_thumbnail_url
+        profile.save()
+
+        if previous_avatar_url != profile.avatar_url:
+            result = re.search(r'/(.{64})-100x100$', previous_avatar_url)
+
+            if result:
+                previous_hash = result[1]
+
+                # remove the file when the last user remove their copy of the same image
+                if not Profile.objects.filter(avatar_url__contains=previous_hash).exists():
+                    cloud_file = storage.file(get_profile_bucket(), f'{hash}-100x100')
+                    cloud_file.delete()
+
+        serializer = GetProfileSerializer(profile, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class GithubMeView(APIView):
+
     def delete(self, request):
         instance = CredentialsGithub.objects.filter(user=request.user).first()
         if not instance:

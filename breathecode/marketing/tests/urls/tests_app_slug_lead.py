@@ -25,6 +25,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Post without app slug or app_id
     """
+
     @patch('breathecode.marketing.tasks.persist_single_lead', MagicMock())
     def test_app_slug_lead__post__without_app_slug_or_app_id(self):
         from breathecode.marketing.tasks import persist_single_lead

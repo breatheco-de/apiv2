@@ -10,6 +10,7 @@ from breathecode.authenticate.models import Token
 class MentorshipTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                          HeadersMixin, DatetimeMixin, BreathecodeMixin):
     """FeedbackTestCase with auth methods"""
+
     def tearDown(self):
         self.clear_cache()
 

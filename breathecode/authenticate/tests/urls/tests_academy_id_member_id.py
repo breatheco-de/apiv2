@@ -22,6 +22,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Check decorator
     """
+
     def test_academy_id_member_id_without_auth(self):
         """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_id_member_id',
@@ -110,6 +111,7 @@ class MemberPutDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Check decorator
     """
+
     def test_academy_id_member_id_without_auth(self):
         """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_id_member_id',
@@ -201,6 +203,7 @@ class MemberDeleteDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Check decorator
     """
+
     def test_academy_id_member_id_without_auth(self):
         """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_id_member_id',

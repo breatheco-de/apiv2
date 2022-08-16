@@ -27,6 +27,7 @@ def profile_fields(data={}):
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -34,6 +35,7 @@ def apply_get_env(configuration={}):
 
 
 class SlackTestSuite(SlackTestCase):
+
     def test_slack_command___context_is_not_provide_or_is_none(self):
         """Testing  ."""
 

@@ -23,6 +23,7 @@ SYNC_RESPONSE = {fake.slug(): fake.slug()}
 
 @ws_auth
 class AsyncConsumer(AsyncJsonWebsocketConsumer):
+
     async def connect(self):
         await self.setup()
         await self.accept()
@@ -31,6 +32,7 @@ class AsyncConsumer(AsyncJsonWebsocketConsumer):
 
 @ws_auth
 class SyncConsumer(SyncJsonWebsocketConsumer):
+
     def connect(self):
         self.setup()
         self.accept()
@@ -44,6 +46,7 @@ ROUTER = URLRouter([
 
 
 class ConsumerTestSuite(WebsocketTestCase):
+
     async def test__async__without_token(self):
 
         communicator = WebsocketCommunicator(ROUTER, 'testws/async/')

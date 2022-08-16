@@ -437,7 +437,7 @@ class RoleType(TypedDict):
 def extend_roles(roles: list[RoleType]) -> None:
     """
     These are additional roles that extend from the base roles above,
-    you can exend from more than one role but also add additional capabilitis at the end.
+    you can extend from more than one role but also add additional capabilities at the end.
     """
     roles.append({
         'slug':

@@ -10,6 +10,7 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Adding a ProfileAcademy, with bad role
     """
+
     @patch('django.db.models.signals.post_save.send', MagicMock())
     def test_adding_a_profile_academy__with_bad_role(self):
         group = {'name': 'Student'}
@@ -87,6 +88,7 @@ class ModelMentorProfileTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Adding a ProfileAcademy
     """
+
     def test_adding_a_mentor_profile(self):
         group = {'name': 'Mentor'}
         model = self.bc.database.create(mentor_profile=1, group=group)

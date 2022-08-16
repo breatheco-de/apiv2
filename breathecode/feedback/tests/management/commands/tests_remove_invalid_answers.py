@@ -6,6 +6,7 @@ import sys
 
 
 class TokenTestSuite(FeedbackTestCase):
+
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('sys.stdout.write', MagicMock())

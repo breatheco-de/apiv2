@@ -74,6 +74,7 @@ class AsyncWsCapableOf:
     @database_sync_to_async
     def async_decorator(self, consumer: AsyncJsonWebsocketConsumer, request: FakeRequest,
                         event: threading.Event):
+
         def callback(request, academy_id=None):
             consumer.scope['academy_id'] = academy_id
             event.set()
@@ -117,6 +118,7 @@ class WsCapableOf(SyncWsCapableOf, AsyncWsCapableOf):
 
 
 def ws_capable_of(capability: str):
+
     def wrapper(cls: JsonWebsocketConsumer | AsyncJsonWebsocketConsumer):
         return WsCapableOf(capability)(cls)
 

@@ -17,6 +17,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Without MentorshipSession
     """
+
     def test_without_mentorship_session(self):
         close_older_sessions()
 

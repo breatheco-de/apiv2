@@ -83,6 +83,7 @@ def format_profile_academy(self, profile_academy, role, academy):
 
 class StudentGetTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_academy_student_without_auth(self):
         """Test /academy/student without auth"""
         url = reverse_lazy('authenticate:academy_student')
@@ -710,6 +711,7 @@ class StudentGetTestSuite(AuthTestCase):
 
 
 class StudentPostTestSuite(AuthTestCase):
+
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_student__post__no_user__invite_is_false(self):
         """Test /academy/:id/member"""
@@ -1332,6 +1334,7 @@ class StudentPostTestSuite(AuthTestCase):
 
 
 class StudentDeleteTestSuite(AuthTestCase):
+
     def test_academy_student_delete_without_auth(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('authenticate:academy_student')

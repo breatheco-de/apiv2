@@ -15,6 +15,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     """
     🔽🔽🔽 With zero MentorProfile
     """
+
     @patch('django.contrib.messages.error', MagicMock())
     def test_with_zero_mentor_profiles(self):
         MentorProfile = self.bc.database.get_model('mentorship.MentorProfile')

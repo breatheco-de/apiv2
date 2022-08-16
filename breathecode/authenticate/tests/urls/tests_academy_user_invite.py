@@ -48,6 +48,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_academy_user_invite__without_auth(self):
         url = reverse_lazy('authenticate:academy_user_invite')
         response = self.client.delete(url)

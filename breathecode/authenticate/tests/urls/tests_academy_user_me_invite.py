@@ -19,6 +19,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Check decorator
     """
+
     def test_duck_test__without_auth(self):
         """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_user_me_invite')
@@ -68,6 +69,7 @@ class MemberPutDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Check decorator
     """
+
     def test_duck_test__without_auth(self):
         """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_user_me_invite')

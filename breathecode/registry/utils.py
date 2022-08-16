@@ -36,6 +36,7 @@ def test_url(url, allow_relative=False, allow_hash=True):
 
 
 class AssetException(Exception):
+
     def __init__(self, message='', severity='ERROR'):
         all_severities = ['ERROR', 'WARNING']
         if severity in all_severities:

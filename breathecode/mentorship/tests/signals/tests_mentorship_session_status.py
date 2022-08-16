@@ -9,6 +9,7 @@ class LeadTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 With status PENDING
     """
+
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     def test_mentorship_session_status__with_status_pending(self):
         from breathecode.feedback.tasks import send_mentorship_session_survey

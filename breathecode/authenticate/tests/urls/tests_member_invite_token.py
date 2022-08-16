@@ -127,6 +127,7 @@ def render_to_string_mock(*args, **kwargs):
 
 
 class GetHasherMock:
+
     def __init__(self, *args, **kwargs):
         ...
 
@@ -142,6 +143,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 GET without UserInvite
     """
+
     def test_member_invite_token__without_user_invite(self):
         url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': 'invalid'})
         response = self.client.get(url)
