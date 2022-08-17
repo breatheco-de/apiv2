@@ -36,6 +36,7 @@ from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
+from breathecode.utils import create_assessment
 
 logger = logging.getLogger(__name__)
 
