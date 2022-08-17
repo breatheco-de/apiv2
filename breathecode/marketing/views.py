@@ -88,6 +88,10 @@ def create_lead(request):
     if 'referral_code' in data and 'referral_key' not in data:
         data['referral_key'] = data['referral_code']
 
+    if 'utm_url' in data and data['utm_url'].contains('//localhost:'):
+        print('Ignoring lead because its coming from localhost')
+        return Response(data, status=status.HTTP_201_CREATED)
+
     serializer = PostFormEntrySerializer(data=data)
     if serializer.is_valid():
         serializer.save()
@@ -95,7 +99,7 @@ def create_lead(request):
         persist_single_lead.delay(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    print(serializer.errors)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
