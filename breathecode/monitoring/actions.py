@@ -406,6 +406,7 @@ def upload_csv(module, model_name, file_content, academy_id=None):
         upload.status = 'DONE'
         upload.save()
         return True
+
     except Exception as e:
         upload.status = 'ERROR'
         upload.status_message = str(e)

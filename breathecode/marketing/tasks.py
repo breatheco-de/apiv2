@@ -338,3 +338,36 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
 
     except:
         logger.exception(f'There was an error creating tag for downloadable {downloadable.slug}')
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def create_form_entry(self, item):
+    form_entry = FormEntry()
+    form_entry.log = ''
+    if 'first_name' in item:
+        form_entry.first_name = item['first_name']
+    if 'last_name' in item:
+        form_entry.last_name = item['last_name']
+    if 'email' in item:
+        form_entry.email = item['email']
+    if 'location' in item:
+        form_entry.location = item['location']
+    if 'academy' in item:
+        form_entry.academy = item['academy']
+
+    # if not form_entry.first_name or not form_entry.last_name or not form_entry.email or not form_entry.location or not form_entry.academy:
+
+    if not form_entry.first_name:
+        form_entry.log += 'No first name in form entry, '
+
+    if not form_entry.last_name:
+        form_entry.log += 'No last name in form entry, '
+
+    if not form_entry.email:
+        form_entry.log += 'No email in form entry, '
+
+    if not form_entry.location or not form_entry.academy:
+        form_entry.log += 'No location or academy in form entry, '
+
+    if form_entry.log.endswith(', '):
+        form_entry.log = form_entry.log[0:-2]

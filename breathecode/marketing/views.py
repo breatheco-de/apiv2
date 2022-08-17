@@ -1,8 +1,9 @@
-import os, re, datetime, logging, csv, pytz, secrets, json
+import os, re, datetime, logging, csv, pytz, secrets, json, hashlib
 from urllib import parse
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
+from breathecode.monitoring.models import CSVUpload
 from breathecode.renderers import PlainTextRenderer
 from rest_framework.decorators import renderer_classes
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
@@ -11,15 +12,18 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny
+from rest_framework.parsers import FileUploadParser, MultiPartParser
+from slugify import slugify
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination, num_to_roman)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
     FormEntrySerializer,
     FormEntrySmallSerializer,
+    PutFormEntrySerializer,
     ShortlinkSmallSerializer,
     TagSmallSerializer,
     AutomationSmallSerializer,
@@ -36,8 +40,10 @@ from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
+import pandas as pd
 
 logger = logging.getLogger(__name__)
+MIME_ALLOW = 'text/csv'
 
 # Create your views here.
 
@@ -676,6 +682,124 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         items.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class UploadView(APIView):
+    """
+    put:
+        Upload a file to Google Cloud.
+    """
+    parser_classes = [MultiPartParser, FileUploadParser]
+    permission_classes = [AllowAny]
+
+    # permission_classes = [AllowAny]
+
+    # upload was separated because in one moment I think that the serializer
+    # not should get many create and update operations together
+    def upload(self, request, academy_id=None, update=False):
+        from ..services.google_cloud import Storage
+
+        files = request.data.getlist('file')
+        names = request.data.getlist('name')
+
+        result = {
+            'data': [],
+            'instance': [],
+        }
+
+        file = request.data.get('file')
+
+        if not file:
+            raise ValidationException('Missing file in request', code=400)
+
+        if not len(files):
+            raise ValidationException('empty files in request')
+
+        if not len(names):
+            for file in files:
+                names.append(file.name)
+
+        elif len(files) != len(names):
+            raise ValidationException('numbers of files and names not match')
+
+        # files validation below
+        for index in range(0, len(files)):
+            file = files[index]
+            if file.content_type != MIME_ALLOW:
+                raise ValidationException(f'You can upload only files on the following formats: {MIME_ALLOW}')
+
+        for index in range(0, len(files)):
+            file = files[index]
+            name = names[index] if len(names) else file.name
+            file_bytes = file.read().decode('utf-8')
+            print('file_bytes', file_bytes)
+            with open(file.name, 'w') as f:
+                f.write(file_bytes)
+
+            df = pd.read_csv(file.name)
+            os.remove(file.name)
+            print('csv_reader', len(df))
+            print(df.iloc[0]['first_name'])
+            required_fields = ['first_name', 'last_name']
+
+            for item in required_fields:
+                if item not in df.keys():
+                    return ValidationException(f'{item} field missing inside of csv')
+
+            for num in range(len(df)):
+                value = df.iloc[num]
+                xz.delay(value['first_name'], value['last_name'])
+
+            # for line in csv_reader:
+            #     print(line)
+
+            data = {
+                'mime': file.content_type,
+                'name': name,
+                'academy': academy_id,
+            }
+
+            # upload file section
+            storage = Storage()
+            cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), hash)
+            cloud_file.upload(file, content_type=file.content_type)
+
+            csv_upload = CSVUpload()
+            csv_upload.url = cloud_file.url()
+            csv_upload.name = file.name
+            print(academy_id)
+            csv_upload.academy = academy_id
+
+            result['data'].append(data)
+
+        # from django.db.models import Q
+        # query = None
+        # datas_with_id = [x for x in result['data'] if 'id' in x]
+        # for x in datas_with_id:
+        #     if query:
+        #         query = query | Q(id=x['id'])
+        #     else:
+        #         query = Q(id=x['id'])
+
+        # if query:
+        #     result['instance'] = FormEntry.objects.filter(query)
+
+        # return result
+        return ''
+
+    # @capable_of('crud_media')
+    def put(self, request, academy_id=None):
+        upload = self.upload(request, academy_id, update=True)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+        serializer = PutFormEntrySerializer(upload['instance'],
+                                            data=upload['data'],
+                                            context=upload['data'],
+                                            many=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 def get_real_conversion_name(slug):
