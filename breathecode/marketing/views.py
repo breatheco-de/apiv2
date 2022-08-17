@@ -88,8 +88,9 @@ def create_lead(request):
     if 'referral_code' in data and 'referral_key' not in data:
         data['referral_key'] = data['referral_code']
 
-    if 'utm_url' in data and data['utm_url'].contains('//localhost:'):
-        print('Ignoring lead because its coming from localhost')
+    if 'utm_url' in data and (data['utm_url'].contains('//localhost:')
+                              or data['utm_url'].contains('gitpod.io')):
+        print('Ignoring lead because its coming from development team')
         return Response(data, status=status.HTTP_201_CREATED)
 
     serializer = PostFormEntrySerializer(data=data)

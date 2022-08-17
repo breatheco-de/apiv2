@@ -10,16 +10,15 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
-from .serializers import (AcademySerializer, GetSyllabusSerializer, SyllabusSchedulePUTSerializer,
-                          SyllabusScheduleSerializer, SyllabusScheduleTimeSlotSerializer, CohortSerializer,
-                          CohortTimeSlotSerializer, GETSyllabusScheduleTimeSlotSerializer,
-                          GETCohortTimeSlotSerializer, GetCohortSerializer, GetSyllabusVersionSerializer,
-                          SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer,
-                          CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer,
-                          CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
-                          GetSyllabusScheduleSerializer, GetSyllabusVersionSerializer,
-                          SyllabusVersionSerializer, GetBigAcademySerializer, AcademyReportSerializer,
-                          PublicCohortSerializer, GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer)
+from .serializers import (
+    AcademySerializer, GetSyllabusSerializer, SyllabusSchedulePUTSerializer, SyllabusScheduleSerializer,
+    SyllabusScheduleTimeSlotSerializer, CohortSerializer, CohortTimeSlotSerializer,
+    GETSyllabusScheduleTimeSlotSerializer, GETCohortTimeSlotSerializer, GetCohortSerializer,
+    GetSyllabusVersionSerializer, SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer,
+    CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
+    UserDJangoRestSerializer, UserMeSerializer, GetSyllabusScheduleSerializer, GetSyllabusVersionSerializer,
+    SyllabusVersionSerializer, GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer,
+    GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer)
 from .models import (ACTIVE, Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule,
                      Cohort, STUDENT, DELETED, Syllabus, SyllabusVersion)
 
@@ -1336,3 +1335,38 @@ class SyllabusVersionView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PublicCohortUserView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = CohortUser.objects.all()
+
+        roles = request.GET.get('roles', None)
+        if roles is not None:
+            items = items.filter(role__in=roles.split(','))
+
+        syllabus = request.GET.get('syllabus', None)
+        if syllabus is not None:
+            items = items.filter(cohort__syllabus_version__syllabus__slug__in=syllabus.split(','))
+
+        users = request.GET.get('users', None)
+        if users is not None:
+            items = items.filter(user__id__in=users.split(','))
+
+        items = handler.queryset(items)
+        serializer = GetPublicCohortUserSerializer(items, many=True)
+        return Response(serializer.data)

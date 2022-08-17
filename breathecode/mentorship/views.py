@@ -1,6 +1,7 @@
 from email.mime import base
 import hashlib, timeago, logging
 import re
+from rest_framework.permissions import AllowAny
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
@@ -35,6 +36,7 @@ from .serializers import (
     GETBillSmallSerializer,
     MentorshipBillPUTSerializer,
     BillSessionSerializer,
+    GETMentorPublicTinySerializer,
 )
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -1027,3 +1029,28 @@ class UserMeBillView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PublicMentorView(APIView, HeaderLimitOffsetPagination):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        items = MentorProfile.objects.filter(status='ACTIVE')
+        lookup = {}
+
+        if 'services' in self.request.GET:
+            param = self.request.GET.get('services', '').split(',')
+            lookup['services__slug__in'] = param
+
+        if 'syllabus' in self.request.GET:
+            param = self.request.GET.get('syllabus')
+            lookup['syllabus__slug'] = param
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = GETMentorPublicTinySerializer(items, many=True)
+
+        return handler.response(serializer.data)

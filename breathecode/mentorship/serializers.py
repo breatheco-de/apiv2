@@ -33,6 +33,12 @@ class ProfileSerializer(serpy.Serializer):
     github_username = serpy.Field()
 
 
+class ProfilePublicSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+
+
 class GetSyllabusSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -40,6 +46,12 @@ class GetSyllabusSmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     logo = serpy.Field()
+
+
+class GetUserPublicTinySerializer(serpy.Serializer):
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    profile = ProfilePublicSerializer(required=False)
 
 
 class GetUserSmallSerializer(serpy.Serializer):
@@ -67,6 +79,10 @@ class GETServiceSmallSerializer(serpy.Serializer):
     language = serpy.Field()
     allow_mentee_to_extend = serpy.Field()
     allow_mentors_to_extend = serpy.Field()
+
+
+class GETMentorPublicTinySerializer(serpy.Serializer):
+    user = GetUserPublicTinySerializer()
 
 
 class GETMentorTinySerializer(serpy.Serializer):

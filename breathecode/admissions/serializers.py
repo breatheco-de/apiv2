@@ -43,6 +43,12 @@ class UserSmallSerializer(serpy.Serializer):
     email = serpy.Field()
 
 
+class PublicProfileSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+
+
 class ProfileSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -80,6 +86,14 @@ class ProfileAcademySmallSerializer(serpy.Serializer):
 
     def get_role(self, obj):
         return obj.role.slug
+
+
+class UserPublicSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    profile = PublicProfileSerializer(required=False)
 
 
 class UserSerializer(serpy.Serializer):
@@ -342,6 +356,11 @@ class GetMeCohortSerializer(serpy.Serializer):
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetSmallAcademySerializer()
     stage = serpy.Field()
+
+
+class GetPublicCohortUserSerializer(serpy.Serializer):
+    user = UserPublicSerializer()
+    role = serpy.Field()
 
 
 class GetCohortUserSerializer(serpy.Serializer):
