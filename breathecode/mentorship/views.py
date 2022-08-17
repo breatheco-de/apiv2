@@ -87,8 +87,11 @@ def forward_booking_url(request, mentor_slug, token):
     try:
         actions.mentor_is_ready(mentor)
 
-    except:
-        return render_message(request, f'This mentor is not ready too')
+    except Exception as e:
+        logger.exception(e)
+        return render_message(
+            request,
+            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
 
     booking_url = mentor.booking_url
     if '?' not in booking_url:
@@ -112,12 +115,15 @@ def pick_mentorship_service(request, token, mentor_slug):
     try:
         actions.mentor_is_ready(mentor)
 
-    except:
-        return render_message(request, f'This mentor is not ready too')
+    except Exception as e:
+        logger.exception(e)
+        return render_message(
+            request,
+            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
 
     services = mentor.services.all()
     if not services:
-        return render_message(request, f'This mentor is not available')
+        return render_message(request, f'This mentor is not available on any service')
 
     return render(request, 'pick_service.html', {
         'token': token.key,
@@ -260,7 +266,10 @@ class ForwardMeetUrl:
             actions.mentor_is_ready(mentor)
 
         except:
-            return render_message(self.request, f'This mentor is not ready too')
+            return render_message(
+                self.request,
+                f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.'
+            )
 
         is_token_of_mentee = mentor.user.id != self.token.user.id
 
