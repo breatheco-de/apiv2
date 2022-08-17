@@ -30,7 +30,7 @@
 | ACTIVE_CAMPAIGN_URL | Represents the domain of Breathecode that provided `Active Campaign` |
 | GOOGLE_APPLICATION_CREDENTIALS | Represents the file will be saved the service account of `Google Cloud` |
 | GOOGLE_SERVICE_KEY | Represents the content of the service account used for the OAuth2 with `Google Cloud` |
-| GOOGLE_SERVICE_KEY | Represents the content of the service account used for the OAuth2 with `Google Cloud` |
+| GOOGLE_PROJECT_ID | Project ID on google cloud used for the integration of the entire API |
 | GOOGLE_CLOUD_KEY | Represents the key used for the OAuth2 with `Google Cloud` |
 | GOOGLE_CLIENT_ID | Represents the client id used for the OAuth2 with `Google Cloud` |
 | GOOGLE_SECRET | Represents the secret used for the OAuth2 with `Google Cloud` |
