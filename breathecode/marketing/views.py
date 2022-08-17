@@ -88,8 +88,7 @@ def create_lead(request):
     if 'referral_code' in data and 'referral_key' not in data:
         data['referral_key'] = data['referral_code']
 
-    if 'utm_url' in data and (data['utm_url'].contains('//localhost:')
-                              or data['utm_url'].contains('gitpod.io')):
+    if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
         print('Ignoring lead because its coming from development team')
         return Response(data, status=status.HTTP_201_CREATED)
 
