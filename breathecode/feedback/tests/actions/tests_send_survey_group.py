@@ -14,6 +14,7 @@ UTC_NOW = timezone.now()
 
 
 class AnswerTestSuite(FeedbackTestCase):
+
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
     def test_send_survey_group(self):
 

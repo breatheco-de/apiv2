@@ -167,3 +167,6 @@ dump.rdb
 # Test of render html
 /content.html
 /expected.html
+
+# pdm
+.pdm.toml

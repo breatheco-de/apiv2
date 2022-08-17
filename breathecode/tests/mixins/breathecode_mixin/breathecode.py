@@ -9,6 +9,7 @@ from .request import Request
 from .database import Database
 from .check import Check
 from .format import Format
+from .random import Random
 
 __all__ = ['Breathecode', 'fake']
 fake = Faker()
@@ -27,6 +28,7 @@ class Breathecode:
     """Collection of mixins for testing purposes"""
 
     cache: Cache
+    random: Random
     datetime: Datetime
     request: Request
     database: Database
@@ -39,6 +41,7 @@ class Breathecode:
         self._parent = parent
 
         self.cache = Cache(parent)
+        self.random = Random(parent)
         self.datetime = Datetime(parent)
         self.request = Request(parent)
         self.database = Database(parent)

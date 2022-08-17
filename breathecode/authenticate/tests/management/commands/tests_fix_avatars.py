@@ -10,6 +10,7 @@ from ....management.commands.fix_avatars import Command
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -20,6 +21,7 @@ class AcademyCohortTestSuite(AuthTestCase):
     """
     🔽🔽🔽 With zero Profile
     """
+
     @patch('logging.Logger.debug', MagicMock())
     def test_with_zero_profiles(self):
         command = Command()

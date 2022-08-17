@@ -318,7 +318,7 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
     try:
         downloads_bucket = os.getenv('DOWNLOADS_BUCKET', None)
         if downloads_bucket is None:
-            raise Exception('Uknown DOWNLOADS_BUCKET configuration, please set env variable')
+            raise Exception('Unknown DOWNLOADS_BUCKET configuration, please set env variable')
 
         # separated downloads by academy
         academy = Academy.objects.filter(id=academy_id).first()

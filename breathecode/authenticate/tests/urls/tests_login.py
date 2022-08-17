@@ -11,6 +11,7 @@ from ..mixins.new_auth_test_case import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_login_with_bad_credentials(self):
         """Test /login with incorrect credentials"""
 

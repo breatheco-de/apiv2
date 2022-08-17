@@ -19,6 +19,7 @@ test_app.short_description = 'Run Applications Diagnostic'
 
 
 class CustomAppModelForm(forms.ModelForm):
+
     class Meta:
         model = Application
         fields = '__all__'
@@ -108,6 +109,7 @@ run_single_script.short_description = 'Run Script'
 
 
 class CustomForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         super(CustomForm, self).__init__(*args, **kwargs)
 

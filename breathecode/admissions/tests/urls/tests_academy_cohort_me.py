@@ -20,6 +20,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_cohort_me__post__without_authorization(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)

@@ -7,6 +7,7 @@ from breathecode.career.services.regex import _cases_salary, _cases_date
 
 
 class BaseScraper(ABC):
+
     @abstractmethod
     def get_location_from_string(cls, location: str):
         pass

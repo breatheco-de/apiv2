@@ -9,6 +9,7 @@ import breathecode.certificate.actions as actions
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """Tests action take_screenshot"""
+
     @patch('breathecode.certificate.actions.certificate_screenshot', MagicMock())
     def test_take_screenshot__call_take_screenshot_properly(self):
         result = take_screenshot(1)

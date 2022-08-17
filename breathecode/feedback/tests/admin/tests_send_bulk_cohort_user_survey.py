@@ -18,6 +18,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     """
     🔽🔽🔽 With zero CohortUser
     """
+
     @patch('django.contrib.messages.api.add_message', MagicMock())
     @patch('breathecode.feedback.actions.send_question', MagicMock())
     def test_with_zero_cohort_users(self):

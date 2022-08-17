@@ -4,6 +4,7 @@ from ..mixins import CareerTestCase
 
 
 class ActionGetDateFromStringTestCase(CareerTestCase):
+
     def test_get_job_id_from_string_is_empty(self):
         result = BaseScraper.get_job_id_from_string('')
         self.assertEqual(result, None)

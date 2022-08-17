@@ -7,6 +7,7 @@ from ..mixins import CypressTestCase
 
 
 class AcademyEventTestSuite(CypressTestCase):
+
     def test_clean__bad_environment__not_exits(self):
         if 'ALLOW_UNSAFE_CYPRESS_APP' in os.environ:
             del os.environ['ALLOW_UNSAFE_CYPRESS_APP']

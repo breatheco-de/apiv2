@@ -210,6 +210,7 @@ MENTORSHIP_STATUS = (
 
 
 class MentorshipSession(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(MentorshipSession, self).__init__(*args, **kwargs)
         self.__old_status = self.status

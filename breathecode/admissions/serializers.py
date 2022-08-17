@@ -495,6 +495,7 @@ class AcademySerializer(serializers.ModelSerializer):
 
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Syllabus
         fields = ['id', 'slug']
@@ -759,7 +760,8 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else
                    request_item.get('finantial_status') == 'LATE')
         if is_graduated and is_late:
-            raise ValidationException('Cannot be marked as `GRADUATED` if its financial ' 'status is `LATE`')
+            raise ValidationException('Cannot be marked as `GRADUATED` if its financial '
+                                      'status is `LATE`')
 
         has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
                                         task_type='PROJECT').exclude(revision_status='IGNORED').count()
@@ -779,6 +781,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
 
 class CohortUserListSerializer(serializers.ListSerializer):
+
     def create(self, validated_data):
         books = [CohortUser(**item) for item in validated_data]
         items = CohortUser.objects.bulk_create(books)
@@ -833,6 +836,7 @@ class CohortTimeSlotSerializer(serializers.ModelSerializer):
 
 
 class SyllabusScheduleSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = SyllabusSchedule
         exclude = ()
@@ -876,6 +880,7 @@ class CohortUserPOSTSerializer(serpy.Serializer):
 
 
 class CohortUserPUTSerializer(CohortUserSerializerMixin):
+
     class Meta:
         model = CohortUser
         fields = ['id', 'role', 'educational_status', 'finantial_status', 'watching']
@@ -883,6 +888,7 @@ class CohortUserPUTSerializer(CohortUserSerializerMixin):
 
 
 class SyllabusSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Syllabus
         fields = [

@@ -15,6 +15,7 @@ from ...models import Answer
 class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                        HeadersMixin, DatetimeMixin, BreathecodeMixin):
     """FeedbackTestCase with auth methods"""
+
     def tearDown(self):
         self.clear_cache()
 

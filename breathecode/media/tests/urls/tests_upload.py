@@ -4,7 +4,7 @@ Test /v1/media/upload
 import tempfile
 import os
 import hashlib
-from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins import MediaTestCase
@@ -13,6 +13,7 @@ from breathecode.media.views import MIME_ALLOW
 
 class MediaTestSuite(MediaTestCase):
     """Test /answer"""
+
     def test_upload_without_auth(self):
         from breathecode.services.google_cloud import Storage, File
 

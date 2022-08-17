@@ -13,6 +13,7 @@ fake_command = AttrDict(**{'fake': AttrDict(**{'execute': MagicMock(return_value
 
 class SlackTestSuite(SlackTestCase):
     """Test /answer"""
+
     def test_slack_command___not_implemented(self):
         """Testing when command has not been implemented."""
 

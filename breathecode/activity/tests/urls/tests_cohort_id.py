@@ -38,6 +38,7 @@ ndb_init_mock = MagicMock(side_effect=init)
 
 
 def ndb_fetch_mock(result=[]):
+
     def fetch(query, **kwargs):
         return result
 
@@ -45,6 +46,7 @@ def ndb_fetch_mock(result=[]):
 
 
 def ndb_count_mock(result=0):
+
     def count(query):
         return result
 
@@ -56,6 +58,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_cohort_id__without_auth(self):
         url = reverse_lazy('activity:cohort_id', kwargs={'cohort_id': 1})
         response = self.client.get(url)

@@ -213,6 +213,7 @@ class AssetKeywordSerializer(serpy.Serializer):
 
 
 class TechSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetTechnology
 
@@ -236,6 +237,7 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
 
 class PostKeywordClusterSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = KeywordCluster
         exclude = ('academy', )
@@ -254,6 +256,7 @@ class PostKeywordClusterSerializer(serializers.ModelSerializer):
 
 
 class PostKeywordSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetKeyword
         exclude = ('academy', )
@@ -323,12 +326,14 @@ class TechnologyPUTSerializer(serializers.ModelSerializer):
 
 
 class PostAssetCommentSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetComment
         exclude = ()
 
 
 class PutAssetCommentSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetComment
         exclude = ('text', 'asset', 'author')

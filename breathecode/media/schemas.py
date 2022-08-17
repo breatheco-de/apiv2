@@ -2,6 +2,7 @@ from rest_framework.schemas.openapi import AutoSchema
 
 
 class GlobalSchema(AutoSchema):
+
     def get_operation(self, path, method):
         operation = super().get_operation(path, method)
         operation['parameters'].append({
@@ -17,6 +18,7 @@ class GlobalSchema(AutoSchema):
 
 
 class MediaSchema(GlobalSchema):
+
     def get_operation(self, path, method):
         operation = super().get_operation(path, method)
         operation['parameters'].append({
@@ -32,6 +34,7 @@ class MediaSchema(GlobalSchema):
 
 
 class FileSchema(AutoSchema):
+
     def get_operation(self, path, method):
         operation = super().get_operation(path, method)
         operation['parameters'].append({

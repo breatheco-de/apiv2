@@ -5,6 +5,7 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Adding a ProfileAcademy
     """
+
     def test_adding_a_profile_academy(self):
         model = self.bc.database.create(profile_academy=1)
 
@@ -70,6 +71,7 @@ class ModelUserTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Adding a User
     """
+
     def test_adding_a_user(self):
         model = self.bc.database.create(user=1)
 
@@ -105,6 +107,7 @@ class ModelMentorProfileTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Adding a ProfileAcademy
     """
+
     def test_adding_a_mentor_profile(self):
         model = self.bc.database.create(mentor_profile=1)
 

@@ -26,7 +26,8 @@ TASK_STARTED_MESSAGE = 'Task add_event_tags_to_student started'
 GET_CONTACT_BY_EMAIL_PATH = ('breathecode.services.activecampaign.client.ActiveCampaign.'
                              'get_contact_by_email')
 
-ADD_TAG_TO_CONTACT_PATH = ('breathecode.services.activecampaign.client.ActiveCampaign.' 'add_tag_to_contact')
+ADD_TAG_TO_CONTACT_PATH = ('breathecode.services.activecampaign.client.ActiveCampaign.'
+                           'add_tag_to_contact')
 
 GET_CONTACT_BY_EMAIL_EXCEPTION = 'Random exception in get_contact_by_email'
 ADD_TAG_TO_CONTACT_EXCEPTION = 'Random exception in add_tag_to_contact'
@@ -36,6 +37,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Without optional arguments
     """
+
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))

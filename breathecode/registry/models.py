@@ -186,6 +186,7 @@ ASSET_SYNC_STATUS = (
 
 
 class Asset(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(Asset, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
