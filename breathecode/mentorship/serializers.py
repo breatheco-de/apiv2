@@ -140,6 +140,8 @@ class GETMentorSmallSerializer(serpy.Serializer):
     user = GetUserSmallSerializer()
     services = serpy.MethodField()
     status = serpy.Field()
+    one_line_bio = serpy.Field()
+    rating = serpy.Field()
     price_per_hour = serpy.Field()
     booking_url = serpy.Field()
     online_meeting_url = serpy.Field()
