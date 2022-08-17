@@ -210,6 +210,8 @@ class GETMentorBigSerializer(serpy.Serializer):
     online_meeting_url = serpy.Field()
     timezone = serpy.Field()
     syllabus = serpy.MethodField()
+    one_line_bio = serpy.Field()
+    rating = serpy.Field()
     email = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
