@@ -87,6 +87,11 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
         },
         'mentor_joined_at': mentorship_session.mentor_joined_at,
         'mentor_left_at': mentorship_session.mentor_left_at,
+        'service': {
+            'id': mentorship_service.id,
+            'name': mentorship_service.name,
+            'slug': mentorship_service.slug,
+        },
         'started_at': format_datetime(self, mentorship_session.started_at),
         'status': mentorship_session.status,
         'summary': mentorship_session.summary,
@@ -166,6 +171,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__get__without_auth(self):
         url = reverse_lazy('mentorship:academy_session')
         response = self.client.get(url)
@@ -787,7 +793,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         )
 
     def test__get__with_four_elements__padding_mentor(self):
-        mentorship_sessions = [{'mentee_id': x, 'mentor_id': x} for x in range(1, 5)]
+        mentorship_sessions = [{'mentee_id': x, 'mentor_id': x, 'service_id': x} for x in range(1, 5)]
         mentor_profiles = [{'user_id': x, 'services': [x]} for x in range(1, 5)]
         model = self.bc.database.create(user=4,
                                         role=1,

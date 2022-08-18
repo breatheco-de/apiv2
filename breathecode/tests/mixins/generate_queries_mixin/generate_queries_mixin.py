@@ -31,6 +31,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
     __generate_queries_was_loaded__ = False
 
     def __get_model__(self, method_name, Model, key='id'):
+
         def get_model(pk):
             print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             kwargs = {key: pk}
@@ -40,6 +41,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
         return get_model
 
     def __get_model_dict__(self, method_name, Model, key='id'):
+
         def get_model_dict(pk):
             print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             kwargs = {key: pk}
@@ -50,6 +52,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
         return get_model_dict
 
     def __all_model__(self, method_name, Model):
+
         def all_model():
             print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             return Model.objects.filter()
@@ -57,6 +60,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
         return all_model
 
     def __all_model_dict__(self, method_name, Model):
+
         def all_model_dict():
             print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             return [self.remove_dinamics_fields(data.__dict__.copy()) for data in Model.objects.filter()]
@@ -64,6 +68,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
         return all_model_dict
 
     def __count_model__(self, method_name, Model):
+
         def count_model():
             print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             return Model.objects.count()

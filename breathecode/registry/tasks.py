@@ -6,7 +6,7 @@ from celery import shared_task, Task
 
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
-from breathecode.services.google_cloud.function import Function
+from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
 from .models import Asset
 from .actions import pull_from_github, screenshots_bucket, test_asset
@@ -52,7 +52,7 @@ def async_create_asset_thumbnail(asset_slug: str):
     slug1 = 'learn-to-code'
     slug2 = asset_slug
     url = f'https://4geeksacademy.com/us/{slug1}/{slug2}/preview'
-    func = Function(region='us-central1', project_id='breathecode-197918', name='screenshots')
+    func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='screenshots')
 
     name = f'{slug1}-{slug2}.png'
     response = func.call({
@@ -136,7 +136,7 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
 
     kwargs = {'width': width} if width else {'height': height}
 
-    func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
+    func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='resize-image')
 
     response = func.call({
         **kwargs,

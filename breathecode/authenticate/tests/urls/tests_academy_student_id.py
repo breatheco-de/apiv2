@@ -10,6 +10,7 @@ from ..mixins.new_auth_test_case import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_student_id_without_auth(self):
         """Test /academy/:id/member/:id without auth"""

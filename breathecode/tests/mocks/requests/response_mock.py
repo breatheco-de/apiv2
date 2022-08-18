@@ -21,7 +21,7 @@ class ResponseMock():
         self.url = url
 
         if isinstance(data, str):
-            self.content = data
+            self.content = str(data).encode('utf-8')
             self.text = data
         else:
             content = json.dumps(data)

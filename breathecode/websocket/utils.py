@@ -13,6 +13,7 @@ UNAUTHENTICATED = {'detail': 'Authentication credentials were not provided.', 's
 
 
 class CommonBreathecodeConsumerMixin():
+
     def get_anonymous_user_id(self):
         """
         Get a unique id for a anonymous user, I you don't want to send or receive a message from other consumer
@@ -45,6 +46,7 @@ class CommonBreathecodeConsumerMixin():
 
 
 class AsyncBreathecodeConsumerMixin(CommonBreathecodeConsumerMixin):
+
     async def setup(self):
         """
         This configure all the related tasks in the `connect` method of consumer
@@ -53,6 +55,7 @@ class AsyncBreathecodeConsumerMixin(CommonBreathecodeConsumerMixin):
 
 
 class SyncBreathecodeConsumerMixin(CommonBreathecodeConsumerMixin):
+
     def setup(self):
         """
         This configure all the related tasks in the `connect` method of consumer

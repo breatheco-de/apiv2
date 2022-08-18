@@ -88,8 +88,8 @@ def create_lead(request):
     if 'referral_code' in data and 'referral_key' not in data:
         data['referral_key'] = data['referral_code']
 
-    if 'utm_url' in data and data['utm_url'].contains('//localhost:'):
-        print('Ignoring lead because its coming from localhost')
+    if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
+        print('Ignoring lead because its coming from development team')
         return Response(data, status=status.HTTP_201_CREATED)
 
     serializer = PostFormEntrySerializer(data=data)
@@ -366,6 +366,7 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_tag')
     def get(self, request, format=None, academy_id=None):
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
@@ -405,6 +406,7 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
 
@@ -418,6 +420,7 @@ class UTMView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
 
@@ -440,6 +443,7 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_won_lead')
     def get(self, request, format=None, academy_id=None):
 
@@ -489,6 +493,7 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
 
 
 class AcademyProcessView(APIView, GenerateLookupsMixin):
+
     @capable_of('crud_lead')
     def put(self, request, academy_id=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
@@ -592,6 +597,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_shortlink')
     def get(self, request, slug=None, academy_id=None):
 

@@ -11,6 +11,7 @@ from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQ
 class EventTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
                     DatetimeMixin, ICallMixin, BreathecodeMixin):
     """AdmissionsTestCase with auth methods"""
+
     def setUp(self):
         os.environ['API_URL'] = 'http://localhost:8000'
         self.generate_queries()

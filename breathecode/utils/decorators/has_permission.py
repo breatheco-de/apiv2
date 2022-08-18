@@ -18,7 +18,9 @@ def validate_permission(user: User, permission: str) -> bool:
 
 def has_permission(permission: str):
     """This decorator check if the current user can access to the resource through of permissions"""
+
     def decorator(function):
+
         def wrapper(*args, **kwargs):
             if isinstance(permission, str) == False:
                 raise ProgramingError('Permission must be a string')

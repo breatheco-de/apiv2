@@ -9,6 +9,7 @@ import breathecode.certificate.actions as actions
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """Tests action remove_screenshot"""
+
     @patch('breathecode.certificate.actions.remove_certificate_screenshot', MagicMock())
     def test_remove_screenshot__call_all_properly(self):
         """remove_screenshot don't call open in development environment"""

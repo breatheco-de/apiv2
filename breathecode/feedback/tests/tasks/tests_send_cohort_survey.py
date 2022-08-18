@@ -19,6 +19,7 @@ now = timezone.now()
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -27,6 +28,7 @@ def apply_get_env(configuration={}):
 
 class SendCohortSurvey(FeedbackTestCase):
     """Test /academy/survey"""
+
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.debug', MagicMock())

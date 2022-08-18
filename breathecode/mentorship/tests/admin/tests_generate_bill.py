@@ -14,6 +14,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     """
     🔽🔽🔽 With zero MentorProfile
     """
+
     @patch('breathecode.mentorship.actions.generate_mentor_bills', MagicMock())
     def test_with_zero_mentor_profiles(self):
         MentorProfile = self.bc.database.get_model('mentorship.MentorProfile')

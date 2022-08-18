@@ -4,6 +4,7 @@ from breathecode.monitoring.actions import run_script
 
 
 class ShortLinkTestSuite(MonitoringTestCase):
+
     def tests_send_list_of_shortlinks_when_operational(self):
         """
         Checking to see if shortlink script runs with properly with working shortlinks

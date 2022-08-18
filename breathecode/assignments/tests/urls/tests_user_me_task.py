@@ -44,6 +44,7 @@ def put_serializer(self, task, data={}):
         'task_status': task.task_status,
         'task_type': task.task_type,
         'title': task.title,
+        'subtasks': task.subtasks,
         **data,
     }
 
@@ -53,6 +54,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_user_me_task__without_auth(self):
         url = reverse_lazy('assignments:user_me_task')
         response = self.client.get(url)

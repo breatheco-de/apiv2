@@ -4,7 +4,7 @@ from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserVi
                     AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView, SyllabusScheduleView,
                     get_all_academies, get_cohorts, AcademyCohortTimeSlotView,
                     AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
-                    get_public_syllabus, SyllabusAssetView)
+                    get_public_syllabus, SyllabusAssetView, PublicCohortUserView)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -97,4 +97,7 @@ urlpatterns = [
 
     #replaces an asset slug in all syllabus versions
     path('admin/syllabus/asset/<str:asset_slug>', SyllabusAssetView.as_view(), name='syllabus_asset'),
+
+    # Public Endpoints anyone can call
+    path('public/cohort/user', PublicCohortUserView.as_view(), name='public_cohort_user'),
 ]

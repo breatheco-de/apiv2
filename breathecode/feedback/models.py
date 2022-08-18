@@ -11,16 +11,19 @@ __all__ = ['UserProxy', 'CohortUserProxy', 'CohortProxy', 'Survey', 'Answer']
 
 
 class UserProxy(User):
+
     class Meta:
         proxy = True
 
 
 class CohortUserProxy(CohortUser):
+
     class Meta:
         proxy = True
 
 
 class CohortProxy(Cohort):
+
     class Meta:
         proxy = True
 
@@ -89,6 +92,7 @@ SURVEY_STATUS = (
 
 
 class Answer(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(Answer, self).__init__(*args, **kwargs)
         self.__old_status = self.status

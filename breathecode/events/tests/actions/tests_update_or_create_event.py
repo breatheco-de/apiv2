@@ -18,6 +18,7 @@ status_map = {
 
 
 def log_mock():
+
     def log(self, *args):
         print(*args)
 
@@ -25,6 +26,7 @@ def log_mock():
 
 
 def create_or_update_venue_mock(raise_error=False):
+
     def create_or_update_venue(*args, **kwargs):
         pass
 
@@ -32,6 +34,7 @@ def create_or_update_venue_mock(raise_error=False):
 
 
 def create_or_update_organizer_mock(raise_error=False):
+
     def create_or_update_organizer(*args, **kwargs):
         pass
 
@@ -39,6 +42,7 @@ def create_or_update_organizer_mock(raise_error=False):
 
 
 def get_current_iso_string_mock():
+
     def get_current_iso_string():
         return sync_desc
 
@@ -49,6 +53,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Data is None
     """
+
     @patch.object(logging.Logger, 'warn', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())

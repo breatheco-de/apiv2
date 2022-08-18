@@ -13,6 +13,7 @@ from rest_framework import status
 class SlackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin,
                     ICallMixin, BreathecodeMixin):
     """SlackTestCase with auth methods"""
+
     def setUp(self):
         self.generate_queries()
         self.set_test_instance(self)

@@ -12,6 +12,7 @@ __all__ = ['ws_can_auth']
 
 class SyncWsCanAuth:
     """This class contain the handlers to the JsonWebsocketConsumer"""
+
     def sync_wrapper(self, cls: JsonWebsocketConsumer, connect: callable):
         found_headers = [
             x for x in self.scope['headers'] if x[0] == b'authorization' or x[0] == 'authorization'
@@ -45,6 +46,7 @@ class SyncWsCanAuth:
 
 class AsyncWsCanAuth:
     """This class contain the handlers to the AsyncJsonWebsocketConsumer"""
+
     async def async_wrapper(self, cls: AsyncJsonWebsocketConsumer, connect: callable):
         found_headers = [
             x for x in self.scope['headers'] if x[0] == b'authorization' or x[0] == 'authorization'
@@ -59,7 +61,6 @@ class AsyncWsCanAuth:
             user, token = await WsCanAuth.async_get_token(request)
 
         except Exception as e:
-            print(e)
             await self.accept()
             await self.send_json({'details': e.detail, 'status_code': e.status_code}, close=True)
             return

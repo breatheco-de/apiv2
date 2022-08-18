@@ -10,6 +10,7 @@ from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixi
 class MediaTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                     HeadersMixin, DatetimeMixin, Sha256Mixin, BreathecodeMixin):
     """FeedbackTestCase with auth methods"""
+
     def tearDown(self):
         self.clear_cache()
 

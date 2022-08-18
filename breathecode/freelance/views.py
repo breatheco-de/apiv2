@@ -82,6 +82,7 @@ class BillView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, format=None):
 
         items = Bill.objects.all()
@@ -116,6 +117,7 @@ class SingleBillView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, id):
         item = Bill.objects.filter(id=id).first()
         if item is None:

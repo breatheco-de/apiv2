@@ -19,6 +19,7 @@ from breathecode.admissions.caches import CohortUserCache
 
 class CohortUserTestSuite(AdmissionsTestCase):
     """Test /cohort/user"""
+
     def test_cohort_user_without_auth(self):
         """Test /cohort/user without auth"""
         url = reverse_lazy('admissions:cohort_user')

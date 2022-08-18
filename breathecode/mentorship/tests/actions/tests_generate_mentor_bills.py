@@ -34,6 +34,7 @@ def mentorship_bill_field(data={}):
 
 #FIXME: improve this tests
 class GenerateMentorBillsTestCase(MentorshipTestCase):
+
     @patch('django.utils.timezone.now', MagicMock(return_value=NOW))
     def test_generate_bills_with_no_previous_bills_no_unpaid_sessions(self):
         """

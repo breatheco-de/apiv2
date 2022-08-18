@@ -85,6 +85,11 @@ class MentorProfile(models.Model):
 
     price_per_hour = models.FloatField()
 
+    one_line_bio = models.TextField(max_length=60,
+                                    default=None,
+                                    blank=True,
+                                    null=True,
+                                    help_text='Will be shown to showcase the mentor')
     bio = models.TextField(max_length=500, default=None, blank=True, null=True)
 
     services = models.ManyToManyField(to=MentorshipService)
@@ -126,12 +131,19 @@ class MentorProfile(models.Model):
                              null=True,
                              default=None,
                              help_text='Only use this if the user does not exist on breathecode already')
+
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
                              help_text='If the user does not exist, you can use the email field instead')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    rating = models.FloatField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text='Automatically filled when new survey responses are collected about this mentor')
 
     def save(self, *args, **kwargs):
 
@@ -210,6 +222,7 @@ MENTORSHIP_STATUS = (
 
 
 class MentorshipSession(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(MentorshipSession, self).__init__(*args, **kwargs)
         self.__old_status = self.status

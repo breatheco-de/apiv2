@@ -9,6 +9,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     """
     🔽🔽🔽 With zero Event
     """
+
     def test_event_marked_as_draft__zero_events(self):
         """
         Descriptions of models are being generated:

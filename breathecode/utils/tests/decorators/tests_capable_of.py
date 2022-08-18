@@ -36,6 +36,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
     """
     🔽🔽🔽 Function get id
     """
+
     def test_capable_of__function__get_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -178,6 +179,7 @@ class ViewTestSuite(UtilsTestCase):
     """
     🔽🔽🔽 View get id
     """
+
     def test_capable_of__view__get__anonymous_user(self):
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')

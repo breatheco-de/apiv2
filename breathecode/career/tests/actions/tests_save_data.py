@@ -410,6 +410,7 @@ JOBS10 = [{
 
 
 class ActionSaveDataTestCase(CareerTestCase):
+
     def test_save_data__with_spider(self):
         spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
         zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}

@@ -7,6 +7,7 @@ from .utils import is_valid, create_models, just_one
 
 
 class EventsModelsMixin(ModelsMixin):
+
     def generate_events_models(self,
                                organization=False,
                                user=False,

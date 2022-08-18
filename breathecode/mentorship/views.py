@@ -1,6 +1,7 @@
 from email.mime import base
 import hashlib, timeago, logging
 import re
+from rest_framework.permissions import AllowAny
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
@@ -35,6 +36,7 @@ from .serializers import (
     GETBillSmallSerializer,
     MentorshipBillPUTSerializer,
     BillSessionSerializer,
+    GETMentorPublicTinySerializer,
 )
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -85,8 +87,11 @@ def forward_booking_url(request, mentor_slug, token):
     try:
         actions.mentor_is_ready(mentor)
 
-    except:
-        return render_message(request, f'This mentor is not ready too')
+    except Exception as e:
+        logger.exception(e)
+        return render_message(
+            request,
+            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
 
     booking_url = mentor.booking_url
     if '?' not in booking_url:
@@ -110,12 +115,15 @@ def pick_mentorship_service(request, token, mentor_slug):
     try:
         actions.mentor_is_ready(mentor)
 
-    except:
-        return render_message(request, f'This mentor is not ready too')
+    except Exception as e:
+        logger.exception(e)
+        return render_message(
+            request,
+            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
 
     services = mentor.services.all()
     if not services:
-        return render_message(request, f'This mentor is not available')
+        return render_message(request, f'This mentor is not available on any service')
 
     return render(request, 'pick_service.html', {
         'token': token.key,
@@ -126,6 +134,7 @@ def pick_mentorship_service(request, token, mentor_slug):
 
 
 class ForwardMeetUrl:
+
     def __init__(self, request, mentor_slug, service_slug, token):
         self.request = request
         self.mentor_slug = mentor_slug
@@ -257,7 +266,10 @@ class ForwardMeetUrl:
             actions.mentor_is_ready(mentor)
 
         except:
-            return render_message(self.request, f'This mentor is not ready too')
+            return render_message(
+                self.request,
+                f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.'
+            )
 
         is_token_of_mentee = mentor.user.id != self.token.user.id
 
@@ -696,21 +708,38 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('read_mentorship_session')
     def put(self, request, academy_id=None, session_id=None):
-        session = MentorshipSession.objects.filter(id=session_id,
-                                                   mentor__service__academy__id=academy_id).first()
-        if session is None:
-            raise ValidationException('This session does not exist on this academy', code=404)
 
-        data = {}
-        for key in request.data.keys():
-            data[key] = request.data.get(key)
+        many = isinstance(request.data, list)
+        if not many:
+            current = MentorshipSession.objects.filter(id=session_id,
+                                                       mentor__service__academy__id=academy_id).first()
+            if current is None:
+                raise ValidationException('This session does not exist on this academy', code=404)
 
-        serializer = SessionPUTSerializer(session,
+            data = {}
+            for key in request.data.keys():
+                data[key] = request.data.get(key)
+        else:
+            data = request.data
+            current = []
+            index = -1
+            for x in request.data:
+                index = index + 1
+
+                if 'id' in x:
+                    current.append(MentorshipSession.objects.filter(id=x['id']).first())
+
+                else:
+                    raise ValidationException('Cannot determine session in '
+                                              f'index {index}')
+
+        serializer = SessionPUTSerializer(current,
                                           data=data,
                                           context={
                                               'request': request,
                                               'academy_id': academy_id
-                                          })
+                                          },
+                                          many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -929,6 +958,7 @@ class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
+
     @has_permission('get_my_mentoring_sessions')
     def get(self, request):
 
@@ -971,6 +1001,7 @@ class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
 
 
 class UserMeBillView(APIView, HeaderLimitOffsetPagination):
+
     @has_permission('get_my_mentoring_sessions')
     def get(self, request, bill_id=None):
 
@@ -1011,3 +1042,28 @@ class UserMeBillView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PublicMentorView(APIView, HeaderLimitOffsetPagination):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        items = MentorProfile.objects.filter(status='ACTIVE')
+        lookup = {}
+
+        if 'services' in self.request.GET:
+            param = self.request.GET.get('services', '').split(',')
+            lookup['services__slug__in'] = param
+
+        if 'syllabus' in self.request.GET:
+            param = self.request.GET.get('syllabus')
+            lookup['syllabus__slug'] = param
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = GETMentorPublicTinySerializer(items, many=True)
+
+        return handler.response(serializer.data)

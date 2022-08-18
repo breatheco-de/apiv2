@@ -33,6 +33,12 @@ class ProfileSerializer(serpy.Serializer):
     github_username = serpy.Field()
 
 
+class ProfilePublicSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+
+
 class GetSyllabusSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -40,6 +46,12 @@ class GetSyllabusSmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     logo = serpy.Field()
+
+
+class GetUserPublicTinySerializer(serpy.Serializer):
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    profile = ProfilePublicSerializer(required=False)
 
 
 class GetUserSmallSerializer(serpy.Serializer):
@@ -67,6 +79,10 @@ class GETServiceSmallSerializer(serpy.Serializer):
     language = serpy.Field()
     allow_mentee_to_extend = serpy.Field()
     allow_mentors_to_extend = serpy.Field()
+
+
+class GETMentorPublicTinySerializer(serpy.Serializer):
+    user = GetUserPublicTinySerializer()
 
 
 class GETMentorTinySerializer(serpy.Serializer):
@@ -124,6 +140,8 @@ class GETMentorSmallSerializer(serpy.Serializer):
     user = GetUserSmallSerializer()
     services = serpy.MethodField()
     status = serpy.Field()
+    one_line_bio = serpy.Field()
+    rating = serpy.Field()
     price_per_hour = serpy.Field()
     booking_url = serpy.Field()
     online_meeting_url = serpy.Field()
@@ -192,6 +210,8 @@ class GETMentorBigSerializer(serpy.Serializer):
     online_meeting_url = serpy.Field()
     timezone = serpy.Field()
     syllabus = serpy.MethodField()
+    one_line_bio = serpy.Field()
+    rating = serpy.Field()
     email = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -366,6 +386,7 @@ class BillSessionSerializer(serpy.Serializer):
 
 
 class ServicePOSTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorshipService
         exclude = ('created_at', 'updated_at', 'academy')
@@ -431,9 +452,24 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
         return data
 
 
+class SessionListSerializer(serializers.ListSerializer):
+
+    def update(self, instances, validated_data):
+
+        instance_hash = {index: instance for index, instance in enumerate(instances)}
+
+        result = [
+            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
+        ]
+
+        return result
+
+
 class SessionPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorshipSession
+        list_serializer_class = SessionListSerializer
         exclude = (
             'created_at',
             'updated_at',
@@ -478,6 +514,7 @@ class SessionSerializer(SessionPUTSerializer):
 
 
 class MentorshipBillPUTListSerializer(serializers.ListSerializer):
+
     def update(self, instances, validated_data):
 
         instance_hash = {index: instance for index, instance in enumerate(instances)}
@@ -490,6 +527,7 @@ class MentorshipBillPUTListSerializer(serializers.ListSerializer):
 
 
 class MentorshipBillPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorshipBill
         exclude = ('created_at', 'updated_at', 'academy', 'mentor', 'reviewer', 'total_duration_in_minutes',

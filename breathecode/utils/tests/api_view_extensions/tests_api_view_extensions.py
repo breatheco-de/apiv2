@@ -100,6 +100,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
     """
     🔽🔽🔽 Spy the extensions
     """
+
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
     def test_cache__get__spy_the_extensions(self):
         cache.clear()
@@ -825,6 +826,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
     """
     🔽🔽🔽 Spy the extensions
     """
+
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
     def test_cache__get__spy_the_extensions(self):
         cache.clear()

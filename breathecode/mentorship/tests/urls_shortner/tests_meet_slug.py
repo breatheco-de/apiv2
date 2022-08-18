@@ -133,6 +133,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_without_auth(self):
         url = reverse_lazy('mentorship_shortner:meet_slug', kwargs={
             'mentor_slug': 'asd',
@@ -194,7 +195,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render('This mentor is not ready too')
+        expected = render(
+            'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
 
         # dump error in external files
         if content != expected:

@@ -9,6 +9,7 @@ from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQ
 class WebsocketTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin,
                         OldBreathecodeMixin, DatetimeMixin, BreathecodeMixin):
     """AdmissionsTestCase with auth methods"""
+
     def setUp(self):
         self.set_test_instance(self)
 

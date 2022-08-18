@@ -6,6 +6,7 @@ from .utils import is_valid, create_models, just_one, get_list
 
 
 class MentorshipModelsMixin(ModelsMixin):
+
     def generate_mentorship_models(self,
                                    mentorship_service=False,
                                    mentor_profile=False,
