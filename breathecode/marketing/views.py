@@ -36,7 +36,7 @@ from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
-from breathecode.utils import create_assessment
+from breathecode.services.google_cloud import Recaptcha
 
 logger = logging.getLogger(__name__)
 
@@ -81,26 +81,20 @@ def get_downloadable(request, slug=None):
 def create_lead(request):
 
     project_id = os.getenv('GOOGLE_PROJECT_ID', '')
-    print('project_id')
-    print(project_id)
-
     site_key = os.getenv('GOOGLE_CAPTCHA_KEY', '')
-    print('site_key')
-    print(site_key)
 
     data = request.data.copy()
 
-    print('token')
-    print(data['token'])
-    print('action')
-    print(data['action'])
-
-    recaptcha = create_assessment(project_id=project_id,
-                                  recaptcha_site_key=site_key,
-                                  token=data['token'],
-                                  recaptcha_action=data['action'])
-
-    print(recaptcha)
+    recaptcha = Recaptcha()
+    recaptcha_result = recaptcha.create_assessment(project_id=project_id,
+                                                   recaptcha_site_key=site_key,
+                                                   token=data['token'],
+                                                   recaptcha_action=data['action']
+                                                   # recaptcha_action='login'
+                                                   )
+    print(recaptcha_result)
+    if (recaptcha_result.risk_analysis.score < 0.8):
+        raise ValidationException('The action was denied because it was considered suspicious', code=400)
 
     # remove spaces from phone
     if 'phone' in data:
