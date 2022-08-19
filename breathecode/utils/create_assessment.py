@@ -1,5 +1,6 @@
 from google.cloud import recaptchaenterprise_v1
 from google.cloud.recaptchaenterprise_v1 import Assessment
+from breathecode.services.google_cloud import resolve_credentials
 
 __all__ = ['create_assessment']
 
@@ -13,7 +14,9 @@ def create_assessment(project_id: str, recaptcha_site_key: str, token: str,
         token: The token obtained from the client on passing the recaptchaSiteKey.
         recaptcha_action: Action name corresponding to the token.
     """
-
+    print('HERE')
+    resolve_credentials()
+    print('HERE2')
     client = recaptchaenterprise_v1.RecaptchaEnterpriseServiceClient()
 
     # Set the properties of the event to be tracked.

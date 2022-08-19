@@ -80,7 +80,27 @@ def get_downloadable(request, slug=None):
 @permission_classes([AllowAny])
 def create_lead(request):
 
+    project_id = os.getenv('GOOGLE_PROJECT_ID', '')
+    print('project_id')
+    print(project_id)
+
+    site_key = os.getenv('GOOGLE_CAPTCHA_KEY', '')
+    print('site_key')
+    print(site_key)
+
     data = request.data.copy()
+
+    print('token')
+    print(data['token'])
+    print('action')
+    print(data['action'])
+
+    recaptcha = create_assessment(project_id=project_id,
+                                  recaptcha_site_key=site_key,
+                                  token=data['token'],
+                                  recaptcha_action=data['action'])
+
+    print(recaptcha)
 
     # remove spaces from phone
     if 'phone' in data:
@@ -89,9 +109,9 @@ def create_lead(request):
     if 'referral_code' in data and 'referral_key' not in data:
         data['referral_key'] = data['referral_code']
 
-    if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
-        print('Ignoring lead because its coming from development team')
-        return Response(data, status=status.HTTP_201_CREATED)
+    # if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
+    #     print('Ignoring lead because its coming from development team')
+    #     return Response(data, status=status.HTTP_201_CREATED)
 
     serializer = PostFormEntrySerializer(data=data)
     if serializer.is_valid():
