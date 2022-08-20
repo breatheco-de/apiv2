@@ -148,10 +148,14 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
             mentor_profile.email,
             'id':
             mentor_profile.id,
+            'one_line_bio':
+            mentor_profile.one_line_bio,
             'online_meeting_url':
             mentor_profile.online_meeting_url,
             'price_per_hour':
             mentor_profile.price_per_hour,
+            'rating':
+            mentor_profile.rating,
             'services': [{
                 'academy': {
                     'icon_url': mentorship_service.academy.icon_url,

@@ -31,6 +31,10 @@ def media_gallery_bucket():
     return os.getenv('MEDIA_GALLERY_BUCKET')
 
 
+def google_project_id():
+    return os.getenv('GOOGLE_PROJECT_ID', '')
+
+
 class MediaView(ViewSet, GenerateLookupsMixin):
     """
     get:
@@ -514,7 +518,7 @@ class MaskingUrlView(APIView):
                                                     | Q(height=height), hash=media.hash).first()
 
         if (width or height) and not resolution:
-            func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='resize-image')
+            func = FunctionV1(region='us-central1', project_id=google_project_id(), name='resize-image')
 
             func_request = func.call({
                 'width': width,
