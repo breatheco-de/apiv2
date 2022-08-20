@@ -90,7 +90,7 @@ def read_n_bytes_from_socket(sock, n):
     view = memoryview(buf)
     while n:
         nbytes = sock.recv_into(view, n)
-        view = view[nbytes:] # slicing views is cheap
+        view = view[nbytes:]  # slicing views is cheap
         n -= nbytes
     return buf
 
