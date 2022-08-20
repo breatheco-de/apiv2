@@ -76,6 +76,7 @@ def async_create_asset_thumbnail(asset_slug: str):
         return
 
     json = response.json()
+    print('task json', json)
 
     url = json['url']
     filename = json['filename']
