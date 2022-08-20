@@ -226,7 +226,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render(f'This mentor is not available')
+        expected = render(f'This mentor is not available on any service')
 
         # dump error in external files
         if content != expected:

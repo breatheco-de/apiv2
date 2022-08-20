@@ -12,23 +12,9 @@ from ..mixins import RegistryTestCase
 
 class RegistryTestSuite(RegistryTestCase):
     """
-    🔽🔽🔽 Auth
-    """
-
-    def test_without_auth(self):
-        url = reverse_lazy('registry:asset_thumbnail_slug', kwargs={'asset_slug': 'slug'})
-        response = self.client.get(url)
-
-        json = response.json()
-        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
-
-    """
     🔽🔽🔽 GET without Asset
     """
+
     @patch('breathecode.registry.actions.AssetThumbnailGenerator.__init__', MagicMock(return_value=None))
     def test__get__without_asset(self):
         cases = [(True, status.HTTP_301_MOVED_PERMANENTLY), (False, status.HTTP_302_FOUND)]

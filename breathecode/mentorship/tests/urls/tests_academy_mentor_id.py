@@ -26,10 +26,14 @@ def get_serializer(self, mentor_profile, mentorship_service, user, data={}):
         mentor_profile.email,
         'id':
         mentor_profile.id,
+        'one_line_bio':
+        mentor_profile.one_line_bio,
         'online_meeting_url':
         mentor_profile.online_meeting_url,
         'price_per_hour':
         mentor_profile.price_per_hour,
+        'rating':
+        mentor_profile.rating,
         'services': [{
             'academy': {
                 'icon_url': mentorship_service.academy.icon_url,
@@ -90,6 +94,8 @@ def put_serializer(self, mentor_profile, mentorship_service, user, syllabus=[], 
     return {
         'id':
         mentor_profile.id,
+        'one_line_bio':
+        mentor_profile.one_line_bio,
         'slug':
         mentor_profile.slug,
         'user': {
@@ -139,6 +145,8 @@ def put_serializer(self, mentor_profile, mentorship_service, user, syllabus=[], 
         mentor_profile.status,
         'price_per_hour':
         mentor_profile.price_per_hour,
+        'rating':
+        mentor_profile.rating,
         'booking_url':
         mentor_profile.booking_url,
         'online_meeting_url':

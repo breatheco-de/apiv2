@@ -99,6 +99,10 @@ def get_shape_of_image_url():
     return os.getenv('GCLOUD_SHAPE_OF_IMAGE', '')
 
 
+def get_google_project_id():
+    return os.getenv('GOOGLE_PROJECT_ID', '')
+
+
 class TemporalTokenView(ObtainAuthToken):
     schema = AutoSchema()
     permission_classes = [IsAuthenticated]
@@ -1961,7 +1965,7 @@ class ProfileMePictureView(APIView):
                 cloud_file.delete()
                 raise ValidationException(f'just can upload square images', slug='not-square-image')
 
-            func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='resize-image')
+            func = FunctionV1(region='us-central1', project_id=get_google_project_id(), name='resize-image')
 
             res = func.call({
                 'width': 100,

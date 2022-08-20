@@ -45,6 +45,11 @@ class RegistryTestSuite(RegistryTestCase):
     """
 
     @patch('logging.Logger.error', MagicMock())
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test__without_media(self):
         # model = self.bc.database.create(asset=1)
         async_resize_asset_thumbnail.delay(1)
@@ -58,6 +63,11 @@ class RegistryTestSuite(RegistryTestCase):
     """
 
     @patch('logging.Logger.error', MagicMock())
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test__with_media(self):
         model = self.bc.database.create(media=1)
         async_resize_asset_thumbnail.delay(1)
@@ -73,6 +83,11 @@ class RegistryTestSuite(RegistryTestCase):
     """
 
     @patch('logging.Logger.error', MagicMock())
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test__with_media__passing_width__passing_height(self):
         model = self.bc.database.create(media=1)
         async_resize_asset_thumbnail.delay(1, width=WIDTH, height=HEIGHT)
@@ -91,6 +106,11 @@ class RegistryTestSuite(RegistryTestCase):
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_GOOD_RESPONSE))
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test__with_media__passing_width_or_height__function_return_good_response(self):
         model = self.bc.database.create(media=1)
         cases = [((1, ), {'width': WIDTH}, 1), ((1, ), {'height': HEIGHT}, 2)]
@@ -109,16 +129,18 @@ class RegistryTestSuite(RegistryTestCase):
             self.assertEqual(Logger.error.call_args_list, [])
 
             self.assertEqual(FunctionV1.__init__.call_args_list, [
-                call(region='us-central1', project_id='breathecode-197918', name='resize-image'),
+                call(region='us-central1', project_id='labor-day-story', name='resize-image'),
             ])
 
-            self.assertEqual(FunctionV1.call.call_args_list, [
-                call({
-                    **kwargs,
-                    'filename': model.media.hash,
-                    'bucket': None,
-                }),
-            ])
+            self.assertEqual(
+                str(FunctionV1.call.call_args_list),
+                str([
+                    call({
+                        **kwargs,
+                        'filename': model.media.hash,
+                        'bucket': 'bucket-name',
+                    }),
+                ]))
 
             # teardown
             self.bc.database.delete('media.MediaResolution')
@@ -133,6 +155,11 @@ class RegistryTestSuite(RegistryTestCase):
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_BAD_RESPONSE))
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test__with_media__passing_width_or_height__function_return_bad_response(self):
         model = self.bc.database.create(media=1)
         cases = [((1, ), {'width': WIDTH}), ((1, ), {'height': HEIGHT})]
@@ -148,14 +175,14 @@ class RegistryTestSuite(RegistryTestCase):
             ])
 
             self.assertEqual(FunctionV1.__init__.call_args_list, [
-                call(region='us-central1', project_id='breathecode-197918', name='resize-image'),
+                call(region='us-central1', project_id='labor-day-story', name='resize-image'),
             ])
 
             self.assertEqual(FunctionV1.call.call_args_list, [
                 call({
                     **kwargs,
                     'filename': model.media.hash,
-                    'bucket': None,
+                    'bucket': 'bucket-name',
                 }),
             ])
 
