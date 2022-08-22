@@ -337,8 +337,6 @@ class TaskMeView(APIView):
             if serializer.is_valid():
                 if not only_validate:
                     serializer.save()
-                    if _req.user.id != item.user.id:
-                        tasks.student_task_notification.delay(item.id)
                 return status.HTTP_200_OK, serializer.data
             return status.HTTP_400_BAD_REQUEST, serializer.errors
 

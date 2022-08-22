@@ -16,6 +16,7 @@ UTC_NOW = timezone.now()
 
 
 def put_serializer(self, task, data={}):
+
     return {
         'associated_slug': task.associated_slug,
         'cohort': task.cohort,
@@ -181,7 +182,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task') + '?id=1,2'
-        print(url)
+
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -244,8 +245,6 @@ class MediaTestSuite(AssignmentsTestCase):
         }
 
         self.assertEqual(json, expected)
-
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
 
@@ -347,9 +346,6 @@ class MediaTestSuite(AssignmentsTestCase):
 
         json = response.json()
 
-        print(json)
-        print(data)
-
         expected = [
             put_serializer(self, model.task[x], {
                 'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
@@ -358,4 +354,9 @@ class MediaTestSuite(AssignmentsTestCase):
         ]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        for x in range(0, 2):
+            data[x]['cohort_id'] = data[x].pop('cohort')
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
+            **self.bc.format.to_dict(model.task[x]),
+            **data[x]
+        } for x in range(0, 2)])
