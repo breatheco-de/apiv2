@@ -84,17 +84,8 @@ def create_lead(request):
     site_key = os.getenv('GOOGLE_CAPTCHA_KEY', '')
 
     data = request.data.copy()
-
-    recaptcha = Recaptcha()
-    recaptcha_result = recaptcha.create_assessment(project_id=project_id,
-                                                   recaptcha_site_key=site_key,
-                                                   token=data['token'],
-                                                   recaptcha_action=data['action']
-                                                   # recaptcha_action='login'
-                                                   )
-    print(recaptcha_result)
-    if (recaptcha_result.risk_analysis.score < 0.8):
-        raise ValidationException('The action was denied because it was considered suspicious', code=400)
+    token = data['token'] if 'token' in data else None
+    action = data['action'] if 'action' in data else None
 
     # remove spaces from phone
     if 'phone' in data:
@@ -103,9 +94,18 @@ def create_lead(request):
     if 'referral_code' in data and 'referral_key' not in data:
         data['referral_key'] = data['referral_code']
 
-    # if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
-    #     print('Ignoring lead because its coming from development team')
-    #     return Response(data, status=status.HTTP_201_CREATED)
+    if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
+        print('Ignoring lead because its coming from development team')
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    recaptcha = Recaptcha()
+    recaptcha_result = recaptcha.create_assessment(project_id=project_id,
+                                                   recaptcha_site_key=site_key,
+                                                   token=token,
+                                                   recaptcha_action=action)
+    print(recaptcha_result)
+    if (recaptcha_result.risk_analysis.score < 0.8):
+        raise ValidationException('The action was denied because it was considered suspicious', code=400)
 
     serializer = PostFormEntrySerializer(data=data)
     if serializer.is_valid():

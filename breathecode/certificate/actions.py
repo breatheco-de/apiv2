@@ -5,6 +5,7 @@ import hashlib
 import requests, os, logging
 from django.utils import timezone
 from urllib.parse import urlencode
+from django.db.models import Q
 from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, APIException
@@ -102,6 +103,17 @@ def generate_certificate(user, cohort=None, layout=None):
 
     try:
         uspe.academy = cohort.academy
+
+        # tasks_count_pending = Task.objects.filter(
+        #                                         Q(cohort__syllabus_version__json__days__values__assignments__values__mandatory=True)
+        #                                         | Q(cohort__syllabus_version__json__days__values__assignments__values__mandatory=None)
+        #                                         ,
+        #                                         user__id=user.id,
+        #                                           task_type='PROJECT',
+        #                                           revision_status='PENDING',
+
+        #                                           ).count()
+
         tasks_count_pending = Task.objects.filter(user__id=user.id,
                                                   task_type='PROJECT',
                                                   revision_status='PENDING').count()

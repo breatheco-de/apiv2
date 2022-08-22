@@ -56,6 +56,8 @@ def generate_form_entry_kwargs():
         'latitude': randint(0, 9999),
         'longitude': randint(0, 9999),
         'state': random_string(),
+        'token': random_string(),
+        'action': 'submit',
         'zip_code': randint(0, 9999),
         'browser_lang': random_string(),
         'storage_status': choice(['PENDING', 'PERSISTED']),
