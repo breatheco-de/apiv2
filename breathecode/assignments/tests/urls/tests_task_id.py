@@ -563,31 +563,3 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
-
-    # def test_update_task_not_found(self):
-    #     model = self.bc.database.create(user=1)
-    #     self.bc.request.authenticate(model.user)
-
-    #     url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
-    #     response = self.client.put(url)
-
-    #     json = response.json()
-    #     expected = {'detail': 'task-not-found', 'status_code': 404}
-
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-    #     self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
-
-    # def test_update_task_found_and_updated(self):
-    #     model = self.bc.database.create(user=1, task=1)
-    #     self.bc.request.authenticate(model.user)
-
-    #     url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
-    #     response = self.client.put(url)
-
-    #     json = response.json()
-    #     expected = {'detail': '', 'status_code': 200}
-
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(self.bc.database.list_of('assignments.Task'), [])

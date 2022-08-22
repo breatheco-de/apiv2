@@ -3,8 +3,6 @@ from rest_framework.response import Response
 
 __all__ = ['response_207']
 
-#TODO implement 404 case
-
 
 def format_response(data, key):
     response = {}
