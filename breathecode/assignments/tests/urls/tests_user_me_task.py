@@ -330,10 +330,10 @@ class MediaTestSuite(AssignmentsTestCase):
         response = self.client.put(url, data, format='json')
 
         json = response.json()
-        expected = {'detail': 'task-not-found', 'status_code': 400}
+        expected = {'detail': 'task-not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
 
     """
