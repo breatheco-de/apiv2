@@ -91,6 +91,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 GET check the param is being passed
     """
+
     @patch('breathecode.authenticate.views.MemberView.get', MagicMock(side_effect=view_method_mock))
     def test_academy_member__get__with_auth___mock_view(self):
         profile_academies = [{'academy_id': id} for id in range(1, 4)]
@@ -167,6 +168,7 @@ class MemberGetTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_academy_member_without_auth(self):
         """Test /academy/member without auth"""
         url = reverse_lazy('authenticate:academy_member')
@@ -1393,6 +1395,7 @@ class MemberGetTestSuite(AuthTestCase):
 
 class MemberPostTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_member__post__no_data(self):
         """Test /academy/:id/member"""
@@ -1991,6 +1994,7 @@ class MemberDeleteTestSuite(AuthTestCase):
     """
     🔽🔽🔽 DELETE in bulk
     """
+
     def test_academy_member_delete_without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.bc.request.set_headers(academy=1)

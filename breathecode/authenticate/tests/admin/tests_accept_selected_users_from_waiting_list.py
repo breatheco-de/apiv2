@@ -9,6 +9,7 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
     """
     🔽🔽🔽 With zero UserInvite
     """
+
     @patch('breathecode.authenticate.tasks.async_accept_user_from_waiting_list.delay', MagicMock())
     def test_with_zero_user_invite(self):
         UserInvite = self.bc.database.get_model('authenticate.UserInvite')

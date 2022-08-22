@@ -7,6 +7,7 @@ from .utils import is_valid, create_models, just_one, get_list
 
 
 class CareerModelsMixin(ModelsMixin):
+
     def generate_career_models(self,
                                platform=False,
                                position=False,

@@ -78,6 +78,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_member_invite__without_auth(self):
         url = reverse_lazy('authenticate:member_invite')
         response = self.client.get(url)

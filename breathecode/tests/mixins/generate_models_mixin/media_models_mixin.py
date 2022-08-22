@@ -7,6 +7,7 @@ from .utils import is_valid, create_models, just_one, get_list
 
 
 class MediaModelsMixin(ModelsMixin):
+
     def generate_media_models(self,
                               category=False,
                               media=False,

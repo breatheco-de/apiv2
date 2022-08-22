@@ -12,6 +12,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_schedule_time_slot__without_auth(self):
         url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         response = self.client.get(url)

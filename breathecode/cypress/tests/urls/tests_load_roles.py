@@ -56,7 +56,7 @@ CAPABILITIES = [
     },
     {
         'slug': 'crud_assignment',
-        'description': 'Update assignments'
+        'description': 'Create, update or delete a assigment'
     },
     {
         'slug': 'task_delivery_details',
@@ -177,10 +177,6 @@ CAPABILITIES = [
     {
         'slug': 'read_assigment',
         'description': 'List all the assigments'
-    },
-    {
-        'slug': 'crud_assigment',
-        'description': 'Create, update or delete a assigment'
     },
     {
         'slug':
@@ -416,6 +412,7 @@ def extend_roles(roles: list):
 
 
 class AcademyEventTestSuite(CypressTestCase):
+
     def test_load_roles__bad_environment__not_exits(self):
         if 'ALLOW_UNSAFE_CYPRESS_APP' in os.environ:
             del os.environ['ALLOW_UNSAFE_CYPRESS_APP']
@@ -571,7 +568,7 @@ class AcademyEventTestSuite(CypressTestCase):
             },
             {
                 'slug': 'crud_assignment',
-                'description': 'Update assignments'
+                'description': 'Create, update or delete a assigment'
             },
             {
                 'description': ('Get delivery URL for a task, that url can be sent to '
@@ -693,10 +690,6 @@ class AcademyEventTestSuite(CypressTestCase):
             {
                 'slug': 'read_assigment',
                 'description': 'List all the assigments'
-            },
-            {
-                'slug': 'crud_assigment',
-                'description': 'Create, update or delete a assigment'
             },
             {
                 'slug':

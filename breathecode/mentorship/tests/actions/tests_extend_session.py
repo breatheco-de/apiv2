@@ -20,6 +20,7 @@ NOW = timezone.now()
 
 
 def apply_get_env(envs={}):
+
     def get_env(key, default=None):
         return envs.get(key, default)
 
@@ -36,6 +37,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     """
     🔽🔽🔽 without MentorshipSession without name
     """
+
     @patch('os.getenv', MagicMock(side_effect=apply_get_env(ENV)))
     def test__without_name(self):
 

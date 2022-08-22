@@ -41,7 +41,8 @@ if __name__ == '__main__':
     if os.path.exists(htmlcov_path):
         shutil.rmtree(htmlcov_path)
 
-    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report html')
+    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings {sys.argv[1]} {sys.argv[2]} '
+                          f'--cov={module} --cov-report html')
 
     webbrowser.open('file://' + os.path.realpath(os.path.join(os.getcwd(), 'htmlcov', 'index.html')))
 

@@ -8,6 +8,7 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
+
     def test_syllabus_id_without_auth(self):
         """Test /certificate without auth"""
         url = reverse_lazy('admissions:academy_id_syllabus_id', kwargs={
@@ -83,7 +84,9 @@ class CertificateTestSuite(AdmissionsTestCase):
             'academy_owner': {
                 'id': model.syllabus.academy_owner.id,
                 'name': model.syllabus.academy_owner.name,
-                'slug': model.syllabus.academy_owner.slug
+                'slug': model.syllabus.academy_owner.slug,
+                'white_labeled': model.syllabus.academy_owner.white_labeled,
+                'icon_url': model.syllabus.academy_owner.icon_url,
             },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,

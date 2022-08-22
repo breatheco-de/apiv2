@@ -17,6 +17,7 @@ class AcademyCohortTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without student
     """
+
     def test_ical_cohorts__without_student(self):
         url = reverse_lazy('events:ical_student_id', kwargs={'user_id': 1})
         args = {'academy': '1'}

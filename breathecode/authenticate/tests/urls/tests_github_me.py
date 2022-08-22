@@ -11,6 +11,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_not_auth(self):
         url = reverse_lazy('authenticate:github_me')
         response = self.client.delete(url)

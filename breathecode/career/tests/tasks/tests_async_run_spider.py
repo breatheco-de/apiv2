@@ -41,6 +41,7 @@ platform = {'name': 'getonboard'}
 
 
 class RunSpiderTaskTestCase(CareerTestCase):
+
     @patch('breathecode.career.actions.run_spider', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())

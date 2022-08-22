@@ -10,6 +10,7 @@ from django.utils import timezone
 
 
 class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
+
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_issued_at_null_status_error(self):
         # the issues_at should remain None because the certificate generation gave an error.

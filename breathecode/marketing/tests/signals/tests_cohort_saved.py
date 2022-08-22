@@ -7,6 +7,7 @@ class LeadTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Create without ActiveCampaignAcademy
     """
+
     @patch('breathecode.marketing.tasks.add_cohort_slug_as_acp_tag.delay', MagicMock())
     def test_cohort_saved__create__without_active_campaign_academy(self):
         """Test /cohort/:id/user without auth"""

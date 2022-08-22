@@ -8,6 +8,7 @@ from .utils import is_valid, create_models, just_one
 
 
 class FeedbackModelsMixin(ModelsMixin):
+
     def generate_feedback_models(self,
                                  answer=False,
                                  event=False,

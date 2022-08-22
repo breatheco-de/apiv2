@@ -8,6 +8,7 @@ from .utils import is_valid, create_models, just_one
 
 
 class AssessmentModelsMixin(ModelsMixin):
+
     def generate_assessment_models(self,
                                    assessment=False,
                                    question=False,

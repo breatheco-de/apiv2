@@ -25,6 +25,7 @@ def random_datetime_interger():
 
 
 class AdmissionsModelsMixin(ModelsMixin):
+
     def count_cohort_stage(self, cohort_id):
         cohort = Cohort.objects.get(id=cohort_id)
         return cohort.stage
@@ -46,6 +47,9 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    monitor_script=False,
                                    mentor_profile=False,
                                    user_specialty=False,
+                                   asset_category=False,
+                                   keyword_cluster=False,
+                                   asset_keyword=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -76,7 +80,8 @@ class AdmissionsModelsMixin(ModelsMixin):
         if not 'academy' in models and (is_valid(academy) or is_valid(profile_academy) or is_valid(syllabus)
                                         or is_valid(cohort) or is_valid(monitor_script)
                                         or is_valid(mentorship_service) or is_valid(mentor_profile)
-                                        or is_valid(user_specialty)):
+                                        or is_valid(user_specialty) or is_valid(asset_category)
+                                        or is_valid(keyword_cluster) or is_valid(asset_keyword)):
             kargs = {}
 
             if 'country' in models:

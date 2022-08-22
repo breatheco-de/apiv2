@@ -20,6 +20,7 @@ __all__ = ['DatetimeMixin']
 
 class DatetimeMixin():
     """Datetime mixin"""
+
     def time_to_string(self, t: datetime) -> str:
         return t.strftime('%H:%M:%S')
 

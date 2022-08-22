@@ -1,15 +1,8 @@
 """
 Test /answer
 """
-import os
-from django.utils import timezone
-from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
-
-from django.urls.base import reverse_lazy
-from rest_framework import status
-
-from breathecode.services.google_cloud import Datastore
+from breathecode.assignments import signals
 
 from ..mixins import AssignmentsTestCase
 from ...tasks import teacher_task_notification
@@ -20,10 +13,12 @@ class MediaTestSuite(AssignmentsTestCase):
     """
     🔽🔽🔽 Without env
     """
+
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_teacher_task_notification__without_env(self):
         import os
         from logging import Logger
@@ -37,6 +32,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list,
                          [call('TEACHER_URL is not set as environment variable')])
+        self.assertEqual(signals.assignment_created.send.call_args_list, [])
 
     """
     🔽🔽🔽 Without Task
@@ -46,6 +42,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url'))
+    @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_teacher_task_notification__without_tasks(self):
         import os
         from logging import Logger
@@ -60,6 +57,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(os.getenv.call_args_list, [call('TEACHER_URL')])
         self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [call('Task not found')])
+        self.assertEqual(signals.assignment_created.send.call_args_list, [])
 
     """
     🔽🔽🔽 With Task
@@ -69,6 +67,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url'))
+    @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_teacher_task_notification__with_task(self):
         import os
         from logging import Logger
@@ -83,6 +82,8 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(os.getenv.call_args_list, [call('TEACHER_URL')])
         self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [call('Can\'t determine the student cohort')])
+        self.assertEqual(signals.assignment_created.send.call_args_list,
+                         [call(instance=model.task, sender=model.task.__class__)])
 
     """
     🔽🔽🔽 With Task and Cohort
@@ -92,6 +93,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url'))
+    @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_teacher_task_notification__with_task__with_cohort(self):
         import os
         from logging import Logger
@@ -121,6 +123,8 @@ class MediaTestSuite(AssignmentsTestCase):
             ])
         self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
+        self.assertEqual(signals.assignment_created.send.call_args_list,
+                         [call(instance=model.task, sender=model.task.__class__)])
 
     """
     🔽🔽🔽 With Task and Cohort in spanish
@@ -130,6 +134,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url'))
+    @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_teacher_task_notification__with_task__with_cohort__lang_es(self):
         import os
         from logging import Logger
@@ -160,6 +165,8 @@ class MediaTestSuite(AssignmentsTestCase):
             ])
         self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
+        self.assertEqual(signals.assignment_created.send.call_args_list,
+                         [call(instance=model.task, sender=model.task.__class__)])
 
     """
     🔽🔽🔽 With Task and Cohort, url ends with /
@@ -169,6 +176,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url/'))
+    @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_teacher_task_notification__with_task__with_cohort__ends_with_slash(self):
         import os
         from logging import Logger
@@ -198,3 +206,5 @@ class MediaTestSuite(AssignmentsTestCase):
             ])
         self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
+        self.assertEqual(signals.assignment_created.send.call_args_list,
+                         [call(instance=model.task, sender=model.task.__class__)])

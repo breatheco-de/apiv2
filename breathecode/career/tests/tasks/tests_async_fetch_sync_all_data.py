@@ -15,6 +15,7 @@ platform = {'name': 'getonboard'}
 
 
 class AsyncFetchSyncAllDataTaskTestCase(CareerTestCase):
+
     @patch('breathecode.career.actions.fetch_sync_all_data', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())

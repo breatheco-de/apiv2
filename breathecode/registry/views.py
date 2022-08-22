@@ -1,26 +1,29 @@
+import re
 import requests, logging, os
 from pathlib import Path
-from django.shortcuts import render
-from django.utils import timezone
+from django.shortcuts import redirect, render
 from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
-from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword, AssetComment
-from .actions import test_syllabus, test_asset, pull_from_github, test_asset
+
+from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
+                     AssetKeyword, AssetComment)
+
+from .actions import AssetThumbnailGenerator, test_syllabus, test_asset, pull_from_github, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
-from .caches import AssetCache, AssetCommentCache, TechnologyCache
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from .caches import AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache
+
+from rest_framework.permissions import AllowAny
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
                           PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
-                          KeywordClusterSerializer, AcademyAssetSerializer, AssetPUTSerializer,
-                          AcademyCommentSerializer, PostAssetCommentSerializer, PutAssetCommentSerializer,
-                          AssetBigTechnologySerializer, TechnologyPUTSerializer)
+                          AcademyAssetSerializer, AssetPUTSerializer, AcademyCommentSerializer,
+                          PostAssetCommentSerializer, PutAssetCommentSerializer, AssetBigTechnologySerializer,
+                          TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
+                          PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
-from breathecode.utils.views import private_view, render_message, set_query_parameter
+from breathecode.utils.views import render_message
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
@@ -109,6 +112,10 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
     """
     extensions = APIViewExtensions(cache=TechnologyCache, sort='-slug', paginate=True)
 
+    def _has_valid_parent(self):
+        regex = r'^(?:\d+,)*(?:\d+)$'
+        return bool(re.findall(regex, self.request.GET.get('parent', '')))
+
     @capable_of('read_technology')
     def get(self, request, academy_id=None):
         handler = self.extensions(request)
@@ -119,7 +126,8 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         items = AssetTechnology.objects.all()
         lookup = {}
 
-        if 'include_children' not in self.request.GET or self.request.GET['include_children'] != 'true':
+        has_valid_parent = self._has_valid_parent()
+        if self.request.GET.get('include_children') != 'true' and not has_valid_parent:
             items = items.filter(parent__isnull=True)
 
         if 'language' in self.request.GET:
@@ -134,13 +142,22 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         else:
             lookup['visibility'] = 'PUBLIC'
 
-        if 'parent' in self.request.GET:
-            parents = self.request.GET.get('parent')
-            lookup['parent__id__in'] = [p.upper() for p in param.split(',')]
+        if has_valid_parent:
+            param = self.request.GET.get('parent')
+            lookup['parent__id__in'] = [int(p) for p in param.split(',')]
 
         like = request.GET.get('like', None)
         if like is not None and like != 'undefined' and like != '':
             items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        if slug := request.GET.get('slug'):
+            lookup['slug__in'] = slug.split(',')
+
+        if asset_slug := request.GET.get('asset_slug'):
+            lookup['featured_asset__slug__in'] = asset_slug.split(',')
+
+        if asset_type := request.GET.get('asset_type'):
+            lookup['featured_asset__asset_type__in'] = asset_type.split(',')
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -165,7 +182,6 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         elif tech_slug is not None:
             lookups['slug__in'] = [tech_slug]
 
-        print(lookups)
         techs = AssetTechnology.objects.filter(**lookups)
         _count = techs.count()
         if _count == 0:
@@ -206,21 +222,6 @@ def get_categories(request):
 def get_keywords(request):
     items = AssetKeyword.objects.all()
     serializer = AssetKeywordSerializer(items, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['GET'])
-def get_clusters(request):
-    items = KeywordCluster.objects.all()
-    lookup = {}
-
-    if 'academy' in request.GET:
-        param = request.GET.get('academy')
-        lookup['academy__id__in'] = [p.lower() for p in param.split(',')]
-
-    items = items.filter(**lookup)
-
-    serializer = KeywordClusterSerializer(items, many=True)
     return Response(serializer.data)
 
 
@@ -322,6 +323,25 @@ def get_config(request, asset_slug):
         raise ValidationException(f'Config file invalid or not found for {asset.url}',
                                   code=404,
                                   slug='config_not_found')
+
+
+class AssetThumbnailView(APIView):
+    """
+    get:
+        Get asset thumbnail.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, asset_slug):
+        width = int(request.GET.get('width', '0'))
+        height = int(request.GET.get('height', '0'))
+
+        asset = Asset.objects.filter(slug=asset_slug).first()
+        generator = AssetThumbnailGenerator(asset, width, height)
+
+        url, permanent = generator.get_thumbnail_url()
+        return redirect(url, permanent=permanent)
 
 
 # Create your views here.
@@ -443,6 +463,7 @@ class AcademyAssetActionView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('crud_asset')
     def put(self, request, asset_slug, action_slug, academy_id=None):
 
@@ -632,7 +653,6 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Create your views here.
 class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -719,3 +739,169 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
 
         comment.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyKeywordView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(cache=KeywordCache, sort='-created_at', paginate=True)
+
+    @capable_of('read_keyword')
+    def get(self, request, keyword_slug=None, academy_id=None):
+
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = AssetKeyword.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        if 'cluster' in self.request.GET:
+            param = self.request.GET.get('cluster')
+            if param == 'null':
+                lookup['cluster'] = None
+            else:
+                lookup['cluster__slug__in'] = [p.lower() for p in param.split(',')]
+
+        like = request.GET.get('like', None)
+        if like is not None and like != 'undefined' and like != '':
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = KeywordSmallSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of('crud_keyword')
+    def post(self, request, academy_id=None):
+
+        payload = {**request.data}
+
+        serializer = PostKeywordSerializer(data=payload, context={'request': request, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            serializer = AssetKeywordSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_keyword')
+    def put(self, request, keyword_slug, academy_id=None):
+
+        keywd = AssetKeyword.objects.filter(slug=keyword_slug, academy__id=academy_id).first()
+        if keywd is None:
+            raise ValidationException('This keyword does not exist for this academy', 404)
+
+        data = {**request.data}
+
+        serializer = PUTKeywordSerializer(keywd,
+                                          data=data,
+                                          context={
+                                              'request': request,
+                                              'academy': academy_id
+                                          })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = AssetKeywordSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # @capable_of('crud_keyword')
+    # def delete(self, request, comment_id=None, academy_id=None):
+
+    #     if comment_id is None:
+    #         raise ValidationException('Missing comment ID on the URL', 404)
+
+    #     comment = AssetComment.objects.filter(id=comment_id, asset__academy__id=academy_id).first()
+    #     if comment is None:
+    #         raise ValidationException('This comment does not exist', 404)
+
+    #     comment.delete()
+    #     return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(cache=KeywordClusterCache, sort='-created_at', paginate=True)
+
+    @capable_of('read_keywordcluster')
+    def get(self, request, keywordcluster_slug=None, academy_id=None):
+
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = KeywordCluster.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        if 'visibility' in self.request.GET:
+            param = self.request.GET.get('visibility')
+            lookup['visibility'] = param.upper()
+        else:
+            lookup['visibility'] = 'PUBLIC'
+
+        like = request.GET.get('like', None)
+        if like is not None and like != 'undefined' and like != '':
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = KeywordClusterBigSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of('crud_keywordcluster')
+    def post(self, request, academy_id=None):
+
+        payload = {**request.data, 'author': request.user.id}
+
+        serializer = PostKeywordClusterSerializer(data=payload,
+                                                  context={
+                                                      'request': request,
+                                                      'academy': academy_id
+                                                  })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = KeywordClusterBigSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_keywordcluster')
+    def put(self, request, cluster_slug, academy_id=None):
+
+        cluster = KeywordCluster.objects.filter(slug=cluster_slug, academy__id=academy_id).first()
+        if cluster is None:
+            raise ValidationException('This cluster does not exist for this academy', 404)
+
+        data = {**request.data}
+        remove_academy = data.pop('academy', False)
+
+        serializer = PostKeywordClusterSerializer(cluster,
+                                                  data=data,
+                                                  context={
+                                                      'request': request,
+                                                      'academy': academy_id
+                                                  })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = KeywordClusterBigSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # @capable_of('crud_keyword')
+    # def delete(self, request, comment_id=None, academy_id=None):
+
+    #     if comment_id is None:
+    #         raise ValidationException('Missing comment ID on the URL', 404)
+
+    #     comment = AssetComment.objects.filter(id=comment_id, asset__academy__id=academy_id).first()
+    #     if comment is None:
+    #         raise ValidationException('This comment does not exist', 404)
+
+    #     comment.delete()
+    #     return Response(None, status=status.HTTP_204_NO_CONTENT)

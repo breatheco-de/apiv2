@@ -151,6 +151,7 @@ platform = {'name': 'indeed'}
 
 
 class ActionTestFetchSyncAllDataAdminTestCase(CareerTestCase):
+
     @patch('logging.Logger.debug', MagicMock())
     def test_fetch_funtion___with_zero_spider(self):
         from logging import Logger

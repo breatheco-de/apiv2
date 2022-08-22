@@ -14,6 +14,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """
     🔽🔽🔽 UserSpecialty not exists
     """
+
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),

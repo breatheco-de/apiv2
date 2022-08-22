@@ -1,6 +1,6 @@
-import os, requests, sys, pytz, re, logging
-from datetime import datetime
-from django.core.management.base import BaseCommand, CommandError
+import os, re, logging
+from random import randint
+from django.core.management.base import BaseCommand
 from ...actions import delete_tokens
 from ...models import Profile
 
@@ -52,7 +52,8 @@ class Command(BaseCommand):
         for p in profile:
             logger.debug('Sanitizing ' + p.user.email)
             if p.avatar_url is None or p.avatar_url == '':
-                p.avatar_url = API_URL + '/static/img/avatar.png'
+                avatar_number = randint(1, 21)
+                p.avatar_url = API_URL + f'/static/img/avatar-{avatar_number}.png'
 
             if p.github_username is None:
                 p.github_username = ''

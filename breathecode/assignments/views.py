@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class TaskTeacherView(APIView):
+
     def get(self, request, task_id=None, user_id=None):
         items = Task.objects.all()
         logger.debug(f'Found {items.count()} tasks')
@@ -121,6 +122,7 @@ class FinalProjectMeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, project_id=None, user_id=None):
         if not user_id:
             user_id = request.user.id
@@ -190,6 +192,7 @@ class FinalProjectMeView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, project_id=None):
+
         def update(_req, data, _id=None, only_validate=True):
             if _id is None:
                 raise ValidationException('Missing project id to update', slug='missing-project-id')
@@ -286,6 +289,7 @@ class TaskMeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, task_id=None, user_id=None):
         if not user_id:
             user_id = request.user.id
@@ -326,6 +330,7 @@ class TaskMeView(APIView):
         return Response(serializer.data)
 
     def put(self, request, task_id=None):
+
         def update(_req, data, _id=None, only_validate=True):
             if _id is None:
                 raise ValidationException('Missing task id to update', slug='missing=task-id')
@@ -454,6 +459,7 @@ class TaskMeDeliverView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('task_delivery_details')
     def get(self, request, task_id, academy_id):
 
@@ -517,3 +523,61 @@ def deliver_assignment_view(request, task_id, token):
             'intro': 'Please fill the following information to deliver your assignment',
             'btn_lable': 'Deliver Assignment'
         })
+
+
+class SubtaskMeView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    def get(self, request, task_id):
+
+        item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+        if item is None:
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        return Response(item.subtasks)
+
+    def put(self, request, task_id):
+
+        item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+        if item is None:
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        if not isinstance(request.data, list):
+            raise ValidationException('Subtasks json must be an array of tasks',
+                                      code=404,
+                                      slug='json-as-array')
+
+        subtasks_ids = []
+        for t in request.data:
+            if not 'id' in t:
+                raise ValidationException('All substasks must have a unique id',
+                                          code=404,
+                                          slug='missing-subtask-unique-id')
+            else:
+                try:
+                    found = subtasks_ids.index(t['id'])
+                    raise ValidationException(
+                        f'Duplicated subtask id {t["id"]} for the assignment on position {found}',
+                        code=404,
+                        slug='duplicated-subtask-unique-id')
+                except:
+                    subtasks_ids.append(t['id'])
+
+            if not 'status' in t:
+                raise ValidationException('All substasks must have a status',
+                                          code=404,
+                                          slug='missing-subtask-status')
+            elif t['status'] not in ['DONE', 'PENDING']:
+                raise ValidationException('Subtask status must be DONE or PENDING, received: ' + t['status'])
+
+            if not 'label' in t:
+                raise ValidationException('All substasks must have a label',
+                                          code=404,
+                                          slug='missing-task-label')
+
+        item.subtasks = request.data
+        item.save()
+
+        return Response(item.subtasks)

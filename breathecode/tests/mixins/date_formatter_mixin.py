@@ -9,6 +9,7 @@ __all__ = ['DateFormatterMixin']
 
 class DateFormatterMixin():
     """Setup ENV variable"""
+
     def date_today(self):
         """get current date"""
         return date.today()

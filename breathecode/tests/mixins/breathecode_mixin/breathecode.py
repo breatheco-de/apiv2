@@ -9,8 +9,10 @@ from .request import Request
 from .database import Database
 from .check import Check
 from .format import Format
+from .random import Random
 
-__all__ = ['Breathecode']
+__all__ = ['Breathecode', 'fake']
+fake = Faker()
 
 
 def print_arguments(func: callable) -> str:
@@ -26,6 +28,7 @@ class Breathecode:
     """Collection of mixins for testing purposes"""
 
     cache: Cache
+    random: Random
     datetime: Datetime
     request: Request
     database: Database
@@ -38,12 +41,13 @@ class Breathecode:
         self._parent = parent
 
         self.cache = Cache(parent)
+        self.random = Random(parent)
         self.datetime = Datetime(parent)
         self.request = Request(parent)
         self.database = Database(parent)
         self.check = Check(parent)
         self.format = Format(parent)
-        self.fake = Faker()
+        self.fake = fake
 
     def help(self, *args) -> None:
         """

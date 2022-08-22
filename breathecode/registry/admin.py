@@ -158,6 +158,16 @@ def create_assessment_from_asset(modeladmin, request, queryset):
             messages.error(request, a.slug + ': ' + str(e))
 
 
+def load_readme_tasks(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        try:
+            tasks = a.get_tasks()
+            print(f'{len(tasks)} tasks', [t['status'] + ': ' + t['label'] + '\n' for t in tasks])
+        except Exception as e:
+            messages.error(request, a.slug + ': ' + str(e))
+
+
 class AssessmentFilter(admin.SimpleListFilter):
 
     title = 'Associated Assessment'
@@ -181,6 +191,7 @@ class AssessmentFilter(admin.SimpleListFilter):
 
 
 class AssetForm(forms.ModelForm):
+
     class Meta:
         model = Asset
         fields = '__all__'
@@ -259,6 +270,7 @@ class AssetAdmin(admin.ModelAdmin):
         get_author_grom_github_usernames,
         generate_spanish_translation,
         remove_dot_from_slug,
+        load_readme_tasks,
     ] + change_field(['DRAFT', 'UNASSIGNED', 'PUBLISHED'], name='status') + change_field(['us', 'es'],
                                                                                          name='lang')
 

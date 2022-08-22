@@ -12,6 +12,7 @@ class ParseDateAdminTestSuite(EventTestCase):
     """
     🔽🔽🔽 With zero Event
     """
+
     @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
     def test_with_zero_events(self):
 

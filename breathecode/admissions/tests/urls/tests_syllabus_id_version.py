@@ -16,6 +16,7 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
+
     def test_syllabus_id_version_without_auth(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
@@ -99,6 +100,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'id': model['syllabus'].academy_owner.id,
                 'name': model['syllabus'].academy_owner.name,
                 'slug': model['syllabus'].academy_owner.slug,
+                'white_labeled': model['syllabus'].academy_owner.white_labeled,
+                'icon_url': model['syllabus'].academy_owner.icon_url,
             },
             'version': model['syllabus_version'].version,
             'duration_in_days': model.syllabus.duration_in_days,

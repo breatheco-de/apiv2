@@ -16,6 +16,7 @@ from ..mixins import FeedbackTestCase
 
 class SurveyAnsweredTestSuite(FeedbackTestCase):
     """Test /academy/survey"""
+
     @patch('breathecode.feedback.tasks.process_answer_received.delay', MagicMock())
     def test_survey_answered_signal_pending(self):
 

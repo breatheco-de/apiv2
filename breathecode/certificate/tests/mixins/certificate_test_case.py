@@ -10,6 +10,7 @@ from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixi
 class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                           DatetimeMixin, BreathecodeMixin):
     """CertificateTestCase with auth methods"""
+
     def setUp(self):
         self.generate_queries()
         self.set_test_instance(self)

@@ -35,7 +35,9 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
 
 
 def private_view(permission=None):
+
     def decorator(func):
+
         def inner(*args, **kwargs):
             req = args[0]
 

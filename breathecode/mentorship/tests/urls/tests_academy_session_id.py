@@ -29,6 +29,7 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
         'ended_at': format_datetime(self, mentorship_session.ended_at),
         'id': mentorship_session.id,
         'mentee': user.id,
+        'service': mentorship_service.id,
         'mentee_left_at': mentorship_session.mentee_left_at,
         'mentor': mentor_profile.id,
         'is_online': mentorship_session.is_online,
@@ -49,6 +50,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__get__without_auth(self):
         url = reverse_lazy('mentorship:academy_session_id', kwargs={'session_id': 1})
         response = self.client.get(url)

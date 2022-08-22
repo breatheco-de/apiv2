@@ -83,6 +83,7 @@ def format_profile_academy(self, profile_academy, role, academy):
 
 class StudentGetTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_academy_student_without_auth(self):
         """Test /academy/student without auth"""
         url = reverse_lazy('authenticate:academy_student')
@@ -637,7 +638,7 @@ class StudentGetTestSuite(AuthTestCase):
             json = response.json()
             expected = [
                 format_profile_academy(self, profile_academy, model.role, model.academy)
-                for profile_academy in model.profile_academy
+                for profile_academy in reversed(model.profile_academy)
             ]
 
             self.assertEqual(json, expected)
@@ -661,7 +662,7 @@ class StudentGetTestSuite(AuthTestCase):
             json = response.json()
             expected = [
                 format_profile_academy(self, profile_academy, model.role, model.academy)
-                for profile_academy in model.profile_academy
+                for profile_academy in reversed(model.profile_academy)
             ]
 
             self.assertEqual(json, expected)
@@ -688,7 +689,7 @@ class StudentGetTestSuite(AuthTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['PaginationExtension']),
+            call(['PaginationExtension', 'SortExtension']),
         ])
 
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
@@ -705,11 +706,12 @@ class StudentGetTestSuite(AuthTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
-            call(paginate=True),
+            call(paginate=True, sort='-created_at'),
         ])
 
 
 class StudentPostTestSuite(AuthTestCase):
+
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_student__post__no_user__invite_is_false(self):
         """Test /academy/:id/member"""
@@ -1332,6 +1334,7 @@ class StudentPostTestSuite(AuthTestCase):
 
 
 class StudentDeleteTestSuite(AuthTestCase):
+
     def test_academy_student_delete_without_auth(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('authenticate:academy_student')

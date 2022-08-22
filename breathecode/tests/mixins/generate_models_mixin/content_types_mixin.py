@@ -9,6 +9,7 @@ from .utils import is_valid, create_models, get_list
 
 class ContentTypesMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
     """CapacitiesTestCase with auth methods"""
+
     def generate_contenttypes_models(self, content_type=False, models={}, **kwargs):
         models = models.copy()
 
