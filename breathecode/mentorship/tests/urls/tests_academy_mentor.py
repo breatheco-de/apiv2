@@ -24,10 +24,14 @@ def get_serializer(self, mentor_profile, mentorship_service, user, data={}):
         mentor_profile.email,
         'id':
         mentor_profile.id,
+        'one_line_bio':
+        mentor_profile.one_line_bio,
         'online_meeting_url':
         mentor_profile.online_meeting_url,
         'price_per_hour':
         mentor_profile.price_per_hour,
+        'rating':
+        mentor_profile.rating,
         'services': [{
             'academy': {
                 'icon_url': mentorship_service.academy.icon_url,
@@ -85,6 +89,8 @@ def post_serializer(self, mentorship_service, user, data={}):
     return {
         'id':
         0,
+        'one_line_bio':
+        None,
         'slug':
         '',
         'user': {
@@ -134,6 +140,8 @@ def post_serializer(self, mentorship_service, user, data={}):
         'INVITED',
         'price_per_hour':
         20.0,
+        'rating':
+        None,
         'booking_url':
         None,
         'online_meeting_url':
@@ -160,8 +168,10 @@ def mentor_profile_columns(data={}):
         'email': None,
         'id': 0,
         'name': '',
+        'one_line_bio': None,
         'online_meeting_url': None,
         'price_per_hour': 0,
+        'rating': None,
         'slug': 'mirai-nikki',
         'status': 'INVITED',
         'timezone': None,

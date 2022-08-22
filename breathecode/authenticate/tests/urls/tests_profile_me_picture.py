@@ -5,18 +5,15 @@ import os
 import random
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
-import pytest
-from breathecode.services import datetime_to_iso_format
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from PIL import Image
 
 from breathecode.services.google_cloud.storage import Storage, File
-from breathecode.tests.mocks.requests import apply_requests_post_mock
+from breathecode.tests.mocks.requests import apply_requests_request_mock
 from ..mixins.new_auth_test_case import AuthTestCase
 import numpy as np
 
-SHAPE_OF_URL = 'https://us-central1-breathecode-197918.cloudfunctions.net/shape-of-image'
+SHAPE_OF_URL = 'https://us-central1-labor-day-story.cloudfunctions.net/shape-of-image'
 
 
 def apply_get_env(configuration={}):
@@ -322,7 +319,7 @@ class AuthenticateTestSuite(AuthTestCase):
                'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
            })))
     @patch('google.oauth2.id_token.fetch_id_token', MagicMock(return_value='blablabla'))
-    @patch('requests.post', apply_requests_post_mock([(200, SHAPE_OF_URL, {'shape': 'Square'})]))
+    @patch('requests.request', apply_requests_request_mock([(200, SHAPE_OF_URL, {'shape': 'Square'})]))
     @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
     def test__passing_file__with_profile__file_does_not_exists__shape_is_square(self):
         file, self.filename = self.bc.random.image(2, 2)
@@ -385,7 +382,7 @@ class AuthenticateTestSuite(AuthTestCase):
                'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
            })))
     @patch('google.oauth2.id_token.fetch_id_token', MagicMock(return_value='blablabla'))
-    @patch('requests.post', apply_requests_post_mock([(200, SHAPE_OF_URL, {'shape': 'Rectangle'})]))
+    @patch('requests.request', apply_requests_request_mock([(200, SHAPE_OF_URL, {'shape': 'Rectangle'})]))
     @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
     def test__passing_file__with_profile__file_does_not_exists__shape_is_not_square(self):
         options = [2, 1]
