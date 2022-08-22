@@ -168,5 +168,6 @@ dump.rdb
 /content.html
 /expected.html
 
+/core.*
 # pdm
 .pdm.toml
