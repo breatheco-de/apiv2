@@ -84,11 +84,11 @@ def async_create_asset_thumbnail(asset_slug: str):
     storage = Storage()
     cloud_file = storage.file(screenshots_bucket(), filename)
 
-    # reattempt 30 times
-    for _ in range(0, 30):
+    # reattempt 60 times
+    for _ in range(0, 60):
         content_file = cloud_file.download()
         if not content_file:
-            time.sleep(2)
+            time.sleep(1)
             continue
 
         hash = hashlib.sha256(content_file).hexdigest()
