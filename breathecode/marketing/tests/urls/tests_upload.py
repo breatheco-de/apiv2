@@ -99,6 +99,7 @@ class MarketingTestSuite(MarketingTestCase):
         self.assertEqual(File.upload.call_args_list, [])
         self.assertEqual(File.url.call_args_list, [])
 
+    @patch('breathecode.marketing.tasks.create_form_entry.delay', MagicMock())
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
@@ -113,6 +114,7 @@ class MarketingTestSuite(MarketingTestCase):
         create=True)
     def test_upload_random(self):
         from breathecode.services.google_cloud import Storage, File
+        from breathecode.marketing.tasks import create_form_entry
 
         self.headers(academy=1)
 
@@ -167,6 +169,9 @@ class MarketingTestSuite(MarketingTestCase):
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            self.assertEqual(create_form_entry.delay.call_args_list(), [call()])
+
             self.assertEqual(
                 self.all_media_dict(),
                 [{

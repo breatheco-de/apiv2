@@ -748,7 +748,7 @@ class UploadView(APIView):
 
             for num in range(len(df)):
                 value = df.iloc[num]
-                xz.delay(value['first_name'], value['last_name'])
+                tasks.create_form_entry.delay(dict(value))
 
             # for line in csv_reader:
             #     print(line)
