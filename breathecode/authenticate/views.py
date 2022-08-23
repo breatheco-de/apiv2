@@ -1,29 +1,40 @@
+import hashlib
 import os, requests, base64, logging
+import re
+import urllib.parse
+import breathecode.notify.actions as notify_actions
 from datetime import timezone, timedelta
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import update_session_auth_hash
 from rest_framework.response import Response
 from django.db.models import Q
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
-from django.urls import resolve
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status, serializers
-from django.contrib.auth.models import User, Group, AnonymousUser
+from django.contrib.auth.models import User, AnonymousUser
 from django.contrib import messages
 from rest_framework.authtoken.views import ObtainAuthToken
-from urllib.parse import urlencode, parse_qs, urlparse, parse_qsl
+from urllib.parse import urlencode, parse_qs
 from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 from django.utils import timezone
-from datetime import datetime
+from django.db.models.functions import Now
+from rest_framework.parsers import FileUploadParser, MultiPartParser
+
+from breathecode.mentorship.models import MentorProfile
+from breathecode.mentorship.serializers import GETMentorSmallSerializer
+from breathecode.services.google_cloud import FunctionV1, FunctionV2
+from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils import response_207
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import has_permission
 from .authentication import ExpiringTokenAuthentication
 
-from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
+from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, SyncGithubUsersForm, LoginForm, InviteForm
 from .models import (
     Profile,
     CredentialsGithub,
@@ -34,19 +45,62 @@ from .models import (
     UserInvite,
     Role,
     ProfileAcademy,
+    GitpodUser,
 )
-from .actions import reset_password, resend_invite, generate_academy_token
+from .actions import reset_password, resend_invite, generate_academy_token, update_gitpod_users, set_gitpod_user_expiration
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
+from breathecode.utils.views import private_view, render_message, set_query_parameter
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
-                          AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
-                          MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer)
+from breathecode.utils.views import set_query_parameter
+from .serializers import (
+    GetProfileAcademySmallSerializer,
+    GetProfileSerializer,
+    ProfileSerializer,
+    UserInviteSmallSerializer,
+    UserInviteWaitingListSerializer,
+    UserSerializer,
+    AuthSerializer,
+    UserSmallSerializer,
+    GetProfileAcademySerializer,
+    MemberPOSTSerializer,
+    MemberPUTSerializer,
+    StudentPOSTSerializer,
+    RoleSmallSerializer,
+    UserMeSerializer,
+    UserInviteSerializer,
+    TokenSmallSerializer,
+    RoleBigSerializer,
+    ProfileAcademySmallSerializer,
+    UserTinySerializer,
+    GitpodUserSmallSerializer,
+    GetGitpodUserSerializer,
+)
 
 logger = logging.getLogger(__name__)
+APP_URL = os.getenv('APP_URL', '')
+
+PATTERNS = {
+    'CONTAINS_LOWERCASE': r'[a-z]',
+    'CONTAINS_UPPERCASE': r'[A-Z]',
+    'CONTAINS_SYMBOLS': r'[^a-zA-Z]',
+}
+
+PROFILE_MIME_ALLOWED = ['image/png']
+
+
+def get_profile_bucket():
+    return os.getenv('PROFILE_BUCKET', '')
+
+
+def get_shape_of_image_url():
+    return os.getenv('GCLOUD_SHAPE_OF_IMAGE', '')
+
+
+def get_google_project_id():
+    return os.getenv('GOOGLE_PROJECT_ID', '')
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -122,10 +176,12 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class MemberView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(paginate=True)
+
     @capable_of('read_member')
     def get(self, request, academy_id, user_id_or_email=None):
-        is_many = bool(not user_id_or_email)
+        handler = self.extensions(request)
 
         if user_id_or_email is not None:
             item = None
@@ -136,19 +192,24 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                      academy_id=academy_id).first()
 
             if item is None:
-                raise ValidationException('Profile not found for this user and academy', 404)
+                raise ValidationException('Profile not found for this user and academy',
+                                          code=404,
+                                          slug='profile-academy-not-found')
 
             serializer = GetProfileAcademySerializer(item, many=False)
             return Response(serializer.data)
 
-        items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug='student')
+        items = ProfileAcademy.objects.filter(academy__id=academy_id)
+        include = request.GET.get('include', '').split()
+        if not 'student' in include:
+            items = items.exclude(role__slug='student')
 
         roles = request.GET.get('roles', None)
-        if is_many and roles is not None:
+        if roles is not None:
             items = items.filter(role__in=roles.split(','))
 
         status = request.GET.get('status', None)
-        if is_many and status is not None:
+        if status is not None:
             items = items.filter(status__iexact=status)
 
         like = request.GET.get('like', None)
@@ -157,16 +218,10 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         items = items.exclude(user__email__contains='@token.com')
 
-        if not is_many:
-            items = items.first()
+        items = handler.queryset(items)
+        serializer = GetProfileAcademySmallSerializer(items, many=True)
 
-        page = self.paginate_queryset(items, request)
-        serializer = GetProfileAcademySmallSerializer(page, many=is_many)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
 
     @capable_of('crud_member')
     def post(self, request, academy_id=None):
@@ -187,72 +242,92 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if user_id_or_email.isnumeric():
             already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
         else:
-            raise ValidationException('User id must be a numeric value', 404)
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
 
         request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            serializer = MemberPOSTSerializer(data=request_data)
+            serializer = MemberPOSTSerializer(data=request_data,
+                                              context={
+                                                  'academy_id': academy_id,
+                                                  'request': request
+                                              })
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_member')
-    def delete(self, request, academy_id=None, user_id=None):
+    def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
-        if lookups and user_id:
+        if lookups and user_id_or_email:
             raise ValidationException(
                 'user_id or cohort_id was provided in url '
                 'in bulk mode request, use querystring style instead',
-                code=400)
+                code=400,
+                slug='user-id-and-bulk-mode')
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups,
                                                   academy__id=academy_id).exclude(role__slug='student')
 
             for item in items:
-
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        member = ProfileAcademy.objects.filter(user=user_id,
+        if user_id_or_email and not user_id_or_email.isnumeric():
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
+
+        member = ProfileAcademy.objects.filter(user=user_id_or_email,
                                                academy__id=academy_id).exclude(role__slug='student').first()
+
         if member is None:
-            raise ValidationException('Member not found', 404)
+            raise ValidationException('Member not found', code=404, slug='profile-academy-not-found')
+
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     def get(self, request):
+        invites = UserInvite.objects.filter(email=request.user.email)
 
-        if request.user is None:
-            raise ValidationException('User not found', 404)
+        status = request.GET.get('status', '')
+        if status != '':
+            invites = invites.filter(status__in=status.split(','))
+        else:
+            invites = invites.filter(status='PENDING')
 
-        invite = UserInvite.objects.filter(email=request.user.email, status='PENDING').first()
-        if invite is None:
-            raise ValidationException('No pending invite was found', 404)
-
-        serializer = UserInviteSerializer(invite, many=False)
+        serializer = UserInviteSerializer(invites, many=True)
         return Response(serializer.data)
 
-    def put(self, request):
+    def put(self, request, new_status=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if new_status is None:
+            raise ValidationException(f'Please specify new status for the invites', slug='missing-status')
+
+        if new_status.upper() not in ['ACCEPTED', 'REJECTED']:
+            raise ValidationException(f'Invalid invite status {new_status}', slug='invalid-status')
 
         if lookups:
             items = UserInvite.objects.filter(**lookups, email=request.user.email)
 
             for item in items:
 
-                item.status = 'ACCEPTED'
+                item.status = new_status.upper()
                 item.save()
 
                 exists = ProfileAcademy.objects.filter(email=item.email, academy__id=item.academy.id)
@@ -270,25 +345,72 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         else:
-            raise ValidationException('Invite ids were not provided', 404, slug='missing_ids')
+            raise ValidationException('Invite ids were not provided', code=400, slug='missing-ids')
 
 
-class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     @capable_of('read_invite')
-    def get(self, request, academy_id, profileacademy_id):
+    def get(self, request, academy_id=None, profileacademy_id=None, invite_id=None):
 
-        profile = ProfileAcademy.objects.filter(academy__id=academy_id, id=profileacademy_id).first()
-        if profile is None:
-            raise ValidationException('Profile not found', 404)
+        if invite_id is not None:
+            invite = UserInvite.objects.filter(academy__id=academy_id, id=invite_id, status='PENDING').first()
+            if invite is None:
+                raise ValidationException('No pending invite was found for this user and academy',
+                                          code=404,
+                                          slug='user-invite-not-found')
 
-        invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email,
-                                           status='PENDING').first()
+            serializer = UserInviteSerializer(invite, many=False)
+            return Response(serializer.data)
 
-        if invite is None:
-            raise ValidationException('No pending invite was found', 404)
+        if profileacademy_id is not None:
+            profile = ProfileAcademy.objects.filter(academy__id=academy_id, id=profileacademy_id).first()
+            if profile is None:
+                raise ValidationException('Profile not found', code=404, slug='profile-academy-not-found')
 
-        serializer = UserInviteSerializer(invite, many=False)
-        return Response(serializer.data)
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email,
+                                               status='PENDING').first()
+
+            if invite is None and profile.status != 'INVITED':
+                raise ValidationException(
+                    'No pending invite was found for this user and academy',
+                    code=404,
+                    slug='user-invite-and-profile-academy-with-status-invited-not-found')
+
+            # IMPORTANT: both serializers need to include "invite_url" property to have a consistent response
+            if invite is not None:
+                serializer = UserInviteSerializer(invite, many=False)
+                return Response(serializer.data)
+
+            if profile.status == 'INVITED':
+                serializer = GetProfileAcademySerializer(profile, many=False)
+                return Response(serializer.data)
+
+        invites = UserInvite.objects.filter(academy__id=academy_id)
+
+        status = request.GET.get('status', '')
+        if status != '':
+            invites = invites.filter(status__in=status.split(','))
+        else:
+            invites = invites.filter(status='PENDING')
+
+        if 'role' in self.request.GET:
+            param = self.request.GET.get('role')
+            invites = invites.filter(role__name__icontains=param)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            invites = query_like_by_full_name(like=like, items=invites)
+
+        invites = invites.order_by(request.GET.get('sort', '-created_at'))
+
+        page = self.paginate_queryset(invites, request)
+        serializer = UserInviteSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @capable_of('crud_invite')
     def delete(self, request, academy_id=None):
@@ -302,10 +424,70 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         else:
             raise ValidationException('Invite ids were not provided', 404, slug='missing_ids')
 
+    @capable_of('invite_resend')
+    def put(self, request, invite_id=None, profileacademy_id=None, academy_id=None):
+        invite = None
+        profile_academy = None
+        if invite_id is not None:
+            invite = UserInvite.objects.filter(academy__id=academy_id, id=invite_id, status='PENDING').first()
+            if invite is None:
+                raise ValidationException('No pending invite was found for this user and academy',
+                                          code=404,
+                                          slug='user-invite-not-found')
 
-class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+        elif profileacademy_id is not None:
+            profile_academy = ProfileAcademy.objects.filter(id=profileacademy_id).first()
+
+            if profile_academy is None:
+                raise ValidationException('Member not found', code=400, slug='profile-academy-not-found')
+
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=profile_academy.email).first()
+
+        if (invite is None and profile_academy is not None and profile_academy.status == 'INVITED'
+                and (profile_academy.user.email or invite.email)):
+            notify_actions.send_email_message(
+                'academy_invite', profile_academy.user.email or invite.email, {
+                    'subject': f'Invitation to study at {profile_academy.academy.name}',
+                    'invites': [ProfileAcademySmallSerializer(profile_academy).data],
+                    'user': UserSmallSerializer(profile_academy.user).data,
+                    'LINK': os.getenv('API_URL') + '/v1/auth/academy/html/invite',
+                })
+            serializer = GetProfileAcademySerializer(profile_academy)
+            return Response(serializer.data)
+
+        if invite is None:
+            raise ValidationException('Invite not found', code=400, slug='user-invite-not-found')
+
+        if invite.sent_at is not None:
+            now = timezone.now()
+            minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
+
+            if minutes_diff < 2:
+                raise ValidationException('Impossible to resend invitation',
+                                          code=400,
+                                          slug='sent-at-diff-less-two-minutes')
+
+        email = (profile_academy and profile_academy.user and profile_academy.user.email) or invite.email
+        if not email:
+            raise ValidationException('Impossible to determine the email of user',
+                                      code=400,
+                                      slug='without-email')
+
+        resend_invite(invite.token, email, invite.first_name)
+
+        invite.sent_at = timezone.now()
+        invite.save()
+        serializer = UserInviteSerializer(invite, many=False)
+        return Response(serializer.data)
+
+
+class StudentView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(paginate=True, sort='-created_at')
+
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id_or_email=None):
+        handler = self.extensions(request)
+
         if user_id_or_email is not None:
             profile = None
             if user_id_or_email.isnumeric():
@@ -316,7 +498,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                         user__email=user_id_or_email).first()
 
             if profile is None:
-                raise ValidationException('Profile not found', 404)
+                raise ValidationException('Profile not found', code=404, slug='profile-academy-not-found')
 
             serializer = GetProfileAcademySerializer(profile, many=False)
             return Response(serializer.data)
@@ -331,21 +513,20 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if status is not None:
             items = items.filter(status__iexact=status)
 
-        page = self.paginate_queryset(items, request)
-        serializer = GetProfileAcademySmallSerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = GetProfileAcademySmallSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
 
     @capable_of('crud_student')
     def post(self, request, academy_id=None):
+
         serializer = StudentPOSTSerializer(data=request.data,
                                            context={
                                                'academy_id': academy_id,
                                                'request': request
                                            })
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -353,54 +534,88 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_student')
     def put(self, request, academy_id=None, user_id_or_email=None):
+        if not user_id_or_email.isnumeric():
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
 
-        student = ProfileAcademy.objects.filter(user=user_id_or_email, academy__id=academy_id).first()
+        student = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy__id=academy_id).first()
 
         if student and student.role.slug != 'student':
             raise ValidationException(
-                f'This endpoint can only update student profiles (not {student.role.slug})')
+                f'This endpoint can only update student profiles (not {student.role.slug})',
+                code=400,
+                slug='trying-to-change-a-staff')
 
-        request_data = {**request.data, 'user': student.user.id, 'academy': academy_id, 'role': 'student'}
+        request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id, 'role': 'student'}
         if 'role' in request.data:
             raise ValidationException(
-                'The student role cannot be updated with this endpoint, user /member instead.')
+                'The student role cannot be updated with this endpoint, user /member instead.',
+                code=400,
+                slug='trying-to-change-role')
 
-        if student:
-            serializer = MemberPUTSerializer(student, data=request_data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            raise ValidationException('The user is not a student in this academy')
+        if not student:
+            raise ValidationException('The user is not a student in this academy',
+                                      code=404,
+                                      slug='profile-academy-not-found')
+
+        serializer = MemberPUTSerializer(student, data=request_data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
+        allow_old = request.GET.get('allow_old', 'false')
+        not_recent = []
 
         if lookups and user_id_or_email:
             raise ValidationException(
                 'user_id was provided in url '
                 'in bulk mode request, use querystring style instead',
-                code=400)
+                code=400,
+                slug='user-id-and-bulk-mode')
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
+            if allow_old != 'true':
+                responses = []
+                not_recent = items.filter(created_at__lt=Now() - timedelta(minutes=30))
+                responses.append(
+                    MultiStatusResponse('Only recently created students can be deleted',
+                                        code=400,
+                                        slug='non-recently-created',
+                                        queryset=not_recent))
+                items = items.filter(created_at__gt=Now() - timedelta(minutes=30))
+                if items:
+                    responses.append(MultiStatusResponse(code=204, queryset=items))
 
             for item in items:
 
                 item.delete()
 
+            if not_recent:
+                response = response_207(responses, 'first_name')
+                return response
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or user_id_or_email is None:
             raise serializers.ValidationError('Missing user_id or academy_id', code=400)
 
+        if user_id_or_email and not user_id_or_email.isnumeric():
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
+
         profile = ProfileAcademy.objects.filter(academy__id=academy_id,
                                                 user__id=user_id_or_email,
                                                 role__slug='student').first()
         if profile is None:
-            raise serializers.ValidationError('User doest not exist or does not belong to this academy')
+            raise ValidationException('User doest not exist or does not belong to this academy',
+                                      code=404,
+                                      slug='profile-academy-not-found')
 
         profile.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -415,7 +630,12 @@ class LoginView(ObtainAuthToken):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.get_or_create(user=user, token_type='login')
-        return Response({'token': token.key, 'user_id': user.pk, 'email': user.email})
+        return Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'email': user.email,
+            'expires_at': token.expires_at
+        })
 
 
 @api_view(['GET'])
@@ -436,6 +656,7 @@ def get_token_info(request, token):
 
 
 class UserMeView(APIView):
+
     def get(self, request, format=None):
         # TODO: This should be not accessible because this endpoint require auth
         try:
@@ -507,7 +728,17 @@ def get_user_by_id_or_email(request, id_or_email):
 
 
 @api_view(['GET'])
-def get_roles(request):
+@permission_classes([AllowAny])
+def get_roles(request, role_slug=None):
+
+    if role_slug is not None:
+        role = Role.objects.filter(slug=role_slug).first()
+        if role is None:
+            raise ValidationException('Role not found', code=404)
+
+        serializer = RoleBigSerializer(role)
+        return Response(serializer.data)
+
     queryset = Role.objects.all()
     serializer = RoleSmallSerializer(queryset, many=True)
     return Response(serializer.data)
@@ -565,6 +796,13 @@ def save_github_token(request):
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationException('No callback URL specified', slug='no-callback-url')
+
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     code = request.query_params.get('code', None)
     if code == None:
         raise ValidationException('No github code specified', slug='no-code')
@@ -624,24 +862,44 @@ def save_github_token(request):
 
             # user can't be found thru token, lets try thru the github credentials
             if token is None and user is None:
-                user = User.objects.filter(
-                    Q(credentialsgithub__github_id=github_user['id'])
-                    | Q(email__iexact=github_user['email'])).first()
+                user = User.objects.filter(credentialsgithub__github_id=github_user['id']).first()
+                if user is None:
+                    user = User.objects.filter(email__iexact=github_user['email'],
+                                               credentialsgithub__isnull=True).first()
 
-            # create the user if not exists
-            if user is None:
-                user = User(username=github_user['email'], email=github_user['email'])
-                user.save()
+            user_does_not_exists = user is None
+            if user_does_not_exists:
+                invite = UserInvite.objects.filter(status='WAITING_LIST', email=github_user['email']).first()
+
+            if user_does_not_exists and invite:
+                if url is None or url == '':
+                    url = os.getenv('APP_URL', 'https://4geeks.com')
+
+                return render_message(
+                    request,
+                    f'You are still number {invite.id} on the waiting list, we will email you once you are '
+                    f'given access <a href="{url}">Back to 4Geeks.com</a>')
+
+            if user_does_not_exists:
+                return render_message(
+                    request, 'We could not find in our records the email associated to this github account, '
+                    'perhaps you want to signup to the platform first? <a href="' + url +
+                    '">Back to 4Geeks.com</a>')
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
-            if github_credentials is not None and github_credentials.user.id != user.id:
+
+            # update latest credentials if the user.id doesn't match
+            if github_credentials and github_credentials.user.id != user.id:
                 github_credentials.delete()
-            elif github_credentials is None:
+                github_credentials = None
+
+            # create a new credentials if it doesn't exists
+            if github_credentials is None:
                 github_credentials = CredentialsGithub(github_id=github_user['id'], user=user)
 
             github_credentials.token = github_token
             github_credentials.username = github_user['login']
-            github_credentials.email = github_user['email']
+            github_credentials.email = github_user['email'].lower()
             github_credentials.avatar_url = github_user['avatar_url']
             github_credentials.name = github_user['name']
             github_credentials.blog = github_user['blog']
@@ -657,6 +915,10 @@ def save_github_token(request):
                                   blog=github_user['blog'],
                                   bio=github_user['bio'],
                                   twitter_username=github_user['twitter_username'])
+                profile.save()
+
+            if not profile.avatar_url:
+                profile.avatar_url = github_user['avatar_url']
                 profile.save()
 
             student_role = Role.objects.get(slug='student')
@@ -692,6 +954,12 @@ def get_slack_token(request):
     if url is None:
         raise ValidationError('No callback URL specified')
 
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     user_id = request.query_params.get('user', None)
     if user_id is None:
         raise ValidationError('No user specified on the URL')
@@ -700,7 +968,6 @@ def get_slack_token(request):
     if academy is None:
         raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
     scopes = ('app_mentions:read', 'channels:history', 'channels:join', 'channels:read', 'chat:write',
               'chat:write.customize', 'commands', 'files:read', 'files:write', 'groups:history',
@@ -829,6 +1096,12 @@ def get_facebook_token(request):
     if url is None:
         raise ValidationError('No callback URL specified')
 
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     user_id = request.query_params.get('user', None)
     if user_id is None:
         raise ValidationError('No user specified on the URL')
@@ -837,7 +1110,6 @@ def get_facebook_token(request):
     if academy is None:
         raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
     scopes = (
         'email',
@@ -982,6 +1254,7 @@ def change_password(request, token):
 
 
 class TokenTemporalView(APIView):
+
     @capable_of('generate_temporal_token')
     def post(self, request, profile_academy_id=None, academy_id=None):
         profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id).first()
@@ -991,6 +1264,31 @@ class TokenTemporalView(APIView):
         token, created = Token.get_or_create(user=profile_academy.user, token_type='temporal')
         serializer = TokenSmallSerializer(token)
         return Response(serializer.data)
+
+
+def sync_gitpod_users_view(request):
+
+    if request.method == 'POST':
+        _dict = request.POST.copy()
+        form = SyncGithubUsersForm(_dict)
+
+        if 'html' not in _dict or _dict['html'] == '':
+            messages.error(request, 'HTML string is required')
+            return render(request, 'form.html', {'form': form})
+
+        try:
+            all_usernames = update_gitpod_users(_dict['html'])
+            return render(
+                request, 'message.html', {
+                    'MESSAGE':
+                    f'{len(all_usernames["active"])} active and {len(all_usernames["inactive"])} inactive users found'
+                })
+        except Exception as e:
+            return render_message(request, str(e))
+
+    else:
+        form = SyncGithubUsersForm()
+    return render(request, 'form.html', {'form': form})
 
 
 def reset_password_view(request):
@@ -1026,35 +1324,63 @@ def pick_password(request, token):
     _dict['token'] = token
     _dict['callback'] = request.GET.get('callback', '')
 
+    token_instance = Token.get_valid(token)
+
+    # allow a token to change the password
+    if token_instance:
+        user = token_instance.user
+
+    # allow a invite token to change the password
+    else:
+        invite = UserInvite.objects.filter(token=token).first()
+
+        # just can process if this user not have a password yet
+        user = User.objects.filter(email=invite.email, password='').first() if invite else None
+
+    if not user:
+        return render_message(request, 'The link has expired.')
+
     form = PickPasswordForm(_dict)
     if request.method == 'POST':
         password1 = request.POST.get('password1', None)
         password2 = request.POST.get('password2', None)
+
         if password1 != password2:
             messages.error(request, 'Passwords don\'t match')
             return render(request, 'form.html', {'form': form})
 
-        token = Token.get_valid(request.POST.get('token', None))
-        if token is None:
-            messages.error(request, 'Invalid or expired token ' + str(token))
+        if not password1:
+            messages.error(request, "Password can't be empty")
+            return render(request, 'form.html', {'form': form})
+
+        if (len(password1) < 8 or not re.findall(PATTERNS['CONTAINS_LOWERCASE'], password1)
+                or not re.findall(PATTERNS['CONTAINS_UPPERCASE'], password1)
+                or not re.findall(PATTERNS['CONTAINS_SYMBOLS'], password1)):
+            messages.error(request, 'Password must contain 8 characters with lowercase, uppercase and '
+                           'symbols')
+            return render(request, 'form.html', {'form': form})
 
         else:
-            user = token.user
             user.set_password(password1)
             user.save()
-            token.delete()
+
+            # destroy the token
+            if token_instance:
+                token_instance.delete()
+
             callback = request.POST.get('callback', None)
             if callback is not None and callback != '':
                 return HttpResponseRedirect(redirect_to=request.POST.get('callback'))
             else:
                 return render(
                     request, 'message.html',
-                    {'message': 'You password has been reset successfully, you can close this window.'})
+                    {'MESSAGE': 'You password has been reset successfully, you can close this window.'})
 
     return render(request, 'form.html', {'form': form})
 
 
 class PasswordResetView(APIView):
+
     @capable_of('send_reset_password')
     def post(self, request, profileacademy_id=None, academy_id=None):
 
@@ -1070,31 +1396,87 @@ class PasswordResetView(APIView):
             raise ValidationException('Reset password token could not be sent')
 
 
-class AcademyInviteView(APIView):
-    @capable_of('crud_member')
-    def put(self, request, pa_id=None, academy_id=None):
-        if pa_id is not None:
-            profile_academy = ProfileAcademy.objects.filter(id=pa_id).first()
+class ProfileInviteMeView(APIView):
 
-            if profile_academy is None:
-                raise ValidationException('Member not found', 400)
-            invite = UserInvite.objects.filter(academy__id=academy_id, email=profile_academy.email).first()
+    def get(self, request):
+        invites = UserInvite.objects.filter(email=request.user.email)
+        profile_academies = ProfileAcademy.objects.filter(user=request.user, status='INVITED')
+        mentor_profiles = MentorProfile.objects.filter(user=request.user, status='INVITED')
 
-            if invite is None:
-                raise ValidationException('Invite not found', 400)
+        return Response({
+            'invites': UserInviteSerializer(invites, many=True).data,
+            'profile_academies': GetProfileAcademySerializer(profile_academies, many=True).data,
+            'mentor_profiles': GETMentorSmallSerializer(mentor_profiles, many=True).data,
+        })
 
-            if invite.sent_at is not None:
-                now = timezone.now()
-                minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
 
-                if minutes_diff < 2:
-                    raise ValidationException('Imposible to resend invitation', 400)
-            resend_invite(invite.token, invite.email, invite.first_name)
+@private_view()
+def render_user_invite(request, token):
+    accepting = request.GET.get('accepting', '')
+    rejecting = request.GET.get('rejecting', '')
+    if accepting.strip() != '':
+        invites = UserInvite.objects.filter(id__in=accepting.split(','),
+                                            email=token.user.email,
+                                            status='PENDING')
 
-            invite.sent_at = timezone.now()
+        for invite in invites:
+            if invite.academy is not None:
+                profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
+
+                #
+                if profile is None:
+                    role = invite.role
+                    if not role:
+                        role = Role.objects.filter(slug='student').first()
+
+                    # is better generate a role without capability that have a exception in this case
+                    if not role:
+                        role = Role(slug='student', name='Student')
+                        role.save()
+
+                    profile = ProfileAcademy(email=invite.email,
+                                             academy=invite.academy,
+                                             role=role,
+                                             first_name=token.user.first_name,
+                                             last_name=token.user.last_name)
+
+                profile.user = token.user
+                profile.status = 'ACTIVE'
+                profile.save()
+
+            if invite.cohort is not None:
+                role = 'student'
+                if invite.role is not None and invite.role.slug != 'student':
+                    role = invite.role.slug.upper()
+
+                cu = CohortUser.objects.filter(user=token.user, cohort=invite.cohort).first()
+                if cu is None:
+                    cu = CohortUser(user=token.user, cohort=invite.cohort, role=role)
+                    cu.save()
+
+            invite.status = 'ACCEPTED'
             invite.save()
-            serializer = UserInviteSerializer(invite, many=False)
-            return Response(serializer.data)
+
+    if rejecting.strip() != '':
+        UserInvite.objects.filter(id__in=rejecting.split(','), email=token.user.email,
+                                  status='PENDING').update(status='REJECTED')
+
+    pending_invites = UserInvite.objects.filter(email=token.user.email, status='PENDING')
+    if pending_invites.count() == 0:
+        return render_message(request,
+                              f'You don\'t have any more pending invites',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=APP_URL)
+
+    querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token.key})
+    url = os.getenv('API_URL') + '/v1/auth/member/invite?' + querystr
+    return render(
+        request, 'user_invite.html', {
+            'subject': f'Invitation to study at 4Geeks.com',
+            'invites': UserInviteSmallSerializer(pending_invites, many=True).data,
+            'LINK': url,
+            'user': UserTinySerializer(token.user, many=False).data
+        })
 
 
 def render_invite(request, token, member_id=None):
@@ -1103,15 +1485,25 @@ def render_invite(request, token, member_id=None):
     _dict['callback'] = request.GET.get('callback', '')
 
     if request.method == 'GET':
-
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
-            return render(request, 'message.html',
-                          {'message': 'Invitation noot found with this token or it was already accepted'})
+            callback_msg = ''
+            if _dict['callback'] != '':
+                callback_msg = ". You can try and login at <a href='" + _dict['callback'] + "'>" + _dict[
+                    'callback'] + '</a>'
+            return render_message(
+                request, 'Invitation not found with this token or it was already accepted' + callback_msg)
+
+        if invite and User.objects.filter(email=invite.email).exists():
+            redirect = os.getenv('API_URL') + '/v1/auth/member/invite'
+            return HttpResponseRedirect(redirect_to=redirect)
+
         form = InviteForm({
-            **_dict, 'first_name': invite.first_name,
+            'callback': [''],
+            **_dict,
+            'first_name': invite.first_name,
             'last_name': invite.last_name,
-            'phone': invite.phone
+            'phone': invite.phone,
         })
 
         return render(request, 'form_invite.html', {
@@ -1123,13 +1515,7 @@ def render_invite(request, token, member_id=None):
         password1 = request.POST.get('password1', None)
         password2 = request.POST.get('password2', None)
 
-        if password1 != password2:
-            messages.error(request, 'Passwords don\'t match')
-            return render(request, 'form_invite.html', {
-                'form': form,
-            })
-
-        invite = UserInvite.objects.filter(token=str(token), status='PENDING').first()
+        invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
         if invite is None:
             messages.error(request, 'Invalid or expired invitation ' + str(token))
             return render(request, 'form_invite.html', {'form': form})
@@ -1138,6 +1524,18 @@ def render_invite(request, token, member_id=None):
         last_name = request.POST.get('last_name', None)
         if first_name is None or first_name == '' or last_name is None or last_name == '':
             messages.error(request, 'Invalid first or last name')
+            return render(request, 'form_invite.html', {
+                'form': form,
+            })
+
+        if password1 != password2:
+            messages.error(request, 'Passwords don\'t match')
+            return render(request, 'form_invite.html', {
+                'form': form,
+            })
+
+        if not password1:
+            messages.error(request, 'Password is empty')
             return render(request, 'form_invite.html', {
                 'form': form,
             })
@@ -1152,12 +1550,24 @@ def render_invite(request, token, member_id=None):
         if invite.academy is not None:
             profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
             if profile is None:
-                role = invite.role.slug
+                role = invite.role
+                if not role:
+                    role = Role.objects.filter(slug='student').first()
+
+                if not role:
+                    messages.error(
+                        request, 'Unexpected error occurred with invite, please contact the '
+                        'staff of 4geeks')
+                    return render(request, 'form_invite.html', {
+                        'form': form,
+                    })
+
                 profile = ProfileAcademy(email=invite.email,
                                          academy=invite.academy,
-                                         role=invite.role,
+                                         role=role,
                                          first_name=first_name,
                                          last_name=last_name)
+
                 if invite.first_name is not None and invite.first_name != '':
                     profile.first_name = invite.first_name
                 if invite.last_name is not None and invite.last_name != '':
@@ -1171,6 +1581,7 @@ def render_invite(request, token, member_id=None):
             role = 'student'
             if invite.role is not None and invite.role.slug != 'student':
                 role = invite.role.slug.upper()
+
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None:
                 cu = CohortUser(user=user, cohort=invite.cohort, role=role)
@@ -1179,12 +1590,48 @@ def render_invite(request, token, member_id=None):
         invite.status = 'ACCEPTED'
         invite.save()
 
-        callback = str(request.POST.get('callback', None))
-        if callback is not None and callback != '' and callback != "['']":
-            return HttpResponseRedirect(redirect_to=callback[2:-2])
+        callback = request.POST.get('callback', None)
+        if callback:
+            uri = callback[0] if isinstance(callback, list) else callback
+            if len(uri) > 0 and uri[0] == '[':
+                uri = uri[2:-2]
+            if settings.DEBUG:
+                print(type(callback))
+                return HttpResponse(f"Redirect to: <a href='{uri}'>{uri}</a>")
+            else:
+                return HttpResponseRedirect(redirect_to=uri)
         else:
             return render(request, 'message.html',
-                          {'MESSAGE': 'Welcome to BreatheCode, you can go ahead an log in'})
+                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
+
+
+@private_view()
+def render_academy_invite(request, token):
+    callback_url = request.GET.get('callback', '')
+    accepting = request.GET.get('accepting', '')
+    rejecting = request.GET.get('rejecting', '')
+    if accepting.strip() != '':
+        ProfileAcademy.objects.filter(id__in=accepting.split(','), user__id=token.user.id,
+                                      status='INVITED').update(status='ACTIVE')
+    if rejecting.strip() != '':
+        ProfileAcademy.objects.filter(id__in=rejecting.split(','), user__id=token.user.id).delete()
+
+    pending_invites = ProfileAcademy.objects.filter(user__id=token.user.id, status='INVITED')
+    if pending_invites.count() == 0:
+        return render_message(request,
+                              f'You don\'t have any more pending invites',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=APP_URL)
+
+    querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token.key})
+    url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
+    return render(
+        request, 'academy_invite.html', {
+            'subject': f'Invitation to study at 4Geeks.com',
+            'invites': ProfileAcademySmallSerializer(pending_invites, many=True).data,
+            'LINK': url,
+            'user': UserTinySerializer(token.user, many=False).data
+        })
 
 
 def login_html_view(request):
@@ -1199,6 +1646,12 @@ def login_html_view(request):
             url = request.POST.get('url', None)
             if url is None or url == '':
                 raise Exception('Invalid redirect url, you must specify a url to redirect to')
+
+            # the url may or may not be encoded
+            try:
+                url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+            except Exception as e:
+                pass
 
             email = request.POST.get('email', None)
             password = request.POST.get('password', None)
@@ -1220,7 +1673,10 @@ def login_html_view(request):
                 raise Exception(msg, code=403)
 
             token, created = Token.get_or_create(user=user, token_type='login')
-            return HttpResponseRedirect(url + '?token=' + str(token))
+
+            request.session['token'] = token.key
+            return HttpResponseRedirect(
+                set_query_parameter(set_query_parameter(url, 'attempt', '1'), 'token', str(token)))
 
         except Exception as e:
             messages.error(request, e.message if hasattr(e, 'message') else e)
@@ -1244,6 +1700,11 @@ def get_google_token(request, token=None):
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationException('No callback URL specified', slug='no-callback-url')
+
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
 
     token = Token.get_valid(
         token)  # IMPORTANT!! you can only connect to google with temporal short lasting tokens
@@ -1341,3 +1802,210 @@ def save_google_token(request):
     else:
         logger.error(resp.json())
         raise APIException('Error from google credentials')
+
+
+class GitpodUserView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of('get_gitpod_user')
+    def get(self, request, academy_id, gitpoduser_id=None):
+        handler = self.extensions(request)
+
+        if gitpoduser_id is not None:
+            item = GitpodUser.objects.filter(id=gitpoduser_id, academy_id=academy_id).first()
+            if item is None:
+                raise ValidationException('Gitpod User not found for this academy',
+                                          code=404,
+                                          slug='gitpoduser-not-found')
+
+            serializer = GetGitpodUserSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = GitpodUser.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(
+                Q(github_username__icontains=like) | Q(user__email__icontains=like)
+                | Q(user__first_name__icontains=like) | Q(user__last_name__icontains=like))
+
+        items = items.order_by(request.GET.get('sort', 'expires_at'))
+
+        items = handler.queryset(items)
+        serializer = GitpodUserSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of('update_gitpod_user')
+    def put(self, request, academy_id, gitpoduser_id):
+
+        item = GitpodUser.objects.filter(id=gitpoduser_id, academy_id=academy_id).first()
+        if item is None:
+            raise ValidationException('Gitpod User not found for this academy',
+                                      code=404,
+                                      slug='gitpoduser-not-found')
+
+        if request.data is None or ('expires_at' in request.data and request.data['expires_at'] is None):
+            item.expires_at = None
+            item.save()
+            item = set_gitpod_user_expiration(item.id)
+            serializer = GitpodUserSmallSerializer(item, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        serializer = GetGitpodUserSerializer(item, data=request.data)
+        if serializer.is_valid():
+            _item = serializer.save()
+            return Response(GitpodUserSmallSerializer(_item, many=False).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileMeView(APIView, GenerateLookupsMixin):
+
+    @has_permission('get_my_profile')
+    def get(self, request):
+        item = Profile.objects.filter(user=request.user).first()
+        if not item:
+            raise ValidationException('Profile not found', code=404, slug='profile-not-found')
+
+        serializer = GetProfileSerializer(item, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @has_permission('create_my_profile')
+    def post(self, request):
+        if Profile.objects.filter(user__id=request.user.id).exists():
+            raise ValidationException('Profile already exists', code=400, slug='profile-already-exist')
+
+        data = {}
+        for key in request.data:
+            data[key] = request.data[key]
+
+        data['user'] = request.user.id
+
+        serializer = ProfileSerializer(data=data)
+        if serializer.is_valid():
+            instance = serializer.save()
+            serializer = GetProfileSerializer(instance, many=False)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @has_permission('update_my_profile')
+    def put(self, request):
+        item = Profile.objects.filter(user__id=request.user.id).first()
+        if not item:
+            raise ValidationException('Profile not found', code=404, slug='profile-not-found')
+
+        data = {}
+        for key in request.data:
+            data[key] = request.data[key]
+
+        data['user'] = request.user.id
+
+        serializer = ProfileSerializer(item, data=data)
+        if serializer.is_valid():
+            instance = serializer.save()
+            serializer = GetProfileSerializer(instance, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileMePictureView(APIView):
+    """
+    put:
+        Upload a file to Google Cloud.
+    """
+    parser_classes = [MultiPartParser, FileUploadParser]
+
+    @has_permission('update_my_profile')
+    def put(self, request):
+        from ..services.google_cloud import Storage
+
+        profile = Profile.objects.filter(user=request.user).first()
+        if not profile:
+            profile = Profile(user=request.user)
+            profile.save()
+
+        files = request.data.getlist('file')
+        file = request.data.get('file')
+
+        if not file:
+            raise ValidationException('Missing file in request', slug='missing-file')
+
+        if not len(files):
+            raise ValidationException('empty files in request')
+
+        if len(files) > 1:
+            raise ValidationException('Just can upload one file at a time')
+
+        # files validation below
+        if file.content_type not in PROFILE_MIME_ALLOWED:
+            raise ValidationException(
+                f'You can upload only files on the following formats: {",".join(PROFILE_MIME_ALLOWED)}',
+                slug='bad-file-format')
+
+        file_bytes = file.read()
+        hash = hashlib.sha256(file_bytes).hexdigest()
+
+        storage = Storage()
+        cloud_file = storage.file(get_profile_bucket(), hash)
+        cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
+
+        if cloud_file_thumbnail.exists():
+            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+
+        else:
+            cloud_file.upload(file, content_type=file.content_type)
+            func = FunctionV2(get_shape_of_image_url())
+
+            res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
+            json = res.json()
+
+            if json['shape'] != 'Square':
+                cloud_file.delete()
+                raise ValidationException(f'just can upload square images', slug='not-square-image')
+
+            func = FunctionV1(region='us-central1', project_id=get_google_project_id(), name='resize-image')
+
+            res = func.call({
+                'width': 100,
+                'filename': hash,
+                'bucket': get_profile_bucket(),
+            })
+
+            cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
+            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+
+            cloud_file.delete()
+
+        previous_avatar_url = profile.avatar_url or ''
+        profile.avatar_url = cloud_file_thumbnail_url
+        profile.save()
+
+        if previous_avatar_url != profile.avatar_url:
+            result = re.search(r'/(.{64})-100x100$', previous_avatar_url)
+
+            if result:
+                previous_hash = result[1]
+
+                # remove the file when the last user remove their copy of the same image
+                if not Profile.objects.filter(avatar_url__contains=previous_hash).exists():
+                    cloud_file = storage.file(get_profile_bucket(), f'{hash}-100x100')
+                    cloud_file.delete()
+
+        serializer = GetProfileSerializer(profile, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class GithubMeView(APIView):
+
+    def delete(self, request):
+        instance = CredentialsGithub.objects.filter(user=request.user).first()
+        if not instance:
+            raise ValidationException('This user not have Github account associated with with account',
+                                      code=404,
+                                      slug='not-found')
+
+        instance.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)

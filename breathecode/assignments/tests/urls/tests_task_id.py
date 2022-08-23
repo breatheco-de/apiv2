@@ -1,16 +1,69 @@
 """
 Test /answer
 """
-from django.utils import timezone
-from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
 from rest_framework import status
-
-from breathecode.services.google_cloud import Datastore
-
 from ..mixins import AssignmentsTestCase
+
+
+def get_serializer(self, task, user):
+    return {
+        'associated_slug': task.associated_slug,
+        'created_at': self.bc.datetime.to_iso_string(task.created_at),
+        'github_url': task.github_url,
+        'id': task.id,
+        'live_url': task.live_url,
+        'revision_status': task.revision_status,
+        'task_status': task.task_status,
+        'task_type': task.task_type,
+        'title': task.title,
+        'description': task.description,
+        'user': {
+            'first_name': user.first_name,
+            'id': user.id,
+            'last_name': user.last_name
+        }
+    }
+
+
+def put_serializer(self, task, data={}):
+    return {
+        'github_url': task.github_url,
+        'created_at': self.bc.datetime.to_iso_string(task.created_at),
+        'cohort': task.cohort.id if task.cohort else None,
+        'id': task.id,
+        'description': task.description,
+        'live_url': task.live_url,
+        'task_type': task.task_type,
+        'associated_slug': task.associated_slug,
+        'revision_status': task.revision_status,
+        'task_status': task.task_status,
+        'associated_slug': task.associated_slug,
+        'task_type': task.task_type,
+        'subtasks': task.subtasks,
+        'title': task.title,
+        **data,
+    }
+
+
+def task_row(task, data={}):
+    return {
+        'id': task.id,
+        'associated_slug': task.associated_slug,
+        'title': task.title,
+        'task_status': task.task_status,
+        'revision_status': task.revision_status,
+        'task_type': task.task_type,
+        'github_url': task.github_url,
+        'live_url': task.live_url,
+        'description': task.description,
+        'cohort_id': task.cohort.id if task.cohort else None,
+        'user_id': task.user.id,
+        'subtasks': task.subtasks,
+        **data,
+    }
 
 
 class MediaTestSuite(AssignmentsTestCase):
@@ -18,6 +71,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_task_id__without_auth(self):
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         response = self.client.get(url)
@@ -59,21 +113,7 @@ class MediaTestSuite(AssignmentsTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = {
-            'associated_slug': model.task.associated_slug,
-            'github_url': model.task.github_url,
-            'id': model.task.id,
-            'live_url': model.task.live_url,
-            'revision_status': model.task.revision_status,
-            'task_status': model.task.task_status,
-            'task_type': model.task.task_type,
-            'title': model.task.title,
-            'user': {
-                'first_name': model.user.first_name,
-                'id': model.user.id,
-                'last_name': model.user.last_name
-            }
-        }
+        expected = get_serializer(self, model.task, model.user)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -115,37 +155,11 @@ class MediaTestSuite(AssignmentsTestCase):
         response = self.client.put(url)
 
         json = response.json()
-        expected = {'detail': 'task-not-found', 'status_code': 400}
+        expected = {'detail': 'task-not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
-
-        self.assertEqual(student_task_notification.delay.call_args_list, [])
-        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
-
-    """
-    🔽🔽🔽 Put with Task
-    """
-
-    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
-    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    def test_task_id__put__with_one_task__bad_fields(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
-
-        model = self.bc.database.create(user=1, task=1)
-        self.bc.request.authenticate(model.user)
-
-        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
-        response = self.client.put(url)
-
-        json = response.json()
-        expected = {'associated_slug': ['This field is required.'], 'title': ['This field is required.']}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -164,7 +178,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
-        data = {'associated_slug': 'they-killed-kenny', 'title': 'They killed kenny'}
+        data = {'title': 'They killed kennyy'}
         start = self.bc.datetime.now()
         response = self.client.put(url, data, format='json')
         end = self.bc.datetime.now()
@@ -173,26 +187,14 @@ class MediaTestSuite(AssignmentsTestCase):
 
         updated_at = self.bc.datetime.from_iso_string(json['updated_at'])
         self.bc.check.datetime_in_range(start, end, updated_at)
+
         del json['updated_at']
 
-        expected = {
-            'github_url': model.task.github_url,
-            'cohort': model.task.cohort,
-            'created_at': self.bc.datetime.to_iso_string(model.task.created_at),
-            'id': model.task.id,
-            'description': model.task.description,
-            'live_url': model.task.live_url,
-            'revision_status': model.task.revision_status,
-            'task_status': model.task.task_status,
-            **data,
-        }
+        expected = put_serializer(self, model.task, data=data)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [task_row(model.task, data=data)])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -309,7 +311,6 @@ class MediaTestSuite(AssignmentsTestCase):
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         data = {
-            'associated_slug': 'they-killed-kenny',
             'title': 'They killed kenny',
             'revision_status': 'APPROVED',
         }
@@ -331,47 +332,52 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
 
-        task = {'revision_status': 'PENDING', 'user_id': 1, 'task_status': 'DONE'}
-        cohort_users = [{'role': 'STUDENT', 'user_id': 1}, {'role': 'TEACHER', 'user_id': 2}]
-        model = self.bc.database.create(user=2, task=task, cohort=1, cohort_user=cohort_users)
-        self.bc.request.authenticate(model.user[1])
+        statuses = ['PENDING', 'APPROVED', 'REJECTED', 'IGNORED']
+        for index in range(0, 4):
+            current_status = statuses[index]
+            next_status = statuses[index - 1 if index > 0 else 3]
+            task = {'revision_status': current_status, 'user_id': (index * 2) + 1, 'task_status': 'DONE'}
+            cohort_users = [
+                {
+                    'role': 'STUDENT',
+                    'user_id': (index * 2) + 1,
+                },
+                {
+                    'role': 'TEACHER',
+                    'user_id': (index * 2) + 2,
+                },
+            ]
+            model = self.bc.database.create(user=2, task=task, cohort=1, cohort_user=cohort_users)
+            model2 = self.bc.database.create(cohort=1)
+            self.bc.request.authenticate(model.user[1])
 
-        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
-        data = {
-            'associated_slug': 'they-killed-kenny',
-            'title': 'They killed kenny',
-            'revision_status': 'APPROVED',
-        }
-        start = self.bc.datetime.now()
-        response = self.client.put(url, data, format='json')
-        end = self.bc.datetime.now()
+            url = reverse_lazy('assignments:task_id', kwargs={'task_id': index + 1})
+            data = {
+                'title': 'They killed kenny',
+                'revision_status': next_status,
+            }
+            start = self.bc.datetime.now()
+            response = self.client.put(url, data, format='json')
+            end = self.bc.datetime.now()
 
-        json = response.json()
-        updated_at = self.bc.datetime.from_iso_string(json['updated_at'])
-        self.bc.check.datetime_in_range(start, end, updated_at)
-        del json['updated_at']
+            json = response.json()
+            updated_at = self.bc.datetime.from_iso_string(json['updated_at'])
+            self.bc.check.datetime_in_range(start, end, updated_at)
 
-        expected = {
-            'github_url': model.task.github_url,
-            'cohort': model.task.cohort.id,
-            'created_at': self.bc.datetime.to_iso_string(model.task.created_at),
-            'id': model.task.id,
-            'description': model.task.description,
-            'live_url': model.task.live_url,
-            'revision_status': model.task.revision_status,
-            'task_status': model.task.task_status,
-            **data,
-        }
+            del json['updated_at']
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+            expected = put_serializer(self, model.task, data=data)
 
-        self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
-        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            self.assertEqual(self.bc.database.list_of('assignments.Task'), [task_row(model.task, data=data)])
+            self.assertEqual(student_task_notification.delay.call_args_list, [call(index + 1)])
+            self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+            # teardown
+            self.bc.database.delete('assignments.Task')
+            student_task_notification.delay.call_args_list = []
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
@@ -391,7 +397,6 @@ class MediaTestSuite(AssignmentsTestCase):
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         data = {
-            'associated_slug': 'they-killed-kenny',
             'title': 'They killed kenny',
             'revision_status': 'APPROVED',
         }
@@ -402,26 +407,14 @@ class MediaTestSuite(AssignmentsTestCase):
         json = response.json()
         updated_at = self.bc.datetime.from_iso_string(json['updated_at'])
         self.bc.check.datetime_in_range(start, end, updated_at)
+
         del json['updated_at']
 
-        expected = {
-            'github_url': model.task.github_url,
-            'cohort': model.task.cohort.id,
-            'created_at': self.bc.datetime.to_iso_string(model.task.created_at),
-            'id': model.task.id,
-            'description': model.task.description,
-            'live_url': model.task.live_url,
-            'revision_status': model.task.revision_status,
-            'task_status': model.task.task_status,
-            **data,
-        }
+        expected = put_serializer(self, model.task, data=data)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [task_row(model.task, data=data)])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -438,45 +431,25 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
 
-        model = self.bc.database.create(task=1, user=1)
+        model = self.bc.database.create(task=1, user=1, cohort=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={
             'task_id': model.task.id,
         })
-        data = {'associated_slug': 'hello', 'title': 'hello'}
+        data = {'cohort': model['cohort'].id, 'title': 'hello'}
         response = self.client.put(url, data)
         json = response.json()
         self.assertDatetime(json['created_at'])
         self.assertDatetime(json['updated_at'])
-        del json['created_at']
+
         del json['updated_at']
-        expected = {
-            'id': 1,
-            'associated_slug': 'hello',
-            'title': 'hello',
-            'task_status': 'PENDING',
-            'revision_status': 'PENDING',
-            'github_url': None,
-            'live_url': None,
-            'description': model.task.description,
-            'cohort': None
-        }
+        expected = put_serializer(self, model.task, data=data)
 
         self.assertEqual(json, expected)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            'id': 1,
-            'associated_slug': 'hello',
-            'title': 'hello',
-            'task_status': 'PENDING',
-            'revision_status': 'PENDING',
-            'task_type': model.task.task_type,
-            'github_url': None,
-            'live_url': None,
-            'description': model.task.description,
-            'cohort_id': None,
-            'user_id': 1
-        }])
+
+        data['cohort_id'] = data.pop('cohort')
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [task_row(model.task, data=data)])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
@@ -548,3 +521,45 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+    def test_delete_task_not_found(self):
+
+        model = self.bc.database.create(user=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
+        response = self.client.delete(url)
+
+        json = response.json()
+        expected = {'detail': 'task-not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+
+    def test_delete_task_found_and_deleted(self):
+
+        model = self.bc.database.create(user=1, task=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+
+    def test_delete_task_associated_with_another_user(self):
+
+        model = self.bc.database.create(user=2, task=1)
+        self.bc.request.authenticate(model.user[1])
+
+        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
+        response = self.client.delete(url)
+
+        json = response.json()
+        expected = {'detail': 'task-not-found-for-this-user', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])

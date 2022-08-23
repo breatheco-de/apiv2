@@ -19,6 +19,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Without cohord id in url
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -154,6 +155,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
@@ -166,7 +168,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -255,6 +257,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
@@ -267,7 +270,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -286,6 +289,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 1,
+            'watching': False,
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -317,6 +321,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
@@ -329,7 +334,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -349,6 +354,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 2,
+            'watching': False
         }, {
             'cohort_id': 1,
             'educational_status': None,
@@ -356,6 +362,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 2,
             'role': 'STUDENT',
             'user_id': 3,
+            'watching': False
         }])
 
     """
@@ -374,7 +381,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                  profile_academy=True,
                                  cohort_user=True,
                                  syllabus=True,
-                                 specialty_mode=True)
+                                 syllabus_schedule=True)
         ]
 
         base = models[0].copy()

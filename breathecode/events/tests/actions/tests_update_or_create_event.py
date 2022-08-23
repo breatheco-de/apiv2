@@ -18,6 +18,7 @@ status_map = {
 
 
 def log_mock():
+
     def log(self, *args):
         print(*args)
 
@@ -25,6 +26,7 @@ def log_mock():
 
 
 def create_or_update_venue_mock(raise_error=False):
+
     def create_or_update_venue(*args, **kwargs):
         pass
 
@@ -32,6 +34,7 @@ def create_or_update_venue_mock(raise_error=False):
 
 
 def create_or_update_organizer_mock(raise_error=False):
+
     def create_or_update_organizer(*args, **kwargs):
         pass
 
@@ -39,6 +42,7 @@ def create_or_update_organizer_mock(raise_error=False):
 
 
 def get_current_iso_string_mock():
+
     def get_current_iso_string():
         return sync_desc
 
@@ -49,10 +53,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Data is None
     """
+
     @patch.object(logging.Logger, 'warn', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
+    @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__data_is_none(self):
         import logging
         import breathecode.events.actions as actions
@@ -67,6 +73,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(actions.create_or_update_venue.call_args_list, [])
         self.assertEqual(actions.create_or_update_organizer.call_args_list, [])
+        self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_event_dict(), [])
@@ -79,6 +86,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
+    @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__without_academy(self):
         import logging
         import breathecode.events.actions as actions
@@ -90,10 +98,11 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('The organization (1) not have a academy assigned')])
+                         [call('The organization Nameless not have a academy assigned')])
 
         self.assertEqual(actions.create_or_update_venue.call_args_list, [])
         self.assertEqual(actions.create_or_update_organizer.call_args_list, [])
+        self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_event_dict(), [])
@@ -107,6 +116,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
+    @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__with_academy(self):
         import logging
         import breathecode.events.actions as actions
@@ -125,6 +135,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(actions.create_or_update_organizer.call_args_list,
                          [call(event['organizer'], model.organization, force_update=True)])
 
+        self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [
+            call(self.bc.database.get('events.Event', 1, dict=False)),
+        ])
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
 
         event = EVENTBRITE_EVENTS['events'][0]
@@ -155,7 +168,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_status': event['status'],
             # organizer: organizer,
             'published_at': self.iso_to_datetime(event['published']),
-            'sync_with_eventbrite': False,
+            'sync_with_eventbrite': True,
             'eventbrite_sync_status': 'PERSISTED',
             'eventbrite_organizer_id': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
@@ -172,6 +185,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
+    @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__with_event(self):
         import logging
         import breathecode.events.actions as actions
@@ -195,6 +209,10 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(actions.create_or_update_organizer.call_args_list,
                          [call(event['organizer'], model.organization, force_update=True)])
 
+        self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [
+            call(model.event),
+        ])
+
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
 
         event = EVENTBRITE_EVENTS['events'][0]
@@ -205,7 +223,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'title': event['name']['text'],
             'currency': event['currency'],
             'lang': None,
-            'url': model.event.url,
+            'url': EVENTBRITE_EVENTS['events'][0]['url'],
             'banner': event['logo']['url'],
             'capacity': event['capacity'],
             'tags': '',

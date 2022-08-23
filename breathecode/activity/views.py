@@ -6,8 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.admissions.models import Cohort, CohortUser
-from breathecode.utils import ValidationException, capable_of
-from breathecode.utils import HeaderLimitOffsetPagination
+from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
 
 from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,
@@ -160,6 +159,7 @@ class ActivityViewMixin(APIView):
 
 
 class ActivityTypeView(APIView):
+
     def get_activity_object(self, slug):
         return {'slug': slug, 'description': ACTIVITIES[slug]}
 
@@ -178,6 +178,7 @@ class ActivityTypeView(APIView):
 
 
 class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
+
     @capable_of('read_activity')
     def get(self, request, cohort_id=None, academy_id=None):
         self.queryargs = []
@@ -200,6 +201,7 @@ class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
 
 
 class ActivityMeView(APIView):
+
     @capable_of('read_activity')
     def get(self, request, academy_id=None):
         from breathecode.services.google_cloud import Datastore
@@ -265,6 +267,7 @@ class ActivityMeView(APIView):
 
 
 class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
+
     @capable_of('classroom_activity')
     def post(self, request, cohort_id=None, academy_id=None):
 
@@ -415,6 +418,7 @@ def add_student_activity(user, data, academy_id):
 
 
 class StudentActivityView(APIView, HeaderLimitOffsetPagination):
+
     @capable_of('read_activity')
     def get(self, request, student_id=None, academy_id=None):
         from breathecode.services.google_cloud import Datastore

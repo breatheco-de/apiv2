@@ -4,6 +4,15 @@ from django.forms.widgets import PasswordInput
 from django import forms
 
 
+class SyncGithubUsersForm(forms.Form):
+    html = forms.CharField(widget=forms.Textarea(attrs={
+        'name': 'html',
+        'rows': '5',
+        'cols': '5',
+        'class': 'form-control'
+    }))
+
+
 class ResetPasswordForm(forms.Form):
     callback = forms.CharField(required=False, widget=forms.HiddenInput())
     email = forms.EmailField(widget=forms.EmailInput(attrs={
@@ -112,6 +121,7 @@ class InviteForm(forms.Form):
 
 
 class PasswordChangeCustomForm(PasswordChangeForm):
+
     def __init__(self, user, *args, **kwargs):
         super(PasswordChangeCustomForm, self).__init__(user, *args, **kwargs)
         for field in self.fields:

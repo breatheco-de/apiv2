@@ -10,8 +10,13 @@
     background: #977a29;
     color: white;
 }
+.bg-secondary{
+    background: #a1a1a1;
+    color: rgb(0, 0, 0);
+}
 .badge{
     font-size: 10px;
+    display: inline-block;
     padding: 3px;
     border-radius: 5px;
 }

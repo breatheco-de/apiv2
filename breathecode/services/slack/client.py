@@ -2,6 +2,7 @@ import requests, logging, re, os, json, inspect
 from .decorator import commands, actions
 from breathecode.services.slack.commands import student, cohort
 from breathecode.services.slack.actions import monitoring
+from .exceptions import SlackException
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class Slack:
 
         _commands = re.findall(patterns['command'], content)
         if len(_commands) != 1:
-            raise Exception('Imposible to determine command')
+            raise SlackException('Impossible to determine command', slug='command-does-not-found')
 
         matches = re.findall(patterns['users'], content)
         response['users'] = [u[0] for u in matches]
@@ -67,16 +68,22 @@ class Slack:
         response['context'] = context
 
         if hasattr(commands, _commands[0]):
-            return getattr(commands, _commands[0]).execute(**response)
+            return self._execute_command(commands, _commands[0], response)
+
         else:
-            raise Exception('No implementation has been found for this command')
+            raise SlackException('No implementation has been found for this command',
+                                 slug='command-does-not-exist')
+
+    def _execute_command(self, module, command, response):
+
+        return getattr(module, command).execute(**response)
 
     def execute_action(self, context):
 
         payload = json.loads(context['payload'])
 
         if 'actions' not in payload or len(payload['actions']) == 0:
-            raise Exception('Imposible to determine action')
+            raise Exception('Impossible to determine action')
 
         try:
             logger.debug(f"Slack action: {str(payload['actions'])}")
@@ -87,7 +94,7 @@ class Slack:
 
         except:
             raise Exception(
-                'Invalid slack action format, must be ajson with class and method properties at least')
+                'Invalid slack action format, must be json with class and method properties at least')
 
         logger.debug(f'Executing {action_class} => {method}')
         if hasattr(actions, action_class):

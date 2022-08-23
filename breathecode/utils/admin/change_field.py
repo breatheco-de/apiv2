@@ -1,4 +1,8 @@
+__all__ = ['make_method', 'change_field']
+
+
 def make_method(status, name):
+
     def _method(modeladmin, request, queryset):
         val = {}
         val[name] = status

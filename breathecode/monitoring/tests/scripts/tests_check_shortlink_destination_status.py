@@ -4,6 +4,7 @@ from breathecode.monitoring.actions import run_script
 
 
 class ShortLinkTestSuite(MonitoringTestCase):
+
     def tests_send_list_of_shortlinks_when_operational(self):
         """
         Checking to see if shortlink script runs with properly with working shortlinks
@@ -23,7 +24,7 @@ class ShortLinkTestSuite(MonitoringTestCase):
             'severity_level': 5,
             'status': 'OPERATIONAL',
             'text': 'All shortlinks working properly\n',
-            'title': None
+            'title': 'OK'
         }
 
         self.assertEqual(script, expected)
@@ -51,7 +52,7 @@ class ShortLinkTestSuite(MonitoringTestCase):
             'severity_level': 5,
             'status': 'OPERATIONAL',
             'text': 'All shortlinks working properly\n',
-            'title': None
+            'title': 'OK'
         }
 
         self.assertEqual(script, expected)
@@ -81,6 +82,8 @@ class ShortLinkTestSuite(MonitoringTestCase):
         del script['slack_payload']
 
         expected = {
+            'btn':
+            None,
             'severity_level':
             5,
             'title':
@@ -129,6 +132,8 @@ class ShortLinkTestSuite(MonitoringTestCase):
         del script['slack_payload']
 
         expected = {
+            'btn':
+            None,
             'severity_level':
             5,
             'title':
@@ -179,6 +184,8 @@ class ShortLinkTestSuite(MonitoringTestCase):
         del script['slack_payload']
 
         expected = {
+            'btn':
+            None,
             'severity_level':
             5,
             'title':
@@ -233,6 +240,8 @@ class ShortLinkTestSuite(MonitoringTestCase):
         del script['slack_payload']
 
         expected = {
+            'btn':
+            None,
             'severity_level':
             5,
             'title':

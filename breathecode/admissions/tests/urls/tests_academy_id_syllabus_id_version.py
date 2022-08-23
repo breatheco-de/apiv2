@@ -16,6 +16,7 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
+
     def test_academy_id_syllabus_id_version_without_auth(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
@@ -33,7 +34,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'status_code': status.HTTP_401_UNAUTHORIZED
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     def test_academy_id_syllabus_id_version_without_capability(self):
@@ -55,7 +56,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -65,7 +66,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato')
@@ -92,7 +93,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato',
@@ -112,6 +113,13 @@ class CertificateTestSuite(AdmissionsTestCase):
             'name': model.syllabus.name,
             'slug': model['syllabus'].slug,
             'syllabus': 1,
+            'academy_owner': {
+                'id': model['syllabus'].academy_owner.id,
+                'name': model['syllabus'].academy_owner.name,
+                'slug': model['syllabus'].academy_owner.slug,
+                'white_labeled': model['syllabus'].academy_owner.white_labeled,
+                'icon_url': model['syllabus'].academy_owner.icon_url,
+            },
             'version': model['syllabus_version'].version,
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
@@ -119,6 +127,9 @@ class CertificateTestSuite(AdmissionsTestCase):
             'logo': model.syllabus.logo,
             'private': model.syllabus.private,
             'week_hours': model.syllabus.week_hours,
+            'main_technologies': None,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
         }]
 
         self.assertEqual(json, expected)
@@ -137,7 +148,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -163,7 +174,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -189,7 +200,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -204,6 +215,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'syllabus': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'version': 1,
             **data,
         }
@@ -212,6 +225,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_syllabus_version_dict(), [{
             'id': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'json': {},
             'syllabus_id': 1,
             'version': 1
@@ -224,7 +239,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -240,6 +255,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'syllabus': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'version': model.syllabus_version.version + 1,
             **data,
         }
@@ -250,6 +267,8 @@ class CertificateTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'syllabus_version')
         }, {
             'id': 2,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'json': {},
             'syllabus_id': 1,
             'version': model.syllabus_version.version + 1,

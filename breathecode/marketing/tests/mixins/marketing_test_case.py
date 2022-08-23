@@ -15,6 +15,7 @@ from breathecode.feedback.actions import strings
 class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                         DatetimeMixin, BreathecodeMixin):
     """MarketingTestCase with auth methods"""
+
     def tearDown(self):
         self.clear_cache()
 
@@ -81,7 +82,7 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin
                 '\n'
                 '\n'
                 '\n'
-                'The BreatheCode Team'
+                'The 4Geeks Team'
             })
         self.assertToken(token)
         self.assertTrue(link in html)

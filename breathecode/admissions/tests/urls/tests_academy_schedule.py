@@ -11,6 +11,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_academy_schedule__without_auth(self):
         """Test /certificate without auth"""
         url = reverse_lazy('admissions:academy_schedule')
@@ -23,7 +24,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'status_code': status.HTTP_401_UNAUTHORIZED
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_academy_schedule__without_capability(self):
         """Test /certificate without auth"""
@@ -39,17 +40,19 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     """
     🔽🔽🔽 Without data
     """
 
-    def test_academy_schedule__without_specialty_mode(self):
+    def test_academy_schedule__with_schedule_of_other_academy(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
+        syllabus_schedule = {'academy_id': 2}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=syllabus_schedule,
+                                     academy=2,
                                      profile_academy=True,
                                      capability='read_certificate',
                                      role='potato')
@@ -70,7 +73,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_certificate',
                                      role='potato',
@@ -79,10 +82,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': model.specialty_mode.id,
-            'name': model.specialty_mode.name,
-            'description': model.specialty_mode.description,
-            'syllabus': model.specialty_mode.syllabus.id,
+            'id': model.syllabus_schedule.id,
+            'name': model.syllabus_schedule.name,
+            'description': model.syllabus_schedule.description,
+            'syllabus': model.syllabus_schedule.syllabus.id,
         }]
 
         self.assertEqual(json, expected)
@@ -97,7 +100,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_certificate',
                                      role='potato',
@@ -115,7 +118,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_certificate',
                                      role='potato',
@@ -124,10 +127,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': model.specialty_mode.id,
-            'name': model.specialty_mode.name,
-            'description': model.specialty_mode.description,
-            'syllabus': model.specialty_mode.syllabus.id,
+            'id': model.syllabus_schedule.id,
+            'name': model.syllabus_schedule.name,
+            'description': model.syllabus_schedule.description,
+            'syllabus': model.syllabus_schedule.syllabus.id,
         }]
 
         self.assertEqual(json, expected)
@@ -142,7 +145,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_certificate',
                                      role='potato',
@@ -162,7 +165,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_certificate',
                                      role='potato',
@@ -172,10 +175,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': model.specialty_mode.id,
-            'name': model.specialty_mode.name,
-            'description': model.specialty_mode.description,
-            'syllabus': model.specialty_mode.syllabus.id,
+            'id': model.syllabus_schedule.id,
+            'name': model.syllabus_schedule.name,
+            'description': model.syllabus_schedule.description,
+            'syllabus': model.syllabus_schedule.syllabus.id,
         }]
 
         self.assertEqual(json, expected)
@@ -208,14 +211,14 @@ class CertificateTestSuite(AdmissionsTestCase):
                                          role='potato',
                                          certificate_kwargs=certificate_kwargs,
                                          syllabus=True,
-                                         specialty_mode=True,
+                                         syllabus_schedule=True,
                                          models=base)
             url = (reverse_lazy('admissions:academy_schedule') + f'?{field}=' +
-                   str(getattr(model['specialty_mode'], field)))
+                   str(getattr(model['syllabus_schedule'], field)))
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_specialty_mode_dict(), [])
+            self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_certificate_delete_without_auth(self):
         """Test /cohort/:id/user without auth"""
@@ -226,7 +229,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_certificate_delete_without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
@@ -242,7 +245,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_certificate_delete_in_bulk_with_two(self):
         """Test /cohort/:id/user without auth"""
@@ -266,7 +269,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                           role='potato',
                                           certificate_kwargs=certificate_kwargs,
                                           syllabus=True,
-                                          specialty_mode=True,
+                                          syllabus_schedule=True,
                                           models=base)
 
             model2 = self.generate_models(profile_academy=True,
@@ -274,16 +277,16 @@ class CertificateTestSuite(AdmissionsTestCase):
                                           role='potato',
                                           certificate_kwargs=certificate_kwargs,
                                           syllabus=True,
-                                          specialty_mode=True,
+                                          syllabus_schedule=True,
                                           models=base)
 
             url = (reverse_lazy('admissions:academy_schedule') + f'?{field}=' +
-                   str(getattr(model1['specialty_mode'], field)) + ',' +
-                   str(getattr(model2['specialty_mode'], field)))
+                   str(getattr(model1['syllabus_schedule'], field)) + ',' +
+                   str(getattr(model2['syllabus_schedule'], field)))
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_specialty_mode_dict(), [])
+            self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_academy_schedule__post__without_syllabus(self):
         """Test /certificate without auth"""
@@ -302,7 +305,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_academy_schedule__post__syllabus_not_found(self):
         """Test /certificate without auth"""
@@ -322,9 +325,9 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
-    def test_academy_schedule__post__without_body(self):
+    def test_academy_schedule__post__without_academy(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -336,6 +339,42 @@ class CertificateTestSuite(AdmissionsTestCase):
         data = {'syllabus': 1}
         response = self.client.post(url, data)
         json = response.json()
+        expected = {'detail': 'missing-academy-in-request', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
+
+    def test_academy_schedule__post__academy_not_found(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     syllabus=True,
+                                     capability='crud_certificate',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_schedule')
+        data = {'syllabus': 1, 'academy': 2}
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {'detail': 'academy-not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
+
+    def test_academy_schedule__post__without_body(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     syllabus=True,
+                                     capability='crud_certificate',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_schedule')
+        data = {'syllabus': 1, 'academy': 1}
+        response = self.client.post(url, data)
+        json = response.json()
         expected = {
             'name': ['This field is required.'],
             'description': ['This field is required.'],
@@ -343,7 +382,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_academy_schedule__post(self):
         """Test /certificate without auth"""
@@ -355,6 +394,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato')
         url = reverse_lazy('admissions:academy_schedule')
         data = {
+            'academy': 1,
             'syllabus': 1,
             'name': 'They killed kenny',
             'description': 'Oh my god!',
@@ -377,10 +417,11 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_specialty_mode_dict(), [{
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
             'id': 1,
             'name': 'They killed kenny',
             'description': 'Oh my god!',
             'schedule_type': 'PART-TIME',
             'syllabus_id': 1,
+            'academy_id': 1,
         }])

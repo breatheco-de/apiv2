@@ -4,16 +4,19 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from breathecode.admissions.models import Academy, Cohort, Syllabus
+import breathecode.certificate.signals as signals
 
 __all__ = ['UserProxy', 'Specialty', 'Badge', 'LayoutDesign', 'UserSpecialty']
 
 
 class UserProxy(User):
+
     class Meta:
         proxy = True
 
 
 class CohortProxy(Cohort):
+
     class Meta:
         proxy = True
 
@@ -104,11 +107,28 @@ class UserSpecialty(models.Model):
     signed_by = models.CharField(max_length=100)
     signed_by_role = models.CharField(max_length=100, default='Director')
     issued_at = models.DateTimeField(default=None, blank=True, null=True)
+    update_hash = models.CharField(max_length=40, blank=True, null=True)
 
     preview_url = models.CharField(max_length=250, blank=True, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def generate_update_hash(self):
+        kwargs = {
+            'signed_by': self.signed_by,
+            'signed_by_role': self.signed_by_role,
+            'status': self.status,
+            'layout': self.layout,
+            'expires_at': self.expires_at,
+            'issued_at': self.issued_at,
+        }
+
+        important_fields = ['signed_by', 'signed_by_role', 'status', 'layout', 'expires_at', 'issued_at']
+        important_values = '-'.join(
+            [str(kwargs.get(field) if field in kwargs else None) for field in sorted(important_fields)])
+
+        return hashlib.sha1(important_values.encode('UTF-8')).hexdigest()
 
     def clean(self):
         if self.status == ERROR:
@@ -131,4 +151,10 @@ class UserSpecialty(models.Model):
         if not self.is_cleaned:
             self.clean()
 
+        hash = self.generate_update_hash()
+        self._hash_was_updated = self.update_hash != hash
+        self.update_hash = hash
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
+        signals.user_specialty_saved.send(instance=self, sender=self.__class__)

@@ -29,6 +29,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Without Academy
     """
+
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
@@ -163,7 +164,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_cohort_task_to_student.delay(1, 1, 1)
 
-        self.assertEqual(self.all_tag_dict(), [self.model_to_dict(model, 'tag')])
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.model_to_dict(model, 'tag')])
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
@@ -196,7 +197,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_cohort_task_to_student.delay(1, 1, 1)
 
-        self.assertEqual(self.all_tag_dict(), [self.model_to_dict(model, 'tag')])
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.model_to_dict(model, 'tag')])
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
@@ -232,7 +233,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_cohort_task_to_student.delay(1, 1, 1)
 
-        self.assertEqual(self.all_tag_dict(), [self.model_to_dict(model, 'tag')])
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.model_to_dict(model, 'tag')])
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),

@@ -1,23 +1,25 @@
 from datetime import datetime
 from typing import Any
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group, Permission
 from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
+from django.db.models import Q
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
+from django.contrib.contenttypes.models import ContentType
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
-from .signals import invite_accepted
+from .signals import invite_accepted, profile_academy_saved
 from breathecode.admissions.models import Academy, Cohort
 
 __all__ = [
-    'User', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite', 'ProfileAcademy', 'CredentialsGithub',
-    'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks', 'CredentialsGoogle', 'DeviceId',
-    'Token'
+    'User', 'Group', 'ContentType', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
+    'ProfileAcademy', 'CredentialsGithub', 'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks',
+    'CredentialsGoogle', 'DeviceId', 'Token'
 ]
 
 TOKEN_TYPE = ['login', 'one_time', 'temporal', 'permanent']
@@ -26,11 +28,13 @@ TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(minutes=10)
 
 
 class UserProxy(User):
+
     class Meta:
         proxy = True
 
 
 class AcademyProxy(Academy):
+
     class Meta:
         proxy = True
 
@@ -79,11 +83,22 @@ class Role(models.Model):
 
 PENDING = 'PENDING'
 ACCEPTED = 'ACCEPTED'
+REJECTED = 'REJECTED'
 WAITING_LIST = 'WAITING_LIST'
 INVITE_STATUS = (
     (PENDING, 'Pending'),
+    (REJECTED, 'Rejected'),
     (ACCEPTED, 'Accepted'),
     (WAITING_LIST, 'Waiting list'),
+)
+
+PENDING = 'PENDING'
+DONE = 'DONE'
+ERROR = 'ERROR'
+PROCESS_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (ERROR, 'Error'),
 )
 
 
@@ -103,6 +118,9 @@ class UserInvite(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
 
     status = models.CharField(max_length=15, choices=INVITE_STATUS, default=PENDING)
+
+    process_status = models.CharField(max_length=7, choices=PROCESS_STATUS, default=PENDING)
+    process_message = models.CharField(max_length=150, default='')
 
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
@@ -127,6 +145,7 @@ PROFILE_ACADEMY_STATUS = (
 
 
 class ProfileAcademy(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(ProfileAcademy, self).__init__(*args, **kwargs)
         self.__old_status = self.status
@@ -330,7 +349,8 @@ class Token(rest_framework.authtoken.models.Token):
         cls.delete_expired_tokens(utc_now)
 
         # find among any non-expired token
-        return Token.objects.filter(key=token, expires_at__gt=utc_now).first()
+        return Token.objects.filter(key=token).filter(Q(expires_at__gt=utc_now)
+                                                      | Q(expires_at__isnull=True)).first()
 
     @classmethod
     def validate_and_destroy(cls, user: User, hash: str) -> None:
@@ -348,3 +368,24 @@ class Token(rest_framework.authtoken.models.Token):
 class DeviceId(models.Model):
     name = models.CharField(max_length=40)
     key = models.CharField(max_length=64)
+
+
+class GitpodUser(models.Model):
+
+    github_username = models.CharField(max_length=40)
+    assignee_id = models.CharField(max_length=64)
+    position_in_gitpod_team = models.PositiveSmallIntegerField()
+    delete_status = models.TextField(null=True, default=None, blank=True)
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, default=None, blank=True)
+    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
+    target_cohort = models.ForeignKey(Cohort, on_delete=models.SET_NULL, null=True, default=None, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+    expires_at = models.DateTimeField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text=
+        'If a gitpod user is not connected to a real user and academy in the database, it will be deleted ASAP'
+    )

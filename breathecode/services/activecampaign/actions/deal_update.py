@@ -25,9 +25,8 @@ def deal_update(self, webhook, payload: dict, acp_ids):
         entry = FormEntry.objects.filter(email=payload['deal[contact_email]']).order_by('-created_at').first()
     if entry is None:
         raise Exception(
-            f'Impossible to find formentry with deal {payload["deal[id]"]} for webhook {webhook.id} -> {webhook.webhook_type} '
-        )
-        logger.debug(payload)
+            f'Impossible to find formentry with deal {payload["deal[id]"]} for webhook {webhook.id} -> '
+            f'{webhook.webhook_type} ')
 
     entry.ac_deal_id = payload['deal[id]']
 

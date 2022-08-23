@@ -7,6 +7,7 @@ from .utils import is_valid, create_models, just_one, get_list
 
 
 class MarketingModelsMixin(ModelsMixin):
+
     def generate_marketing_models(self,
                                   active_campaign_academy=False,
                                   automation=False,
@@ -18,6 +19,7 @@ class MarketingModelsMixin(ModelsMixin):
                                   user=False,
                                   academy_alias=False,
                                   lead_generation_app=False,
+                                  downloadable=False,
                                   active_campaign_academy_kwargs={},
                                   automation_kwargs={},
                                   tag_kwargs={},
@@ -26,6 +28,7 @@ class MarketingModelsMixin(ModelsMixin):
                                   form_entry_kwargs={},
                                   short_link_kwargs={},
                                   lead_generation_app_kwargs={},
+                                  downloadable_kwargs={},
                                   models={},
                                   **kwargs):
         """Generate models"""
@@ -52,6 +55,20 @@ class MarketingModelsMixin(ModelsMixin):
             models['automation'] = create_models(automation, 'marketing.Automation', **{
                 **kargs,
                 **automation_kwargs
+            })
+
+        if not 'downloadable' in models and is_valid(downloadable):
+            kargs = {}
+
+            if 'academy' in models and is_valid(downloadable):
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'user' in models and is_valid(downloadable):
+                kargs['user'] = just_one(models['user'])
+
+            models['downloadable'] = create_models(downloadable, 'marketing.Downloadable', **{
+                **kargs,
+                **downloadable_kwargs
             })
 
         if not 'academy_alias' in models and is_valid(academy_alias):
@@ -144,6 +161,20 @@ class MarketingModelsMixin(ModelsMixin):
             models['short_link'] = create_models(short_link, 'marketing.ShortLink', **{
                 **kargs,
                 **short_link_kwargs
+            })
+
+        if not 'downloadable' in models and is_valid(downloadable):
+            kargs = {}
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'user' in models:
+                kargs['author'] = just_one(models['user'])
+
+            models['downloadable'] = create_models(downloadable, 'marketing.Downloadable', **{
+                **kargs,
+                **downloadable_kwargs
             })
 
         return models

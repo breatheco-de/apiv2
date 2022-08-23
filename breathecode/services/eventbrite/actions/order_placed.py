@@ -17,7 +17,7 @@ def order_placed(self, webhook, payload: dict):
     org = Organization.objects.filter(id=webhook.organization_id).first()
 
     if org is None:
-        message = 'Organization doesn\'t exist'
+        message = "Organization doesn't exist"
         logger.debug(message)
         raise Exception(message)
 
@@ -31,7 +31,7 @@ def order_placed(self, webhook, payload: dict):
     local_event = Event.objects.filter(eventbrite_id=event_id).first()
 
     if not local_event:
-        message = 'event doesn\'t exist'
+        message = "event doesn't exist"
         logger.debug(message)
         raise Exception(message)
 
@@ -69,7 +69,7 @@ def order_placed(self, webhook, payload: dict):
 
     academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
     if academy is None:
-        message = 'ActiveCampaignAcademy doesn\'t exist'
+        message = "ActiveCampaignAcademy doesn't exist"
         logger.debug(message)
         raise Exception(message)
 
@@ -79,7 +79,7 @@ def order_placed(self, webhook, payload: dict):
     if automation_id:
         add_to_active_campaign(contact, academy_id, automation_id)
     else:
-        message = f'Automation for order_placed doesn\'t exist'
+        message = f"Automation for order_placed doesn't exist"
         logger.debug(message)
         raise Exception(message)
 

@@ -11,6 +11,7 @@ from ..mixins.new_auth_test_case import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     @patch('breathecode.notify.actions.send_email_message')
     def test_password_reset__post__without_data(self, mock):
         """Test /cohort/:id without auth"""
@@ -140,7 +141,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
@@ -166,7 +167,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
@@ -210,7 +211,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
@@ -236,7 +237,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])

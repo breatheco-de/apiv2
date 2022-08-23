@@ -5,77 +5,103 @@ import re
 from django.contrib.auth.models import User
 from rest_framework import status
 from django.urls.base import reverse_lazy
-from ..mixins import AuthTestCase
+from django.contrib.auth.hashers import make_password
+from ..mixins.new_auth_test_case import AuthTestCase
 
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_login_with_bad_credentials(self):
         """Test /login with incorrect credentials"""
-        response = self.create_user(email='Konan@naruto.io', password='Pain!$%')
 
-        non_field_errors = response.data['non_field_errors']
-        status_code = response.data['status_code']
+        url = reverse_lazy('authenticate:login')
+        data = {'email': 'Konan@naruto.io', 'password': 'Pain!$%'}
+        response = self.client.post(url, data)
 
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(non_field_errors, ['Unable to log in with provided credentials.'])
-        self.assertEqual(status_code, 400)
+        json = response.json()
+        expected = {
+            'non_field_errors': ['Unable to log in with provided credentials.'],
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_login_without_email(self):
         """Test /login with incorrect credentials"""
+
         url = reverse_lazy('authenticate:login')
         data = {'password': 'Pain!$%'}
         response = self.client.post(url, data)
-        status_code = response.data['status_code']
 
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(len(response.data['email']), 1)
-        self.assertEqual(response.data['email'], ['This field is required.'])
-        self.assertEqual(status_code, 400)
+        json = response.json()
+        expected = {
+            'email': ['This field is required.'],
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_login_without_password(self):
         """Test /login with incorrect credentials"""
+
         url = reverse_lazy('authenticate:login')
         data = {'email': 'Konan@naruto.io'}
         response = self.client.post(url, data)
-        status_code = response.data['status_code']
 
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(len(response.data['password']), 1)
-        self.assertEqual(response.data['password'], ['This field is required.'])
-        self.assertEqual(status_code, 400)
+        json = response.json()
+        expected = {
+            'password': ['This field is required.'],
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_login(self):
+    def test_login_lowercase_email(self):
         """Test /login"""
-        response = self.create_user()
-        token_pattern = re.compile('^[0-9a-zA-Z]{,40}$')
 
-        token = str(response.data['token'])
-        user_id = int(response.data['user_id'])
-        email = str(response.data['email'])
+        password = 'Pain!$%'
+        user = {'email': 'Konan@naruto.io', 'password': make_password(password)}
+        model = self.bc.database.create(user=user)
 
-        self.assertEqual(len(response.data), 3)
-        self.assertEqual(len(token), 40)
-        self.assertEqual(bool(token_pattern.match(token)), True)
-        self.assertEqual(user_id, 1)
-        self.assertEqual(email, self.email)
+        url = reverse_lazy('authenticate:login')
+        data = {'email': model.user.email.lower(), 'password': password}
+        response = self.client.post(url, data)
+
+        json = response.json()
+        token = self.bc.database.get('authenticate.Token', 1, dict=False)
+        expected = {
+            'email': model.user.email,
+            'expires_at': self.bc.datetime.to_iso_string(token.expires_at),
+            'token': token.key,
+            'user_id': 1
+        }
+
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_login_uppercase_email(self):
         """Test /login"""
-        response = self.create_user(email=self.email.upper())
-        token_pattern = re.compile('^[0-9a-zA-Z]{,40}$')
 
-        token = str(response.data['token'])
-        user_id = int(response.data['user_id'])
-        email = str(response.data['email'])
+        password = 'Pain!$%'
+        user = {'email': 'Konan@naruto.io', 'password': make_password(password)}
+        model = self.bc.database.create(user=user)
 
-        self.assertEqual(len(response.data), 3)
-        self.assertEqual(len(token), 40)
-        self.assertEqual(bool(token_pattern.match(token)), True)
-        self.assertEqual(user_id, 1)
-        self.assertEqual(email, self.email)
+        url = reverse_lazy('authenticate:login')
+        data = {'email': model.user.email.upper(), 'password': password}
+        response = self.client.post(url, data)
+
+        json = response.json()
+        token = self.bc.database.get('authenticate.Token', 1, dict=False)
+        expected = {
+            'email': model.user.email,
+            'expires_at': self.bc.datetime.to_iso_string(token.expires_at),
+            'token': token.key,
+            'user_id': 1
+        }
+
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

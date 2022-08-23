@@ -13,6 +13,7 @@ from rest_framework import status
 class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin,
                          ICallMixin, BreathecodeMixin):
     """AdmissionsTestCase with auth methods"""
+
     def setUp(self):
         self.generate_queries()
         self.set_test_instance(self)
@@ -31,7 +32,10 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
             'timezone': timezone,
         }
 
-    def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, update=False):
+    def check_cohort_user_that_not_have_role_student_can_be_teacher(self,
+                                                                    role,
+                                                                    update=False,
+                                                                    additional_data={}):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
 
@@ -71,6 +75,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
@@ -83,7 +88,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -91,6 +96,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'created_at': self.datetime_to_iso(model['cohort'].created_at),
                 'updated_at': self.datetime_to_iso(model['cohort'].updated_at),
             },
+            **additional_data,
         }
 
         if update:
@@ -120,7 +126,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'finantial_status': None,
                 'id': 1,
                 'role': 'TEACHER',
-                'user_id': 1
+                'user_id': 1,
+                'watching': False,
             }])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
@@ -141,12 +148,12 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs,
                                      academy_kwargs=academy_kwargs)
             ]
@@ -173,6 +180,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].name,
                 'never_ends':
                 model['cohort'].never_ends,
+                'remote_available':
+                model['cohort'].remote_available,
                 'private':
                 model['cohort'].private,
                 'kickoff_date':
@@ -185,6 +194,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].language,
                 'current_day':
                 model['cohort'].current_day,
+                'current_module':
+                model['cohort'].current_module,
                 'online_meeting_url':
                 model['cohort'].online_meeting_url,
                 'timezone':
@@ -201,14 +212,137 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                     'starting_at':
                     self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
                 }] if cohort_time_slots and model.cohort.id != 1 else [],
-                'specialty_mode': {
-                    'id': model['cohort'].specialty_mode.id,
-                    'name': model['cohort'].specialty_mode.name,
-                    'syllabus': model['cohort'].specialty_mode.syllabus.id,
+                'schedule': {
+                    'id': model['cohort'].schedule.id,
+                    'name': model['cohort'].schedule.name,
+                    'syllabus': model['cohort'].schedule.syllabus.id,
                 },
                 'syllabus_version': {
                     'name': model.syllabus.name,
                     'slug': model.syllabus.slug,
+                    'status': model['cohort'].syllabus_version.status,
+                    'version': model['cohort'].syllabus_version.version,
+                    'syllabus': model['cohort'].syllabus_version.syllabus.id,
+                    'duration_in_days': model.syllabus.duration_in_days,
+                    'duration_in_hours': model.syllabus.duration_in_hours,
+                    'github_url': model.syllabus.github_url,
+                    'logo': model.syllabus.logo,
+                    'private': model.syllabus.private,
+                    'week_hours': model.syllabus.week_hours,
+                },
+                'academy': {
+                    'id': model['cohort'].academy.id,
+                    'slug': model['cohort'].academy.slug,
+                    'name': model['cohort'].academy.name,
+                    'country': {
+                        'code': model['cohort'].academy.country.code,
+                        'name': model['cohort'].academy.country.name,
+                    },
+                    'city': {
+                        'name': model['cohort'].academy.city.name,
+                    },
+                    'logo_url': model['cohort'].academy.logo_url,
+                },
+            } for model in models]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
+        self.assertEqual(cohort_saved.send.call_args_list, [])
+        return models
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    def check_cohort_me__with_data(self, models=None, deleted=False):
+        """Test /cohort without auth"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+
+        cohort_time_slots = self.all_cohort_time_slot_dict()
+        if cohort_time_slots:
+            cohort_time_slot = cohort_time_slots[0]
+
+        if models is None:
+            syllabus_kwargs = {'slug': 'they-killed-kenny'}
+            academy_kwargs = {'timezone': 'America/Caracas'}
+            models = [
+                self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     profile_academy=True,
+                                     capability='read_all_cohort',
+                                     role='potato',
+                                     syllabus=True,
+                                     cohort_user=1,
+                                     syllabus_version=True,
+                                     syllabus_schedule=True,
+                                     syllabus_schedule_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs,
+                                     academy_kwargs=academy_kwargs)
+            ]
+
+            # reset because this call are coming from mixer
+            cohort_saved.send.call_args_list = []
+
+        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
+
+        url = reverse_lazy('admissions:academy_cohort')
+        response = self.client.get(url)
+        json = response.json()
+
+        if deleted:
+            expected = []
+
+        else:
+            expected = [{
+                'id':
+                model['cohort'].id,
+                'slug':
+                model['cohort'].slug,
+                'name':
+                model['cohort'].name,
+                'never_ends':
+                model['cohort'].never_ends,
+                'remote_available':
+                model['cohort'].remote_available,
+                'private':
+                model['cohort'].private,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort'].ending_date,
+                'stage':
+                model['cohort'].stage,
+                'language':
+                model['cohort'].language,
+                'current_day':
+                model['cohort'].current_day,
+                'current_module':
+                model['cohort'].current_module,
+                'online_meeting_url':
+                model['cohort'].online_meeting_url,
+                'timezone':
+                model['cohort'].timezone,
+                'timeslots': [{
+                    'ending_at':
+                    self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
+                    'id':
+                    cohort_time_slot['id'],
+                    'recurrency_type':
+                    cohort_time_slot['recurrency_type'],
+                    'recurrent':
+                    cohort_time_slot['recurrent'],
+                    'starting_at':
+                    self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
+                }] if cohort_time_slots and model.cohort.id != 1 else [],
+                'schedule': {
+                    'id': model['cohort'].schedule.id,
+                    'name': model['cohort'].schedule.name,
+                    'syllabus': model['cohort'].schedule.syllabus.id,
+                },
+                'syllabus_version': {
+                    'name': model.syllabus.name,
+                    'slug': model.syllabus.slug,
+                    'status': model['cohort'].syllabus_version.status,
                     'version': model['cohort'].syllabus_version.version,
                     'syllabus': model['cohort'].syllabus_version.syllabus.id,
                     'duration_in_days': model.syllabus.duration_in_days,

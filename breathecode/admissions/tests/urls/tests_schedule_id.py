@@ -15,6 +15,7 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
+
     def test_certificate_without_auth(self):
         """Test /certificate without auth"""
         url = reverse_lazy('admissions:schedule_id', kwargs={'schedule_id': 1})
@@ -27,7 +28,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'status_code': status.HTTP_401_UNAUTHORIZED
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_certificate_without_data(self):
         """Test /certificate without auth"""
@@ -39,26 +40,26 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_with_data(self):
         """Test /certificate without auth"""
-        model = self.generate_models(authenticate=True, specialty_mode=True, syllabus=True)
+        model = self.generate_models(authenticate=True, syllabus_schedule=True, syllabus=True)
         url = reverse_lazy('admissions:schedule_id', kwargs={'schedule_id': 1})
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(
             json, {
-                'id': model['specialty_mode'].id,
-                'name': model['specialty_mode'].name,
-                'description': model['specialty_mode'].description,
-                'syllabus': model['specialty_mode'].syllabus.id,
+                'id': model['syllabus_schedule'].id,
+                'name': model['syllabus_schedule'].name,
+                'description': model['syllabus_schedule'].description,
+                'syllabus': model['syllabus_schedule'].syllabus.id,
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_specialty_mode_dict(), [{
-            **self.model_to_dict(model, 'specialty_mode'),
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
+            **self.model_to_dict(model, 'syllabus_schedule'),
         }])

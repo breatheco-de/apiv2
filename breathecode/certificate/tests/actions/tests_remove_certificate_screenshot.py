@@ -1,45 +1,163 @@
 """
 Tasks tests
 """
-from unittest.mock import patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 from ...actions import remove_certificate_screenshot
 from ..mixins import CertificateTestCase
 from ...models import UserSpecialty
-from ..mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-    SCREENSHOTMACHINE_PATH,
-    apply_screenshotmachine_requests_get_mock,
-    CREDENTIALS_PATH,
-    apply_resolve_credentials_mock,
-)
+import breathecode.certificate.signals as signals
+from breathecode.services.google_cloud import Storage, File
 
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """Tests action remove_certificate_screenshot"""
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    """
+    🔽🔽🔽 UserSpecialty not exists
+    """
+
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch.multiple('breathecode.services.google_cloud.Storage',
+                    __init__=MagicMock(return_value=None),
+                    client=PropertyMock(),
+                    create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    blob=PropertyMock(return_value=1),
+                    upload=MagicMock(),
+                    delete=MagicMock(),
+                    url=MagicMock(return_value='https://xyz/hardcoded_url'),
+                    create=True)
     def test_remove_certificate_screenshot_with_invalid_id(self):
         """remove_certificate_screenshot don't call open in development environment"""
-        try:
-            remove_certificate_screenshot(0)
-        except UserSpecialty.DoesNotExist as error:
-            self.assertEqual(str(error), 'UserSpecialty matching query does not exist.')
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(SCREENSHOTMACHINE_PATH['get'], apply_screenshotmachine_requests_get_mock())
-    @patch(CREDENTIALS_PATH['resolve_credentials'], apply_resolve_credentials_mock())
-    def test_remove_certificate_screenshot_with_valid_id_cover_else_path(self):
+        with self.assertRaisesMessage(UserSpecialty.DoesNotExist,
+                                      'UserSpecialty matching query does not exist.'):
+            remove_certificate_screenshot(1)
+
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
+
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(File.delete.call_args_list, [])
+
+    """
+    🔽🔽🔽 With preview_url as a empty string
+    """
+
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch.multiple('breathecode.services.google_cloud.Storage',
+                    __init__=MagicMock(return_value=None),
+                    client=PropertyMock(),
+                    create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    blob=PropertyMock(return_value=1),
+                    upload=MagicMock(),
+                    delete=MagicMock(),
+                    url=MagicMock(return_value='https://xyz/hardcoded_url'),
+                    create=True)
+    def test_remove_certificate_screenshot__with_preview_url_as_empty_string(self):
         """remove_certificate_screenshot don't call open in development environment"""
-        model = self.generate_models(specialty=True,
-                                     layout_design=True,
-                                     teacher=True,
-                                     stage=True,
-                                     user_specialty=True)
-        print('ewwowowowowoowowow', model['user_specialty'].preview_url)
-        self.assertEqual(remove_certificate_screenshot(model['user_specialty'].id), True)
+
+        user_specialty = {'preview_url': ''}
+        model = self.generate_models(user_specialty=user_specialty)
+
+        result = remove_certificate_screenshot(1)
+
+        self.assertFalse(result)
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [
+            {
+                **self.remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty)),
+            },
+        ])
+
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+        ])
+        self.assertEqual(File.delete.call_args_list, [])
+
+    """
+    🔽🔽🔽 With preview_url as a None
+    """
+
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch.multiple('breathecode.services.google_cloud.Storage',
+                    __init__=MagicMock(return_value=None),
+                    client=PropertyMock(),
+                    create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    blob=PropertyMock(return_value=1),
+                    upload=MagicMock(),
+                    delete=MagicMock(),
+                    url=MagicMock(return_value='https://xyz/hardcoded_url'),
+                    create=True)
+    def test_remove_certificate_screenshot__with_preview_url_as_none(self):
+        """remove_certificate_screenshot don't call open in development environment"""
+
+        user_specialty = {'preview_url': None}
+        model = self.generate_models(user_specialty=user_specialty)
+
+        result = remove_certificate_screenshot(1)
+
+        self.assertFalse(result)
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [
+            {
+                **self.remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty)),
+            },
+        ])
+
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+        ])
+        self.assertEqual(File.delete.call_args_list, [])
+
+    """
+    🔽🔽🔽 With a properly preview_url
+    """
+
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch.multiple('breathecode.services.google_cloud.Storage',
+                    __init__=MagicMock(return_value=None),
+                    client=PropertyMock(),
+                    create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    blob=PropertyMock(return_value=1),
+                    upload=MagicMock(),
+                    delete=MagicMock(),
+                    url=MagicMock(return_value='https://xyz/hardcoded_url'),
+                    create=True)
+    def test_remove_certificate_screenshot__with_a_properly_preview_url(self):
+        """remove_certificate_screenshot don't call open in development environment"""
+
+        user_specialty = {'preview_url': 'https://xyz/hardcoded_url'}
+        model = self.generate_models(user_specialty=user_specialty)
+
+        result = remove_certificate_screenshot(1)
+
+        self.assertTrue(result)
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [
+            {
+                **self.remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty)),
+                'preview_url':
+                '',
+            },
+        ])
+
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # Save
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            ])
+        self.assertEqual(File.delete.call_args_list, [call()])

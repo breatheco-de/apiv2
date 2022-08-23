@@ -10,6 +10,6 @@ logger = logging.getLogger(__name__)
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
 def post_mentorin_session_status(sender, instance, **kwargs):
-    logger.debug('Procesing mentoring session status change')
     if instance.status == 'STARTED':
+        logger.debug('Mentorship has started, notifying the mentor')
         send_mentorship_starting_notification.delay(instance.id)

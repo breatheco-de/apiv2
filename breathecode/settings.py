@@ -9,10 +9,13 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 from pathlib import Path
+import re
+import ssl
 import django_heroku
 import dj_database_url
 import json
 import logging
+from django.conf import settings as global_settings
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
@@ -30,7 +33,7 @@ ENVIRONMENT = os.environ.get('ENV')
 SECRET_KEY = '5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = (ENVIRONMENT == 'development')
+DEBUG = (ENVIRONMENT == 'development' or ENVIRONMENT == 'test')
 
 ALLOWED_HOSTS = []
 
@@ -65,7 +68,11 @@ INSTALLED_APPS = [
     'breathecode.assessment',
     'breathecode.registry',
     'breathecode.mentorship',
+    'breathecode.career',
+    'breathecode.commons',
+    'breathecode.websocket',
     'explorer',
+    'channels',
 ]
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
@@ -290,28 +297,32 @@ CORS_ALLOW_HEADERS = [
 
 REDIS_URL = os.getenv('REDIS_URL', '')
 
+IS_TEST_ENV = os.getenv('ENV') == 'test'
+IS_REDIS_WITH_SSL = REDIS_URL.startswith('rediss://')
 
-def cache_opts(is_test_env):
-    if is_test_env:
-        return {'OPTIONS': {}}
-    else:
-        return {
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                'PARSER_CLASS': 'redis.connection.HiredisParser',
-            }
-        }
-
-
-is_test_env = os.getenv('ENV') == 'test'
 CACHES = {
     'default': {
-        'BACKEND':
-        'django.core.cache.backends.locmem.LocMemCache' if is_test_env else 'django_redis.cache.RedisCache',
-        'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
-        # **cache_opts(is_test_env),
-    },
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'ssl_cert_reqs': None
+            },
+        }
+    }
 }
+
+if IS_TEST_ENV:
+    del CACHES['default']['OPTIONS']
+    CACHES['default'] = {
+        **CACHES['default'],
+        'LOCATION': 'breathecode',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+
+elif not IS_REDIS_WITH_SSL:
+    del CACHES['default']['OPTIONS']
 
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
@@ -321,13 +332,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 SITE_ID = 1
 
-_locals = locals()
-django_heroku.settings(_locals)
-
 # Change 'default' database configuration with $DATABASE_URL.
 # https://github.com/jacobian/dj-database-url#url-schema
 DATABASES = {
-    'default': dj_database_url.config(default=DATABASE_URL),
+    'default': dj_database_url.config(default=DATABASE_URL, ssl_require=False),
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
@@ -344,3 +352,37 @@ with open(sql_keywords_path, 'r') as f:
     # breathecode/sql_keywords.json
 
     EXPLORER_SQL_BLACKLIST = tuple(sql_keywords['blacklist'])
+
+# Websocket
+ASGI_APPLICATION = 'breathecode.asgi.application'
+REDIS_URL_PATTERN = r'^redis://(.+):(\d+)$'
+
+ssl_context = ssl.SSLContext()
+ssl_context.check_hostname = False
+
+heroku_redis_ssl_host = {
+    'address': REDIS_URL,  # The 'rediss' schema denotes a SSL connection.
+    'ssl': ssl_context
+}
+
+if not IS_REDIS_WITH_SSL:
+    del heroku_redis_ssl_host['ssl']
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': (heroku_redis_ssl_host, ),
+        },
+    },
+}
+
+if IS_TEST_ENV:
+    del CHANNEL_LAYERS['default']['CONFIG']
+    CHANNEL_LAYERS['default'] = {
+        **CHANNEL_LAYERS['default'],
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    }
+
+# keep last part of the file
+django_heroku.settings(locals(), databases=False)

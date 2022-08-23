@@ -8,6 +8,7 @@ from django.utils import timezone
 from datetime import datetime
 from django.urls.base import reverse_lazy
 from rest_framework import status
+from breathecode.events.actions import fix_datetime_weekday
 
 from breathecode.utils import DatetimeInteger
 from ..mixins.new_events_tests_case import EventTestCase
@@ -15,9 +16,10 @@ from ..mixins.new_events_tests_case import EventTestCase
 
 class AcademyCohortTestSuite(EventTestCase):
     """Test /academy/cohort"""
+
     def test_ical_cohorts__without_academy(self):
         """Test /academy/cohort without auth"""
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
         json = response.json()
@@ -35,7 +37,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                      device_id=True,
                                      device_id_kwargs=device_id_kwargs)
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -67,7 +69,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                      cohort_kwargs=cohort_kwargs,
                                      device_id_kwargs=device_id_kwargs)
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -91,11 +93,12 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_one(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
+        cohort = {'ending_date': timezone.now() + timedelta(weeks=10 * 52)}
         model = self.generate_models(academy=True,
-                                     cohort=True,
+                                     cohort=cohort,
                                      device_id=True,
                                      device_id_kwargs=device_id_kwargs)
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -117,10 +120,64 @@ class AcademyCohortTestSuite(EventTestCase):
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
+            'END:VCALENDAR',
+            '',
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_ical_cohorts__with_one__ending_date_is_none(self):
+        """Test /academy/cohort without auth"""
+        device_id_kwargs = {'name': 'server'}
+        model = self.generate_models(academy=1, cohort=1, device_id=1, device_id_kwargs=device_id_kwargs)
+
+        url = reverse_lazy('events:ical_cohorts')
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
+
+        key = model.device_id.key
+        expected = '\r\n'.join([
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            f'PRODID:-//BreatheCode//Academy Cohorts (1) {key}//EN',
+            'METHOD:PUBLISH',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:Academy - Cohorts',
+            'END:VCALENDAR',
+            '',
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_ical_cohorts__with_one__never_ends_true(self):
+        """Test /academy/cohort without auth"""
+        device_id_kwargs = {'name': 'server'}
+        cohort = {'never_ends': True}
+        model = self.generate_models(academy=1, cohort=cohort, device_id=1, device_id_kwargs=device_id_kwargs)
+
+        url = reverse_lazy('events:ical_cohorts')
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
+
+        key = model.device_id.key
+        expected = '\r\n'.join([
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            f'PRODID:-//BreatheCode//Academy Cohorts (1) {key}//EN',
+            'METHOD:PUBLISH',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:Academy - Cohorts',
             'END:VCALENDAR',
             '',
         ])
@@ -138,7 +195,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                      cohort_kwargs=cohort_kwargs,
                                      device_id_kwargs=device_id_kwargs)
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1', 'upcoming': 'true'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -161,7 +218,10 @@ class AcademyCohortTestSuite(EventTestCase):
 
     def test_ical_cohorts__with_one__with_incoming_true(self):
         """Test /academy/cohort without auth"""
-        cohort_kwargs = {'kickoff_date': timezone.now() + timedelta(days=1)}
+        cohort_kwargs = {
+            'kickoff_date': timezone.now() + timedelta(days=1),
+            'ending_date': timezone.now() + timedelta(weeks=10 * 52),
+        }
         device_id_kwargs = {'name': 'server'}
         model = self.generate_models(academy=True,
                                      cohort=True,
@@ -169,7 +229,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                      cohort_kwargs=cohort_kwargs,
                                      device_id_kwargs=device_id_kwargs)
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1', 'upcoming': 'true'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -191,6 +251,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
@@ -215,7 +276,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                      cohort_user_kwargs=cohort_user_kwargs,
                                      device_id_kwargs=device_id_kwargs)
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -260,12 +321,13 @@ class AcademyCohortTestSuite(EventTestCase):
                                     skip_cohort=True,
                                     device_id_kwargs=device_id_kwargs)
 
+        cohort = {'ending_date': timezone.now() + timedelta(weeks=10 * 52)}
         models = [
-            self.generate_models(user=True, cohort=True, models=base),
-            self.generate_models(user=True, cohort=True, models=base),
+            self.generate_models(user=True, cohort=cohort, models=base),
+            self.generate_models(user=True, cohort=cohort, models=base),
         ]
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -289,6 +351,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
@@ -299,6 +362,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
@@ -335,7 +399,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                  cohort_user_kwargs=cohort_user_kwargs),
         ]
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -429,7 +493,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                  cohort_user_kwargs=cohort_user_kwargs),
         ]
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1,2'}
         url = url + '?' + urllib.parse.urlencode(args)
         response = self.client.get(url)
@@ -560,7 +624,7 @@ class AcademyCohortTestSuite(EventTestCase):
 
         models = sorted(models, key=lambda x: x.cohort.id)
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy_slug': ','.join(list(dict.fromkeys([x.academy.slug for x in models])))}
         url = url + '?' + urllib.parse.urlencode(args)
         response = self.client.get(url)
@@ -649,86 +713,16 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     """
-    🔽🔽🔽 With first cohort day
-    """
-
-    def test_ical_cohorts__with_one__first_day(self):
-        """Test /academy/cohort without auth"""
-        device_id_kwargs = {'name': 'server'}
-
-        # don't forget 🦾
-        datetime_interger = 191109111330
-        cohort_time_slot_kwargs = {
-            'timezone': 'Europe/Madrid',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
-        }
-
-        model = self.generate_models(academy=True,
-                                     cohort=True,
-                                     device_id=True,
-                                     device_id_kwargs=device_id_kwargs,
-                                     cohort_time_slot=True,
-                                     cohort_time_slot_kwargs=cohort_time_slot_kwargs)
-        url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': '1'}
-        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
-
-        cohort = model['cohort']
-        timeslot = model['cohort_time_slot']
-        academy = model['academy']
-        key = model.device_id.key
-
-        starting_at = self.datetime_to_ical(
-            DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
-
-        ending_at = self.datetime_to_ical(DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at),
-                                          False)
-
-        expected = '\r\n'.join([
-            'BEGIN:VCALENDAR',
-            'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Academy Cohorts (1) {key}//EN',
-            'METHOD:PUBLISH',
-            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
-            'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
-            'X-WR-CALDESC:',
-            f'X-WR-CALNAME:Academy - Cohorts',
-
-            # =================================================================
-            # First event
-            'BEGIN:VEVENT',
-            f'SUMMARY:{cohort.name} - First day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
-            f'UID:breathecode_cohort_{cohort.id}_first_{key}',
-            f'LOCATION:{academy.name}',
-            'END:VEVENT',
-
-            # Event
-            'BEGIN:VEVENT',
-            f'SUMMARY:{cohort.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
-            f'UID:breathecode_cohort_{cohort.id}_{key}',
-            f'LOCATION:{academy.name}',
-            'END:VEVENT',
-            'END:VCALENDAR',
-            '',
-        ])
-
-        self.assertEqual(response.content.decode('utf-8'), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    """
-    🔽🔽🔽 With last cohort day
+    🔽🔽🔽 With first cohort day and last cohort day
     """
 
     def test_ical_cohorts__with_one__first_day__last_day(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
-        cohort_kwargs = {'ending_date': datetime(year=2030, month=10, day=10)}
+        cohort_kwargs = {
+            'kickoff_date': datetime(year=2029, month=1, day=10),
+            'ending_date': datetime(year=2030, month=10, day=10),
+        }
 
         starting_datetime_interger = 202810080030
         ending_datetime_interger = 202810080630
@@ -746,7 +740,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_time_slot_kwargs=cohort_time_slot_kwargs)
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -768,11 +762,20 @@ class AcademyCohortTestSuite(EventTestCase):
                                            tzinfo=gettz('Europe/Madrid'))
         key = model.device_id.key
 
-        starting_at = self.datetime_to_ical(
-            DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
+        starting_at = DatetimeInteger.to_datetime(model.cohort_time_slot.timezone,
+                                                  model.cohort_time_slot.starting_at)
 
-        ending_at = self.datetime_to_ical(DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at),
-                                          False)
+        starting_at_fixed = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
+                                                                       starting_at,
+                                                                       next=True),
+                                                  utc=False)
+
+        ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
+
+        ending_at_fixed = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
+                                                                     ending_at,
+                                                                     next=True),
+                                                utc=False)
 
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
@@ -788,8 +791,8 @@ class AcademyCohortTestSuite(EventTestCase):
             # First event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name} - First day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{ending_at}',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{starting_at_fixed}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{ending_at_fixed}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_first_{key}',
             f'LOCATION:{academy.name}',
@@ -808,8 +811,8 @@ class AcademyCohortTestSuite(EventTestCase):
             # Last event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name} - Last day',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_ending_at)}',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_starting_at, utc=False)}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_ending_at, utc=False)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_last_{key}',
             f'LOCATION:{academy.name}',
@@ -846,7 +849,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_time_slot_kwargs=cohort_time_slot_kwargs)
 
-        url = reverse_lazy('events:academy_id_ical_cohorts')
+        url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
@@ -855,11 +858,15 @@ class AcademyCohortTestSuite(EventTestCase):
         academy = model['academy']
         key = model.device_id.key
 
-        starting_at = self.datetime_to_ical(
-            DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
+        starting_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at)
+        first_timeslot_starting_at = self.datetime_to_ical(starting_at, utc=False)
 
-        ending_at = self.datetime_to_ical(DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at),
-                                          False)
+        last_timeslot_starting_at = self.datetime_to_ical(starting_at, utc=False)
+
+        ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
+        first_timeslot_ending_at = self.datetime_to_ical(ending_at, utc=False)
+
+        last_timeslot_ending_at = self.datetime_to_ical(ending_at, utc=False)
 
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
@@ -875,8 +882,8 @@ class AcademyCohortTestSuite(EventTestCase):
             # First event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name} - First day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{ending_at}',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_first_{key}',
             f'LOCATION:{academy.name}',
@@ -895,8 +902,8 @@ class AcademyCohortTestSuite(EventTestCase):
             # Last event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name} - Last day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{ending_at}',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_last_{key}',
             f'LOCATION:{academy.name}',
@@ -908,259 +915,342 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    # def test_ical_cohorts__with_one__first_day__last_day__two_timeslots(self):
-    #     """Test /academy/cohort without auth"""
-    #     device_id_kwargs = {'name': 'server'}
-    #     cohort_kwargs = {
-    #         'kickoff_date': datetime(year=2020, month=10, day=10),
-    #         'ending_date': datetime(year=2030, month=10, day=10),
-    #     }
+    def test_ical_cohorts__with_two__first_day__last_day__two_timeslots(self):
+        """Test /academy/cohort without auth"""
+        device_id_kwargs = {'name': 'server'}
+        cohort_kwargs = {
+            'kickoff_date': datetime(year=2020, month=10, day=10),
+            'ending_date': datetime(year=2030, month=10, day=10),
+        }
 
-    #     first_cohort_time_slot_kwargs = {
-    #         'timezone': 'Europe/Madrid',
-    #         'starting_at': 202110080030,
-    #         'ending_at': 202110080630,
-    #     }
+        first_cohort_time_slot_kwargs = {
+            'timezone': 'Europe/Madrid',
+            'starting_at': 202110080030,
+            'ending_at': 202110080630,
+        }
 
-    #     last_cohort_time_slot_kwargs = {
-    #         'timezone': 'Europe/Madrid',
-    #         'starting_at': 202810080030,
-    #         'ending_at': 202810080630,
-    #     }
+        last_cohort_time_slot_kwargs = {
+            'timezone': 'Europe/Madrid',
+            'starting_at': 202810080030,
+            'ending_at': 202810080630,
+        }
 
-    #     base = self.generate_models(academy=True,
-    #                                 cohort=True,
-    #                                 device_id=True,
-    #                                 device_id_kwargs=device_id_kwargs,
-    #                                 cohort_kwargs=cohort_kwargs)
+        cohort_time_slots = [
+            {
+                **first_cohort_time_slot_kwargs,
+                'cohort_id': 1,
+            },
+            {
+                **last_cohort_time_slot_kwargs,
+                'cohort_id': 1,
+            },
+            {
+                **first_cohort_time_slot_kwargs,
+                'cohort_id': 2,
+            },
+            {
+                **last_cohort_time_slot_kwargs,
+                'cohort_id': 2,
+            },
+        ]
+        model = self.generate_models(academy=True,
+                                     cohort=(2, cohort_kwargs),
+                                     device_id=device_id_kwargs,
+                                     cohort_time_slot=cohort_time_slots)
 
-    #     models = [
-    #         self.generate_models(cohort_time_slot=True,
-    #                              models=base,
-    #                              cohort_time_slot_kwargs=first_cohort_time_slot_kwargs),
-    #         self.generate_models(cohort_time_slot=True,
-    #                              models=base,
-    #                              cohort_time_slot_kwargs=last_cohort_time_slot_kwargs),
-    #     ]
+        url = reverse_lazy('events:ical_cohorts')
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
-    #     url = reverse_lazy('events:academy_id_ical_cohorts')
-    #     args = {'academy': '1'}
-    #     response = self.client.get(url + '?' + urllib.parse.urlencode(args))
+        cohort1 = model.cohort[0]
+        cohort2 = model.cohort[1]
 
-    #     cohort = base['cohort']
-    #     timeslot = models[0]['cohort_time_slot']
-    #     academy = base['academy']
-    #     last_timeslot_starting_at = datetime(year=2030,
-    #                                          month=10,
-    #                                          day=6,
-    #                                          hour=0,
-    #                                          second=30,
-    #                                          tzinfo=gettz('Europe/Madrid'))
+        academy = model.academy
+        timeslot1 = model.cohort_time_slot[0]
+        timeslot2 = model.cohort_time_slot[1]
+        key = model.device_id.key
 
-    #     last_timeslot_ending_at = datetime(year=2030,
-    #                                        month=10,
-    #                                        day=6,
-    #                                        hour=6,
-    #                                        second=30,
-    #                                        tzinfo=gettz('Europe/Madrid'))
-    #     key = base.device_id.key
-    #     expected = '\r\n'.join([
-    #         'BEGIN:VCALENDAR',
-    #         'VERSION:2.0',
-    #         f'PRODID:-//BreatheCode//Academy Cohorts (1) {key}//EN',
-    #         'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
-    #         'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
-    #         'X-WR-CALDESC:',
-    #         f'X-WR-CALNAME:Academy - Cohorts',
+        starting_at1 = self.datetime_to_ical(model.cohort[0].kickoff_date)
+        starting_at2 = self.datetime_to_ical(model.cohort[1].kickoff_date)
 
-    #         # =================================================================
-    #         # First event
-    #         'BEGIN:VEVENT',
-    #         f'SUMMARY:{cohort.name} - First day',
-    #         f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.starting_at)}',
-    #         f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.ending_at)}',
-    #         f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
-    #         f'UID:breathecode_cohort_{cohort.id}_first_{key}',
-    #         f'LOCATION:{academy.name}',
-    #         'END:VEVENT',
+        starting_at_utc1 = self.datetime_to_ical(model.cohort[0].created_at)
+        starting_at_utc2 = self.datetime_to_ical(model.cohort[1].created_at)
 
-    #         # Event
-    #         'BEGIN:VEVENT',
-    #         f'SUMMARY:{cohort.name}',
-    #         f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
-    #         f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
-    #         f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
-    #         f'UID:breathecode_cohort_{cohort.id}_{key}',
-    #         f'LOCATION:{academy.name}',
-    #         'END:VEVENT',
+        ending_at1 = self.datetime_to_ical(model.cohort[0].ending_date)
+        ending_at2 = self.datetime_to_ical(model.cohort[1].ending_date)
 
-    #         # Last event
-    #         'BEGIN:VEVENT',
-    #         f'SUMMARY:{cohort.name} - Last day',
-    #         f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_starting_at)}',
-    #         f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_ending_at)}',
-    #         f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
-    #         f'UID:breathecode_cohort_{cohort.id}_last_{key}',
-    #         f'LOCATION:{academy.name}',
-    #         'END:VEVENT',
-    #         'END:VCALENDAR',
-    #         '',
-    #     ])
+        first_timeslot_starting_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[0].kickoff_date,
+            DatetimeInteger.to_datetime(timeslot1.timezone, first_cohort_time_slot_kwargs['starting_at']),
+            next=True),
+                                                           utc=False)
 
-    #     self.assertEqual(response.content.decode('utf-8'), expected)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+        first_timeslot_starting_at_utc = self.datetime_to_ical(timeslot1.created_at, utc=True)
 
-    # def test_ical_cohorts__with_two__first_day__last_day__two_timeslots(self):
-    #     """Test /academy/cohort without auth"""
-    #     device_id_kwargs = {'name': 'server'}
-    #     cohort_kwargs = {
-    #         'kickoff_date': datetime(year=2020, month=10, day=10),
-    #         'ending_date': datetime(year=2030, month=10, day=10),
-    #     }
+        first_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[0].kickoff_date,
+            DatetimeInteger.to_datetime(timeslot1.timezone, first_cohort_time_slot_kwargs['ending_at']),
+            next=True),
+                                                         utc=False)
 
-    #     first_cohort_time_slot_kwargs = {
-    #         'timezone': 'Europe/Madrid',
-    #         'starting_at': 202110080030,
-    #         'ending_at': 202110080630,
-    #     }
+        last_timeslot_starting_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[0].ending_date,
+            DatetimeInteger.to_datetime(timeslot2.timezone, last_cohort_time_slot_kwargs['starting_at']),
+            prev=True),
+                                                          utc=False)
 
-    #     last_cohort_time_slot_kwargs = {
-    #         'timezone': 'Europe/Madrid',
-    #         'starting_at': 202810080030,
-    #         'ending_at': 202810080630,
-    #     }
+        last_timeslot_starting_at_utc = self.datetime_to_ical(timeslot2.created_at, utc=True)
 
-    #     base = self.generate_models(academy=True,
-    #                                 skip_cohort=True,
-    #                                 device_id=True,
-    #                                 device_id_kwargs=device_id_kwargs)
+        last_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[1].ending_date,
+            DatetimeInteger.to_datetime(timeslot2.timezone, last_cohort_time_slot_kwargs['ending_at']),
+            prev=True),
+                                                        utc=False)
 
-    #     models = [
-    #         self.generate_models(cohort=True, models=base, cohort_kwargs=cohort_kwargs),
-    #         self.generate_models(cohort=True, models=base, cohort_kwargs=cohort_kwargs),
-    #     ]
+        expected = '\r\n'.join([
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            f'PRODID:-//BreatheCode//Academy Cohorts (1) {key}//EN',
+            'METHOD:PUBLISH',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:Academy - Cohorts',
 
-    #     for index in range(0, len(models)):
-    #         model = models[index]
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - First day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
+            f'LOCATION:{academy.name}',
+            'END:VEVENT',
 
-    #         timeslot1 = self.generate_models(cohort_time_slot=True,
-    #                                          models=model,
-    #                                          cohort_time_slot_kwargs=first_cohort_time_slot_kwargs)
-    #         timeslot2 = self.generate_models(cohort_time_slot=True,
-    #                                          models=model,
-    #                                          cohort_time_slot_kwargs=last_cohort_time_slot_kwargs)
+            # Event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name}',
+            f'DTSTART;VALUE=DATE-TIME:{starting_at1}',
+            f'DTEND;VALUE=DATE-TIME:{ending_at1}',
+            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc1}',
+            f'UID:breathecode_cohort_{cohort1.id}_{key}',
+            f'LOCATION:{academy.name}',
+            'END:VEVENT',
 
-    #         model['timeslot1'] = timeslot1.cohort_time_slot
-    #         model['timeslot2'] = timeslot2.cohort_time_slot
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - Last day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort1.id}_last_{key}',
+            f'LOCATION:{academy.name}',
+            'END:VEVENT',
 
-    #     url = reverse_lazy('events:academy_id_ical_cohorts')
-    #     args = {'academy': '1'}
-    #     response = self.client.get(url + '?' + urllib.parse.urlencode(args))
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - First day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
+            f'LOCATION:{academy.name}',
+            'END:VEVENT',
 
-    #     cohort1 = models[0]['cohort']
-    #     cohort2 = models[1]['cohort']
-    #     timeslot = models[0]['timeslot1']
+            # Event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name}',
+            f'DTSTART;VALUE=DATE-TIME:{starting_at2}',
+            f'DTEND;VALUE=DATE-TIME:{ending_at2}',
+            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc2}',
+            f'UID:breathecode_cohort_{cohort2.id}_{key}',
+            f'LOCATION:{academy.name}',
+            'END:VEVENT',
 
-    #     academy = base['academy']
-    #     last_timeslot_starting_at = datetime(year=2030,
-    #                                          month=10,
-    #                                          day=6,
-    #                                          hour=0,
-    #                                          minute=30,
-    #                                          tzinfo=gettz('Europe/Madrid'))
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - Last day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort2.id}_last_{key}',
+            f'LOCATION:{academy.name}',
+            'END:VEVENT',
+            'END:VCALENDAR',
+            '',
+        ])
 
-    #     last_timeslot_ending_at = datetime(year=2030,
-    #                                        month=10,
-    #                                        day=6,
-    #                                        hour=6,
-    #                                        minute=30,
-    #                                        tzinfo=gettz('Europe/Madrid'))
-    #     key = base.device_id.key
-    #     first_starting_at = self.datetime_to_ical(
-    #         DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    #     starting_at = self.datetime_to_ical(
-    #         DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
+    def test_ical_cohorts__with_two__first_day__last_day__two_timeslots__cohort_with_meeting_url(self):
+        """Test /academy/cohort without auth"""
+        device_id_kwargs = {'name': 'server'}
+        cohort_kwargs = [{
+            'online_meeting_url': self.bc.fake.url(),
+            'kickoff_date': datetime(year=2020, month=10, day=10),
+            'ending_date': datetime(year=2030, month=10, day=10),
+        } for _ in range(0, 2)]
 
-    #     starting_at_utc = self.datetime_to_ical(
-    #         DatetimeInteger.to_utc_datetime(timeslot.timezone, timeslot.starting_at), True)
+        first_cohort_time_slot_kwargs = {
+            'timezone': 'Europe/Madrid',
+            'starting_at': 202110080030,
+            'ending_at': 202110080630,
+        }
 
-    #     ending_at = self.datetime_to_ical(DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at),
-    #                                       False)
+        last_cohort_time_slot_kwargs = {
+            'timezone': 'Europe/Madrid',
+            'starting_at': 202810080030,
+            'ending_at': 202810080630,
+        }
 
-    #     expected = '\r\n'.join([
-    #         'BEGIN:VCALENDAR',
-    #         'VERSION:2.0',
-    #         f'PRODID:-//BreatheCode//Academy Cohorts (1) {key}//EN',
-    #         'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
-    #         'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
-    #         'X-WR-CALDESC:',
-    #         f'X-WR-CALNAME:Academy - Cohorts',
+        cohort_time_slots = [
+            {
+                **first_cohort_time_slot_kwargs,
+                'cohort_id': 1,
+            },
+            {
+                **last_cohort_time_slot_kwargs,
+                'cohort_id': 1,
+            },
+            {
+                **first_cohort_time_slot_kwargs,
+                'cohort_id': 2,
+            },
+            {
+                **last_cohort_time_slot_kwargs,
+                'cohort_id': 2,
+            },
+        ]
+        model = self.generate_models(academy=True,
+                                     cohort=cohort_kwargs,
+                                     device_id=device_id_kwargs,
+                                     cohort_time_slot=cohort_time_slots)
 
-    #         # =================================================================
-    #         # First event
-    #         'BEGIN:VEVENT',
-    #         f'SUMMARY:{cohort1.name} - First day',
-    #         f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{starting_at}',
-    #         f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{ending_at}',
-    #         f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc}',
-    #         f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
-    #         f'LOCATION:{academy.name}',
-    #         'END:VEVENT',
+        url = reverse_lazy('events:ical_cohorts')
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
-    #         # Event
-    #         'BEGIN:VEVENT',
-    #         f'SUMMARY:{cohort1.name}',
-    #         f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
-    #         f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
-    #         f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
-    #         f'UID:breathecode_cohort_{cohort1.id}_{key}',
-    #         f'LOCATION:{academy.name}',
-    #         'END:VEVENT',
+        cohort1 = model.cohort[0]
+        cohort2 = model.cohort[1]
 
-    #         # Last event
-    #         'BEGIN:VEVENT',
-    #         f'SUMMARY:{cohort1.name} - Last day',
-    #         f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_starting_at)}',
-    #         f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_ending_at)}',
-    #         f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc}',
-    #         f'UID:breathecode_cohort_{cohort1.id}_last_{key}',
-    #         f'LOCATION:{academy.name}',
-    #         'END:VEVENT',
+        timeslot1 = model.cohort_time_slot[0]
+        timeslot2 = model.cohort_time_slot[1]
+        key = model.device_id.key
 
-    #         # =================================================================
-    #         # First event
-    #         'BEGIN:VEVENT',
-    #         f'SUMMARY:{cohort2.name} - First day',
-    #         f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{starting_at}',
-    #         f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{ending_at}',
-    #         f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc}',
-    #         f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
-    #         f'LOCATION:{academy.name}',
-    #         'END:VEVENT',
+        starting_at1 = self.datetime_to_ical(model.cohort[0].kickoff_date)
+        starting_at2 = self.datetime_to_ical(model.cohort[1].kickoff_date)
 
-    #         # Event
-    #         'BEGIN:VEVENT',
-    #         f'SUMMARY:{cohort2.name}',
-    #         f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
-    #         f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date)}',
-    #         f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
-    #         f'UID:breathecode_cohort_{cohort2.id}_{key}',
-    #         f'LOCATION:{academy.name}',
-    #         'END:VEVENT',
+        starting_at_utc1 = self.datetime_to_ical(model.cohort[0].created_at)
+        starting_at_utc2 = self.datetime_to_ical(model.cohort[1].created_at)
 
-    #         # Last event
-    #         'BEGIN:VEVENT',
-    #         f'SUMMARY:{cohort2.name} - Last day',
-    #         f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_starting_at)}',
-    #         f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_ending_at)}',
-    #         f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
-    #         f'UID:breathecode_cohort_{cohort2.id}_last_{key}',
-    #         f'LOCATION:{academy.name}',
-    #         'END:VEVENT',
-    #         'END:VCALENDAR',
-    #         '',
-    #     ])
+        ending_at1 = self.datetime_to_ical(model.cohort[0].ending_date)
+        ending_at2 = self.datetime_to_ical(model.cohort[1].ending_date)
 
-    #     self.assertEqual(response.content.decode('utf-8'), expected)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+        first_timeslot_starting_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[0].kickoff_date,
+            DatetimeInteger.to_datetime(timeslot1.timezone, first_cohort_time_slot_kwargs['starting_at']),
+            next=True),
+                                                           utc=False)
+
+        first_timeslot_starting_at_utc = self.datetime_to_ical(timeslot1.created_at, utc=True)
+
+        first_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[0].kickoff_date,
+            DatetimeInteger.to_datetime(timeslot1.timezone, first_cohort_time_slot_kwargs['ending_at']),
+            next=True),
+                                                         utc=False)
+
+        last_timeslot_starting_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[0].ending_date,
+            DatetimeInteger.to_datetime(timeslot2.timezone, last_cohort_time_slot_kwargs['starting_at']),
+            prev=True),
+                                                          utc=False)
+
+        last_timeslot_starting_at_utc = self.datetime_to_ical(timeslot2.created_at, utc=True)
+
+        last_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
+            model.cohort[1].ending_date,
+            DatetimeInteger.to_datetime(timeslot2.timezone, last_cohort_time_slot_kwargs['ending_at']),
+            prev=True),
+                                                        utc=False)
+
+        expected = '\r\n'.join([
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            f'PRODID:-//BreatheCode//Academy Cohorts (1) {key}//EN',
+            'METHOD:PUBLISH',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:Academy - Cohorts',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - First day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
+            f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # Event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name}',
+            f'DTSTART;VALUE=DATE-TIME:{starting_at1}',
+            f'DTEND;VALUE=DATE-TIME:{ending_at1}',
+            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc1}',
+            f'UID:breathecode_cohort_{cohort1.id}_{key}',
+            f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - Last day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort1.id}_last_{key}',
+            f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - First day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
+            f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # Event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name}',
+            f'DTSTART;VALUE=DATE-TIME:{starting_at2}',
+            f'DTEND;VALUE=DATE-TIME:{ending_at2}',
+            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc2}',
+            f'UID:breathecode_cohort_{cohort2.id}_{key}',
+            f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
+            'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - Last day',
+            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
+            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'UID:breathecode_cohort_{cohort2.id}_last_{key}',
+            f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
+            'END:VEVENT',
+            'END:VCALENDAR',
+            '',
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

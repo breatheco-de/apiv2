@@ -10,6 +10,7 @@ from breathecode.authenticate.models import Token
 class AssignmentsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
                           DatetimeMixin, BreathecodeMixin):
     """AdmissionsTestCase with auth methods"""
+
     def setUp(self):
         self.generate_queries()
         self.set_test_instance(self)
@@ -45,7 +46,7 @@ class AssignmentsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, Generate
             call(f'https://api.mailgun.net/v3/{os.environ.get("MAILGUN_DOMAIN")}/messages',
                  auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
                  data={
-                     'from': f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                     'from': f"4Geeks <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
                      'to': model['user'].email,
                      'subject': template['subject'],
                      'text': template['text'],
@@ -74,7 +75,7 @@ class AssignmentsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, Generate
                 '\n'
                 '\n'
                 '\n'
-                'The BreatheCode Team'
+                'The 4Geeks Team'
             })
         self.assertToken(token)
         self.assertTrue(link in html)

@@ -5,7 +5,6 @@ import sys
 import shutil
 import webbrowser
 from pathlib import Path
-from .utils.environment import test_environment, reset_environment
 
 
 def python_module_to_dir(module: str) -> str:
@@ -26,22 +25,21 @@ def help_command():
 if __name__ == '__main__':
     module = 'breathecode'
 
-    if len(sys.argv) > 1:
-        module = sys.argv[1]
+    if len(sys.argv) > 3:
+        module = sys.argv[3]
 
         if module == '--help' or module == '-h':
             help_command()
 
     dir = python_module_to_dir(module)
 
-    reset_environment()
-    test_environment()
     htmlcov_path = os.path.join(os.getcwd(), 'htmlcov')
 
     if os.path.exists(htmlcov_path):
         shutil.rmtree(htmlcov_path)
 
-    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report html -n auto')
+    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings {sys.argv[1]} {sys.argv[2]} '
+                          f'--cov={module} --cov-report html -n auto')
 
     webbrowser.open('file://' + os.path.realpath(os.path.join(os.getcwd(), 'htmlcov', 'index.html')))
 

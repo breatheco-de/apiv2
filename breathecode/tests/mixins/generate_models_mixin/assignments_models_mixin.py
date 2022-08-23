@@ -7,15 +7,22 @@ from .utils import is_valid, create_models, just_one
 
 
 class AssignmentsModelsMixin(ModelsMixin):
+
     def generate_assignments_models(self,
                                     task=False,
                                     task_status='',
+                                    cohort=False,
                                     task_type='',
                                     task_revision_status='',
                                     models={},
                                     task_kwargs={},
                                     **kwargs):
         models = models.copy()
+
+        if not 'cohort' in models and is_valid(cohort):
+            kargs = {}
+
+            models['cohort'] = create_models(cohort, 'admissions.Cohort', **kargs)
 
         if not 'task' in models and is_valid(task):
             kargs = {}

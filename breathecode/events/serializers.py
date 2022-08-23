@@ -1,7 +1,12 @@
+from typing import Any
 from breathecode.marketing.actions import validate_marketing_tags
+from breathecode.utils.validation_exception import ValidationException
 from .models import Event, Organization, EventbriteWebhook
+from slugify import slugify
 from rest_framework import serializers
-import serpy
+import serpy, logging
+
+logger = logging.getLogger(__name__)
 
 
 class CitySerializer(serpy.Serializer):
@@ -137,9 +142,45 @@ class EventCheckinSerializer(serpy.Serializer):
 
 
 class EventSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Event
         exclude = ()
+
+    def validate(self, data: dict[str, Any]):
+
+        academy = self.context.get('academy_id')
+
+        if ('sync_with_eventbrite' not in data or data['sync_with_eventbrite']
+                == False) and ('url' not in data or data['url'] is None or data['url'] == ''):
+            raise ValidationException(
+                f'Event URL must not be empty unless it will be synched with Eventbrite', slug='empty-url')
+
+        if 'tags' not in data or data['tags'] == '':
+            raise ValidationException(f'Event must have at least one tag', slug='empty-tags')
+
+        validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'])
+
+        title = data.get('title')
+        slug = data.get('slug')
+
+        if slug and self.instance:
+            raise ValidationException(f'The slug field is readonly', slug='try-update-slug')
+
+        if title and not slug:
+            slug = slugify(data['title']).lower()
+
+        elif slug:
+            slug = f'{data["slug"].lower()}'
+
+        existing_events = Event.objects.filter(slug=slug)
+        if slug and not self.instance and existing_events.exists():
+            raise ValidationException(f'Event slug {slug} already taken, try a different event slug?',
+                                      slug='slug-taken')
+
+        data['slug'] = slug
+
+        return data
 
     def create(self, validated_data):
         # hard-code the organizer to the academy organizer
@@ -160,19 +201,16 @@ class EventSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
-    def validate_tags(self, value):
-        academy = self.initial_data.get('academy')
-        validate_marketing_tags(value, academy, types=['DISCOVERY'])
-        return value
-
 
 class OrganizationSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Organization
         exclude = ()
 
 
 class EventbriteWebhookSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = EventbriteWebhook
         exclude = ()

@@ -1,7 +1,7 @@
 # from breathecode.media.schemas import MediaSchema
 from breathecode.media.schemas import FileSchema, MediaSchema
 import os, hashlib, requests, logging
-from breathecode.services.google_cloud.function import Function
+from breathecode.services.google_cloud import FunctionV1
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category, MediaResolution
 from breathecode.utils import GenerateLookupsMixin, num_to_roman
@@ -18,6 +18,8 @@ from breathecode.media.serializers import (GetMediaSerializer, MediaSerializer, 
                                            GetCategorySerializer, CategorySerializer, GetResolutionSerializer)
 from slugify import slugify
 
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+
 logger = logging.getLogger(__name__)
 MIME_ALLOW = [
     'image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'video/quicktime', 'video/mp4', 'audio/mpeg',
@@ -29,7 +31,11 @@ def media_gallery_bucket():
     return os.getenv('MEDIA_GALLERY_BUCKET')
 
 
-class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+def google_project_id():
+    return os.getenv('GOOGLE_PROJECT_ID', '')
+
+
+class MediaView(ViewSet, GenerateLookupsMixin):
     """
     get:
         Return a list of Media.
@@ -56,9 +62,12 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         Media by name.
     """
     schema = MediaSchema()
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_media')
     def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+
         lookups = self.generate_lookups(request,
                                         many_fields=['mime', 'name', 'slug', 'id'],
                                         many_relationships=['academy'])
@@ -81,16 +90,10 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if like:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
-        sort = request.GET.get('sort', '-created_at')
-        items = items.order_by(sort)
+        items = handler.queryset(items)
+        serializer = GetMediaSerializer(items, many=True)
 
-        page = self.paginate_queryset(items, request)
-        serializer = GetMediaSerializer(page, many=True)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
     @capable_of('read_media')
     def get_id(self, request, media_id: int, academy_id=None):
@@ -257,7 +260,7 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class CategoryView(ViewSet, HeaderLimitOffsetPagination):
+class CategoryView(ViewSet):
     """
     get:
         Get a Category.
@@ -280,16 +283,17 @@ class CategoryView(ViewSet, HeaderLimitOffsetPagination):
     delete:
         Delete a Category by slug.
     """
+    extensions = APIViewExtensions(paginate=True)
+
     @capable_of('read_media')
     def get(self, request, category_id=None, category_slug=None, academy_id=None):
-        items = Category.objects.filter()
-        page = self.paginate_queryset(items, request)
-        serializer = GetCategorySerializer(page, many=True)
+        handler = self.extensions(request)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        items = Category.objects.filter()
+        items = handler.queryset(items)
+        serializer = GetCategorySerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
     @capable_of('read_media')
     def get_id(self, request, category_id=None, academy_id=None):
@@ -486,7 +490,7 @@ class MaskingUrlView(APIView):
         if media_id:
             lookups['id'] = media_id
         elif media_slug:
-            lookups['slug'] = media_slug.split('.')[0]  #ignore extesion
+            lookups['slug'] = media_slug.split('.')[0]  #ignore extension
 
         width = request.GET.get('width')
         height = request.GET.get('height')
@@ -514,14 +518,16 @@ class MaskingUrlView(APIView):
                                                     | Q(height=height), hash=media.hash).first()
 
         if (width or height) and not resolution:
-            func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
+            func = FunctionV1(region='us-central1', project_id=google_project_id(), name='resize-image')
 
-            res = func.call({
+            func_request = func.call({
                 'width': width,
                 'height': height,
                 'filename': media.hash,
                 'bucket': media_gallery_bucket(),
             })
+
+            res = func_request.json()
 
             if not res['status_code'] == 200 or not res['message'] == 'Ok':
                 if 'message' in res:
@@ -576,6 +582,7 @@ class ResolutionView(ViewSet):
     delete:
         Delete a Resolution by id.
     """
+
     @capable_of('read_media_resolution')
     def get_id(self, request, resolution_id: int, academy_id=None):
         resolutions = MediaResolution.objects.filter(id=resolution_id).first()

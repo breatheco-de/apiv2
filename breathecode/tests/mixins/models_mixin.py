@@ -7,6 +7,7 @@ __all__ = ['ModelsMixin']
 
 class ModelsMixin():
     """Mixins for models"""
+
     def remove_dinamics_fields(self, dict, fields=['_state', 'created_at', 'updated_at', '_password']):
         """Remove dinamics fields from django models as dict"""
         if not dict:
@@ -27,6 +28,7 @@ class ModelsMixin():
 
     def model_to_dict(self, models: dict, key: str) -> dict:
         """Convert one django models to dict"""
+        print(f'The method `model_to_dict` is deprecated, use `self.bc.format.to_dict` instead')
         if key in models:
             return self.remove_dinamics_fields(models[key].__dict__)
 

@@ -2,7 +2,6 @@ import os
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
-from .actions import get_bucket_object
 from .signals import student_edu_status_updated
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
@@ -21,6 +20,7 @@ __all__ = [
 
 
 class UserAdmissions(User):
+
     class Meta:
         proxy = True
 
@@ -55,6 +55,9 @@ class Academy(models.Model):
     slug = models.SlugField(max_length=100, unique=True)
     name = models.CharField(max_length=150)
     logo_url = models.CharField(max_length=255)
+    icon_url = models.CharField(max_length=255,
+                                help_text='It has to be a square',
+                                default='/static/icons/picture.png')
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
@@ -83,6 +86,7 @@ class Academy(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     zip_code = models.IntegerField(blank=True, null=True)
+    white_labeled = models.BooleanField(default=False)
 
     active_campaign_slug = models.SlugField(max_length=100, unique=False, null=True, default=None)
 
@@ -106,6 +110,7 @@ class Academy(models.Model):
     #     super(Image, self).delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
+        from .actions import get_bucket_object
         if os.getenv('ENV', '') == 'production':
             obj = get_bucket_object(f'location-{self.slug}')
             if obj is not None:
@@ -125,6 +130,11 @@ SCHEDULE_TYPE = (
 class Syllabus(models.Model):
     slug = models.SlugField(max_length=100, blank=True, null=True, default=None)
     name = models.CharField(max_length=150, blank=True, null=True, default=None)
+    main_technologies = models.CharField(max_length=150,
+                                         blank=True,
+                                         null=True,
+                                         default=None,
+                                         help_text='Coma separated, E.g: HTML, CSS, Javascript')
 
     github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
     duration_in_hours = models.IntegerField(null=True, default=None)
@@ -145,11 +155,21 @@ class Syllabus(models.Model):
         return self.slug if self.slug else 'unknown'
 
 
+PUBLISHED = 'PUBLISHED'
+DRAFT = 'DRAFT'
+VERSION_STATUS = (
+    (PUBLISHED, 'Published'),
+    (DRAFT, 'Draft'),
+)
+
+
 class SyllabusVersion(models.Model):
     json = models.JSONField()
 
     version = models.PositiveSmallIntegerField()
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+    status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED)
+    change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -158,13 +178,14 @@ class SyllabusVersion(models.Model):
         return f'{self.syllabus.slug}.v{self.version}'
 
 
-class SpecialtyMode(models.Model):
+class SyllabusSchedule(models.Model):
     name = models.CharField(max_length=150)
 
     schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME')
     description = models.TextField(max_length=450)
 
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, default=None, null=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, default=None, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -184,14 +205,6 @@ class SpecialtyMode(models.Model):
     #             self.logo = obj.public_url
 
     #     super().save(*args, **kwargs)  # Call the "real" save() method.
-
-
-class AcademySpecialtyMode(models.Model):
-    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
 INACTIVE = 'INACTIVE'
@@ -216,7 +229,15 @@ class Cohort(models.Model):
 
     kickoff_date = models.DateTimeField()
     ending_date = models.DateTimeField(blank=True, null=True)
-    current_day = models.IntegerField()
+    current_day = models.IntegerField(
+        help_text='Each day the teacher takes attendancy and increases the day in one')
+    current_module = models.IntegerField(
+        null=True,
+        default=None,
+        blank=True,
+        help_text=
+        'The syllabus is separated by modules, from 1 to N and the teacher decides when to start a new mobule (after a couple of days)'
+    )
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
     private = models.BooleanField(default=False)
     never_ends = models.BooleanField(default=False)
@@ -229,9 +250,8 @@ class Cohort(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
-    syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.CASCADE, default=None, null=True)
-
-    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE, default=None, null=True)
+    syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.SET_NULL, default=None, null=True)
+    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.SET_NULL, default=None, null=True)
 
     language = models.CharField(max_length=2, default='en')
 
@@ -285,6 +305,7 @@ EDU_STATUS = (
 
 
 class CohortUser(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(CohortUser, self).__init__(*args, **kwargs)
         self.__old_edu_status = self.educational_status
@@ -292,6 +313,9 @@ class CohortUser(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT)
+
+    watching = models.BooleanField(
+        default=False, help_text='You can active students to the watch list and monitor them closely')
 
     finantial_status = models.CharField(max_length=15, choices=FINANTIAL_STATUS, default=None, null=True)
     educational_status = models.CharField(max_length=15, choices=EDU_STATUS, default=None, null=True)
@@ -351,9 +375,8 @@ class TimeSlot(models.Model):
         abstract = True
 
 
-class SpecialtyModeTimeSlot(TimeSlot):
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
+class SyllabusScheduleTimeSlot(TimeSlot):
+    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.CASCADE)
 
 
 class CohortTimeSlot(TimeSlot):

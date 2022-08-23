@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>A simple, clean, and responsive HTML invoice template</title>
+    <title>4Geeks Freelancers</title>
 
     <style>
         .invoice-box {
@@ -123,14 +123,18 @@
         <table cellpadding="0" cellspacing="0">
             <tr class="top">
                 <td colspan="2">
-                    <h1>The following is a list of {{ status }} payments:</h1>
+                    <h1>{{ title }}</h1>
                 </td>
             </tr>
             <tr class="top">
                 <td colspan="2">
                     <ul class="inline">
                         {% for key, label in possible_status %}
+                        {% if key == status %}
+                        <li><a style="background: #acccff; padding: 3px; border-radius: 4px;" href="?status={{key}}">{{label}}</a></li>
+                        {% else %}
                         <li><a href="?status={{key}}">{{label}}</a></li>
+                        {% endif %}
                         {% endfor %}
                     </ul>
                 </td>
@@ -161,7 +165,13 @@
                 </td>
 
                 <td>
-                    <button onClick="location.href = '/v1/freelance/bills/{{ bill.id }}/html';">view</button>
+                    <button class="btn" onClick="location.href = '/v1/freelance/bills/{{ bill.id }}/html';">view</button>
+                    <select id="change_status" onChange="chanceBillStatus({{ bill.id }}, {{ bill.academy.id }}, this.value);">
+                        <option value="mark_as">Mark as</option>
+                        {% for key, label in possible_status %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </td>
             </tr>
             {% endfor %}
@@ -175,6 +185,40 @@
             </tr>
         </table>
     </div>
+    <script>
+
+    function chanceBillStatus(bill_id, academy_id, status){
+        const options = {
+            method: 'PUT',
+            headers: {
+                "Content-Type": "application/json",
+                "Academy": academy_id,
+                "Authorization": 'Token {{ token }}',
+            },
+            body: JSON.stringify({
+                status,
+            })
+        }
+        fetch('/v1/freelance/bills/'+bill_id, options)
+            .then(function(resp){
+                if(resp.status >= 200 && resp.status < 400){
+                    return resp.json();
+                }
+                else if(resp.status == 401 || resp.status == 403){
+                    alert('You dont have permissions to do this action')
+                }
+                else{
+                    alert('Error updating the bill')
+                }
+            })
+            .then(function(){
+                window.location.reload()
+            })
+            .catch(function(){
+                alert("There was an error updating the bill")
+            })
+        }
+    </script>
 </body>
 
 </html>

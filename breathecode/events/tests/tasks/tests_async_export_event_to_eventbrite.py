@@ -11,6 +11,7 @@ class AcademyEventTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without event
     """
+
     @patch.object(actions, 'export_event_to_eventbrite', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
@@ -48,7 +49,7 @@ class AcademyEventTestSuite(EventTestCase):
                          [call('Event 1 not have a organization assigned')])
 
         self.assertEqual(event_saved.send.call_args_list,
-                         [call(instance=model.event, sender=model.event.__class__)])
+                         [call(instance=model.event, created=True, sender=model.event.__class__)])
 
         self.assertEqual(self.all_event_dict(), [event_db])
 
@@ -76,6 +77,6 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting async_eventbrite_webhook')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(event_saved.send.call_args_list,
-                         [call(instance=model.event, sender=model.event.__class__)])
+                         [call(instance=model.event, created=True, sender=model.event.__class__)])
 
         self.assertEqual(self.all_event_dict(), [event_db])

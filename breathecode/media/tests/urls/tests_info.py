@@ -11,6 +11,7 @@ from ..mixins import MediaTestCase
 
 
 class MediaTestSuite(MediaTestCase):
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -211,6 +212,11 @@ class MediaTestSuite(MediaTestCase):
             f"{model['media'].url}-thumbnail",
             'url':
             model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -251,6 +257,7 @@ class MediaTestSuite(MediaTestCase):
             'name': model[0]['media'].name,
             'thumbnail': None,
             'url': model[0]['media'].url,
+            'academy': model[0]['academy'].id,
         }, {
             'categories': [1, 2],
             'academy': 1,
@@ -262,6 +269,7 @@ class MediaTestSuite(MediaTestCase):
             'name': model[1]['media'].name,
             'thumbnail': None,
             'url': model[1]['media'].url,
+            'academy': model[1]['academy'].id,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.full_media_dict(), [{
@@ -292,6 +300,11 @@ class MediaTestSuite(MediaTestCase):
             f"{model[0]['media'].url}-thumbnail",
             'url':
             model[0]['media'].url,
+            'academy': {
+                'id': model[0]['academy'].id,
+                'slug': model[0]['academy'].slug,
+                'name': model[0]['academy'].name,
+            }
         }, {
             'categories': [{
                 'id': model[0]['category'].id,
@@ -320,6 +333,11 @@ class MediaTestSuite(MediaTestCase):
             f"{model[1]['media'].url}-thumbnail",
             'url':
             model[1]['media'].url,
+            'academy': {
+                'id': model[1]['academy'].id,
+                'slug': model[1]['academy'].slug,
+                'name': model[1]['academy'].name,
+            }
         }])
 
     """

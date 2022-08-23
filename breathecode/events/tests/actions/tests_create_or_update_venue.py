@@ -7,6 +7,7 @@ from ..mixins import EventTestCase
 
 
 def log_mock():
+
     def log(self, *args):
         print(*args)
 
@@ -17,6 +18,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without academy
     """
+
     @patch.object(logging.Logger, 'error', log_mock())
     def test_create_or_update_venue__without_academy(self):
         import logging
@@ -27,7 +29,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         create_or_update_venue(EVENTBRITE_VENUES['venues'][0], model.organization, force_update=False)
 
         self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('The organization (1) not have a academy assigned')])
+                         [call('The organization Nameless not have a academy assigned')])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_venue_dict(), [])

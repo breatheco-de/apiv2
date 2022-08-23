@@ -26,7 +26,8 @@ TASK_STARTED_MESSAGE = 'Task add_event_tags_to_student started'
 GET_CONTACT_BY_EMAIL_PATH = ('breathecode.services.activecampaign.client.ActiveCampaign.'
                              'get_contact_by_email')
 
-ADD_TAG_TO_CONTACT_PATH = ('breathecode.services.activecampaign.client.ActiveCampaign.' 'add_tag_to_contact')
+ADD_TAG_TO_CONTACT_PATH = ('breathecode.services.activecampaign.client.ActiveCampaign.'
+                           'add_tag_to_contact')
 
 GET_CONTACT_BY_EMAIL_EXCEPTION = 'Random exception in get_contact_by_email'
 ADD_TAG_TO_CONTACT_EXCEPTION = 'Random exception in add_tag_to_contact'
@@ -36,10 +37,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Without optional arguments
     """
+
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_optional_arguments(self):
         import logging
         import requests
@@ -48,7 +51,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Imposible to determine the user email'),
+            call('Impossible to determine the user email'),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
@@ -62,6 +65,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__user_id_and_email(self):
         import logging
         import requests
@@ -84,6 +88,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_user(self):
         import logging
         import requests
@@ -103,6 +108,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_event__with_user(self):
         import logging
         import requests
@@ -118,7 +124,9 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_event__with_email(self):
         import logging
         import requests
@@ -137,7 +145,9 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_academy__with_user(self):
         import logging
         import requests
@@ -147,7 +157,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Imposible to determine the academy'),
+            call('Impossible to determine the academy'),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
@@ -157,6 +167,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_academy__with_email(self):
         import logging
         import requests
@@ -166,7 +177,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Imposible to determine the academy'),
+            call('Impossible to determine the academy'),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
@@ -180,6 +191,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_active_campaign_academy__with_user(self):
         import logging
         import requests
@@ -199,6 +211,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_active_campaign_academy__with_email(self):
         import logging
         import requests
@@ -222,6 +235,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_tags__with_user(self):
         import logging
         import requests
@@ -243,6 +257,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_tags__with_email(self):
         import logging
         import requests
@@ -269,6 +284,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GET_CONTACT_BY_EMAIL_PATH, MagicMock(side_effect=Exception(GET_CONTACT_BY_EMAIL_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__exception_in_get_contact_by_email__with_user(self):
         import logging
         import requests
@@ -298,6 +314,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GET_CONTACT_BY_EMAIL_PATH, MagicMock(side_effect=Exception(GET_CONTACT_BY_EMAIL_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__exception_in_get_contact_by_email__with_email(self):
         import logging
         import requests
@@ -330,6 +347,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(ADD_TAG_TO_CONTACT_PATH, MagicMock(side_effect=Exception(ADD_TAG_TO_CONTACT_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__exception_in_add_tag_to_contact__with_user(self):
         import logging
         import requests
@@ -367,6 +385,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(ADD_TAG_TO_CONTACT_PATH, MagicMock(side_effect=Exception(ADD_TAG_TO_CONTACT_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__exception_in_add_tag_to_contact__with_email(self):
         import logging
         import requests
@@ -406,6 +425,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_one_tag__with_user(self):
         import logging
         import requests
@@ -438,7 +458,11 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model.tag.acp_id
@@ -449,6 +473,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_one_tag__with_email(self):
         import logging
         import requests
@@ -480,7 +505,11 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model.tag.acp_id
@@ -495,6 +524,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_two_tags__with_user(self):
         import logging
         import requests
@@ -531,13 +561,21 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
@@ -548,6 +586,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_two_tags__with_email(self):
         import logging
         import requests
@@ -583,13 +622,21 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
@@ -604,6 +651,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_two_tags__event_slug_math_with_tag__with_user(self):
         import logging
         import requests
@@ -621,7 +669,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                     event_kwargs=event_kwargs,
                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        tag_kwargs = {'slug': 'they-killed-kenny1'}
+        tag_kwargs = {'slug': 'event-they-killed-kenny1'}
         model1 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
         tag_kwargs = {'slug': 'they-killed-kenny2'}
         model2 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
@@ -643,13 +691,21 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
@@ -660,6 +716,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_two_tags__event_slug_math_with_tag__with_email(self):
         import logging
         import requests
@@ -676,7 +733,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                     event_kwargs=event_kwargs,
                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        tag_kwargs = {'slug': 'they-killed-kenny1'}
+        tag_kwargs = {'slug': 'event-they-killed-kenny1'}
         model1 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
         tag_kwargs = {'slug': 'they-killed-kenny2'}
         model2 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
@@ -698,13 +755,21 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
@@ -719,6 +784,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_three_tags__event_slug_math_with_tag__with_user(self):
         import logging
         import requests
@@ -736,7 +802,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                     event_kwargs=event_kwargs,
                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        tag_kwargs = {'slug': 'they-killed-kenny1'}
+        tag_kwargs = {'slug': 'event-they-killed-kenny1'}
         model1 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
         tag_kwargs = {'slug': 'they-killed-kenny2'}
@@ -763,19 +829,31 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model3.tag.acp_id
@@ -786,6 +864,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_three_tags__event_slug_math_with_tag__with_email(self):
         import logging
         import requests
@@ -802,7 +881,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                     event_kwargs=event_kwargs,
                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        tag_kwargs = {'slug': 'they-killed-kenny1'}
+        tag_kwargs = {'slug': 'event-they-killed-kenny1'}
         model1 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
         tag_kwargs = {'slug': 'they-killed-kenny2'}
@@ -829,19 +908,31 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
                  }}),
             call('https://ac.ca/api/3/contactTags',
-                 headers={'Api-Token': model1.active_campaign_academy.ac_key},
+                 headers={
+                     'Api-Token': model1.active_campaign_academy.ac_key,
+                     'Content-Type': 'application/json',
+                     'Accept': 'application/json',
+                 },
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model3.tag.acp_id

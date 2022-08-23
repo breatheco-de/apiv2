@@ -15,6 +15,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     """
     🔽🔽🔽 With bad entity 🔽🔽🔽
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -975,6 +976,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'aaaa\n',
             'status_code': 0,
+            'special_status_text': 'OK',
         }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
@@ -1104,6 +1106,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'aaaa\n',
             'status_code': 0,
+            'special_status_text': 'OK',
         }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])

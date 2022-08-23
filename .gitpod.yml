@@ -19,13 +19,14 @@ tasks:
       (psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode || true) &&
       pipenv run migrate &&
       pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
-      pipenv run python manage.py create_roles &&
+      pipenv run python manage.py create_academy_roles &&
       pipenv run start;
   - init: gp sync-await deps
 
 vscode:
   extensions:
     - ms-python.python
+    - streetsidesoftware.code-spell-checker
     - mikestead.dotenv
     - ms-azuretools.vscode-docker
     - github.vscode-pull-request-github
@@ -33,3 +34,4 @@ vscode:
     - tabnine.tabnine-vscode
     - gruntfuggly.todo-tree
     - redhat.vscode-yaml
+    - bungcip.better-toml

@@ -13,6 +13,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_academy_cohort_user__without_auth(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -36,7 +37,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         url = reverse_lazy('admissions:academy_cohort_user')
         response = self.client.get(url)
@@ -56,13 +57,14 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         url = reverse_lazy('admissions:academy_cohort_user')
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -89,6 +91,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -106,7 +109,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -125,7 +128,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -133,6 +136,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -159,6 +163,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -172,7 +177,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -181,7 +186,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
 
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'user': {
                 'id': model['cohort_user'].user.id,
                 'first_name': model['cohort_user'].user.first_name,
@@ -208,6 +213,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
             'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -225,7 +231,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -245,7 +251,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'finantial_status': 'LATE'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -253,6 +259,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -279,6 +286,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -293,7 +301,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'finantial_status': 'LATE'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -301,7 +309,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -328,6 +336,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -345,7 +354,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -365,7 +374,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -373,7 +382,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -400,6 +409,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -414,7 +424,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -423,7 +433,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -450,6 +460,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -468,7 +479,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -476,7 +487,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -503,6 +514,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -517,7 +529,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -525,7 +537,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -552,6 +564,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -569,7 +582,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -589,7 +602,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -597,7 +610,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -624,6 +637,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -701,7 +715,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         data = [{'id': model['cohort_user'].id}]
         response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = [{'id': 1, 'role': 'STUDENT', 'educational_status': None, 'finantial_status': None}]
+        expected = [{
+            'id': 1,
+            'role': 'STUDENT',
+            'educational_status': None,
+            'finantial_status': None,
+            'watching': False,
+        }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -711,7 +731,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': None,
-            'educational_status': None
+            'educational_status': None,
+            'watching': False,
         }])
 
     def test_academy_cohort_user__put__in_bulk__with_two_items(self):
@@ -749,11 +770,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'role': 'STUDENT',
             'educational_status': None,
             'finantial_status': 'LATE',
+            'watching': False,
         }, {
             'id': 2,
             'role': 'STUDENT',
             'educational_status': 'GRADUATED',
-            'finantial_status': None
+            'finantial_status': None,
+            'watching': False,
         }]
 
         self.assertEqual(json, expected)
@@ -764,14 +787,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': 'LATE',
-            'educational_status': None
+            'educational_status': None,
+            'watching': False,
         }, {
             'id': 2,
             'user_id': 2,
             'cohort_id': 2,
             'role': 'STUDENT',
             'finantial_status': None,
-            'educational_status': 'GRADUATED'
+            'educational_status': 'GRADUATED',
+            'watching': False,
         }])
 
     """
@@ -826,6 +851,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
@@ -838,7 +864,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -857,6 +883,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 1,
+            'watching': False,
         }])
 
     def test_academy_cohort_user__post_in_bulk__2_items(self):
@@ -891,6 +918,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
@@ -903,7 +931,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -922,6 +950,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 2,
+            'watching': False,
         }, {
             'cohort_id': 1,
             'educational_status': None,
@@ -929,6 +958,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'id': 2,
             'role': 'STUDENT',
             'user_id': 3,
+            'watching': False,
         }])
 
     """

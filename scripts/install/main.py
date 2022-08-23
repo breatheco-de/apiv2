@@ -22,8 +22,7 @@ def install():
     print('--- Running pipenv install ---')
     print('')
 
-    python_path = which('python')
-    os.system(f'pipenv install --dev --python "{python_path}"')
+    os.system(f'pipenv install --dev')
 
 
 def postinstall_hook():
