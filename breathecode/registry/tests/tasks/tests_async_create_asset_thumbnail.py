@@ -25,10 +25,10 @@ class Response:
 WIDTH = randint(0, 2000)
 HEIGHT = randint(0, 2000)
 URL = fake.url()
-FUNCTION_GOOD_RESPONSE = Response({
+FUNCTION_GOOD_RESPONSE = Response([{
     'url': URL,
     'filename': 'xyz.png',
-}, 200)
+}], 200)
 FUNCTION_BAD_RESPONSE = Response({'status_code': 400, 'message': 'Bad response'}, 400)
 
 
@@ -86,7 +86,6 @@ class RegistryTestSuite(RegistryTestCase):
                         'name': f'learn-to-code-{model.asset.slug}.png',
                         'dimension': '1200x630',
                         'delay': 1000,
-                        'includeDate': False
                     })
             ]))
 
@@ -143,7 +142,6 @@ class RegistryTestSuite(RegistryTestCase):
                         'name': f'learn-to-code-{model.asset.slug}.png',
                         'dimension': '1200x630',
                         'delay': 1000,
-                        'includeDate': False
                     })
             ]))
 
@@ -191,7 +189,6 @@ class RegistryTestSuite(RegistryTestCase):
                         'name': f'learn-to-code-{model.asset.slug}.png',
                         'dimension': '1200x630',
                         'delay': 1000,
-                        'includeDate': False
                     })
             ]))
 
@@ -244,6 +241,5 @@ class RegistryTestSuite(RegistryTestCase):
                         'name': f'learn-to-code-{model.asset.slug}.png',
                         'dimension': '1200x630',
                         'delay': 1000,
-                        'includeDate': False
                     })
             ]))
