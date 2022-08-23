@@ -25,6 +25,13 @@ class KeywordSmallSerializer(serpy.Serializer):
     title = serpy.Field()
 
 
+class KeywordClusterSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+
+
 class UserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
@@ -50,6 +57,14 @@ class AssetCategorySmallSerializer(serpy.Serializer):
 class KeywordClusterSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
+
+
+class AssetKeywordSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    academy = AcademySmallSerializer()
+    cluster = KeywordClusterSmallSerializer(required=False)
 
 
 class AcademyCommentSerializer(serpy.Serializer):
@@ -135,8 +150,10 @@ class AssetBigSerializer(AssetMidSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
-    created_at = serpy.Field()
-    updated_at = serpy.Field()
+    academy = AcademySmallSerializer()
+
+    def get_seo_keywords(self, obj):
+        return list(map(lambda t: AssetKeywordSerializer(t).data, obj.seo_keywords.all()))
 
 
 class ParentAssetTechnologySerializer(serpy.Serializer):
@@ -179,13 +196,6 @@ class _Keyword(serpy.Serializer):
         return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
 
 
-class KeywordClusterSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    title = serpy.Field()
-    lang = serpy.Field()
-
-
 class KeywordClusterBigSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -204,14 +214,6 @@ class KeywordClusterBigSerializer(serpy.Serializer):
         return Asset.objects.filter(seo_keywords__cluster__id=obj.id).count()
 
 
-class AssetKeywordSerializer(serpy.Serializer):
-    slug = serpy.Field()
-    title = serpy.Field()
-    lang = serpy.Field()
-    academy = AcademySmallSerializer()
-    cluster = KeywordClusterSmallSerializer(required=False)
-
-
 class TechSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -228,6 +230,9 @@ class PostAssetSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         validated_data = super().validate(data)
+
+        academy_id = self.context['academy']
+        validated_data['academy'] = Academy.objects.filter(id=academy_id).first()
 
         alias = AssetAlias.objects.filter(slug=validated_data['slug']).first()
         if alias is not None:
@@ -360,7 +365,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        exclude = ('technologies', )
+        exclude = ('technologies', 'academy')
 
     def validate(self, data):
 
