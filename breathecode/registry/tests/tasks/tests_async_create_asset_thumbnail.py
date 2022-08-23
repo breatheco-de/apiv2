@@ -110,23 +110,28 @@ class RegistryTestSuite(RegistryTestCase):
                     download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
                     url=MagicMock(return_value='https://uio.io/path'),
                     create=True)
-    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'SCREENSHOTS_BUCKET': 'random-bucket'
+           })))
     def test__with_asset__good_function_response(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
         model = self.bc.database.create(asset=1)
         async_create_asset_thumbnail.delay(model.asset.slug)
 
-        self.assertEqual(self.bc.database.list_of('media.Media'), [{
-            'academy_id': None,
-            'hash': hash,
-            'hits': 0,
-            'id': 1,
-            'mime': 'image/png',
-            'name': f'learn-to-code-{model.asset.slug}.png',
-            'slug': f'asset-{model.asset.slug}',
-            'thumbnail': 'https://uio.io/path-thumbnail',
-            'url': 'https://uio.io/path',
-        }])
+        self.assertEqual(self.bc.database.list_of('media.Media'),
+                         [{
+                             'academy_id': None,
+                             'hash': hash,
+                             'hits': 0,
+                             'id': 1,
+                             'mime': 'image/png',
+                             'name': f'learn-to-code-{model.asset.slug}.png',
+                             'slug': f'asset-{model.asset.slug}',
+                             'thumbnail': f'https://storage.googleapis.com/random-bucket/{hash}-thumbnail',
+                             'url': f'https://storage.googleapis.com/random-bucket/{hash}',
+                         }])
         self.assertEqual(Logger.warn.call_args_list, [
             call(f'Media was save with {hash} for academy {model.asset.academy}'),
         ])
