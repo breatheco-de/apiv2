@@ -89,6 +89,7 @@ def async_create_asset_thumbnail(asset_slug: str):
         content_file = cloud_file.download()
         if not content_file:
             time.sleep(1)
+            cloud_file = storage.file(screenshots_bucket(), filename)
             continue
 
         hash = hashlib.sha256(content_file).hexdigest()
