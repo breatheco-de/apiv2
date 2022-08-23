@@ -1,7 +1,6 @@
 import hashlib
 import logging
 import os
-import re
 import time
 from typing import Optional
 from celery import shared_task, Task
@@ -121,7 +120,7 @@ def async_create_asset_thumbnail(asset_slug: str):
 
     # if media does not exist too, keep the screenshots with other name
     cloud_file.rename(hash)
-    url = cloud_file.url()
+    url = f'https://storage.googleapis.com/{screenshots_bucket()}/{hash}'
 
     media = Media(
         slug=f'asset-{asset_slug}',
