@@ -151,10 +151,14 @@ def get_sessions(self, obj):
             session.mentor.email,
             'id':
             session.mentor.id,
+            'one_line_bio':
+            session.mentor.one_line_bio,
             'online_meeting_url':
             session.mentor.online_meeting_url,
             'price_per_hour':
             session.mentor.price_per_hour,
+            'rating':
+            session.mentor.rating,
             'services': [{
                 'academy': {
                     'icon_url': session.service.academy.icon_url,
@@ -249,12 +253,16 @@ def get_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
             format_datetime(self, mentor_profile.created_at),
             'id':
             mentor_profile.id,
+            'one_line_bio':
+            mentor_profile.one_line_bio,
             'email':
             mentor_profile.email,
             'online_meeting_url':
             mentor_profile.online_meeting_url,
             'price_per_hour':
             mentor_profile.price_per_hour,
+            'rating':
+            mentor_profile.rating,
             'services': [{
                 'academy': {
                     'icon_url': academy.icon_url,

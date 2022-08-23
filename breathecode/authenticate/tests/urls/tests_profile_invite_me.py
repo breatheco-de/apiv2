@@ -8,6 +8,80 @@ from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
+def get_serializer(self, mentor_profile, academy, mentorship_service, user):
+    return {
+        'invites': [],
+        'mentor_profiles': [{
+            'booking_url':
+            mentor_profile.booking_url,
+            'online_meeting_url':
+            None,
+            'created_at':
+            self.bc.datetime.to_iso_string(mentor_profile.created_at),
+            'email':
+            mentor_profile.email,
+            'id':
+            mentor_profile.id,
+            'one_line_bio':
+            mentor_profile.one_line_bio,
+            'price_per_hour':
+            mentor_profile.price_per_hour,
+            'rating':
+            mentor_profile.rating,
+            'services': [{
+                'academy': {
+                    'icon_url': '/static/icons/picture.png',
+                    'id': academy.id,
+                    'logo_url': academy.logo_url,
+                    'name': academy.name,
+                    'slug': academy.slug,
+                },
+                'allow_mentee_to_extend':
+                mentorship_service.allow_mentee_to_extend,
+                'allow_mentors_to_extend':
+                mentorship_service.allow_mentors_to_extend,
+                'created_at':
+                self.bc.datetime.to_iso_string(mentorship_service.created_at),
+                'duration':
+                self.bc.datetime.from_timedelta(mentorship_service.duration),
+                'id':
+                mentorship_service.id,
+                'language':
+                mentorship_service.language,
+                'logo_url':
+                mentorship_service.logo_url,
+                'max_duration':
+                self.bc.datetime.from_timedelta(mentorship_service.max_duration),
+                'missed_meeting_duration':
+                self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
+                'name':
+                mentorship_service.name,
+                'slug':
+                mentorship_service.slug,
+                'status':
+                mentorship_service.status,
+                'updated_at':
+                self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+            }],
+            'slug':
+            mentor_profile.slug,
+            'status':
+            mentor_profile.status,
+            'timezone':
+            mentor_profile.timezone,
+            'updated_at':
+            self.bc.datetime.to_iso_string(mentor_profile.updated_at),
+            'user': {
+                'email': user.email,
+                'first_name': user.first_name,
+                'id': user.id,
+                'last_name': user.last_name,
+            }
+        } for mentor_profile in (mentor_profile if isinstance(mentor_profile, list) else [mentor_profile])],
+        'profile_academies': [],
+    }
+
+
 class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
@@ -140,73 +214,8 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = {
-            'invites': [],
-            'mentor_profiles': [{
-                'booking_url':
-                model.mentor_profile.booking_url,
-                'online_meeting_url':
-                None,
-                'created_at':
-                self.bc.datetime.to_iso_string(model.mentor_profile.created_at),
-                'email':
-                model.mentor_profile.email,
-                'id':
-                model.mentor_profile.id,
-                'price_per_hour':
-                model.mentor_profile.price_per_hour,
-                'services': [{
-                    'academy': {
-                        'icon_url': '/static/icons/picture.png',
-                        'id': model.academy.id,
-                        'logo_url': model.academy.logo_url,
-                        'name': model.academy.name,
-                        'slug': model.academy.slug,
-                    },
-                    'allow_mentee_to_extend':
-                    model.mentorship_service.allow_mentee_to_extend,
-                    'allow_mentors_to_extend':
-                    model.mentorship_service.allow_mentors_to_extend,
-                    'created_at':
-                    self.bc.datetime.to_iso_string(model.mentorship_service.created_at),
-                    'duration':
-                    self.bc.datetime.from_timedelta(model.mentorship_service.duration),
-                    'id':
-                    model.mentorship_service.id,
-                    'language':
-                    model.mentorship_service.language,
-                    'logo_url':
-                    model.mentorship_service.logo_url,
-                    'max_duration':
-                    self.bc.datetime.from_timedelta(model.mentorship_service.max_duration),
-                    'missed_meeting_duration':
-                    self.bc.datetime.from_timedelta(model.mentorship_service.missed_meeting_duration),
-                    'name':
-                    model.mentorship_service.name,
-                    'slug':
-                    model.mentorship_service.slug,
-                    'status':
-                    model.mentorship_service.status,
-                    'updated_at':
-                    self.bc.datetime.to_iso_string(model.mentorship_service.updated_at),
-                }],
-                'slug':
-                model.mentor_profile.slug,
-                'status':
-                model.mentor_profile.status,
-                'timezone':
-                model.mentor_profile.timezone,
-                'updated_at':
-                self.bc.datetime.to_iso_string(model.mentor_profile.updated_at),
-                'user': {
-                    'email': model.user.email,
-                    'first_name': model.user.first_name,
-                    'id': model.user.id,
-                    'last_name': model.user.last_name,
-                }
-            }],
-            'profile_academies': [],
-        }
+        expected = get_serializer(self, model.mentor_profile, model.academy, model.mentorship_service,
+                                  model.user)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -228,73 +237,8 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = {
-            'invites': [],
-            'mentor_profiles': [{
-                'booking_url':
-                mentor_profile.booking_url,
-                'online_meeting_url':
-                None,
-                'created_at':
-                self.bc.datetime.to_iso_string(mentor_profile.created_at),
-                'email':
-                mentor_profile.email,
-                'id':
-                mentor_profile.id,
-                'price_per_hour':
-                mentor_profile.price_per_hour,
-                'services': [{
-                    'academy': {
-                        'icon_url': '/static/icons/picture.png',
-                        'id': model.academy.id,
-                        'logo_url': model.academy.logo_url,
-                        'name': model.academy.name,
-                        'slug': model.academy.slug,
-                    },
-                    'allow_mentee_to_extend':
-                    model.mentorship_service.allow_mentee_to_extend,
-                    'allow_mentors_to_extend':
-                    model.mentorship_service.allow_mentors_to_extend,
-                    'created_at':
-                    self.bc.datetime.to_iso_string(model.mentorship_service.created_at),
-                    'duration':
-                    self.bc.datetime.from_timedelta(model.mentorship_service.duration),
-                    'id':
-                    model.mentorship_service.id,
-                    'language':
-                    model.mentorship_service.language,
-                    'logo_url':
-                    model.mentorship_service.logo_url,
-                    'max_duration':
-                    self.bc.datetime.from_timedelta(model.mentorship_service.max_duration),
-                    'missed_meeting_duration':
-                    self.bc.datetime.from_timedelta(model.mentorship_service.missed_meeting_duration),
-                    'name':
-                    model.mentorship_service.name,
-                    'slug':
-                    model.mentorship_service.slug,
-                    'status':
-                    model.mentorship_service.status,
-                    'updated_at':
-                    self.bc.datetime.to_iso_string(model.mentorship_service.updated_at),
-                }],
-                'slug':
-                mentor_profile.slug,
-                'status':
-                mentor_profile.status,
-                'timezone':
-                mentor_profile.timezone,
-                'updated_at':
-                self.bc.datetime.to_iso_string(mentor_profile.updated_at),
-                'user': {
-                    'email': model.user.email,
-                    'first_name': model.user.first_name,
-                    'id': model.user.id,
-                    'last_name': model.user.last_name,
-                }
-            } for mentor_profile in model.mentor_profile],
-            'profile_academies': [],
-        }
+        expected = get_serializer(self, model.mentor_profile, model.academy, model.mentorship_service,
+                                  model.user)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

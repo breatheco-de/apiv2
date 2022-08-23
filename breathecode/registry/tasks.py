@@ -1,6 +1,7 @@
 import hashlib
 import logging
-import re
+import os
+import time
 from typing import Optional
 from celery import shared_task, Task
 
@@ -12,6 +13,10 @@ from .models import Asset
 from .actions import pull_from_github, screenshots_bucket, test_asset
 
 logger = logging.getLogger(__name__)
+
+
+def google_project_id():
+    return os.getenv('GOOGLE_PROJECT_ID', '')
 
 
 class BaseTaskWithRetry(Task):
@@ -52,16 +57,17 @@ def async_create_asset_thumbnail(asset_slug: str):
     slug1 = 'learn-to-code'
     slug2 = asset_slug
     url = f'https://4geeksacademy.com/us/{slug1}/{slug2}/preview'
-    func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='screenshots')
+    func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
 
     name = f'{slug1}-{slug2}.png'
-    response = func.call({
-        'url': url,
-        'name': name,
-        'dimension': '1200x630',
-        'delay': 1000,  # this should be fixed if the screenshots is taken without load the content properly
-        'includeDate': False,
-    })
+    response = func.call(
+        params={
+            'url': url,
+            'name': name,
+            'dimension': '1200x630',
+            # this should be fixed if the screenshots is taken without load the content properly
+            'delay': 1000,
+        })
 
     if response.status_code >= 400:
         logger.error('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
@@ -69,6 +75,7 @@ def async_create_asset_thumbnail(asset_slug: str):
         return
 
     json = response.json()
+    json = json[0]
 
     url = json['url']
     filename = json['filename']
@@ -76,8 +83,16 @@ def async_create_asset_thumbnail(asset_slug: str):
     storage = Storage()
     cloud_file = storage.file(screenshots_bucket(), filename)
 
-    content_file = cloud_file.download()
-    hash = hashlib.sha256(content_file).hexdigest()
+    # reattempt 60 times
+    for _ in range(0, 60):
+        content_file = cloud_file.download()
+        if not content_file:
+            time.sleep(1)
+            cloud_file = storage.file(screenshots_bucket(), filename)
+            continue
+
+        hash = hashlib.sha256(content_file).hexdigest()
+        break
 
     # file already exists for this academy
     if Media.objects.filter(hash=hash, academy=asset.academy).exists():
@@ -105,6 +120,7 @@ def async_create_asset_thumbnail(asset_slug: str):
 
     # if media does not exist too, keep the screenshots with other name
     cloud_file.rename(hash)
+    url = f'https://storage.googleapis.com/{screenshots_bucket()}/{hash}'
 
     media = Media(
         slug=f'asset-{asset_slug}',
@@ -136,7 +152,7 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
 
     kwargs = {'width': width} if width else {'height': height}
 
-    func = FunctionV1(region='us-central1', project_id='breathecode-197918', name='resize-image')
+    func = FunctionV1(region='us-central1', project_id=google_project_id(), name='resize-image')
 
     response = func.call({
         **kwargs,
