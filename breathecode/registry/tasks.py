@@ -84,6 +84,9 @@ def async_create_asset_thumbnail(asset_slug: str):
     cloud_file = storage.file(screenshots_bucket(), filename)
 
     content_file = cloud_file.download()
+    print('==========================================')
+    print(screenshots_bucket(), filename)
+    print(type(content_file), content_file)
     hash = hashlib.sha256(content_file).hexdigest()
 
     # file already exists for this academy
