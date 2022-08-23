@@ -65,9 +65,8 @@ def async_create_asset_thumbnail(asset_slug: str):
             'url': url,
             'name': name,
             'dimension': '1200x630',
-            'delay':
-            1000,  # this should be fixed if the screenshots is taken without load the content properly
-            'includeDate': False,
+            # this should be fixed if the screenshots is taken without load the content properly
+            'delay': 1000,
         })
 
     if response.status_code >= 400:
@@ -76,7 +75,7 @@ def async_create_asset_thumbnail(asset_slug: str):
         return
 
     json = response.json()
-    print('task json', json)
+    json = json[0]
 
     url = json['url']
     filename = json['filename']
