@@ -41,10 +41,6 @@ class Recaptcha:
         response = client.create_assessment(request)
 
         # Check if the token is valid.
-        print('valid')
-        print(response.token_properties.valid)
-        print('risk_analysis')
-        print(response.risk_analysis)
         if not response.token_properties.valid:
             print('The CreateAssessment call failed because the token was ' +
                   'invalid for for the following reasons: ' + str(response.token_properties.invalid_reason))
