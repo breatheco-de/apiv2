@@ -108,6 +108,7 @@ class RegistryTestSuite(RegistryTestCase):
                     file_name=PropertyMock(),
                     delete=MagicMock(),
                     download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
+                    url=MagicMock(return_value='https://uio.io/path'),
                     create=True)
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
     def test__with_asset__good_function_response(self):
@@ -123,8 +124,8 @@ class RegistryTestSuite(RegistryTestCase):
             'mime': 'image/png',
             'name': f'learn-to-code-{model.asset.slug}.png',
             'slug': f'asset-{model.asset.slug}',
-            'thumbnail': f'{URL}-thumbnail',
-            'url': URL,
+            'thumbnail': 'https://uio.io/path-thumbnail',
+            'url': 'https://uio.io/path',
         }])
         self.assertEqual(Logger.warn.call_args_list, [
             call(f'Media was save with {hash} for academy {model.asset.academy}'),
