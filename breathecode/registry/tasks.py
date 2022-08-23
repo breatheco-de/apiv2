@@ -120,6 +120,7 @@ def async_create_asset_thumbnail(asset_slug: str):
 
     # if media does not exist too, keep the screenshots with other name
     cloud_file.rename(hash)
+    url = cloud_file.url()
 
     media = Media(
         slug=f'asset-{asset_slug}',
