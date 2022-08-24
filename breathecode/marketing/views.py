@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination, validate_captcha)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
@@ -78,6 +78,7 @@ def get_downloadable(request, slug=None):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@validate_captcha
 def create_lead(request):
 
     project_id = os.getenv('GOOGLE_PROJECT_ID', '')
