@@ -60,10 +60,10 @@ class KeywordClusterSmallSerializer(serpy.Serializer):
 
 
 class AssetKeywordSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
-    academy = AcademySmallSerializer()
     cluster = KeywordClusterSmallSerializer(required=False)
 
 
@@ -264,7 +264,7 @@ class PostKeywordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetKeyword
-        exclude = ('academy', )
+        exclude = ()
 
     def create(self, validated_data):
         academy_id = self.context['academy']
@@ -359,9 +359,6 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
 class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
-
-    # url = serializers.CharField(required=False)
-    # url = serializers.CharField(required=False)
 
     class Meta:
         model = Asset

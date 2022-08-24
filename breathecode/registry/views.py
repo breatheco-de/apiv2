@@ -570,6 +570,8 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
             lookup['status__in'] = [p.upper() for p in param.split(',')]
+        else:
+            items = items.exclude(status='DELETED')
 
         if 'sync_status' in self.request.GET:
             param = self.request.GET.get('sync_status')

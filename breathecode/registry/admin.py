@@ -536,9 +536,9 @@ class KeywordAssignedFilter(admin.SimpleListFilter):
 @admin.register(AssetKeyword)
 class AssetKeywordAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'title']
-    list_display = ('id', 'slug', 'title', 'cluster', 'academy')
-    raw_id_fields = ['academy']
-    list_filter = ['academy', KeywordAssignedFilter]
+    list_display = ('id', 'slug', 'title', 'cluster')
+    # raw_id_fields = ['academy']
+    list_filter = [KeywordAssignedFilter]
 
 
 @admin.register(KeywordCluster)

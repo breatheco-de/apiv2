@@ -112,7 +112,12 @@ class KeywordCluster(models.Model):
 
 
 class AssetKeyword(models.Model):
-    slug = models.SlugField(max_length=200, unique=True)
+
+    def __init__(self, *args, **kwargs):
+        super(AssetKeyword, self).__init__(*args, **kwargs)
+        self.__old_slug = self.slug
+
+    slug = models.SlugField(max_length=200)
     title = models.CharField(max_length=200)
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
 
@@ -142,6 +147,16 @@ class AssetKeyword(models.Model):
 
     def __str__(self):
         return self.slug
+
+    def save(self, *args, **kwargs):
+
+        if self.__old_slug != self.slug:
+            # Prevent multiple keywords with same slug
+            keyword = AssetKeyword.objects.filter(slug=self.slug, academy=self.academy).first()
+            if keyword is not None:
+                raise Exception(f'Keyword with {self.slug} already exists on this academy')
+
+        super().save(*args, **kwargs)
 
 
 PROJECT = 'PROJECT'
@@ -356,8 +371,11 @@ class Asset(models.Model):
             elif extension in ['.ipynb']:
                 readme = self.parse(readme, format='notebook')
             else:
-                raise Exception('Uknown readme file extension ' + extension + ' for ' + self.asset_type +
-                                ': ' + self.slug)
+                AssetErrorLog(slug=AssetErrorLog.INVALID_README_URL,
+                              path=self.slug,
+                              asset_type=self.asset_type,
+                              asset=self,
+                              status_text='Invalid Readme URL').save()
         return readme
 
     def parse(self, readme, format='markdown'):
@@ -477,6 +495,7 @@ class AssetErrorLog(models.Model):
     DIFFERENT_TYPE = 'different-type'
     EMPTY_README = 'empty-readme'
     INVALID_URL = 'invalid-url'
+    INVALID_README_URL = 'invalid-readme-url'
     README_SYNTAX = 'readme-syntax-error'
 
     asset_type = models.CharField(max_length=20, choices=TYPE, default=None, null=True, blank=True)

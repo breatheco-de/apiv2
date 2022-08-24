@@ -79,9 +79,10 @@ class AssetValidator():
     def urls(self):
 
         readme = self.asset.get_readme(parse=True)
-        urls = get_urls_from_html(readme['html'])
-        for url in urls:
-            test_url(url, allow_relative=False)
+        if 'html' in readme:
+            urls = get_urls_from_html(readme['html'])
+            for url in urls:
+                test_url(url, allow_relative=False)
 
     def lang(self):
 
