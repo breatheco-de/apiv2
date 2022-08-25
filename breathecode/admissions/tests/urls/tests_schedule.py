@@ -12,6 +12,7 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
+
     def test_certificate_without_auth(self):
         """Test /certificate without auth"""
         url = reverse_lazy('admissions:schedule')

@@ -79,6 +79,7 @@ DATA = {
 
 
 class ActionTestfetchToApiTestCase(CareerTestCase):
+
     @patch('logging.Logger.debug', MagicMock())
     def test_fetch_to_api__without_spider(self):
         from logging import Logger
@@ -87,7 +88,7 @@ class ActionTestfetchToApiTestCase(CareerTestCase):
             fetch_to_api(None)
             assert False
         except Exception as e:
-            self.assertEquals(str(e), ('without-spider'))
+            self.assertEqual(str(e), ('without-spider'))
             self.assertEqual(Logger.debug.call_args_list,
                              [call('First you must specify a spider (fetch_to_api)')])
 

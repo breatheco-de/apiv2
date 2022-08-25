@@ -117,6 +117,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_resend_invite__no_auth(self):
         """Test """
         self.headers(academy=1)

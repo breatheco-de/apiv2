@@ -52,6 +52,7 @@ def from_now(_date, include_seconds=False, include_days=False):
 
 
 class Datetime(datetime):
+
     def __setattr__(self, key, value):
         if key == 'info':
             object.__setattr__(self, key, value)
@@ -61,6 +62,7 @@ class Datetime(datetime):
 
 class DatetimeInteger:
     """This type of date pretend resolve the problems related to summer schedule"""
+
     def __init__(self, year, month, day, hour, minute):
         self.year = str(year)
         self.month = str(month)

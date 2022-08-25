@@ -20,6 +20,7 @@ platform = {'name': 'indeed'}
 
 
 class ActionRunSpiderTestCase(CareerTestCase):
+
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -29,7 +30,7 @@ class ActionRunSpiderTestCase(CareerTestCase):
             get_was_published_date_from_string(None)
             assert False
         except Exception as e:
-            self.assertEquals(str(e), ('data-job-none'))
+            self.assertEqual(str(e), ('data-job-none'))
             self.assertEqual(Logger.error.call_args_list, [
                 call('First you must specify a job (get_was_published_date_from_string)'),
                 call('Status 400 - data-job-none')
@@ -45,7 +46,7 @@ class ActionRunSpiderTestCase(CareerTestCase):
         expected = timezone.now() - timedelta(days=30)
         expected = f'{expected.year}-{expected.month}-{expected.day}'
 
-        self.assertEquals(result, expected)
+        self.assertEqual(result, expected)
 
     def test_get_was_published_date_from_string__whith_active_x_days_ago(self):
         job = {'published_date_raw': 'Active 6 days ago'}
@@ -57,7 +58,7 @@ class ActionRunSpiderTestCase(CareerTestCase):
         expected = timezone.now() - timedelta(days=6)
         expected = f'{expected.year}-{expected.month}-{expected.day}'
 
-        self.assertEquals(result, expected)
+        self.assertEqual(result, expected)
 
     def test_get_was_published_date_from_string__whith_month_day_year(self):
         job = {'published_date_raw': 'July 17, 1977'}
@@ -67,7 +68,7 @@ class ActionRunSpiderTestCase(CareerTestCase):
         result = result.published_date_processed
         result = f'{result.year}-{result.month}-{result.day}'
 
-        self.assertEquals(result, '1977-7-17')
+        self.assertEqual(result, '1977-7-17')
 
     def test_get_was_published_date_from_string__whith_today(self):
         job = {'published_date_raw': 'today'}
@@ -79,4 +80,4 @@ class ActionRunSpiderTestCase(CareerTestCase):
         expected = timezone.now()
         expected = f'{expected.year}-{expected.month}-{expected.day}'
 
-        self.assertEquals(result, expected)
+        self.assertEqual(result, expected)

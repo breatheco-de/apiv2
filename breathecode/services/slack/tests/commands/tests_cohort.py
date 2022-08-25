@@ -8,6 +8,7 @@ from ...commands.cohort import execute
 
 
 class SlackTestSuite(SlackTestCase):
+
     def test_slack_command___context_is_not_provided_or_is_none(self):
         """Testing when context is None or not provided."""
 

@@ -7,6 +7,7 @@ from .utils import is_valid, create_models, just_one, get_list
 
 
 class RegistryModelsMixin(ModelsMixin):
+
     def generate_registry_models(self,
                                  asset_technology=False,
                                  asset_category=False,

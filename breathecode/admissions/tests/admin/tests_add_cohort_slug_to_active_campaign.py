@@ -12,6 +12,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 With zero Cohort
     """
+
     @patch('breathecode.marketing.tasks.add_cohort_slug_as_acp_tag.delay', MagicMock())
     def test_add_cohort_slug_to_active_campaign__zero_cohorts(self):
         from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag

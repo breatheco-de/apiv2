@@ -17,6 +17,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     """
     🔽🔽🔽 With zero MentorProfile
     """
+
     @patch('django.contrib.messages.success', MagicMock())
     @patch('django.contrib.messages.error', MagicMock())
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())

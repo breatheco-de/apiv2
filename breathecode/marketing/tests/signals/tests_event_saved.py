@@ -7,6 +7,7 @@ class LeadTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Create without slug
     """
+
     @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
     def test_event_saved__create__without_slug(self):
         """Test /cohort/:id/user without auth"""

@@ -17,6 +17,7 @@ eventbrite_url_with_query = eventbrite_url + '?expand=organizer,venue'
 
 
 def update_or_create_event_mock(raise_error=False):
+
     def update_or_create_event(self, *args, **kwargs):
         if raise_error:
             raise Exception('Random error in creating')
@@ -26,7 +27,9 @@ def update_or_create_event_mock(raise_error=False):
 
 class EventbriteWebhookTestSuite(EventTestCase):
     """Test /eventbrite/webhook"""
+
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook_without_data(self):
         """Test /eventbrite/webhook without auth"""
         url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
@@ -45,6 +48,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook_without_organization(self):
         from breathecode.marketing.tasks import add_event_tags_to_student
 
@@ -74,6 +78,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook_without_academy(self):
         from breathecode.marketing.tasks import add_event_tags_to_student
 
@@ -106,6 +111,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook_without_event(self):
         from breathecode.marketing.tasks import add_event_tags_to_student
 
@@ -138,6 +144,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook_with_event_without_eventbrite_id(self):
         from breathecode.marketing.tasks import add_event_tags_to_student
 
@@ -170,6 +177,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook_without_active_campaign_academy(self):
         from breathecode.marketing.tasks import add_event_tags_to_student
 
@@ -216,6 +224,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook_without_automation(self):
         from breathecode.marketing.tasks import add_event_tags_to_student
 
@@ -261,6 +270,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook_without_lang(self):
         from breathecode.marketing.tasks import add_event_tags_to_student
 
@@ -317,6 +327,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook(self):
         from breathecode.marketing.tasks import add_event_tags_to_student
 
@@ -381,6 +392,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
            apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
     @patch.object(actions, 'update_or_create_event',
                   MagicMock(side_effect=Exception('Random error in creating')))
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook__event_created__raise_error(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True)
@@ -415,6 +427,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
     @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook__event_created(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True)
@@ -452,6 +465,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
            apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
     @patch.object(actions, 'update_or_create_event',
                   MagicMock(side_effect=Exception('Random error in creating')))
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook__event_updated__raise_error(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True)
@@ -486,6 +500,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
     @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook__event_updated(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True)
@@ -523,6 +538,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
            apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
     @patch('breathecode.events.actions.publish_event_from_eventbrite',
            MagicMock(side_effect=Exception('Random error')))
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook__event_published__raise_error(self):
         from breathecode.events.actions import publish_event_from_eventbrite
 
@@ -558,6 +574,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
     @patch.object(actions, 'publish_event_from_eventbrite', MagicMock())
+    @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook__event_published(self):
         from breathecode.events.actions import publish_event_from_eventbrite
 

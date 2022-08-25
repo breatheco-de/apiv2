@@ -2,7 +2,7 @@ import serpy
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
 import breathecode.mentorship.actions as actions
-from .actions import mentor_is_ready, generate_mentor_bill
+from .actions import generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from breathecode.utils.datetime_interger import duration_to_str
@@ -33,6 +33,12 @@ class ProfileSerializer(serpy.Serializer):
     github_username = serpy.Field()
 
 
+class ProfilePublicSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+
+
 class GetSyllabusSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -42,12 +48,24 @@ class GetSyllabusSmallSerializer(serpy.Serializer):
     logo = serpy.Field()
 
 
+class GetUserPublicTinySerializer(serpy.Serializer):
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    profile = ProfilePublicSerializer(required=False)
+
+
 class GetUserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
     email = serpy.Field()
     profile = ProfileSerializer(required=False)
+
+
+class GETServiceTinySerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
 
 
 class GETServiceSmallSerializer(serpy.Serializer):
@@ -63,19 +81,27 @@ class GETServiceSmallSerializer(serpy.Serializer):
     allow_mentors_to_extend = serpy.Field()
 
 
+class GETMentorPublicTinySerializer(serpy.Serializer):
+    user = GetUserPublicTinySerializer()
+
+
 class GETMentorTinySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     user = GetUserSmallSerializer()
-    service = GETServiceSmallSerializer()
+    services = serpy.MethodField()
     status = serpy.Field()
     booking_url = serpy.Field()
+
+    def get_services(self, obj):
+        return GETServiceSmallSerializer(obj.services.all(), many=True).data
 
 
 class GETSessionSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     mentor = GETMentorTinySerializer()
+    service = GETServiceTinySerializer(required=False)
     mentee = GetUserSmallSerializer(required=False)
     started_at = serpy.Field()
     ended_at = serpy.Field()
@@ -112,8 +138,10 @@ class GETMentorSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     user = GetUserSmallSerializer()
-    service = GETServiceSmallSerializer()
+    services = serpy.MethodField()
     status = serpy.Field()
+    one_line_bio = serpy.Field()
+    rating = serpy.Field()
     price_per_hour = serpy.Field()
     booking_url = serpy.Field()
     online_meeting_url = serpy.Field()
@@ -121,6 +149,9 @@ class GETMentorSmallSerializer(serpy.Serializer):
     email = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+    def get_services(self, obj):
+        return GETServiceSmallSerializer(obj.services.all(), many=True).data
 
 
 class GETBillSmallSerializer(serpy.Serializer):
@@ -160,10 +191,8 @@ class BigBillSerializer(GETBillSmallSerializer):
 
     def get_unfinished_sessions(self, obj):
         _sessions = MentorshipSession.objects.filter(
-            mentor=obj.mentor,
-            bill__isnull=True,
-            allow_billing=True,
-            bill__academy=obj.mentor.service.academy).exclude(status__in=['COMPLETED', 'FAILED'])
+            mentor=obj.mentor, bill__isnull=True, allow_billing=True,
+            bill__academy=obj.academy).exclude(status__in=['COMPLETED', 'FAILED'])
         return BillSessionSerializer(_sessions, many=True).data
 
     def get_public_url(self, obj):
@@ -174,19 +203,24 @@ class GETMentorBigSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     user = GetUserSmallSerializer()
-    service = GETServiceBigSerializer()
+    services = serpy.MethodField()
     status = serpy.Field()
     price_per_hour = serpy.Field()
     booking_url = serpy.Field()
     online_meeting_url = serpy.Field()
     timezone = serpy.Field()
     syllabus = serpy.MethodField()
+    one_line_bio = serpy.Field()
+    rating = serpy.Field()
     email = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
 
     def get_syllabus(self, obj):
         return GetSyllabusSmallSerializer(obj.syllabus.all(), many=True).data
+
+    def get_services(self, obj):
+        return GETServiceBigSerializer(obj.services.all(), many=True).data
 
 
 class GETSessionReportSerializer(serpy.Serializer):
@@ -251,8 +285,12 @@ class BillSessionSerializer(serpy.Serializer):
     rating = serpy.MethodField()
 
     def get_tooltip(self, obj):
+        service = obj.service
 
-        message = f'This mentorship should last no longer than {int(obj.mentor.service.duration.seconds/60)} min. <br />'
+        if service is None:
+            return 'Please ser service for this mentorship'
+
+        message = f'This mentorship should last no longer than {int(service.duration.seconds/60)} min. <br />'
         if obj.started_at is None:
             message += 'The mentee never joined the session. <br />'
         else:
@@ -266,8 +304,10 @@ class BillSessionSerializer(serpy.Serializer):
 
             if obj.ended_at is not None:
                 message += f'The mentorship lasted {duration_to_str(obj.ended_at - obj.started_at)}. <br />'
-                if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
-                    extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
+
+                if (obj.ended_at - obj.started_at) > service.duration:
+                    extra_time = (obj.ended_at - obj.started_at) - service.duration
+
                     message += f'With extra time of {duration_to_str(extra_time)}. <br />'
                 else:
                     message += f'No extra time detected <br />'
@@ -309,9 +349,12 @@ class BillSessionSerializer(serpy.Serializer):
         if (obj.ended_at - obj.started_at).days > 1:
             return f'Many days of extra time, probably it was never closed'
 
-        if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
-            extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
-            return f'Extra time of {duration_to_str(extra_time)}, the expected duration was {duration_to_str(obj.mentor.service.duration)}'
+        if obj.service is None:
+            return 'Please setup service for this session'
+
+        if (obj.ended_at - obj.started_at) > obj.service.duration:
+            extra_time = (obj.ended_at - obj.started_at) - obj.service.duration
+            return f'Extra time of {duration_to_str(extra_time)}, the expected duration was {duration_to_str(obj.service.duration)}'
         else:
             return None
 
@@ -343,6 +386,7 @@ class BillSessionSerializer(serpy.Serializer):
 
 
 class ServicePOSTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorshipService
         exclude = ('created_at', 'updated_at', 'academy')
@@ -378,6 +422,8 @@ class ServicePUTSerializer(serializers.ModelSerializer):
 
 
 class MentorSerializer(serializers.ModelSerializer):
+    academy = serializers.PrimaryKeyRelatedField(queryset=Academy.objects.all(), required=True)
+
     class Meta:
         model = MentorProfile
         exclude = ('created_at', 'updated_at')
@@ -386,7 +432,10 @@ class MentorSerializer(serializers.ModelSerializer):
 class MentorUpdateSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False)
     price_per_hour = serializers.FloatField(required=False)
-    service = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(), required=False)
+
+    services = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(),
+                                                  required=False,
+                                                  many=True)
 
     class Meta:
         model = MentorProfile
@@ -403,9 +452,24 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
         return data
 
 
-class SessionSerializer(serializers.ModelSerializer):
+class SessionListSerializer(serializers.ListSerializer):
+
+    def update(self, instances, validated_data):
+
+        instance_hash = {index: instance for index, instance in enumerate(instances)}
+
+        result = [
+            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
+        ]
+
+        return result
+
+
+class SessionPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorshipSession
+        list_serializer_class = SessionListSerializer
         exclude = (
             'created_at',
             'updated_at',
@@ -445,7 +509,12 @@ class SessionSerializer(serializers.ModelSerializer):
         return result
 
 
+class SessionSerializer(SessionPUTSerializer):
+    service = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(), required=True)
+
+
 class MentorshipBillPUTListSerializer(serializers.ListSerializer):
+
     def update(self, instances, validated_data):
 
         instance_hash = {index: instance for index, instance in enumerate(instances)}
@@ -458,6 +527,7 @@ class MentorshipBillPUTListSerializer(serializers.ListSerializer):
 
 
 class MentorshipBillPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = MentorshipBill
         exclude = ('created_at', 'updated_at', 'academy', 'mentor', 'reviewer', 'total_duration_in_minutes',

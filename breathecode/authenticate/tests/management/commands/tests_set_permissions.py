@@ -54,6 +54,7 @@ class TokenTestSuite(AuthTestCase):
     """
     🔽🔽🔽 format of PERMISSIONS
     """
+
     def test__format__permissions(self):
         from breathecode.authenticate.management.commands.set_permissions import PERMISSIONS
 

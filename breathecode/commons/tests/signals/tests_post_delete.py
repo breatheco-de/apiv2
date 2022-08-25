@@ -16,6 +16,7 @@ def to_snake_case(name):
 
 
 class LeadTestSuite(CommonsTestCase):
+
     def test_post_save__cohort(self):
         cache.clear()
 

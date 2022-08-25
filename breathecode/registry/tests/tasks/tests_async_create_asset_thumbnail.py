@@ -6,12 +6,14 @@ from unittest.mock import MagicMock, PropertyMock, call, patch
 
 from breathecode.registry.tasks import async_create_asset_thumbnail
 from logging import Logger
+from breathecode.services.google_cloud.function_v1 import FunctionV1
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import fake
 from ..mixins import RegistryTestCase
 
 
 class Response:
+
     def __init__(self, response, status_code):
         self.response = response
         self.status_code = status_code
@@ -31,6 +33,7 @@ FUNCTION_BAD_RESPONSE = Response({'status_code': 400, 'message': 'Bad response'}
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -41,6 +44,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
     🔽🔽🔽 Without Asset
     """
+
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test__without_asset(self):
@@ -56,9 +60,10 @@ class RegistryTestSuite(RegistryTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.function.Function.__init__', MagicMock(return_value=None))
-    @patch('breathecode.services.google_cloud.function.Function.call',
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_BAD_RESPONSE))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
     def test__with_asset__bad_function_response(self):
         model = self.bc.database.create(asset=1)
         async_create_asset_thumbnail.delay(model.asset.slug)
@@ -69,6 +74,21 @@ class RegistryTestSuite(RegistryTestCase):
             call('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
                  'returns status code 400'),
         ])
+        self.assertEqual(
+            str(FunctionV1.__init__.call_args_list),
+            str([call(region='us-central1', project_id='labor-day-story', name='screenshots', method='GET')]))
+        self.assertEqual(
+            str(FunctionV1.call.call_args_list),
+            str([
+                call(
+                    params={
+                        'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                        'name': f'learn-to-code-{model.asset.slug}.png',
+                        'dimension': '1200x630',
+                        'delay': 1000,
+                        'includeDate': False
+                    })
+            ]))
 
     """
     🔽🔽🔽 With Asset, good Function response
@@ -76,8 +96,8 @@ class RegistryTestSuite(RegistryTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.function.Function.__init__', MagicMock(return_value=None))
-    @patch('breathecode.services.google_cloud.function.Function.call',
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_GOOD_RESPONSE))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
@@ -90,6 +110,7 @@ class RegistryTestSuite(RegistryTestCase):
                     delete=MagicMock(),
                     download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
                     create=True)
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
     def test__with_asset__good_function_response(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
         model = self.bc.database.create(asset=1)
@@ -110,6 +131,21 @@ class RegistryTestSuite(RegistryTestCase):
             call(f'Media was save with {hash} for academy {model.asset.academy}'),
         ])
         self.assertEqual(Logger.error.call_args_list, [])
+        self.assertEqual(
+            str(FunctionV1.__init__.call_args_list),
+            str([call(region='us-central1', project_id='labor-day-story', name='screenshots', method='GET')]))
+        self.assertEqual(
+            str(FunctionV1.call.call_args_list),
+            str([
+                call(
+                    params={
+                        'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                        'name': f'learn-to-code-{model.asset.slug}.png',
+                        'dimension': '1200x630',
+                        'delay': 1000,
+                        'includeDate': False
+                    })
+            ]))
 
     """
     🔽🔽🔽 With Asset and Media, good Function response
@@ -117,8 +153,8 @@ class RegistryTestSuite(RegistryTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.function.Function.__init__', MagicMock(return_value=None))
-    @patch('breathecode.services.google_cloud.function.Function.call',
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_GOOD_RESPONSE))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
@@ -129,6 +165,7 @@ class RegistryTestSuite(RegistryTestCase):
                     delete=MagicMock(),
                     download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
                     create=True)
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
     def test__with_asset__with_media(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
         media = {'hash': hash}
@@ -142,6 +179,21 @@ class RegistryTestSuite(RegistryTestCase):
             call(f'Media with hash {hash} already exists, skipping'),
         ])
         self.assertEqual(Logger.error.call_args_list, [])
+        self.assertEqual(
+            str(FunctionV1.__init__.call_args_list),
+            str([call(region='us-central1', project_id='labor-day-story', name='screenshots', method='GET')]))
+        self.assertEqual(
+            str(FunctionV1.call.call_args_list),
+            str([
+                call(
+                    params={
+                        'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                        'name': f'learn-to-code-{model.asset.slug}.png',
+                        'dimension': '1200x630',
+                        'delay': 1000,
+                        'includeDate': False
+                    })
+            ]))
 
     """
     🔽🔽🔽 With Asset and Media, good Function response, Media for another Academy
@@ -149,8 +201,8 @@ class RegistryTestSuite(RegistryTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.function.Function.__init__', MagicMock(return_value=None))
-    @patch('breathecode.services.google_cloud.function.Function.call',
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
            MagicMock(return_value=FUNCTION_GOOD_RESPONSE))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
@@ -161,6 +213,7 @@ class RegistryTestSuite(RegistryTestCase):
                     delete=MagicMock(),
                     download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
                     create=True)
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
     def test__with_asset__with_media__media_for_another_academy(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
         asset = {'academy_id': 1}
@@ -179,4 +232,18 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(Logger.warn.call_args_list, [
             call(f'Media was save with {hash} for academy {model.academy[0]}'),
         ])
-        self.assertEqual(Logger.error.call_args_list, [])
+        self.assertEqual(
+            str(FunctionV1.__init__.call_args_list),
+            str([call(region='us-central1', project_id='labor-day-story', name='screenshots', method='GET')]))
+        self.assertEqual(
+            str(FunctionV1.call.call_args_list),
+            str([
+                call(
+                    params={
+                        'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                        'name': f'learn-to-code-{model.asset.slug}.png',
+                        'dimension': '1200x630',
+                        'delay': 1000,
+                        'includeDate': False
+                    })
+            ]))

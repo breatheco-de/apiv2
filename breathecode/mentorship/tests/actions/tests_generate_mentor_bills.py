@@ -34,6 +34,7 @@ def mentorship_bill_field(data={}):
 
 #FIXME: improve this tests
 class GenerateMentorBillsTestCase(MentorshipTestCase):
+
     @patch('django.utils.timezone.now', MagicMock(return_value=NOW))
     def test_generate_bills_with_no_previous_bills_no_unpaid_sessions(self):
         """
@@ -57,6 +58,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
 
         models_a = self.bc.database.create(mentor_profile=1,
                                            user=1,
+                                           mentorship_service=1,
                                            mentorship_session={
                                                'status': 'COMPLETED',
                                                'started_at': NOW - datetime.timedelta(days=80, hours=2),
@@ -65,6 +67,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                                            })
         models = self.bc.database.create(mentor_profile=1,
                                          user=1,
+                                         mentorship_service=1,
                                          mentorship_session=[{
                                              'status':
                                              'COMPLETED',
@@ -177,12 +180,14 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                                                'ended_at': end,
                                                'accounted_duration': datetime.timedelta(hours=1)
                                            },
+                                           mentorship_service=1,
                                            mentorship_bill={
                                                'started_at': start_month,
                                                'ended_at': end_month
                                            })
         models = self.bc.database.create(mentor_profile=models_a['mentor_profile'],
                                          user=models_a['user'],
+                                         mentorship_service=1,
                                          mentorship_session=[{
                                              'status':
                                              'COMPLETED',

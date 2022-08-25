@@ -116,19 +116,32 @@ def post_serializer(self, mentor_profile, mentorship_service, user, data={}):
         'ended_at': format_datetime(self, ended_at),
         'id': 0,
         'mentor': {
-            'booking_url': mentor_profile.booking_url,
-            'id': mentor_profile.id,
-            'service': {
+            'booking_url':
+            mentor_profile.booking_url,
+            'id':
+            mentor_profile.id,
+            'services': [{
+                'academy': {
+                    'icon_url': mentorship_service.academy.icon_url,
+                    'id': mentorship_service.academy.id,
+                    'logo_url': mentorship_service.academy.logo_url,
+                    'name': mentorship_service.academy.name,
+                    'slug': mentorship_service.academy.slug,
+                },
                 'allow_mentee_to_extend':
                 mentorship_service.allow_mentee_to_extend,
                 'allow_mentors_to_extend':
                 mentorship_service.allow_mentors_to_extend,
+                'created_at':
+                self.bc.datetime.to_iso_string(mentorship_service.created_at),
                 'duration':
                 self.bc.datetime.from_timedelta(mentorship_service.duration),
                 'id':
                 mentorship_service.id,
                 'language':
                 mentorship_service.language,
+                'logo_url':
+                mentorship_service.logo_url,
                 'max_duration':
                 self.bc.datetime.from_timedelta(mentorship_service.max_duration),
                 'missed_meeting_duration':
@@ -139,9 +152,13 @@ def post_serializer(self, mentor_profile, mentorship_service, user, data={}):
                 mentorship_service.slug,
                 'status':
                 mentorship_service.status,
-            },
-            'slug': mentor_profile.slug,
-            'status': mentor_profile.status,
+                'updated_at':
+                self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+            }],
+            'slug':
+            mentor_profile.slug,
+            'status':
+            mentor_profile.status,
             'user': {
                 'email': user.email,
                 'first_name': user.first_name,
@@ -195,6 +212,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__post__without_auth(self):
         url = reverse_lazy('mentorship:academy_mentor_id_bill', kwargs={'mentor_id': 1})
         response = self.client.post(url)
@@ -276,6 +294,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_bill',
                                         mentor_profile=1,
+                                        mentorship_service=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -312,6 +331,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             capability='crud_mentorship_bill',
                                             mentor_profile=1,
                                             mentorship_session=mentorship_session,
+                                            mentorship_service=1,
                                             profile_academy=1)
 
             self.bc.request.set_headers(academy=model.academy.id)

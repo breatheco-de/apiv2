@@ -17,6 +17,7 @@ class SubscribeTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Post without email
     """
+
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
     def test_task__post__without_email(self):
         url = reverse_lazy('authenticate:subscribe')

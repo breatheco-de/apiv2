@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (ServiceView, MentorView, SessionView, render_html_bill, BillView, ServiceSessionView,
-                    MentorSessionView, UserMeSessionView, UserMeBillView)
+                    MentorSessionView, UserMeSessionView, UserMeBillView, PublicMentorView)
 
 app_name = 'mentorship'
 urlpatterns = [
@@ -22,4 +22,7 @@ urlpatterns = [
     path('academy/mentor/<int:mentor_id>/bill', BillView.as_view(), name='academy_mentor_id_bill'),
     path('user/me/session', UserMeSessionView.as_view(), name='user_session'),
     path('user/me/bill', UserMeBillView.as_view(), name='user_bill'),
+
+    # Public Endpoints for marketing purposes
+    path('public/mentor', PublicMentorView.as_view(), name='public_mentor'),
 ]

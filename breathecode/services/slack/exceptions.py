@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 class SlackException(Exception):
+
     def __init__(self, message, slug=None):
 
         if IS_TEST_ENV and slug:

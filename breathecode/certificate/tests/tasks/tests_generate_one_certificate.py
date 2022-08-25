@@ -13,6 +13,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     """
     🔽🔽🔽 CohortUser not found
     """
+
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.certificate.actions.generate_certificate', MagicMock())

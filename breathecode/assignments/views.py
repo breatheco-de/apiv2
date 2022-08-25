@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
 from django.contrib import messages
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils import ValidationException, capable_of, localize_query, GenerateLookupsMixin
+from breathecode.utils import ValidationException, capable_of, localize_query, GenerateLookupsMixin, response_207
 from breathecode.admissions.models import Academy, CohortUser, Cohort
 from breathecode.authenticate.models import Token
 from rest_framework.decorators import api_view, permission_classes
@@ -23,11 +23,13 @@ from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializ
                           FinalProjectGETSerializer, PostFinalProjectSerializer, PUTFinalProjectSerializer)
 from .actions import sync_cohort_tasks
 import breathecode.assignments.tasks as tasks
+from breathecode.utils.multi_status_response import MultiStatusResponse
 
 logger = logging.getLogger(__name__)
 
 
 class TaskTeacherView(APIView):
+
     def get(self, request, task_id=None, user_id=None):
         items = Task.objects.all()
         logger.debug(f'Found {items.count()} tasks')
@@ -50,7 +52,7 @@ class TaskTeacherView(APIView):
         if user is not None:
             items = items.filter(user__id__in=user.split(','))
 
-        # tasks these cohorts (not the users, but the tasts belong to the cohort)
+        # tasks these cohorts (not the users, but the tasks belong to the cohort)
         cohort = request.GET.get('cohort', None)
         if cohort is not None:
             cohorts = cohort.split(',')
@@ -120,6 +122,7 @@ class FinalProjectMeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, project_id=None, user_id=None):
         if not user_id:
             user_id = request.user.id
@@ -189,6 +192,7 @@ class FinalProjectMeView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, project_id=None):
+
         def update(_req, data, _id=None, only_validate=True):
             if _id is None:
                 raise ValidationException('Missing project id to update', slug='missing-project-id')
@@ -285,6 +289,7 @@ class TaskMeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, task_id=None, user_id=None):
         if not user_id:
             user_id = request.user.id
@@ -325,13 +330,14 @@ class TaskMeView(APIView):
         return Response(serializer.data)
 
     def put(self, request, task_id=None):
+
         def update(_req, data, _id=None, only_validate=True):
             if _id is None:
                 raise ValidationException('Missing task id to update', slug='missing=task-id')
 
             item = Task.objects.filter(id=_id).first()
             if item is None:
-                raise ValidationException('Task not found', slug='task-not-found')
+                raise ValidationException('Task not found', slug='task-not-found', code=404)
             serializer = PUTTaskSerializer(item, data=data, context={'request': _req})
             if serializer.is_valid():
                 if not only_validate:
@@ -393,9 +399,14 @@ class TaskMeView(APIView):
     def delete(self, request, task_id=None):
 
         if task_id is not None:
-            item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+            item = Task.objects.filter(id=task_id).first()
             if item is None:
-                raise ValidationException('Task not found for this user', slug='task-not-found')
+                raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+            if item.user.id != request.user.id:
+                raise ValidationException('Task not found for this user',
+                                          code=400,
+                                          slug='task-not-found-for-this-user')
 
             item.delete()
 
@@ -404,8 +415,44 @@ class TaskMeView(APIView):
             if ids == '':
                 raise ValidationException('Missing querystring propery id for bulk delete tasks',
                                           slug='missing-id')
-            ids_to_delete = [id.strip() for id in ids.split(',')]
-            Task.objects.filter(id__in=ids_to_delete, user__id=request.user.id).delete()
+
+            ids_to_delete = [
+                int(id.strip()) if id.strip().isnumeric() else id.strip() for id in ids.split(',')
+            ]
+
+            all = Task.objects.filter(id__in=ids_to_delete)
+            do_not_belong = all.exclude(user__id=request.user.id)
+            belong = all.filter(user__id=request.user.id)
+
+            responses = []
+
+            for task in all:
+                if task.id in ids_to_delete:
+                    ids_to_delete.remove(task.id)
+
+            if belong:
+                responses.append(MultiStatusResponse(code=204, queryset=belong))
+
+            if do_not_belong:
+                responses.append(
+                    MultiStatusResponse('Task not found for this user',
+                                        code=400,
+                                        slug='task-not-found-for-this-user',
+                                        queryset=do_not_belong))
+
+            if ids_to_delete:
+                responses.append(
+                    MultiStatusResponse('Task not found',
+                                        code=404,
+                                        slug='task-not-found',
+                                        queryset=ids_to_delete))
+
+            if do_not_belong or ids_to_delete:
+                response = response_207(responses, 'associated_slug')
+                belong.delete()
+                return response
+
+            belong.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
@@ -414,6 +461,7 @@ class TaskMeDeliverView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('task_delivery_details')
     def get(self, request, task_id, academy_id):
 
@@ -477,3 +525,61 @@ def deliver_assignment_view(request, task_id, token):
             'intro': 'Please fill the following information to deliver your assignment',
             'btn_lable': 'Deliver Assignment'
         })
+
+
+class SubtaskMeView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    def get(self, request, task_id):
+
+        item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+        if item is None:
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        return Response(item.subtasks)
+
+    def put(self, request, task_id):
+
+        item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+        if item is None:
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        if not isinstance(request.data, list):
+            raise ValidationException('Subtasks json must be an array of tasks',
+                                      code=404,
+                                      slug='json-as-array')
+
+        subtasks_ids = []
+        for t in request.data:
+            if not 'id' in t:
+                raise ValidationException('All substasks must have a unique id',
+                                          code=404,
+                                          slug='missing-subtask-unique-id')
+            else:
+                try:
+                    found = subtasks_ids.index(t['id'])
+                    raise ValidationException(
+                        f'Duplicated subtask id {t["id"]} for the assignment on position {found}',
+                        code=404,
+                        slug='duplicated-subtask-unique-id')
+                except:
+                    subtasks_ids.append(t['id'])
+
+            if not 'status' in t:
+                raise ValidationException('All substasks must have a status',
+                                          code=404,
+                                          slug='missing-subtask-status')
+            elif t['status'] not in ['DONE', 'PENDING']:
+                raise ValidationException('Subtask status must be DONE or PENDING, received: ' + t['status'])
+
+            if not 'label' in t:
+                raise ValidationException('All substasks must have a label',
+                                          code=404,
+                                          slug='missing-task-label')
+
+        item.subtasks = request.data
+        item.save()
+
+        return Response(item.subtasks)

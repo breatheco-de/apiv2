@@ -8,9 +8,11 @@ theme:
 nav:
   - 'index.md'
   - Installation:
-      - 'installation/configuring-the-github-secrets.md'
-      - 'installation/editor-configs.md'
+      - 'installation/environment-variables.md'
       - 'installation/fixtures.md'
+  - Deployment:
+      - 'deployment/environment-variables.md'
+      - 'deployment/configuring-the-github-secrets.md'
   - Apps:
     - Monitoring:
       - 'apps/monitoring/introduction.md'
@@ -31,12 +33,14 @@ nav:
     - 'testing/runing-tests.md'
     - Mixins:
       - 'bc': 'testing/mixins/bc.md'
+      - 'bc.fake': 'testing/mixins/bc-fake.md'
       - 'bc.request': 'testing/mixins/bc-request.md'
       - 'bc.database': 'testing/mixins/bc-database.md'
       - 'bc.datetime': 'testing/mixins/bc-datetime.md'
       - 'bc.format': 'testing/mixins/bc-format.md'
       - 'bc.check': 'testing/mixins/bc-check.md'
       - 'bc.cache': 'testing/mixins/bc-cache.md'
+      - 'bc.random': 'testing/mixins/bc-random.md'
     - Mocks:
       - 'testing/mocks/using-mocks.md'
       - 'testing/mocks/mock-requests.md'

@@ -11,6 +11,7 @@ from ..mixins.new_auth_test_case import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     @patch('breathecode.notify.actions.send_email_message')
     def test_password_reset__post__without_data(self, mock):
         """Test /cohort/:id without auth"""

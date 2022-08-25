@@ -36,6 +36,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_without_auth(self):
         url = reverse_lazy('registry:academy_technology')
         response = self.client.get(url)

@@ -287,6 +287,22 @@ CAPABILITIES = [
         'slug': 'crud_technology',
         'description': 'Update, create and delete asset technologies'
     },
+    {
+        'slug': 'read_keyword',
+        'description': 'Read SEO keywords'
+    },
+    {
+        'slug': 'crud_keyword',
+        'description': 'Update, create and delete SEO keywords'
+    },
+    {
+        'slug': 'read_keywordcluster',
+        'description': 'Update, create and delete asset technologies'
+    },
+    {
+        'slug': 'crud_keywordcluster',
+        'description': 'Update, create and delete asset technologies'
+    },
 ]
 
 ROLES = [
@@ -352,11 +368,15 @@ ROLES = [
         ],
     },
     {
-        'slug': 'content_writer',
-        'name': 'Content Writer (Base)',
+        'slug':
+        'content_writer',
+        'name':
+        'Content Writer (Base)',
         'caps': [
+            'read_keywordcluster',
             'read_member',
             'read_media',
+            'read_keyword',
             'read_my_academy',
             'read_asset',
             'crud_asset',
@@ -417,7 +437,7 @@ class RoleType(TypedDict):
 def extend_roles(roles: list[RoleType]) -> None:
     """
     These are additional roles that extend from the base roles above,
-    you can exend from more than one role but also add additional capabilitis at the end.
+    you can extend from more than one role but also add additional capabilities at the end.
     """
     roles.append({
         'slug':
@@ -473,7 +493,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Syllabus Coordinator',
         'caps':
-        extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset', 'read_asset']
+        extend(roles, ['staff']) +
+        ['crud_syllabus', 'crud_media', 'crud_asset', 'read_asset', 'read_keywordcluster', 'read_keyword']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
@@ -488,7 +509,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset'
+            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset', 'read_keywordcluster', 'read_keyword'
         ]
     })
     roles.append({
@@ -499,7 +520,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff', 'community_manager']) + [
             'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
-            'crud_tag'
+            'crud_tag', 'crud_keyword', 'crud_keywordcluster'
         ]
     })
     roles.append({

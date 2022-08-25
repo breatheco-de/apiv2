@@ -1,17 +1,22 @@
 import hashlib
 import logging
+import os
 import re
 from typing import Optional
 from celery import shared_task, Task
 
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
-from breathecode.services.google_cloud.function import Function
+from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
 from .models import Asset
 from .actions import pull_from_github, screenshots_bucket, test_asset
 
 logger = logging.getLogger(__name__)
+
+
+def google_project_id():
+    return os.getenv('GOOGLE_PROJECT_ID', '')
 
 
 class BaseTaskWithRetry(Task):
@@ -52,16 +57,18 @@ def async_create_asset_thumbnail(asset_slug: str):
     slug1 = 'learn-to-code'
     slug2 = asset_slug
     url = f'https://4geeksacademy.com/us/{slug1}/{slug2}/preview'
-    func = Function(region='us-central1', project_id='breathecode-197918', name='screenshots')
+    func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
 
     name = f'{slug1}-{slug2}.png'
-    response = func.call({
-        'url': url,
-        'name': name,
-        'dimension': '1200x630',
-        'delay': 1000,  # this should be fixed if the screenshots is taken without load the content properly
-        'includeDate': False,
-    })
+    response = func.call(
+        params={
+            'url': url,
+            'name': name,
+            'dimension': '1200x630',
+            'delay':
+            1000,  # this should be fixed if the screenshots is taken without load the content properly
+            'includeDate': False,
+        })
 
     if response.status_code >= 400:
         logger.error('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
@@ -69,6 +76,7 @@ def async_create_asset_thumbnail(asset_slug: str):
         return
 
     json = response.json()
+    print('task json', json)
 
     url = json['url']
     filename = json['filename']
@@ -136,7 +144,7 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
 
     kwargs = {'width': width} if width else {'height': height}
 
-    func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
+    func = FunctionV1(region='us-central1', project_id=google_project_id(), name='resize-image')
 
     response = func.call({
         **kwargs,

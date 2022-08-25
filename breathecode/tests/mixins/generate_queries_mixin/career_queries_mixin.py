@@ -4,6 +4,7 @@ Collections of mixins used to login in authorize microservice
 
 
 class CareerQueriesMixin():
+
     def generate_career_queries(self):
         """Generate queries"""
         return {

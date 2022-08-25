@@ -94,6 +94,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__get__without_auth(self):
         """Test /user/me without auth"""
         url = reverse_lazy('authenticate:profile_me')
