@@ -24,7 +24,9 @@ VISIBILITY = (
 
 
 class AssetTechnology(models.Model):
-    slug = models.SlugField(max_length=200, unique=True)
+    slug = models.SlugField(max_length=200,
+                            unique=True,
+                            help_text='Technologies are unified within all 4geeks.com')
     title = models.CharField(max_length=200, blank=True)
     lang = models.CharField(max_length=2,
                             blank=True,
@@ -61,7 +63,12 @@ class AssetTechnology(models.Model):
 
 
 class AssetCategory(models.Model):
-    slug = models.SlugField(max_length=200, unique=True)
+
+    def __init__(self, *args, **kwargs):
+        super(AssetCategory, self).__init__(*args, **kwargs)
+        self.__old_slug = self.slug
+
+    slug = models.SlugField(max_length=200)
     title = models.CharField(max_length=200)
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
     description = models.TextField(null=True, blank=True, default=None)
@@ -74,9 +81,24 @@ class AssetCategory(models.Model):
     def __str__(self):
         return self.slug
 
+    def save(self, *args, **kwargs):
+
+        if self.__old_slug != self.slug:
+            # Prevent multiple keywords with same slug
+            cat = AssetCategory.objects.filter(slug=self.slug, academy=self.academy).first()
+            if cat is not None:
+                raise Exception(f'Category with slug {self.slug} already exists on this academy')
+
+        super().save(*args, **kwargs)
+
 
 class KeywordCluster(models.Model):
-    slug = models.SlugField(max_length=200, unique=True)
+
+    def __init__(self, *args, **kwargs):
+        super(KeywordCluster, self).__init__(*args, **kwargs)
+        self.__old_slug = self.slug
+
+    slug = models.SlugField(max_length=200)
     title = models.CharField(max_length=200)
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -110,6 +132,16 @@ class KeywordCluster(models.Model):
     def __str__(self):
         return self.slug
 
+    def save(self, *args, **kwargs):
+
+        if self.__old_slug != self.slug:
+            # Prevent multiple keywords with same slug
+            cluster = KeywordCluster.objects.filter(slug=self.slug, academy=self.academy).first()
+            if cluster is not None:
+                raise Exception(f'Cluster with slug {self.slug} already exists on this academy')
+
+        super().save(*args, **kwargs)
+
 
 class AssetKeyword(models.Model):
 
@@ -137,11 +169,6 @@ class AssetKeyword(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
-    optimization_rating = models.FloatField(null=True,
-                                            blank=True,
-                                            default=None,
-                                            help_text='Automatically filled (1 to 100)')
-
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -154,7 +181,7 @@ class AssetKeyword(models.Model):
             # Prevent multiple keywords with same slug
             keyword = AssetKeyword.objects.filter(slug=self.slug, academy=self.academy).first()
             if keyword is not None:
-                raise Exception(f'Keyword with {self.slug} already exists on this academy')
+                raise Exception(f'Keyword with slug {self.slug} already exists on this academy')
 
         super().save(*args, **kwargs)
 
@@ -206,15 +233,18 @@ class Asset(models.Model):
         super(Asset, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
 
-    slug = models.SlugField(max_length=200, unique=True)
+    slug = models.SlugField(
+        max_length=200,
+        unique=True,
+        help_text=
+        'Asset must be unique within the entire database because they could be published into 4geeks.com (shared among all academies)'
+    )
     title = models.CharField(max_length=200, blank=True)
     lang = models.CharField(max_length=2, blank=True, null=True, default=None, help_text='E.g: en, es, it')
 
     all_translations = models.ManyToManyField('self', blank=True)
     technologies = models.ManyToManyField(AssetTechnology)
-    seo_keywords = models.ManyToManyField(AssetKeyword,
-                                          blank=True,
-                                          help_text='Optimize for a max of two keywords per asset')
+
     category = models.ForeignKey(AssetCategory,
                                  on_delete=models.SET_NULL,
                                  default=None,
@@ -274,6 +304,9 @@ class Asset(models.Model):
                                    null=True,
                                    blank=True,
                                    help_text='Internal state automatically set by the system based on sync')
+    last_synch_at = models.DateTimeField(null=True, blank=True, default=None)
+    # is_synched = models.BooleanField(default=True)
+
     test_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
                                    default=None,
@@ -281,7 +314,6 @@ class Asset(models.Model):
                                    blank=True,
                                    help_text='Internal state automatically set by the system based on test')
     published_at = models.DateTimeField(null=True, blank=True, default=None)
-    last_synch_at = models.DateTimeField(null=True, blank=True, default=None)
     last_test_at = models.DateTimeField(null=True, blank=True, default=None)
     status_text = models.TextField(null=True,
                                    default=None,
@@ -313,6 +345,17 @@ class Asset(models.Model):
                               null=True,
                               help_text='The owner has the github premissions to update the lesson')
 
+    seo_keywords = models.ManyToManyField(AssetKeyword,
+                                          blank=True,
+                                          help_text='Optimize for a max of two keywords per asset')
+
+    optimization_rating = models.FloatField(null=True,
+                                            blank=True,
+                                            default=None,
+                                            help_text='Automatically filled (1 to 100)')
+    last_seo_scan_at = models.DateTimeField(null=True, blank=True, default=None)
+    seo_json_status = models.JSONField(null=True, blank=True, default=None)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -333,7 +376,7 @@ class Asset(models.Model):
         else:
             super().save(*args, **kwargs)
 
-    def get_readme(self, parse=None, raw=False):
+    def get_readme(self, parse=None, raw=False, remove_frontmatter=False):
 
         if self.readme is None or self.readme == '':
             if self.asset_type != 'QUIZ':
@@ -367,7 +410,7 @@ class Asset(models.Model):
                 extension = pathlib.Path(self.readme_url).suffix if not self.external else '.md'
 
             if extension in ['.md', '.mdx', '.txt']:
-                readme = self.parse(readme, format='markdown')
+                readme = self.parse(readme, format='markdown', remove_frontmatter=remove_frontmatter)
             elif extension in ['.ipynb']:
                 readme = self.parse(readme, format='notebook')
             else:
@@ -378,11 +421,12 @@ class Asset(models.Model):
                               status_text='Invalid Readme URL').save()
         return readme
 
-    def parse(self, readme, format='markdown'):
+    def parse(self, readme, format='markdown', remove_frontmatter=False):
         if format == 'markdown':
             _data = frontmatter.loads(readme['decoded'])
             readme['frontmatter'] = _data.metadata
             readme['frontmatter']['format'] = format
+            readme['decoded'] = _data.content
             readme['html'] = markdown.markdown(_data.content, extensions=['markdown.extensions.fenced_code'])
         if format == 'notebook':
             import nbformat
@@ -525,3 +569,49 @@ class AssetErrorLog(models.Model):
 
     def __str__(self):
         return f'Error {self.status} with {self.slug}'
+
+
+class SEOReport(models.Model):
+
+    report_type = models.CharField(max_length=40,
+                                   help_text='Must be one of the services.seo.action script names')
+    status = models.CharField(max_length=20,
+                              choices=ASSET_SYNC_STATUS,
+                              default='PENDING',
+                              help_text='Internal state automatically set by the system')
+    log = models.TextField(default=None, null=True, blank=True)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    rating = models.FloatField(default=None,
+                               null=True,
+                               blank=True,
+                               help_text='Automatically filled (1 to 100)')
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    def __init__(self, *args, **kwargs):
+        super(SEOReport, self).__init__(*args, **kwargs)
+        self.__log = []
+
+    def fatal(self, msg):
+        self.__log.append({'rating': -100, 'msg': msg})
+
+    def good(self, rating, msg):
+        self.__log.append({'rating': rating, 'msg': msg})
+
+    def bad(self, rating, msg):
+        self.__log.append({'rating': rating, 'msg': msg})
+
+    def get_rating(self):
+        total_rating = 0
+        for entry in self.__log:
+            total_rating += entry['rating']
+
+        if total_rating < 0:
+            return 0
+        else:
+            return total_rating
+
+    def get_log(self):
+        return self.__log
+
+    def to_json(self, rating, msg):
+        return {'rating': self.get_rating(), 'log': self.__log}

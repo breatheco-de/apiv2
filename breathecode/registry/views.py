@@ -5,7 +5,8 @@ from django.shortcuts import redirect, render
 from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
-
+from .tasks import async_pull_from_github
+from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment)
 
@@ -21,7 +22,8 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           AcademyAssetSerializer, AssetPUTSerializer, AcademyCommentSerializer,
                           PostAssetCommentSerializer, PutAssetCommentSerializer, AssetBigTechnologySerializer,
                           TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
-                          PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer)
+                          PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
+                          AssetKeywordBigSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -260,7 +262,8 @@ def render_readme(request, asset_slug, extension='raw'):
     is_parse = True
     if asset.asset_type == 'QUIZ':
         is_parse = False
-    readme = asset.get_readme(parse=is_parse)
+    readme = asset.get_readme(parse=is_parse,
+                              remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
 
     response = HttpResponse('Invalid extension format', content_type='text/html')
     if extension == 'html':
@@ -474,15 +477,27 @@ class AcademyAssetActionView(APIView):
         if asset is None:
             raise ValidationException('This asset does not exist for this academy', 404)
 
+        possible_actions = ['test', 'sync', 'analyze_seo']
+        if action_slug not in possible_actions:
+            raise ValidationException(f'Invalid action {action_slug}')
         try:
             if action_slug == 'test':
                 test_asset(asset)
             elif action_slug == 'sync':
-                pull_from_github(asset.slug)
+                override_meta = False
+                if request.data and 'override_meta' in request.data:
+                    override_meta = request.data['override_meta']
+                pull_from_github(asset.slug, override_meta=override_meta)
+            elif action_slug == 'analyze_seo':
+                report = SEOAnalyzer(asset)
+                report.start()
+
         except Exception as e:
+            raise e
             pass
 
-        serializer = AssetBigSerializer(asset)
+        asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
+        serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -507,11 +522,11 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         if asset_slug is not None:
             asset = Asset.get_by_slug(asset_slug, request)
-            if asset is None or (asset.academy is not None and asset.academy.id != academy_id):
+            if asset is None or (asset.academy is not None and asset.academy.id != int(academy_id)):
                 raise ValidationException(f'Asset {asset_slug} not found for this academy',
                                           status.HTTP_404_NOT_FOUND)
 
-            serializer = AssetBigSerializer(asset)
+            serializer = AcademyAssetSerializer(asset)
             return handler.response(serializer.data)
 
         items = Asset.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
@@ -650,8 +665,9 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         serializer = PostAssetSerializer(data=data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            instance = serializer.save()
+            async_pull_from_github.delay(instance.slug)
+            return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -785,7 +801,7 @@ class AcademyKeywordView(APIView, GenerateLookupsMixin):
         serializer = PostKeywordSerializer(data=payload, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
-            serializer = AssetKeywordSerializer(serializer.instance)
+            serializer = AssetKeywordBigSerializer(serializer.instance)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -806,7 +822,7 @@ class AcademyKeywordView(APIView, GenerateLookupsMixin):
                                           })
         if serializer.is_valid():
             serializer.save()
-            serializer = AssetKeywordSerializer(serializer.instance)
+            serializer = AssetKeywordBigSerializer(serializer.instance)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
