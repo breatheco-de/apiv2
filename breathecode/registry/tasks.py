@@ -4,6 +4,7 @@ import os
 import time
 from typing import Optional
 from celery import shared_task, Task
+from breathecode.services.seo import SEOAnalyzer
 
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
@@ -43,6 +44,21 @@ def async_test_asset(asset_slug):
             return True
     except Exception as e:
         logger.exception(f'Error testing asset {a.slug}')
+
+    return False
+
+
+@shared_task
+def async_execute_seo_report(asset_slug):
+    a = Asset.objects.filter(slug=asset_slug).first()
+    if a is None:
+        logger.debug(f'Error: Error running SEO report for asset with slug {asset_slug}, does not exist.')
+
+    try:
+        report = SEOAnalyzer(a)
+        report.start()
+    except Exception as e:
+        logger.exception(f'Error running SEO report asset {a.slug}')
 
     return False
 

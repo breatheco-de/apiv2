@@ -25,6 +25,13 @@ class KeywordSmallSerializer(serpy.Serializer):
     title = serpy.Field()
 
 
+class KeywordClusterSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+
+
 class UserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
@@ -50,6 +57,27 @@ class AssetCategorySmallSerializer(serpy.Serializer):
 class KeywordClusterSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
+
+
+class AssetKeywordSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    cluster = KeywordClusterSmallSerializer(required=False)
+
+
+class AssetKeywordBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    cluster = KeywordClusterSmallSerializer(required=False)
+
+    published_assets = serpy.MethodField()
+
+    def get_published_assets(self, obj):
+        return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
 
 
 class AcademyCommentSerializer(serpy.Serializer):
@@ -109,8 +137,15 @@ class AcademyAssetSerializer(AssetSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
+    last_seo_scan_at = serpy.Field()
+    seo_json_status = serpy.Field()
+    optimization_rating = serpy.Field()
+
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
+
+    def get_seo_keywords(self, obj):
+        return list(map(lambda t: AssetKeywordSerializer(t).data, obj.seo_keywords.all()))
 
 
 class AssetMidSerializer(AssetSerializer):
@@ -135,8 +170,7 @@ class AssetBigSerializer(AssetMidSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
-    created_at = serpy.Field()
-    updated_at = serpy.Field()
+    academy = AcademySmallSerializer()
 
 
 class ParentAssetTechnologySerializer(serpy.Serializer):
@@ -179,13 +213,6 @@ class _Keyword(serpy.Serializer):
         return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
 
 
-class KeywordClusterSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    title = serpy.Field()
-    lang = serpy.Field()
-
-
 class KeywordClusterBigSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -204,14 +231,6 @@ class KeywordClusterBigSerializer(serpy.Serializer):
         return Asset.objects.filter(seo_keywords__cluster__id=obj.id).count()
 
 
-class AssetKeywordSerializer(serpy.Serializer):
-    slug = serpy.Field()
-    title = serpy.Field()
-    lang = serpy.Field()
-    academy = AcademySmallSerializer()
-    cluster = KeywordClusterSmallSerializer(required=False)
-
-
 class TechSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -228,6 +247,9 @@ class PostAssetSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         validated_data = super().validate(data)
+
+        academy_id = self.context['academy']
+        validated_data['academy'] = Academy.objects.filter(id=academy_id).first()
 
         alias = AssetAlias.objects.filter(slug=validated_data['slug']).first()
         if alias is not None:
@@ -281,7 +303,6 @@ class PUTKeywordSerializer(serializers.ModelSerializer):
         exclude = ('academy', )
 
     def update(self, instance, validated_data):
-        print('update keyword serializer', validated_data)
         return super().update(instance, validated_data)
 
 
@@ -355,12 +376,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
 
-    # url = serializers.CharField(required=False)
-    # url = serializers.CharField(required=False)
-
     class Meta:
         model = Asset
-        exclude = ('technologies', )
+        exclude = ('technologies', 'academy')
 
     def validate(self, data):
 
