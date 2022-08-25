@@ -81,21 +81,7 @@ def get_downloadable(request, slug=None):
 @validate_captcha
 def create_lead(request):
 
-    project_id = os.getenv('GOOGLE_PROJECT_ID', '')
-    site_key = os.getenv('GOOGLE_CAPTCHA_KEY', '')
-
     data = request.data.copy()
-    token = data['token'] if 'token' in data else None
-    action = data['action'] if 'action' in data else None
-
-    recaptcha = Recaptcha()
-    recaptcha_result = recaptcha.create_assessment(project_id=project_id,
-                                                   recaptcha_site_key=site_key,
-                                                   token=token,
-                                                   recaptcha_action=action)
-
-    if (recaptcha_result.risk_analysis.score < 0.8):
-        raise ValidationException('The action was denied because it was considered suspicious', code=400)
 
     # remove spaces from phone
     if 'phone' in data:
@@ -121,6 +107,7 @@ def create_lead(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@validate_captcha
 def create_lead_from_app(request, app_slug=None):
     app_id = request.GET.get('app_id', None)
     if app_slug is None or app_id is None:

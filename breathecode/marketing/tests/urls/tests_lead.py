@@ -25,15 +25,15 @@ def random_string():
     return ''.join(choices(string.ascii_letters, k=10))
 
 
-class Fake_Recaptcha:
+class FakeRecaptcha:
 
-    class Risk_Analysis:
+    class RiskAnalysis:
 
         def __init__(self, *args, **kwargs):
             self.score = 0.9
 
     def __init__(self, *args, **kwargs):
-        self.risk_analysis = self.Risk_Analysis()
+        self.risk_analysis = self.RiskAnalysis()
 
 
 def generate_form_entry_kwargs():
@@ -86,7 +86,7 @@ class LeadTestSuite(MarketingTestCase):
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=Fake_Recaptcha()),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     def test_lead__without_data(self):
         """Test /cohort/:id/user without auth"""
@@ -203,7 +203,7 @@ class LeadTestSuite(MarketingTestCase):
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=Fake_Recaptcha()),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     def test_lead__with__bad_data(self):
         """Test /cohort/:id/user without auth"""
@@ -226,7 +226,7 @@ class LeadTestSuite(MarketingTestCase):
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=Fake_Recaptcha()),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     def test_lead__with__data(self):
         """Test /cohort/:id/user without auth"""
@@ -346,7 +346,7 @@ class LeadTestSuite(MarketingTestCase):
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=Fake_Recaptcha()),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     def test_lead__with__data_active_campaign_slug(self):
         """Test /cohort/:id/user without auth"""
@@ -468,7 +468,7 @@ class LeadTestSuite(MarketingTestCase):
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=Fake_Recaptcha()),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     def test_lead__with__data_alias_active_campaign_slug(self):
         """Test /cohort/:id/user without auth"""
@@ -592,7 +592,7 @@ class LeadTestSuite(MarketingTestCase):
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=Fake_Recaptcha()),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     def test_lead__with__data_active_campaign_slug_priority(self):
         """Test /cohort/:id/user without auth"""
@@ -718,7 +718,7 @@ class LeadTestSuite(MarketingTestCase):
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=Fake_Recaptcha()),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     def test_lead__create_lead(self):
         """Test /lead with create lead happening"""
