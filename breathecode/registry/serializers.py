@@ -137,6 +137,8 @@ class AcademyAssetSerializer(AssetSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
+    requirements = serpy.Field()
+
     last_seo_scan_at = serpy.Field()
     seo_json_status = serpy.Field()
     optimization_rating = serpy.Field()
