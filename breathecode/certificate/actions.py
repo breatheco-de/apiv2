@@ -104,30 +104,17 @@ def generate_certificate(user, cohort=None, layout=None):
     try:
         uspe.academy = cohort.academy
 
-        # tasks_count_pending = Task.objects.filter(
-        #                                         Q(cohort__syllabus_version__json__days__values__assignments__values__mandatory=True)
-        #                                         | Q(cohort__syllabus_version__json__days__values__assignments__values__mandatory=None)
-        #                                         ,
-        #                                         user__id=user.id,
-        #                                           task_type='PROJECT',
-        #                                           revision_status='PENDING',
-
-        #                                           ).count()
-
         tasks_pending = Task.objects.filter(user__id=user.id, task_type='PROJECT', revision_status='PENDING')
-        print(0)
-        syllabus_v = []
+        mandatory_slugs = []
         for task in tasks_pending:
-            print(1)
-            print('cohort id')
-            print(task.cohort.id)
-            print('cohort syllabus_v json')
-            print(task.cohort.syllabus_version.__dict__['json'])
-        # print(tasks_pending)
+            if 'days' in task.cohort.syllabus_version.__dict__['json']:
+                for day in task.cohort.syllabus_version.__dict__['json']['days']:
+                    for assignment in day['assignments']:
+                        if 'mandatory' in assignment or assignment['mandatory']:
+                            mandatory_slugs.append(assignment['slug'])
 
-        tasks_count_pending = Task.objects.filter(user__id=user.id,
-                                                  task_type='PROJECT',
-                                                  revision_status='PENDING').count()
+        tasks_count_pending = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(
+            revision_status__in=['APPROVED', 'IGNORED']).count()
 
         if tasks_count_pending:
             raise ValidationException(f'The student has {tasks_count_pending} '
