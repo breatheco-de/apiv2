@@ -6,7 +6,7 @@ import requests, os, logging
 from django.utils import timezone
 from urllib.parse import urlencode
 from django.db.models import Q
-from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
+from breathecode.admissions.models import SyllabusVersion, Cohort, CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, APIException
 from .models import ERROR, PERSISTED, Specialty, UserSpecialty, LayoutDesign
@@ -113,6 +113,17 @@ def generate_certificate(user, cohort=None, layout=None):
         #                                           revision_status='PENDING',
 
         #                                           ).count()
+
+        tasks_pending = Task.objects.filter(user__id=user.id, task_type='PROJECT', revision_status='PENDING')
+        print(0)
+        syllabus_v = []
+        for task in tasks_pending:
+            print(1)
+            print('cohort id')
+            print(task.cohort.id)
+            print('cohort syllabus_v json')
+            print(task.cohort.syllabus_version.__dict__['json'])
+        # print(tasks_pending)
 
         tasks_count_pending = Task.objects.filter(user__id=user.id,
                                                   task_type='PROJECT',
