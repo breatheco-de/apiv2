@@ -171,3 +171,4 @@ dump.rdb
 /core.*
 # pdm
 .pdm.toml
+/experiments.py

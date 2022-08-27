@@ -9,6 +9,8 @@ from breathecode.services.daily.client import DailyClient
 from breathecode.utils.datetime_interger import duration_to_str
 from django.db.models import QuerySet
 from .models import MentorshipSession, MentorshipBill
+from breathecode.utils.validation_exception import ValidationException
+from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
@@ -268,6 +270,7 @@ def last_month_date(current_date):
 
 
 def generate_mentor_bills(mentor, reset=False):
+    bills = []
 
     def get_unpaid_sessions():
         return MentorshipSession.objects.filter(
@@ -278,33 +281,39 @@ def generate_mentor_bills(mentor, reset=False):
             mentor__id=mentor.id,
             status__in=['COMPLETED', 'FAILED'],
             started_at__isnull=False,
-        )
+        ).order_by('started_at')
+
+    without_service = MentorshipSession.objects.filter(mentor=mentor, service__isnull=True).count()
+    if without_service:
+        raise ValidationException(
+            f'This mentor has {without_service} sessions without an associated service that need to be fixed',
+            slug='session_without_service')
 
     unpaid_sessions = get_unpaid_sessions()
     if not unpaid_sessions:
         return []
 
-    first_session = unpaid_sessions.order_by('started_at').first()
-    latest_session = unpaid_sessions.order_by('-ended_at').first()
-
-    start_at = first_session.started_at
-    if not start_at:
-        first_session = unpaid_sessions.order_by('created_at').first()
-        start_at = first_session.created_at
-
-    end_at = latest_session.ended_at
-    if not end_at:
-        latest_session = unpaid_sessions.order_by('-updated_at').first()
-        end_at = latest_session.updated_at
-
     MentorshipBill.objects.filter(mentor__id=mentor.id, academy__id=mentor.academy.id, status='DUE').delete()
 
-    open_bill = MentorshipBill(mentor=mentor, academy=mentor.academy, started_at=start_at, ended_at=end_at)
-    open_bill.save()
+    pending_months = sorted({(x.year, x.month) for x in unpaid_sessions.values_list('started_at', flat=True)})
+    for year, month in pending_months:
+        sessions_of_month = unpaid_sessions.filter(started_at__month=month, started_at__year=year)
 
-    open_bill = generate_mentor_bill(mentor, open_bill, unpaid_sessions, reset)
+        start_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC)
+        end_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC) + relativedelta(
+            months=1) - datetime.timedelta(microseconds=1)
 
-    return [open_bill]
+        open_bill = MentorshipBill(mentor=mentor,
+                                   academy=mentor.academy,
+                                   started_at=start_at,
+                                   ended_at=end_at)
+        open_bill.save()
+
+        open_bill = generate_mentor_bill(mentor, open_bill, sessions_of_month, reset)
+
+        bills.append(open_bill)
+
+    return bills
 
 
 def generate_mentor_bill(mentor, bill, sessions, reset=False):

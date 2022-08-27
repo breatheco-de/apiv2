@@ -322,8 +322,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                 data={
                                     'id':
                                     current + 1,
-                                    'ended_at':
-                                    self.bc.datetime.to_iso_string(model.mentorship_session.updated_at),
+                                    'started_at':
+                                    self.bc.datetime.to_iso_string(
+                                        UTC_NOW.replace(day=1, hour=0, minute=0, second=0, microsecond=0)),
                                 }),
             ]
 
@@ -335,7 +336,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                         'id': current + 1,
                         'mentor_id': current + 1,
                         'academy_id': current + 1,
-                        'ended_at': model.mentorship_session.updated_at,
+                        'started_at': UTC_NOW.replace(day=1, hour=0, minute=0, second=0, microsecond=0),
                     }),
             ])
 
