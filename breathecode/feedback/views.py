@@ -1,7 +1,10 @@
+import re
 from django.shortcuts import render
 from django.utils import timezone
+from django.db.models import Avg
 from django.http import HttpResponse
 from breathecode.admissions.models import CohortUser, Academy
+from .caches import AnswerCache
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .models import Answer, Survey, ReviewPlatform, Review
 from .tasks import generate_user_cohort_survey_answers
@@ -19,6 +22,8 @@ from breathecode.utils import capable_of, ValidationException, HeaderLimitOffset
 from PIL import Image
 from django.db.models import Q
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+from django.db.models import QuerySet
+from .utils import strings
 
 
 @api_view(['GET'])
@@ -172,6 +177,65 @@ class AcademyAnswerView(APIView):
 
         serializer = BigAnswerSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class SurveyStatisticsView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    extensions = APIViewExtensions(cache=AnswerCache)
+
+    @capable_of('read_survey')
+    def get(self, request, survey_id, academy_id=None):
+
+        def get_average(answers: QuerySet[Answer]) -> float:
+            result = answers.aggregate(Avg('score'))
+            return result['score__avg']
+
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        survey = Survey.objects.filter(id=survey_id).first()
+        if not survey:
+            raise ValidationException('Survey not found', code=404, slug='not-found')
+
+        answers = Answer.objects.filter(survey=survey, status='ANSWERED')
+        total = get_average(answers)
+
+        academy_pattern = strings[survey.lang]['academy']['title'].split('{}')
+        cohort_pattern = strings[survey.lang]['cohort']['title'].split('{}')
+        mentor_pattern = strings[survey.lang]['mentor']['title'].split('{}')
+
+        academy = get_average(
+            answers.filter(title__startswith=academy_pattern[0], title__endswith=academy_pattern[1]))
+
+        cohort = get_average(
+            answers.filter(title__startswith=cohort_pattern[0], title__endswith=cohort_pattern[1]))
+
+        all_mentors = {
+            x.title
+            for x in answers.filter(title__startswith=mentor_pattern[0], title__endswith=mentor_pattern[1])
+        }
+
+        full_mentor_pattern = (mentor_pattern[0].replace('?', '\\?') + r'([\w ]+)' +
+                               mentor_pattern[1].replace('?', '\\?'))
+
+        mentors = []
+        for mentor in all_mentors:
+            name = re.findall(full_mentor_pattern, mentor)[0]
+            score = get_average(answers.filter(title=mentor))
+
+            mentors.append({'name': name, 'score': score})
+
+        return handler.response({
+            'scores': {
+                'total': total,
+                'academy': academy,
+                'cohort': cohort,
+                'mentors': sorted(mentors, key=lambda x: x['name']),
+            },
+            'response_rate': survey.response_rate,
+        })
 
 
 class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
