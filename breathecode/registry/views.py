@@ -507,7 +507,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         if asset_slug is not None:
             asset = Asset.get_by_slug(asset_slug, request)
-            if asset is None or (asset.academy is not None and asset.academy.id != academy_id):
+            if asset is None or (asset.academy is not None and asset.academy.id != str(academy_id)):
                 raise ValidationException(f'Asset {asset_slug} not found for this academy',
                                           status.HTTP_404_NOT_FOUND)
 
