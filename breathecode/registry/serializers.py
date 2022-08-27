@@ -234,6 +234,15 @@ class PostAssetSerializer(serializers.ModelSerializer):
             raise ValidationException('Asset alias already exists with this slug')
 
         return validated_data
+    
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super(PostAssetSerializer, self).create({
+            **validated_data,
+            'academy': academy,
+        })
 
 
 class PostKeywordClusterSerializer(serializers.ModelSerializer):
