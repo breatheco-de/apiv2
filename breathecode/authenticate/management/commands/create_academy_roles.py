@@ -303,6 +303,14 @@ CAPABILITIES = [
         'slug': 'crud_keywordcluster',
         'description': 'Update, create and delete asset technologies'
     },
+    {
+        'slug': 'read_cohort_log',
+        'description': 'Read the cohort logo that contains attendance and other info logged each day'
+    },
+    {
+        'slug': 'crud_cohort_log',
+        'description': 'Update and delete things like the cohort attendance, teacher comments, etc'
+    },
 ]
 
 ROLES = [
@@ -333,6 +341,7 @@ ROLES = [
             'read_shortlink',
             'read_nps_answers',
             'read_won_lead',
+            'read_cohort_log',
             'read_mentorship_service',
             'read_mentorship_mentor',
         ],
@@ -398,6 +407,7 @@ ROLES = [
             'crud_activity',
             'read_mentorship_service',
             'read_mentorship_mentor',
+            'read_cohort_log',
         ],
     },
 ]
@@ -446,14 +456,9 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Teacher Assistant',
         'caps':
         extend(roles, ['staff']) + [
-            'read_assignment',
-            'crud_assignment',
-            'read_cohort_activity',
-            'read_nps_answers',
-            'classroom_activity',
-            'read_event',
-            'task_delivery_details',
-            'crud_cohort',
+            'read_assignment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers',
+            'classroom_activity', 'read_event', 'task_delivery_details', 'crud_cohort', 'read_cohort_log',
+            'crud_cohort_log'
         ]
     })
     roles.append({

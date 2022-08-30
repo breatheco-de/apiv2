@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
+from .utils import CohortLog
 from .serializers import (
     AcademySerializer, GetSyllabusSerializer, SyllabusSchedulePUTSerializer, SyllabusScheduleSerializer,
     SyllabusScheduleTimeSlotSerializer, CohortSerializer, CohortTimeSlotSerializer,
@@ -1382,3 +1383,45 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
         items = handler.queryset(items)
         serializer = GetPublicCohortUserSerializer(items, many=True)
         return Response(serializer.data)
+
+
+class AcademyCohortHistoryView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_cohort_log')
+    def get(self, request, cohort_id, academy_id):
+
+        item = None
+        if cohort_id.isnumeric():
+            item = Cohort.objects.filter(id=int(cohort_id), academy__id=academy_id).first()
+        else:
+            item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
+
+        if item is None:
+            raise ValidationException('Cohort not found on this academy', code=404, slug='cohort-not-found')
+
+        return Response(CohortLog(item).serialize())
+
+    @capable_of('crud_cohort_log')
+    def put(self, request, cohort_id, academy_id):
+
+        item = None
+        if cohort_id.isnumeric():
+            item = Cohort.objects.filter(id=int(cohort_id), academy__id=academy_id).first()
+        else:
+            item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
+
+        if item is None:
+            raise ValidationException('Cohort not found on this academy', code=404, slug='cohort-not-found')
+
+        try:
+            cohort_log = CohortLog(item)
+            cohort_log.logCurrentDay(request.data)
+            cohort_log.save()
+        except Exception as e:
+            logger.exception('Error logging the current day into the cohort')
+            raise ValidationException(str(e))
+
+        return Response(cohort_log.serialize())

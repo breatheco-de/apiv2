@@ -1,10 +1,11 @@
-import os
+import os, logging
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from .signals import student_edu_status_updated
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
+logger = logging.getLogger(__name__)
 
 
 def get_user_label(self):
@@ -230,7 +231,7 @@ class Cohort(models.Model):
     kickoff_date = models.DateTimeField()
     ending_date = models.DateTimeField(blank=True, null=True)
     current_day = models.IntegerField(
-        help_text='Each day the teacher takes attendancy and increases the day in one')
+        help_text='Each day the teacher takes attendancy and increases the day in one', default=1)
     current_module = models.IntegerField(
         null=True,
         default=None,
@@ -249,6 +250,12 @@ class Cohort(models.Model):
     timezone = models.CharField(max_length=50, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    history_log = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text='The cohort history will save attendancy and information about progress on each class')
 
     syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.SET_NULL, default=None, null=True)
     schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.SET_NULL, default=None, null=True)
