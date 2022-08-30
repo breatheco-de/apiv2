@@ -716,6 +716,10 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
             if current is None:
                 raise ValidationException('This session does not exist on this academy', code=404)
 
+            if (current.bill.status == 'APPROVED' or current.bill.status == 'PAID'
+                    or current.bill.status == 'IGNORED'):
+                raise ValidationException('Sessions associated with a closed bill cannot be edited', code=400)
+
             data = {}
             for key in request.data.keys():
                 data[key] = request.data.get(key)
@@ -732,6 +736,11 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
                 else:
                     raise ValidationException('Cannot determine session in '
                                               f'index {index}')
+
+                if (current.bill.status == 'APPROVED' or current.bill.status == 'PAID'
+                        or current.bill.status == 'IGNORED'):
+                    raise ValidationException(
+                        f'Sessions associated with a closed bill cannot be edited (index {index})', code=400)
 
         serializer = SessionPUTSerializer(current,
                                           data=data,
