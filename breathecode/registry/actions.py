@@ -102,7 +102,13 @@ def create_asset(data, asset_type, force=False):
         a.graded = (data['graded'] == True or (isinstance(data['graded'], str)
                                                and data['graded'].upper() in ['ISOLATED', 'INCREMENTAL']))
     if 'video-id' in data:
-        a.solution_video_url = 'https://www.youtube.com/watch?v=' + str(data['video-id'])
+        video_id = str(data['video-id'])
+        if re.search(r"https?:\/\/", video_id) is None:
+            a.solution_video_url = 'https://www.youtube.com/watch?v=' + video_id
+        else:
+            a.solution_video_url = video_id
+        a.with_video = True
+            
     if 'preview' in data:
         a.preview = data['preview']
     if 'video-solutions' in data:
@@ -500,7 +506,11 @@ def sync_learnpack_asset(github, asset):
             raise Exception(f'Missing preview URL')
 
         if 'video-id' in config:
-            asset.solution_video_url = 'https://www.youtube.com/watch?v=' + str(config['video-id'])
+            video_id = str(config['video-id'])
+            if re.search(r"https?:\/\/", video_id) is None:
+                asset.solution_video_url = 'https://www.youtube.com/watch?v=' + video_id
+            else:
+                asset.solution_video_url = video_id
             asset.with_video = True
 
         if 'duration' in config:
