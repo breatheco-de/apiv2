@@ -5,7 +5,6 @@ import hashlib
 import requests, os, logging
 from django.utils import timezone
 from urllib.parse import urlencode
-from django.db.models import Q
 from breathecode.admissions.models import SyllabusVersion, Cohort, CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, APIException

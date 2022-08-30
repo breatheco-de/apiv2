@@ -338,30 +338,28 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         cohort_kwargs = {'stage': 'ENDED'}
         task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE'}
-        model = self.generate_models(
-            user=True,
-            cohort=True,
-            cohort_user=True,
-            #  syllabus_version=True,
-            syllabus_version={
-                'id': 1,
-                'json': {
-                    'days': [{
-                        'assignments': [{
-                            'slug': 'testing-slug',
-                            'mandatory': True
-                        }]
-                    }]
-                }
-            },
-            syllabus=True,
-            syllabus_schedule=True,
-            specialty=True,
-            layout_design=True,
-            task={'associated_slug': 'testing-slug'},
-            task_kwargs=task_kwargs,
-            cohort_kwargs=cohort_kwargs,
-            cohort_user_kwargs=cohort_user_kwargs)
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version={
+                                         'id': 1,
+                                         'json': {
+                                             'days': [{
+                                                 'assignments': [{
+                                                     'slug': 'testing-slug',
+                                                     'mandatory': True
+                                                 }]
+                                             }]
+                                         }
+                                     },
+                                     syllabus=True,
+                                     syllabus_schedule=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     task={'associated_slug': 'testing-slug'},
+                                     task_kwargs=task_kwargs,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs)
 
         base = model.copy()
         del base['user']
