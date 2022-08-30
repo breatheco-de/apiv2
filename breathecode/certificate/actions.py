@@ -109,7 +109,7 @@ def generate_certificate(user, cohort=None, layout=None):
             if 'days' in task.cohort.syllabus_version.__dict__['json']:
                 for day in task.cohort.syllabus_version.__dict__['json']['days']:
                     for assignment in day['assignments']:
-                        if 'mandatory' in assignment or assignment['mandatory']:
+                        if 'mandatory' not in assignment or ('mandatory' in assignment and assignment['mandatory'] == True):
                             mandatory_slugs.append(assignment['slug'])
 
         tasks_count_pending = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(
