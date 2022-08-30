@@ -172,7 +172,7 @@ class AssetBigSerializer(AssetMidSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
-    academy = AcademySmallSerializer()
+    academy = AcademySmallSerializer(required=False)
 
 
 class ParentAssetTechnologySerializer(serpy.Serializer):
