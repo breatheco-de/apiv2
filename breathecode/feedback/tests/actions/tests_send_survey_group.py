@@ -188,7 +188,7 @@ class AnswerTestSuite(FeedbackTestCase):
             '{"success": [], "error": ["Survey NOT sent to '
             f"{model.user.email} because it's not an active or graduated student\"]"
             '}',
-            'avg_score':
+            'scores':
             None,
             'cohort_id':
             1,
@@ -203,6 +203,8 @@ class AnswerTestSuite(FeedbackTestCase):
             'max_teachers_to_ask':
             1,
             'response_rate':
+            None,
+            'scores':
             None,
         }])
         self.assertEqual(tasks.send_cohort_survey.delay.call_args_list, [])

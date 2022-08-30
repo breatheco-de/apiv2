@@ -1,3 +1,4 @@
+import re
 from breathecode.notify.actions import send_email_message, send_slack
 import logging, json
 from django.utils import timezone
@@ -7,7 +8,8 @@ from breathecode.authenticate.models import Token
 from .models import Answer, Survey, Review, ReviewPlatform
 from .utils import strings
 from breathecode.admissions.models import CohortUser
-from .tasks import send_cohort_survey, build_question
+from django.db.models import QuerySet
+from . import tasks
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,7 @@ def send_survey_group(survey=None, cohort=None):
 
         for uc in ucs:
             if uc.educational_status in ['ACTIVE', 'GRADUATED']:
-                send_cohort_survey.delay(uc.user.id, survey.id)
+                tasks.send_cohort_survey.delay(uc.user.id, survey.id)
 
                 logger.debug(f'Survey scheduled to send for {uc.user.email}')
                 result['success'].append(f'Survey scheduled to send for {uc.user.email}')
@@ -108,7 +110,7 @@ def send_question(user, cohort=None):
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
                                                          status='SENT').count()
 
-    question = build_question(answer)
+    question = tasks.build_question(answer)
 
     if question_was_sent_previously:
         answer = Answer.objects.filter(cohort=answer.cohort, user=user, status='SENT').first()
@@ -204,3 +206,57 @@ def create_user_graduation_reviews(user, cohort):
 
     logger.debug(f'No reviews requested for student {user.id} because average NPS score is {average}')
     return False
+
+
+def calculate_survey_response_rate(survey_id: int) -> float:
+    total_responses = Answer.objects.filter(survey__id=survey_id).count()
+    answered_responses = Answer.objects.filter(survey__id=survey_id, status='ANSWERED').count()
+    response_rate = (answered_responses / total_responses) * 100
+
+    return response_rate
+
+
+def calculate_survey_scores(survey_id: int) -> dict:
+
+    def get_average(answers: QuerySet[Answer]) -> float:
+        result = answers.aggregate(Avg('score'))
+        return result['score__avg']
+
+    survey = Survey.objects.filter(id=survey_id).first()
+    if not survey:
+        raise ValidationException('Survey not found', code=404, slug='not-found')
+
+    answers = Answer.objects.filter(survey=survey, status='ANSWERED')
+    total = get_average(answers)
+
+    academy_pattern = strings[survey.lang]['academy']['title'].split('{}')
+    cohort_pattern = strings[survey.lang]['cohort']['title'].split('{}')
+    mentor_pattern = strings[survey.lang]['mentor']['title'].split('{}')
+
+    academy = get_average(
+        answers.filter(title__startswith=academy_pattern[0], title__endswith=academy_pattern[1]))
+
+    cohort = get_average(
+        answers.filter(title__startswith=cohort_pattern[0], title__endswith=cohort_pattern[1]))
+
+    all_mentors = {
+        x.title
+        for x in answers.filter(title__startswith=mentor_pattern[0], title__endswith=mentor_pattern[1])
+    }
+
+    full_mentor_pattern = (mentor_pattern[0].replace('?', '\\?') + r'([\w ]+)' +
+                           mentor_pattern[1].replace('?', '\\?'))
+
+    mentors = []
+    for mentor in all_mentors:
+        name = re.findall(full_mentor_pattern, mentor)[0]
+        score = get_average(answers.filter(title=mentor))
+
+        mentors.append({'name': name, 'score': score})
+
+    return {
+        'total': total,
+        'academy': academy,
+        'cohort': cohort,
+        'mentors': sorted(mentors, key=lambda x: x['name']),
+    }

@@ -96,7 +96,7 @@ class SurveySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     lang = serpy.Field()
     cohort = GetCohortSerializer()
-    avg_score = serpy.Field()
+    scores = serpy.Field()
     response_rate = serpy.Field()
     status = serpy.Field()
     status_json = serpy.Field()
@@ -194,7 +194,7 @@ class SurveySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json', 'response_rate')
+        exclude = ('scores', 'status_json', 'response_rate')
 
     def validate(self, data):
 
@@ -245,7 +245,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json', 'status', 'response_rate')
+        exclude = ('scores', 'status_json', 'status', 'response_rate')
 
     def validate(self, data):
 
