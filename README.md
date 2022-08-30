@@ -37,7 +37,7 @@
 
 ## Documentation
 
-You can find the development documentation [on the webside](https://breatheco-de.github.io/apiv2/).
+You can find the development documentation [on the website](https://breatheco-de.github.io/apiv2/).
 
 Check out the [Postman docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef), [Swagger](https://breathecode.herokuapp.com/swagger/) or [Redoc](https://breathecode.herokuapp.com/swagger/).
 
