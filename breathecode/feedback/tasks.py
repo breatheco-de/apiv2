@@ -6,7 +6,7 @@ from breathecode.utils import getLogger
 from django.db.models import Avg
 from celery import shared_task, Task
 from django.utils import timezone
-import breathecode.notify.actions as actions
+from breathecode.notify import actions as notify_actions
 from .utils import strings
 from breathecode.utils import getLogger
 from breathecode.admissions.models import CohortUser, Cohort
@@ -14,6 +14,7 @@ from django.contrib.auth.models import User
 from .models import Survey, Answer
 from breathecode.mentorship.models import MentorshipSession
 from django.utils import timezone
+from . import actions
 
 # Get an instance of a logger
 logger = getLogger(__name__)
@@ -191,10 +192,10 @@ def send_cohort_survey(self, user_id, survey_id):
 
     if user.email:
 
-        actions.send_email_message('nps_survey', user.email, data)
+        notify_actions.send_email_message('nps_survey', user.email, data)
 
     if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy, 'slackteam'):
-        actions.send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
+        notify_actions.send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -216,14 +217,26 @@ def process_student_graduation(self, cohort_id, user_id):
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
+def recalculate_survey_scores(self, survey_id):
+    logger.debug('Starting recalculate_survey_score')
+
+    survey = Survey.objects.filter(id=survey_id).first()
+    if survey is None:
+        logger.error('Survey not found')
+        return
+
+    survey.response_rate = actions.calculate_survey_response_rate(survey.id)
+    survey.scores = actions.calculate_survey_scores(survey.id)
+    survey.save()
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
 def process_answer_received(self, answer_id):
     """
     This task will be called every time a single NPS answer is received
     the task will review the score, if we got less than 7 it will notify
     the school.
     """
-
-    from breathecode.notify.actions import send_email_message
 
     logger.debug('Starting notify_bad_nps_score')
     answer = Answer.objects.filter(id=answer_id).first()
@@ -235,13 +248,8 @@ def process_answer_received(self, answer_id):
         logger.error('No survey connected to answer.')
         return
 
-    survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
-    answer.survey.avg_score = survey_score['score__avg']
-
-    total_responses = Answer.objects.filter(survey=answer.survey).count()
-    answered_responses = Answer.objects.filter(survey=answer.survey, status='ANSWERED').count()
-    response_rate = (answered_responses / total_responses) * 100
-    answer.survey.response_rate = response_rate
+    answer.survey.response_rate = actions.calculate_survey_response_rate(answer.survey.id)
+    answer.survey.scores = actions.calculate_survey_scores(answer.survey.id)
     answer.survey.save()
 
     if answer.user and answer.academy and answer.score is not None and answer.score < 8:
@@ -262,24 +270,18 @@ def process_answer_received(self, answer_id):
 
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
         if list_of_emails:
-            send_email_message('negative_answer',
-                               list_of_emails,
-                               data={
-                                   'SUBJECT':
-                                   f'A student answered with a bad NPS score at {answer.academy.name}',
-                                   'FULL_NAME':
-                                   answer.user.first_name + ' ' + answer.user.last_name,
-                                   'QUESTION':
-                                   answer.title,
-                                   'SCORE':
-                                   answer.score,
-                                   'COMMENTS':
-                                   answer.comment,
-                                   'ACADEMY':
-                                   answer.academy.name,
-                                   'LINK':
-                                   f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
-                               })
+            notify_actions.send_email_message(
+                'negative_answer',
+                list_of_emails,
+                data={
+                    'SUBJECT': f'A student answered with a bad NPS score at {answer.academy.name}',
+                    'FULL_NAME': answer.user.first_name + ' ' + answer.user.last_name,
+                    'QUESTION': answer.title,
+                    'SCORE': answer.score,
+                    'COMMENTS': answer.comment,
+                    'ACADEMY': answer.academy.name,
+                    'LINK': f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
+                })
 
     return True
 
@@ -347,6 +349,6 @@ def send_mentorship_session_survey(self, session_id):
     }
 
     if session.mentee.email:
-        if actions.send_email_message('nps_survey', session.mentee.email, data):
+        if notify_actions.send_email_message('nps_survey', session.mentee.email, data):
             answer.sent_at = timezone.now()
             answer.save()
