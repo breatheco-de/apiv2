@@ -9,6 +9,8 @@ from breathecode.services.daily.client import DailyClient
 from breathecode.utils.datetime_interger import duration_to_str
 from django.db.models import QuerySet
 from .models import MentorshipSession, MentorshipBill
+from breathecode.utils.validation_exception import ValidationException
+from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
@@ -268,14 +270,12 @@ def last_month_date(current_date):
 
 
 def generate_mentor_bills(mentor, reset=False):
-
-    generated_bills = []
-    start_at = None
-    end_at = None
+    bills = []
 
     def get_unpaid_sessions():
         return MentorshipSession.objects.filter(
-            Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.academy),
+            Q(bill__isnull=True)
+            | Q(bill__status='DUE', bill__academy=mentor.academy, bill__paid_at__isnull=True),
             service__isnull=False,
             allow_billing=True,
             mentor__id=mentor.id,
@@ -283,29 +283,25 @@ def generate_mentor_bills(mentor, reset=False):
             started_at__isnull=False,
         ).order_by('started_at')
 
-    previous_bill = MentorshipBill.objects.filter(mentor__id=mentor.id,
-                                                  academy__id=mentor.academy.id,
-                                                  status='DUE').order_by('-started_at').first()
+    without_service = MentorshipSession.objects.filter(mentor=mentor, service__isnull=True).count()
+    if without_service:
+        raise ValidationException(
+            f'This mentor has {without_service} sessions without an associated service that need to be fixed',
+            slug='session_without_service')
 
-    if (previous_bill is not None and previous_bill.started_at and previous_bill.ended_at
-            and previous_bill.ended_at > timezone.now()):
-        return generated_bills
+    unpaid_sessions = get_unpaid_sessions()
+    if not unpaid_sessions:
+        return []
 
-    monthly_unpaid_sessions = None
-    while end_at is None or end_at < timezone.now():
+    MentorshipBill.objects.filter(mentor__id=mentor.id, academy__id=mentor.academy.id, status='DUE').delete()
 
-        unpaid_sessions = get_unpaid_sessions()
-        #print("Sessions: " + "".join([str(s.started_at) for s in unpaid_sessions]))
-        if unpaid_sessions.count() == 0:
-            return generated_bills
+    pending_months = sorted({(x.year, x.month) for x in unpaid_sessions.values_list('started_at', flat=True)})
+    for year, month in pending_months:
+        sessions_of_month = unpaid_sessions.filter(started_at__month=month, started_at__year=year)
 
-        if previous_bill is None or not previous_bill.started_at or not previous_bill.ended_at:
-            start_at = unpaid_sessions.first().started_at
-            end_at = last_month_date(start_at)
-        else:
-            start_at = previous_bill.ended_at + datetime.timedelta(seconds=1)
-            end_at = last_month_date(start_at)
-            # raise Exception(f"Starting from {start_at} to {end_at}")
+        start_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC)
+        end_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC) + relativedelta(
+            months=1) - datetime.timedelta(microseconds=1)
 
         open_bill = MentorshipBill(mentor=mentor,
                                    academy=mentor.academy,
@@ -313,35 +309,27 @@ def generate_mentor_bills(mentor, reset=False):
                                    ended_at=end_at)
         open_bill.save()
 
-        monthly_unpaid_sessions = unpaid_sessions.filter(started_at__gte=start_at, started_at__lte=end_at)
-        print(
-            f'There are {len(monthly_unpaid_sessions)} unpaid sessions starting from {start_at} to {end_at}')
+        open_bill = generate_mentor_bill(mentor, open_bill, sessions_of_month, reset)
 
-        generate_mentor_bill(mentor, open_bill, monthly_unpaid_sessions, reset)
+        bills.append(open_bill)
 
-        generated_bills.append(open_bill)
-        print(f'Added bill with total ammount {open_bill.total_duration_in_hours}')
-
-        # the recently created bill is not the previous because we moving on to the next cycle
-        previous_bill = open_bill
-        print(f'Billing until {end_at} vs {timezone.now()}')
-
-    return generated_bills
+    return bills
 
 
 def generate_mentor_bill(mentor, bill, sessions, reset=False):
     total = {'minutes': 0, 'overtime_minutes': 0}
 
     for session in sessions:
-        if session.bill is None:
-            session.bill = bill
+        session.bill = bill
 
-            _result = get_accounted_time(session)
-            session.suggested_accounted_duration = _result['accounted_duration']
-            session.status_message = _result['status_message']
-            # if is null and reset=true all the sessions durations will be rest to the suggested one
-            if session.accounted_duration is None or reset == True:
-                session.accounted_duration = _result['accounted_duration']
+        _result = get_accounted_time(session)
+
+        session.suggested_accounted_duration = _result['accounted_duration']
+        session.status_message = _result['status_message']
+
+        # if is null and reset=true all the sessions durations will be rest to the suggested one
+        if session.accounted_duration is None or reset == True:
+            session.accounted_duration = _result['accounted_duration']
 
         extra_minutes = 0
         if session.accounted_duration > session.service.duration:

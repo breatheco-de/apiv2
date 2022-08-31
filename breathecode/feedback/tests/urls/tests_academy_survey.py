@@ -1,16 +1,9 @@
 """
 Test /academy/survey
 """
-import re, urllib
 from unittest.mock import patch, MagicMock, call
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from ..mixins import FeedbackTestCase
 import breathecode.feedback.actions as actions
 from django.utils import timezone
@@ -21,9 +14,6 @@ now = timezone.now()
 class SurveyTestSuite(FeedbackTestCase):
     """Test /academy/survey"""
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__without_auth(self):
         """Test /academy/survey without authorization"""
         url = reverse_lazy('feedback:academy_survey')
@@ -33,9 +23,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__without_academy(self):
         """Test /academy/survey without academy"""
         self.bc.database.create(authenticate=True)
@@ -50,9 +37,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__without_role(self):
         """Test /academy/survey without role"""
         self.headers(academy=1)
@@ -68,9 +52,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__without_data(self):
         """Test /academy/survey without data"""
 
@@ -90,9 +71,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_data(self):
         """Test /academy/survey with data"""
 
@@ -117,7 +95,7 @@ class SurveyTestSuite(FeedbackTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name
             },
-            'avg_score': model['survey'].avg_score,
+            'scores': model['survey'].scores,
             'response_rate': model['survey'].response_rate,
             'status': model['survey'].status,
             'status_json': model['survey'].status_json,
@@ -130,9 +108,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_response_rate(self):
         """Test /academy/survey wiith response rate"""
 
@@ -158,7 +133,7 @@ class SurveyTestSuite(FeedbackTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name
             },
-            'avg_score': model['survey'].avg_score,
+            'scores': model['survey'].scores,
             'response_rate': model['survey'].response_rate,
             'status': model['survey'].status,
             'status_json': model['survey'].status_json,
@@ -170,9 +145,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_sent_status_query(self):
         """Test /academy/survey with sent status query"""
 
@@ -194,9 +166,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_pending_status_query(self):
         """Test /academy/survey with pending status query"""
 
@@ -221,7 +190,7 @@ class SurveyTestSuite(FeedbackTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name
             },
-            'avg_score': model['survey'].avg_score,
+            'scores': model['survey'].scores,
             'response_rate': model['survey'].response_rate,
             'status': model['survey'].status,
             'status_json': model['survey'].status_json,
@@ -234,9 +203,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_different_lang_query(self):
         """Test /academy/survey with different lang status query"""
 
@@ -258,9 +224,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_same_lang_query(self):
         """Test /academy/survey with same lang status query"""
 
@@ -285,7 +248,7 @@ class SurveyTestSuite(FeedbackTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name
             },
-            'avg_score': model['survey'].avg_score,
+            'scores': model['survey'].scores,
             'response_rate': model['survey'].response_rate,
             'status': model['survey'].status,
             'status_json': model['survey'].status_json,
@@ -298,9 +261,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_different_cohort_slug_cohort_query(self):
         """Test /academy/survey with different cohort slug than what is in the cohort query"""
 
@@ -323,9 +283,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_same_cohort_slug_cohort_query(self):
         """Test /academy/survey with same cohort slug as in the model"""
 
@@ -352,7 +309,7 @@ class SurveyTestSuite(FeedbackTestCase):
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name
             },
-            'avg_score': model['survey'].avg_score,
+            'scores': model['survey'].scores,
             'response_rate': model['survey'].response_rate,
             'status': model['survey'].status,
             'status_json': model['survey'].status_json,
@@ -365,9 +322,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__without_auth(self):
         """Test /academy/survey without authorization"""
         url = reverse_lazy('feedback:academy_survey')
@@ -377,9 +331,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__without_academy(self):
         """Test /academy/survey without authorization"""
         self.bc.database.create(authenticate=True)
@@ -394,9 +345,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__without_role(self):
         """Test /academy/survey without role"""
         self.headers(academy=1)
@@ -412,9 +360,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__without_cohort(self):
         """Test /academy/survey post without cohort"""
 
@@ -434,9 +379,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__with_cohort_needs_rights(self):
         """Test /academy/survey post with cohort needs rights"""
 
@@ -458,9 +400,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__with_cohort_shorter_than_hour(self):
         """Test /academy/survey post with cohort shorter than hour"""
 
@@ -481,9 +420,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__without_cohort_teacher_assigned(self):
         """Test /academy/survey post without cohort teacher assigned"""
 
@@ -505,9 +441,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__with_cohort_teacher_assigned(self):
         """Test /academy/survey post with cohort teacher assigned"""
 
@@ -543,9 +476,6 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__with_cohort_teacher_assigned_with_longer_than_hour(self):
         """Test /academy/survey post with cohort teacher assigned with longer than hour."""
 

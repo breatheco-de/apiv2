@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytz
 
+from breathecode.utils.validation_exception import ValidationException
+
 from ..mixins import MentorshipTestCase
 from ...actions import generate_mentor_bills
 
@@ -32,11 +34,40 @@ def mentorship_bill_field(data={}):
     }
 
 
-#FIXME: improve this tests
+def mentorship_session_field(data={}):
+    return {
+        'name': None,
+        'is_online': False,
+        'latitude': None,
+        'longitude': None,
+        'mentor_id': 0,
+        'service_id': None,
+        'mentee_id': None,
+        'online_meeting_url': None,
+        'online_recording_url': None,
+        'status': 'PENDING',
+        'status_message': None,
+        'allow_billing': True,
+        'bill_id': None,
+        'accounted_duration': None,
+        'agenda': None,
+        'summary': None,
+        'starts_at': None,
+        'ends_at': None,
+        'started_at': None,
+        'ended_at': None,
+        'mentor_joined_at': None,
+        'mentor_left_at': None,
+        'mentee_left_at': None,
+        'suggested_accounted_duration': None,
+        **data,
+    }
+
+
 class GenerateMentorBillsTestCase(MentorshipTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=NOW))
-    def test_generate_bills_with_no_previous_bills_no_unpaid_sessions(self):
+    def test_generate_bills_with_no_previous_bills_no_unpaid_sessions__session_without_service(self):
         """
         First bill generate, with no previous bills.
         """
@@ -44,10 +75,31 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         models = self.bc.database.create(mentor_profile=1, user=1, mentorship_session=1)
         mentor = models.mentor_profile
 
+        with self.assertRaisesMessage(ValidationException, 'session_without_service'):
+            generate_mentor_bills(mentor)
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [])
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            self.bc.format.to_dict(models.mentorship_session),
+        ])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=NOW))
+    def test_generate_bills_with_no_previous_bills_no_unpaid_sessions__session_with_service(self):
+        """
+        First bill generate, with no previous bills.
+        """
+
+        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_session=1, mentorship_service=1)
+        mentor = models.mentor_profile
+
         bills = generate_mentor_bills(mentor)
 
-        #FIXME
-        self.assertEqual(len(bills), 0)
+        self.assertEqual(bills, [])
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [])
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            self.bc.format.to_dict(models.mentorship_session),
+        ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=NOW))
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -60,10 +112,14 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                                            user=1,
                                            mentorship_service=1,
                                            mentorship_session={
-                                               'status': 'COMPLETED',
-                                               'started_at': NOW - datetime.timedelta(days=80, hours=2),
-                                               'ended_at': NOW - datetime.timedelta(days=80, hours=1),
-                                               'accounted_duration': datetime.timedelta(hours=1)
+                                               'status':
+                                               'COMPLETED',
+                                               'started_at':
+                                               datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                                               'ended_at':
+                                               datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                                               'accounted_duration':
+                                               datetime.timedelta(hours=1)
                                            })
         models = self.bc.database.create(mentor_profile=1,
                                          user=1,
@@ -72,27 +128,27 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                                              'status':
                                              'COMPLETED',
                                              'started_at':
-                                             NOW - datetime.timedelta(days=80, hours=2),
+                                             datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                                              'ended_at':
-                                             NOW - datetime.timedelta(days=80, hours=1),
+                                             datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
                                              'accounted_duration':
                                              datetime.timedelta(hours=1)
                                          }, {
                                              'status':
                                              'COMPLETED',
                                              'started_at':
-                                             NOW - datetime.timedelta(days=79, hours=3),
+                                             datetime.datetime(2021, 10, 17, 21, 0, tzinfo=pytz.UTC),
                                              'ended_at':
-                                             NOW - datetime.timedelta(days=79, hours=1),
+                                             datetime.datetime(2021, 10, 17, 23, 0, tzinfo=pytz.UTC),
                                              'accounted_duration':
                                              datetime.timedelta(hours=2)
                                          }, {
                                              'status':
                                              'COMPLETED',
                                              'started_at':
-                                             NOW - datetime.timedelta(days=40, hours=3),
+                                             datetime.datetime(2021, 11, 25, 21, 0, tzinfo=pytz.UTC),
                                              'ended_at':
-                                             NOW - datetime.timedelta(days=40, hours=1),
+                                             datetime.datetime(2021, 11, 25, 23, 0, tzinfo=pytz.UTC),
                                              'accounted_duration':
                                              datetime.timedelta(hours=2)
                                          }])
@@ -101,12 +157,17 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         bills = generate_mentor_bills(mentor)
 
         list_bills = [self.bc.format.to_dict(x) for x in bills]
+        first = sorted(models.mentorship_session, key=lambda x: x.started_at)[0].started_at
+        latest = sorted(models.mentorship_session, key=lambda x: x.ended_at, reverse=True)[0].ended_at
 
-        bill1 = round((models.mentorship_session[0].accounted_duration.seconds +
+        bill1 = round(models_a.mentorship_session.accounted_duration.seconds / 60 / 60,
+                      2) * models.mentor_profile.price_per_hour
+
+        bill2 = round((models.mentorship_session[0].accounted_duration.seconds +
                        models.mentorship_session[1].accounted_duration.seconds) / 60 / 60,
                       2) * models.mentor_profile.price_per_hour
 
-        bill2 = round((models.mentorship_session[2].accounted_duration.seconds) / 60 / 60,
+        bill3 = round((models.mentorship_session[2].accounted_duration.seconds) / 60 / 60,
                       2) * models.mentor_profile.price_per_hour
 
         self.assertEqual(
@@ -114,53 +175,115 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                 mentorship_bill_field(
                     {
                         'academy_id': 2,
+                        'started_at': datetime.datetime(2021, 10, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
                         'ended_at': datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
                         'id': 1,
                         'mentor_id': 2,
                         'overtime_minutes': 60.0,
-                        'started_at': datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                         'total_duration_in_hours': 3.0,
                         'total_duration_in_minutes': 180.0,
-                        'total_price': bill1,
-                    }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 2,
-                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 2,
-                        'mentor_id': 2,
-                        'overtime_minutes': 60.0,
-                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 999999, tzinfo=pytz.UTC),
-                        'total_duration_in_hours': 2.0,
-                        'total_duration_in_minutes': 120.0,
                         'total_price': bill2,
                     }),
                 mentorship_bill_field(
                     {
                         'academy_id': 2,
-                        'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 3,
+                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                        'id': 2,
                         'mentor_id': 2,
-                        'overtime_minutes': 0.0,
-                        'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 999999, tzinfo=pytz.UTC),
-                        'total_duration_in_hours': 0.0,
-                        'total_duration_in_minutes': 0,
-                        'total_price': 0.0,
+                        'overtime_minutes': 60.0,
+                        'total_duration_in_hours': 2.0,
+                        'total_duration_in_minutes': 120.0,
+                        'total_price': bill3,
+                    }),
+            ])
+
+        self.assertEqual(
+            self.bc.database.list_of('mentorship.MentorshipBill'), [
+                mentorship_bill_field(
+                    {
+                        'academy_id': 2,
+                        'started_at': datetime.datetime(2021, 10, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                        'ended_at': datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                        'id': 1,
+                        'mentor_id': 2,
+                        'overtime_minutes': 60.0,
+                        'total_duration_in_hours': 3.0,
+                        'total_duration_in_minutes': 180.0,
+                        'total_price': bill2,
                     }),
                 mentorship_bill_field(
                     {
                         'academy_id': 2,
-                        'ended_at': datetime.datetime(2022, 1, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 4,
+                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                        'id': 2,
                         'mentor_id': 2,
-                        'overtime_minutes': 0.0,
-                        'started_at': datetime.datetime(2022, 1, 1, 0, 0, 0, 999999, tzinfo=pytz.UTC),
-                        'total_duration_in_hours': 0.0,
-                        'total_duration_in_minutes': 0,
-                        'total_price': 0.0,
+                        'overtime_minutes': 60.0,
+                        'total_duration_in_hours': 2.0,
+                        'total_duration_in_minutes': 120.0,
+                        'total_price': bill3,
                     }),
             ])
-        self.assertEqual(bills[0].total_duration_in_hours, 3)
+
+        status_message = ('The mentor never joined the meeting, no time will be '
+                          'accounted for.')
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            mentorship_session_field({
+                'accounted_duration': datetime.timedelta(seconds=3600),
+                'id': 1,
+                'mentee_id': 1,
+                'mentor_id': 1,
+                'service_id': 1,
+                'status': 'COMPLETED',
+                'started_at': datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                'bill_id': None,
+            }),
+            mentorship_session_field({
+                'accounted_duration': datetime.timedelta(seconds=3600),
+                'id': 2,
+                'mentee_id': 2,
+                'mentor_id': 2,
+                'service_id': 2,
+                'status': 'COMPLETED',
+                'status_message': status_message,
+                'suggested_accounted_duration': datetime.timedelta(0),
+                'started_at': datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                'summary': None,
+                'bill_id': 1,
+            }),
+            mentorship_session_field({
+                'accounted_duration': datetime.timedelta(seconds=7200),
+                'id': 3,
+                'mentee_id': 2,
+                'mentor_id': 2,
+                'service_id': 2,
+                'status': 'COMPLETED',
+                'status_message': status_message,
+                'suggested_accounted_duration': datetime.timedelta(0),
+                'started_at': datetime.datetime(2021, 10, 17, 21, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 10, 17, 23, 0, tzinfo=pytz.UTC),
+                'summary': None,
+                'bill_id': 1,
+            }),
+            mentorship_session_field({
+                'accounted_duration': datetime.timedelta(seconds=7200),
+                'id': 4,
+                'mentee_id': 2,
+                'mentor_id': 2,
+                'service_id': 2,
+                'status': 'COMPLETED',
+                'status_message': status_message,
+                'suggested_accounted_duration': datetime.timedelta(0),
+                'started_at': datetime.datetime(2021, 11, 25, 21, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 11, 25, 23, 0, tzinfo=pytz.UTC),
+                'summary': None,
+                'bill_id': 2,
+            }),
+        ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=NOW))
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -175,10 +298,14 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         models_a = self.bc.database.create(mentor_profile=1,
                                            user=1,
                                            mentorship_session={
-                                               'status': 'COMPLETED',
-                                               'started_at': start,
-                                               'ended_at': end,
-                                               'accounted_duration': datetime.timedelta(hours=1)
+                                               'status':
+                                               'COMPLETED',
+                                               'started_at':
+                                               datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                                               'ended_at':
+                                               datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                                               'accounted_duration':
+                                               datetime.timedelta(hours=1)
                                            },
                                            mentorship_service=1,
                                            mentorship_bill={
@@ -192,27 +319,27 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                                              'status':
                                              'COMPLETED',
                                              'started_at':
-                                             NOW - datetime.timedelta(days=49, hours=2),
+                                             datetime.datetime(2021, 11, 16, 22, 0, tzinfo=pytz.UTC),
                                              'ended_at':
-                                             NOW - datetime.timedelta(days=49, hours=1),
+                                             datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
                                              'accounted_duration':
                                              datetime.timedelta(hours=1)
                                          }, {
                                              'status':
                                              'COMPLETED',
                                              'started_at':
-                                             NOW - datetime.timedelta(days=48, hours=3),
+                                             datetime.datetime(2021, 11, 17, 21, 0, tzinfo=pytz.UTC),
                                              'ended_at':
-                                             NOW - datetime.timedelta(days=48, hours=1),
+                                             datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
                                              'accounted_duration':
                                              datetime.timedelta(hours=2)
                                          }, {
                                              'status':
                                              'COMPLETED',
                                              'started_at':
-                                             NOW - datetime.timedelta(days=5, hours=3),
+                                             datetime.datetime(2021, 12, 30, 21, 0, tzinfo=pytz.UTC),
                                              'ended_at':
-                                             NOW - datetime.timedelta(days=5, hours=1),
+                                             datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
                                              'accounted_duration':
                                              datetime.timedelta(hours=2)
                                          }])
@@ -221,11 +348,14 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         bills = generate_mentor_bills(mentor)
         list_bills = [self.bc.format.to_dict(x) for x in bills]
 
-        bill1 = round((models.mentorship_session[0].accounted_duration.seconds +
+        bill1 = round(models_a.mentorship_session.accounted_duration.seconds / 60 / 60,
+                      2) * models.mentor_profile.price_per_hour
+
+        bill2 = round((models.mentorship_session[0].accounted_duration.seconds +
                        models.mentorship_session[1].accounted_duration.seconds) / 60 / 60,
                       2) * models.mentor_profile.price_per_hour
 
-        bill2 = round((models.mentorship_session[2].accounted_duration.seconds) / 60 / 60,
+        bill3 = round((models.mentorship_session[2].accounted_duration.seconds) / 60 / 60,
                       2) * models.mentor_profile.price_per_hour
 
         self.assertEqual(
@@ -233,39 +363,139 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                 mentorship_bill_field(
                     {
                         'academy_id': 1,
-                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                        'started_at': datetime.datetime(2021, 10, 1, 0, 0, tzinfo=pytz.UTC),
+                        'ended_at': datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
                         'id': 2,
                         'mentor_id': 1,
-                        'overtime_minutes': 60.0,
-                        'started_at': datetime.datetime(2021, 11, 2, 0, 0, tzinfo=pytz.UTC),
-                        'total_duration_in_hours': 3.0,
-                        'total_duration_in_minutes': 180.0,
+                        'overtime_minutes': 0.0,
+                        'total_duration_in_hours': 1.0,
+                        'total_duration_in_minutes': 60.0,
                         'total_price': bill1,
                     }),
                 mentorship_bill_field(
                     {
                         'academy_id': 1,
-                        'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
                         'id': 3,
                         'mentor_id': 1,
                         'overtime_minutes': 60.0,
-                        'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 999999, tzinfo=pytz.UTC),
-                        'total_duration_in_hours': 2.0,
-                        'total_duration_in_minutes': 120.0,
+                        'total_duration_in_hours': 3.0,
+                        'total_duration_in_minutes': 180.0,
                         'total_price': bill2,
                     }),
                 mentorship_bill_field(
                     {
                         'academy_id': 1,
-                        'ended_at': datetime.datetime(2022, 1, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                        'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                        'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
                         'id': 4,
                         'mentor_id': 1,
-                        'overtime_minutes': 0.0,
-                        'started_at': datetime.datetime(2022, 1, 1, 0, 0, 0, 999999, tzinfo=pytz.UTC),
-                        'total_duration_in_hours': 0.0,
-                        'total_duration_in_minutes': 0,
-                        'total_price': 0.0,
+                        'overtime_minutes': 60.0,
+                        'total_duration_in_hours': 2.0,
+                        'total_duration_in_minutes': 120.0,
+                        'total_price': bill3,
                     }),
             ])
-        # first generated bill needs to be one month after the previous one
-        self.assertEqual(bills[0].started_at.month, start.month + 1)
+
+        self.assertEqual(
+            self.bc.database.list_of('mentorship.MentorshipBill'), [
+                mentorship_bill_field(
+                    {
+                        'academy_id': 1,
+                        'started_at': datetime.datetime(2021, 10, 1, 0, 0, tzinfo=pytz.UTC),
+                        'ended_at': datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                        'id': 2,
+                        'mentor_id': 1,
+                        'overtime_minutes': 0.0,
+                        'total_duration_in_hours': 1.0,
+                        'total_duration_in_minutes': 60.0,
+                        'total_price': bill1,
+                    }),
+                mentorship_bill_field(
+                    {
+                        'academy_id': 1,
+                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                        'id': 3,
+                        'mentor_id': 1,
+                        'overtime_minutes': 60.0,
+                        'total_duration_in_hours': 3.0,
+                        'total_duration_in_minutes': 180.0,
+                        'total_price': bill2,
+                    }),
+                mentorship_bill_field(
+                    {
+                        'academy_id': 1,
+                        'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                        'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                        'id': 4,
+                        'mentor_id': 1,
+                        'overtime_minutes': 60.0,
+                        'total_duration_in_hours': 2.0,
+                        'total_duration_in_minutes': 120.0,
+                        'total_price': bill3,
+                    }),
+            ])
+
+        status_message = ('The mentor never joined the meeting, no time will be '
+                          'accounted for.')
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            mentorship_session_field({
+                'accounted_duration': datetime.timedelta(seconds=3600),
+                'id': 1,
+                'mentee_id': 1,
+                'mentor_id': 1,
+                'service_id': 1,
+                'status': 'COMPLETED',
+                'status_message': status_message,
+                'suggested_accounted_duration': datetime.timedelta(0),
+                'started_at': datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                'summary': None,
+                'bill_id': 2,
+            }),
+            mentorship_session_field({
+                'accounted_duration': datetime.timedelta(seconds=3600),
+                'id': 2,
+                'mentee_id': 1,
+                'mentor_id': 1,
+                'service_id': 2,
+                'status': 'COMPLETED',
+                'status_message': status_message,
+                'suggested_accounted_duration': datetime.timedelta(0),
+                'started_at': datetime.datetime(2021, 11, 16, 22, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
+                'summary': None,
+                'bill_id': 3,
+            }),
+            mentorship_session_field({
+                'accounted_duration': datetime.timedelta(seconds=7200),
+                'id': 3,
+                'mentee_id': 1,
+                'mentor_id': 1,
+                'service_id': 2,
+                'status': 'COMPLETED',
+                'status_message': status_message,
+                'suggested_accounted_duration': datetime.timedelta(0),
+                'started_at': datetime.datetime(2021, 11, 17, 21, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
+                'summary': None,
+                'bill_id': 3,
+            }),
+            mentorship_session_field({
+                'accounted_duration': datetime.timedelta(seconds=7200),
+                'id': 4,
+                'mentee_id': 1,
+                'mentor_id': 1,
+                'service_id': 2,
+                'status': 'COMPLETED',
+                'status_message': status_message,
+                'suggested_accounted_duration': datetime.timedelta(0),
+                'started_at': datetime.datetime(2021, 12, 30, 21, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
+                'summary': None,
+                'bill_id': 4,
+            }),
+        ])
