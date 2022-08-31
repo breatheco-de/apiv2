@@ -1,6 +1,5 @@
 import logging, os
 from celery import shared_task, Task
-from .models import SlackTeam
 from .actions import sync_slack_team_channel, sync_slack_team_users, send_email_message
 from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
@@ -66,3 +65,24 @@ def async_slack_action(post_data):
     except Exception as e:
         logger.exception('Error processing slack action')
         return False
+
+
+@shared_task
+def async_deliver_hook(target, payload, instance=None, hook_id=None, **kwargs):
+    from .utils.hook_manager import HookManager
+    """
+    target:     the url to receive the payload.
+    payload:    a python primitive data structure
+    instance:   a possibly null "trigger" instance
+    hook:       the defining Hook object (useful for removing)
+    """
+    response = requests.post(url=target,
+                             data=json.dumps(payload, cls=DjangoJSONEncoder),
+                             headers={'Content-Type': 'application/json'})
+
+    if response.status_code == 410 and hook_id:
+        HookModel = HookManager.get_hook_model()
+        hook = HookModel.object.get(id=hook_id)
+        hook.delete()
+
+    # would be nice to log this, at least for a little while...
