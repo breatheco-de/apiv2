@@ -161,13 +161,13 @@ class MentorProfile(models.Model):
         return f'{name} ({self.id})'
 
 
-DIRTY = 'DIRTY'
+RECALCULATE = 'RECALCULATE'
 DUE = 'DUE'
 APPROVED = 'APPROVED'
 PAID = 'PAID'
 IGNORED = 'IGNORED'
 BILL_STATUS = (
-    (DIRTY, 'Dirty'),
+    (RECALCULATE, 'Recalculate'),
     (DUE, 'Due'),
     (APPROVED, 'Approved'),
     (PAID, 'Paid'),
