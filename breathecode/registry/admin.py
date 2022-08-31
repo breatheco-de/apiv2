@@ -10,8 +10,19 @@ from breathecode.admissions.admin import CohortAdmin
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.utils.admin import change_field
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword, AssetComment
-from .tasks import async_pull_from_github, async_test_asset
+from breathecode.services.seo import SEOAnalyzer
+from .models import (
+    Asset,
+    AssetTechnology,
+    AssetAlias,
+    AssetErrorLog,
+    KeywordCluster,
+    AssetCategory,
+    AssetKeyword,
+    AssetComment,
+    SEOReport,
+)
+from .tasks import async_pull_from_github, async_test_asset, async_execute_seo_report
 from .actions import pull_from_github, get_user_from_github_username, test_asset
 
 logger = logging.getLogger(__name__)
@@ -134,6 +145,17 @@ def test_asset_integrity(modeladmin, request, queryset):
         try:
             async_test_asset.delay(a.slug)
             #test_asset(a)
+        except Exception as e:
+            messages.error(request, a.slug + ': ' + str(e))
+
+
+def seo_report(modeladmin, request, queryset):
+    assets = queryset.all()
+
+    for a in assets:
+        try:
+            # async_execute_seo_report.delay(a.slug)
+            SEOAnalyzer(a).start()
         except Exception as e:
             messages.error(request, a.slug + ': ' + str(e))
 
@@ -264,6 +286,7 @@ class AssetAdmin(admin.ModelAdmin):
         add_gitpod,
         remove_gitpod,
         pull_content_from_github,
+        seo_report,
         make_me_author,
         make_me_owner,
         create_assessment_from_asset,
@@ -276,7 +299,8 @@ class AssetAdmin(admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
 
-        if obj is not None and obj.readme is not None and 'ipynb' in obj.url and len(obj.readme) > 2000:
+        if obj is not None and obj.readme is not None and obj.url is not None and 'ipynb' in obj.url and len(
+                obj.readme) > 2000:
             self.exclude = ('readme', 'html')
         form = super(AssetAdmin, self).get_form(request, obj, **kwargs)
         return form
@@ -535,9 +559,9 @@ class KeywordAssignedFilter(admin.SimpleListFilter):
 @admin.register(AssetKeyword)
 class AssetKeywordAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'title']
-    list_display = ('id', 'slug', 'title', 'cluster', 'academy')
-    raw_id_fields = ['academy']
-    list_filter = ['academy', KeywordAssignedFilter]
+    list_display = ('id', 'slug', 'title', 'cluster')
+    # raw_id_fields = ['academy']
+    list_filter = [KeywordAssignedFilter]
 
 
 @admin.register(KeywordCluster)
@@ -553,4 +577,12 @@ class AssetCommentAdmin(admin.ModelAdmin):
     list_display = ['asset', 'text', 'author']
     search_fields = ('asset__slug', 'author__first_name', 'author__last_name', 'author__email')
     raw_id_fields = ['asset', 'author']
+    list_filter = ['asset__academy']
+
+
+@admin.register(SEOReport)
+class SEOReportAdmin(admin.ModelAdmin):
+    list_display = ['report_type', 'created_at', 'status', 'asset']
+    search_fields = ('asset__slug', 'asset__title', 'report_type')
+    raw_id_fields = ['asset']
     list_filter = ['asset__academy']
