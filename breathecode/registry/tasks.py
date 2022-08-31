@@ -30,7 +30,8 @@ class BaseTaskWithRetry(Task):
 @shared_task
 def async_pull_from_github(asset_slug, user_id=None):
     logger.debug(f'Synching asset {asset_slug} with data found on github')
-    return pull_from_github(asset_slug)
+    asset = pull_from_github(asset_slug)
+    return asset != 'ERROR'
 
 
 @shared_task
