@@ -35,6 +35,16 @@ def generate_external_readme(a):
     return True
 
 
+def get_video_url(video_id):
+    if re.search(r'https?:\/\/', video_id) is None:
+        return 'https://www.youtube.com/watch?v=' + video_id
+    else:
+        patterns = ((r'(https?:\/\/www\.loom\.com\/)embed(\/.+)', r'\1share\2'), )
+        for regex, replacement in patterns:
+            video_id = re.sub(regex, replacement, video_id)
+        return video_id
+
+
 def create_asset(data, asset_type, force=False):
     slug = data['slug']
     created = False
@@ -102,13 +112,9 @@ def create_asset(data, asset_type, force=False):
         a.graded = (data['graded'] == True or (isinstance(data['graded'], str)
                                                and data['graded'].upper() in ['ISOLATED', 'INCREMENTAL']))
     if 'video-id' in data:
-        video_id = str(data['video-id'])
-        if re.search(r"https?:\/\/", video_id) is None:
-            a.solution_video_url = 'https://www.youtube.com/watch?v=' + video_id
-        else:
-            a.solution_video_url = video_id
+        a.solution_video_url = get_video_url(str(data['video-id']))
         a.with_video = True
-            
+
     if 'preview' in data:
         a.preview = data['preview']
     if 'video-solutions' in data:
@@ -453,7 +459,7 @@ class AssetThumbnailGenerator:
         return bool((self.width and not self.height) or (not self.width and self.height))
 
 
-def sync_learnpack_asset(github, asset):
+def sync_learnpack_asset(github, asset, override_meta):
 
     org_name, repo_name, branch_name = get_url_info(asset.url)
     repo = github.get_repo(f'{org_name}/{repo_name}')
@@ -490,7 +496,7 @@ def sync_learnpack_asset(github, asset):
     asset.readme = str(readme_file.content)
     asset = clean_asset_readme(asset)
 
-    if learn_file is not None:
+    if learn_file is not None and (asset.last_synch_at is None or override_meta):
         config = json.loads(learn_file.decoded_content.decode('utf-8'))
         asset.config = config
 
@@ -506,11 +512,7 @@ def sync_learnpack_asset(github, asset):
             raise Exception(f'Missing preview URL')
 
         if 'video-id' in config:
-            video_id = str(config['video-id'])
-            if re.search(r"https?:\/\/", video_id) is None:
-                asset.solution_video_url = 'https://www.youtube.com/watch?v=' + video_id
-            else:
-                asset.solution_video_url = video_id
+            asset.solution_video_url = get_video_url(str(config['video-id']))
             asset.with_video = True
 
         if 'duration' in config:
