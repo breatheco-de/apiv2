@@ -403,6 +403,157 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         ])
 
     """
+    🔽🔽🔽 Student with pending tasks without mandatory property
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    def test_generate_certificate__with_student_that_didnt_finish_tasks_without_mandatory(self):
+        cohort_kwargs = {'stage': 'ENDED'}
+        task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE'}
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version={
+                                         'id': 1,
+                                         'json': {
+                                             'days': [{
+                                                 'assignments': [{
+                                                     'slug': 'testing-slug'
+                                                 }]
+                                             }]
+                                         }
+                                     },
+                                     syllabus=True,
+                                     syllabus_schedule=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     task={'associated_slug': 'testing-slug'},
+                                     task_kwargs=task_kwargs,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs)
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        cohort_user_kwargs = {'role': 'TEACHER'}
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+
+        self.assertToken(result['token'])
+        result['token'] = None
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        expected = {
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
+            'specialty_id': 1,
+            'issued_at': None,
+            'status': 'ERROR',
+            'token': None,
+            'status_text': 'with-pending-tasks',
+            'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
+        }
+        self.assertEqual(result, expected)
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
+                         [expected])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
+
+    """
+    🔽🔽🔽 Student with non mandatory pending tasks without
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    def test_generate_certificate__with_student_that_didnt_finish_mandatory_tasks(self):
+        cohort_kwargs = {'stage': 'ENDED'}
+        task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE'}
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version={
+                                         'id': 1,
+                                         'json': {
+                                             'days': [{
+                                                 'assignments': [{
+                                                     'slug': 'testing-slug',
+                                                     'mandatory': False
+                                                 }]
+                                             }]
+                                         }
+                                     },
+                                     syllabus=True,
+                                     syllabus_schedule=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     task={'associated_slug': 'testing-slug'},
+                                     task_kwargs=task_kwargs,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs)
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        cohort_user_kwargs = {'role': 'TEACHER'}
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+
+        self.assertToken(result['token'])
+        result['token'] = None
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        expected = {
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
+            'specialty_id': 1,
+            'issued_at': None,
+            'status': 'ERROR',
+            'token': None,
+            'status_text': 'bad-educational-status',
+            'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
+        }
+        self.assertEqual(result, expected)
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
+                         [expected])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
+
+    """
     🔽🔽🔽 Student not graduated
     """
 
