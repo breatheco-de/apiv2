@@ -79,34 +79,6 @@ def get_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
     }
 
 
-# def post_serializer(data={}):
-#     return {
-#         'accounted_duration': None,
-#         'agenda': None,
-#         'allow_billing': False,
-#         'bill': None,
-#         'ended_at': None,
-#         'ends_at': None,
-#         'id': 1,
-#         'is_online': False,
-#         'latitude': None,
-#         'longitude': None,
-#         'mentee': None,
-#         'mentee_left_at': None,
-#         'mentor': 1,
-#         'mentor_joined_at': None,
-#         'mentor_left_at': None,
-#         'name': None,
-#         'online_meeting_url': None,
-#         'online_recording_url': None,
-#         'started_at': None,
-#         'starts_at': None,
-#         'status': 'PENDING',
-#         'summary': None,
-#         **data,
-#     }
-
-
 def post_serializer(self, mentor_profile, mentorship_service, user, data={}):
     nxt_mnth = UTC_NOW.replace(day=28, hour=23, minute=59, second=59, microsecond=999999) + timedelta(days=4)
     ended_at = (nxt_mnth - timedelta(days=nxt_mnth.day))
@@ -347,58 +319,27 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                 model.mentor_profile,
                                 model.mentorship_service,
                                 model.user,
-                                data={'id': current + 1}),
+                                data={
+                                    'id':
+                                    current + 1,
+                                    'started_at':
+                                    self.bc.datetime.to_iso_string(
+                                        UTC_NOW.replace(day=1, hour=0, minute=0, second=0, microsecond=0)),
+                                }),
             ]
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
-                mentorship_bill_columns(data={
-                    'id': current + 1,
-                    'mentor_id': current + 1,
-                    'academy_id': current + 1,
-                }),
+                mentorship_bill_columns(
+                    data={
+                        'id': current + 1,
+                        'mentor_id': current + 1,
+                        'academy_id': current + 1,
+                        'started_at': UTC_NOW.replace(day=1, hour=0, minute=0, second=0, microsecond=0),
+                    }),
             ])
 
             # teardown
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('mentorship.MentorshipBill')
-
-    # @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    # def test__post__with_one_mentor_profile__with_mentorship_session__with_mentorship_bill(self):
-    #     started_at = timezone.now()
-    #     mentorship_session = {
-    #         'started_at': None,
-    #         'allow_billing': True,
-    #         'status': 'COMPLETED',
-    #         'started_at': started_at,
-    #     }
-    #     mentorship_bill = {'status': 'DUE'}
-    #     model = self.bc.database.create(user=1,
-    #                                     role=1,
-    #                                     capability='crud_mentorship_bill',
-    #                                     mentor_profile=1,
-    #                                     mentorship_session=mentorship_session,
-    #                                     mentorship_bill=mentorship_bill,
-    #                                     profile_academy=1)
-
-    #     self.bc.request.set_headers(academy=model.academy.id)
-    #     self.bc.request.authenticate(model.user)
-
-    #     url = reverse_lazy('mentorship:academy_mentor_id_bill', kwargs={'mentor_id': model.mentor_profile.id})
-    #     response = self.client.post(url)
-
-    #     json = response.json()
-    #     expected = [
-    #         post_serializer(self, model.mentor_profile, model.mentorship_service, model.user, data={'id': 1}),
-    #     ]
-
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
-    #         mentorship_bill_columns(data={
-    #             'id': 1,
-    #             'mentor_id': 1,
-    #             'academy_id': 1,
-    #         }),
-    #     ])
