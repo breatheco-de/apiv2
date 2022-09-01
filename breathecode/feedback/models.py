@@ -55,13 +55,7 @@ class Survey(models.Model):
     max_assistants_to_ask = models.IntegerField(default=2)
     max_teachers_to_ask = models.IntegerField(default=1)
 
-    avg_score = models.CharField(max_length=250,
-                                 default=None,
-                                 blank=True,
-                                 null=True,
-                                 help_text='The avg from all the answers taken under this survey',
-                                 editable=False)
-
+    scores = models.JSONField(default=None, blank=True, null=True)
     response_rate = models.FloatField(default=None, blank=True, null=True)
 
     status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)

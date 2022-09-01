@@ -693,15 +693,21 @@ def get_users(request):
 
     query = User.objects.all()
 
+    def find_user_by_name(query_name, qs):
+        for term in query_name.split():
+            qs = qs.filter(Q(first_name__icontains=term) | Q(last_name__icontains=term))
+        return qs
+
     name = request.GET.get('name', None)
     if name is not None:
-        query = query.filter(Q(first_name__icontains=name) | Q(last_name__icontains=name))
+        query = find_user_by_name(name, query)
 
     like = request.GET.get('like', None)
     if like is not None:
-        query = query.filter(
-            Q(first_name__icontains=like) | Q(last_name__icontains=like)
-            | Q(email__icontains=like))
+        if '@' in like:
+            query = query.filter(Q(email__icontains=like))
+        else:
+            query = find_user_by_name(like, query)
 
     query = query.exclude(email__contains='@token.com')
     query = query.order_by('-date_joined')

@@ -13,13 +13,15 @@ from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS
 from .serializers import AssetBigSerializer
 from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator, ArticleValidator
 from github import Github, GithubException
 from breathecode.registry import tasks
 
 logger = logging.getLogger(__name__)
+
+ASSET_STATUS_DICT = [x for x, y in ASSET_STATUS]
 
 
 def generate_external_readme(a):
@@ -31,6 +33,16 @@ def generate_external_readme(a):
     a.set_readme(readme.render(AssetBigSerializer(a).data))
     a.save()
     return True
+
+
+def get_video_url(video_id):
+    if re.search(r'https?:\/\/', video_id) is None:
+        return 'https://www.youtube.com/watch?v=' + video_id
+    else:
+        patterns = ((r'(https?:\/\/www\.loom\.com\/)embed(\/.+)', r'\1share\2'), )
+        for regex, replacement in patterns:
+            video_id = re.sub(regex, replacement, video_id)
+        return video_id
 
 
 def create_asset(data, asset_type, force=False):
@@ -100,7 +112,9 @@ def create_asset(data, asset_type, force=False):
         a.graded = (data['graded'] == True or (isinstance(data['graded'], str)
                                                and data['graded'].upper() in ['ISOLATED', 'INCREMENTAL']))
     if 'video-id' in data:
-        a.solution_video_url = 'https://www.youtube.com/watch?v=' + str(data['video-id'])
+        a.solution_video_url = get_video_url(str(data['video-id']))
+        a.with_video = True
+
     if 'preview' in data:
         a.preview = data['preview']
     if 'video-solutions' in data:
@@ -176,10 +190,11 @@ def get_user_from_github_username(username):
     return github_users
 
 
-def pull_from_github(asset_slug, author_id=None):
+def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
     logger.debug(f'Sync with github asset {asset_slug}')
 
+    asset = None
     try:
 
         asset = Asset.objects.filter(slug=asset_slug).first()
@@ -215,15 +230,17 @@ def pull_from_github(asset_slug, author_id=None):
 
         g = Github(credentials.token)
         if asset.asset_type in ['LESSON', 'ARTICLE']:
-            asset = sync_github_lesson(g, asset)
+            asset = sync_github_lesson(g, asset, override_meta=override_meta)
         else:
-            asset = sync_learnpack_asset(g, asset)
+            asset = sync_learnpack_asset(g, asset, override_meta=override_meta)
 
         asset.status_text = 'Successfully Synched'
         asset.sync_status = 'OK'
         asset.last_synch_at = timezone.now()
         asset.save()
         logger.debug(f'Successfully re-synched asset {asset_slug} with github')
+
+        return asset
     except Exception as e:
         # raise e
         message = ''
@@ -231,12 +248,16 @@ def pull_from_github(asset_slug, author_id=None):
             message = e.data['message']
         else:
             message = str(e).replace('"', '\'')
-        asset.status_text = str(message)
-        asset.sync_status = 'ERROR'
-        asset.save()
-        logger.error(f'Error updating {asset.url} from github: ' + str(message))
 
-    return asset.sync_status
+        logger.error(f'Error updating {asset_slug} from github: ' + str(message))
+        # if the exception triggered too early, the asset will be early
+        if asset is not None:
+            asset.status_text = str(message)
+            asset.sync_status = 'ERROR'
+            asset.save()
+            return asset.sync_status
+
+    return 'ERROR'
 
 
 def get_url_info(url: str):
@@ -270,7 +291,7 @@ def get_blob_content(repo, path_name, branch='main'):
     return repo.get_git_blob(sha[0])
 
 
-def sync_github_lesson(github, asset):
+def sync_github_lesson(github, asset, override_meta=False):
 
     logger.debug(f'Sync sync_github_lesson {asset.slug}')
 
@@ -311,16 +332,27 @@ def sync_github_lesson(github, asset):
 
     asset.set_readme(replaced)
 
-    fm = dict(readme['frontmatter'].items())
-    if 'slug' in fm and fm['slug'] != asset.slug:
-        logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
-        asset.slug = fm['slug']
+    # only the first time a lesson is synched it will override some of the properties
+    if asset.last_synch_at is None or override_meta:
+        fm = dict(readme['frontmatter'].items())
+        if 'slug' in fm and fm['slug'] != asset.slug:
+            logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
+            asset.slug = fm['slug']
 
-    if 'tags' in fm and isinstance(fm['tags'], list):
-        asset.technologies.clear()
-        for tech_slug in fm['tags']:
-            technology = AssetTechnology.get_or_create(tech_slug)
-            asset.technologies.add(technology)
+        if 'title' in fm and fm['title'] != '':
+            asset.title = fm['title']
+
+        if 'authors' in fm and fm['authors'] != '':
+            asset.authors_username = ','.join(fm['authors'])
+
+        if 'status' in fm and fm['status'] in ASSET_STATUS_DICT:
+            asset.status = fm['status']
+
+        if 'tags' in fm and isinstance(fm['tags'], list):
+            asset.technologies.clear()
+            for tech_slug in fm['tags']:
+                technology = AssetTechnology.get_or_create(tech_slug)
+                asset.technologies.add(technology)
 
     return asset
 
@@ -427,7 +459,7 @@ class AssetThumbnailGenerator:
         return bool((self.width and not self.height) or (not self.width and self.height))
 
 
-def sync_learnpack_asset(github, asset):
+def sync_learnpack_asset(github, asset, override_meta):
 
     org_name, repo_name, branch_name = get_url_info(asset.url)
     repo = github.get_repo(f'{org_name}/{repo_name}')
@@ -464,7 +496,7 @@ def sync_learnpack_asset(github, asset):
     asset.readme = str(readme_file.content)
     asset = clean_asset_readme(asset)
 
-    if learn_file is not None:
+    if learn_file is not None and (asset.last_synch_at is None or override_meta):
         config = json.loads(learn_file.decoded_content.decode('utf-8'))
         asset.config = config
 
@@ -480,7 +512,7 @@ def sync_learnpack_asset(github, asset):
             raise Exception(f'Missing preview URL')
 
         if 'video-id' in config:
-            asset.solution_video_url = 'https://www.youtube.com/watch?v=' + str(config['video-id'])
+            asset.solution_video_url = get_video_url(str(config['video-id']))
             asset.with_video = True
 
         if 'duration' in config:

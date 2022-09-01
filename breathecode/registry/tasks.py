@@ -1,9 +1,10 @@
 import hashlib
 import logging
 import os
-import re
+import time
 from typing import Optional
 from celery import shared_task, Task
+from breathecode.services.seo import SEOAnalyzer
 
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
@@ -29,7 +30,8 @@ class BaseTaskWithRetry(Task):
 @shared_task
 def async_pull_from_github(asset_slug, user_id=None):
     logger.debug(f'Synching asset {asset_slug} with data found on github')
-    return pull_from_github(asset_slug)
+    asset = pull_from_github(asset_slug)
+    return asset != 'ERROR'
 
 
 @shared_task
@@ -43,6 +45,21 @@ def async_test_asset(asset_slug):
             return True
     except Exception as e:
         logger.exception(f'Error testing asset {a.slug}')
+
+    return False
+
+
+@shared_task
+def async_execute_seo_report(asset_slug):
+    a = Asset.objects.filter(slug=asset_slug).first()
+    if a is None:
+        logger.debug(f'Error: Error running SEO report for asset with slug {asset_slug}, does not exist.')
+
+    try:
+        report = SEOAnalyzer(a)
+        report.start()
+    except Exception as e:
+        logger.exception(f'Error running SEO report asset {a.slug}')
 
     return False
 
@@ -65,9 +82,8 @@ def async_create_asset_thumbnail(asset_slug: str):
             'url': url,
             'name': name,
             'dimension': '1200x630',
-            'delay':
-            1000,  # this should be fixed if the screenshots is taken without load the content properly
-            'includeDate': False,
+            # this should be fixed if the screenshots is taken without load the content properly
+            'delay': 1000,
         })
 
     if response.status_code >= 400:
@@ -76,7 +92,7 @@ def async_create_asset_thumbnail(asset_slug: str):
         return
 
     json = response.json()
-    print('task json', json)
+    json = json[0]
 
     url = json['url']
     filename = json['filename']
@@ -84,8 +100,16 @@ def async_create_asset_thumbnail(asset_slug: str):
     storage = Storage()
     cloud_file = storage.file(screenshots_bucket(), filename)
 
-    content_file = cloud_file.download()
-    hash = hashlib.sha256(content_file).hexdigest()
+    # reattempt 60 times
+    for _ in range(0, 60):
+        content_file = cloud_file.download()
+        if not content_file:
+            time.sleep(1)
+            cloud_file = storage.file(screenshots_bucket(), filename)
+            continue
+
+        hash = hashlib.sha256(content_file).hexdigest()
+        break
 
     # file already exists for this academy
     if Media.objects.filter(hash=hash, academy=asset.academy).exists():
@@ -113,6 +137,7 @@ def async_create_asset_thumbnail(asset_slug: str):
 
     # if media does not exist too, keep the screenshots with other name
     cloud_file.rename(hash)
+    url = f'https://storage.googleapis.com/{screenshots_bucket()}/{hash}'
 
     media = Media(
         slug=f'asset-{asset_slug}',

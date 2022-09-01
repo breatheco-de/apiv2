@@ -353,6 +353,17 @@ with open(sql_keywords_path, 'r') as f:
 
     EXPLORER_SQL_BLACKLIST = tuple(sql_keywords['blacklist'])
 
+# Django Rest Hooks
+HOOK_EVENTS = {
+    # 'any.event.name': 'App.Model.Action' (created/updated/deleted)
+    'form_entry.added': 'marketing.FormEntry.created+',
+    'form_entry.changed': 'marketing.FormEntry.updated+',
+    'profile_academy.added': 'authenticate.ProfileAcademy.created+',
+    'profile_academy.changed': 'authenticate.ProfileAcademy.updated+',
+    # and custom events, no extra meta data needed
+    # 'book.read':         'bookstore.Book.read',
+}
+
 # Websocket
 ASGI_APPLICATION = 'breathecode.asgi.application'
 REDIS_URL_PATTERN = r'^redis://(.+):(\d+)$'

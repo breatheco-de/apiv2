@@ -1,9 +1,18 @@
+import requests
 from django.db import models
+from collections import OrderedDict
+from django.core import serializers
+from django.conf import settings
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.models import CredentialsSlack
 
-__all__ = ['UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel']
+__all__ = [
+    'UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook'
+]
+AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
+if getattr(settings, 'HOOK_CUSTOM_MODEL', None) is None:
+    settings.HOOK_CUSTOM_MODEL = 'notify.Hook'
 
 
 class UserProxy(User):
@@ -126,3 +135,69 @@ class SlackChannel(models.Model):
     def __str__(self):
         name = self.name if self.name else 'Unknown'
         return f'{name}({self.slack_id})'
+
+
+class AbstractHook(models.Model):
+    """
+    Stores a representation of a Hook.
+    """
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    user = models.ForeignKey(AUTH_USER_MODEL, related_name='%(class)ss', on_delete=models.CASCADE)
+    event = models.CharField('Event', max_length=64, db_index=True)
+    target = models.URLField('Target URL', max_length=255)
+    service_id = models.CharField('Service ID', max_length=64, null=True, default=None, blank=True)
+    sample_data = models.JSONField(null=True,
+                                   default=None,
+                                   blank=True,
+                                   help_text='Use this as an example on what you will be receiving')
+
+    total_calls = models.IntegerField(default=0)
+    last_call_at = models.DateTimeField(null=True, blank=True, default=None)
+    last_response_code = models.IntegerField(null=True, blank=True, default=None)
+
+    class Meta:
+        abstract = True
+
+    def clean(self):
+        from .utils.hook_manager import HookManager
+        """ Validation for events. """
+        if self.event not in HookManager.HOOK_EVENTS.keys():
+            raise ValidationError('Invalid hook event {evt}.'.format(evt=self.event))
+
+    def dict(self):
+        return {'id': self.id, 'event': self.event, 'target': self.target}
+
+    def serialize_hook(self, instance):
+        """
+        Serialize the object down to Python primitives.
+        By default it uses Django's built in serializer.
+        """
+        if getattr(instance, 'serialize_hook', None) and callable(instance.serialize_hook):
+            return instance.serialize_hook(hook=self)
+        if getattr(settings, 'HOOK_SERIALIZER', None):
+            serializer = get_module(settings.HOOK_SERIALIZER)
+            return serializer(instance, hook=self)
+        # if no user defined serializers, fallback to the django builtin!
+        data = serializers.serialize('python', [instance])[0]
+        for k, v in data.items():
+            if isinstance(v, OrderedDict):
+                data[k] = dict(v)
+
+        if isinstance(data, OrderedDict):
+            data = dict(data)
+
+        return {
+            'hook': self.dict(),
+            'data': data,
+        }
+
+    def __unicode__(self):
+        return u'{} => {}'.format(self.event, self.target)
+
+
+class Hook(AbstractHook):
+
+    class Meta(AbstractHook.Meta):
+        swappable = 'HOOK_CUSTOM_MODEL'
