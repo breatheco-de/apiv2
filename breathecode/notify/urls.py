@@ -11,5 +11,6 @@ urlpatterns = [
     path('slack/interaction', process_interaction),
     path('hook/subscribe', HooksView.as_view()),
     path('hook/subscribe/<int:hook_id>', HooksView.as_view()),
-    path('hook/subscribe/sample', get_sample_data),
+    path('hook/sample', get_sample_data),
+    path('hook/<int:hook_id>/sample', get_sample_data),
 ]
