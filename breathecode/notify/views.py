@@ -73,10 +73,21 @@ def slack_command(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
-def get_sample_data(request):
+def get_sample_data(request, hook_id=None):
+
+    if hook_id is not None:
+        hook = Hook.objects.filter(user__id=request.user.id, id=hook_id).first()
+        if hook is None:
+            return Response({'details': 'No hook found with this filters for sample data'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if hook.sample_data is None:
+            return Response([])
+
+        return Response(hook.sample_data)
 
     items = Hook.objects.filter(user__id=request.user.id)
+    filtered = False
     event = request.GET.get('event', None)
     if event is not None:
         filtered = True
@@ -90,6 +101,11 @@ def get_sample_data(request):
     like = request.GET.get('like', None)
     if like is not None:
         items = items.filter(Q(event__icontains=like) | Q(target__icontains=like))
+
+    if not filtered:
+        return Response(
+            {'details': 'Please specify hook id or filters get have an idea on what sample data you want'},
+            status=status.HTTP_400_BAD_REQUEST)
 
     single = items.first()
     if single is None:
