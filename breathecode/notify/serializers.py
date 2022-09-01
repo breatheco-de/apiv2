@@ -42,7 +42,7 @@ class HookSerializer(serializers.ModelSerializer):
 
         data['user'] = self.context['request'].user
 
-        return data
+        return super().validate(data)
 
     class Meta:
         model = Hook
