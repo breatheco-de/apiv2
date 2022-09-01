@@ -21,6 +21,11 @@ class DeviceSerializer(serpy.Serializer):
 
 class HookSerializer(serializers.ModelSerializer):
 
+    class Meta:
+        model = Hook
+        read_only_fields = ('user', )
+        exclude = ['sample_data']
+
     def validate(self, data):
 
         if data['event'] not in settings.HOOK_EVENTS:
@@ -36,8 +41,3 @@ class HookSerializer(serializers.ModelSerializer):
         data['user'] = self.context['request'].user
 
         return super().validate(data)
-
-    class Meta:
-        model = Hook
-        fields = '__all__'
-        read_only_fields = ('user', )

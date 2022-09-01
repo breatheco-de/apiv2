@@ -131,6 +131,7 @@ class HookManagerClass(object):
 
         HookModel = self.get_hook_model()
         hooks = HookModel.objects.filter(**filters)
+        print('filters', filters)
         for hook in hooks:
             self.deliver_hook(hook, instance, payload_override=payload_override)
 
@@ -208,7 +209,7 @@ class HookManagerClass(object):
             payload = payload(hook, instance)
 
         logger.debug(f'Calling delayed task deliver_hook for hook {hook.id}')
-        async_deliver_hook.delay(hook.target, payload, hook=hook.id)
+        async_deliver_hook.delay(hook.target, payload, hook_id=hook.id)
 
         return None
 

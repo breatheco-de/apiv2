@@ -141,13 +141,17 @@ class AbstractHook(models.Model):
     """
     Stores a representation of a Hook.
     """
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     user = models.ForeignKey(AUTH_USER_MODEL, related_name='%(class)ss', on_delete=models.CASCADE)
     event = models.CharField('Event', max_length=64, db_index=True)
     target = models.URLField('Target URL', max_length=255)
     service_id = models.CharField('Service ID', max_length=64, null=True, default=None, blank=True)
+    sample_data = models.JSONField(null=True,
+                                   default=None,
+                                   blank=True,
+                                   help_text='Use this as an example on what you will be receiving')
 
     total_calls = models.IntegerField(default=0)
     last_call_at = models.DateTimeField(null=True, blank=True, default=None)
