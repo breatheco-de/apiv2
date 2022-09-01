@@ -182,8 +182,8 @@ class HookManagerClass(object):
             if ignore_user_override:
                 user_override = False
 
-        logger.debug(f'process_model_event for event_name={event_name}')
         if event_name:
+            logger.debug(f'process_model_event for event_name={event_name}')
             self.find_and_fire_hook(event_name,
                                     instance,
                                     user_override=user_override,
