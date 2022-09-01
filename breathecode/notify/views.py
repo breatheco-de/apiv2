@@ -16,7 +16,7 @@ from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, P
 from .actions import get_template, get_template_content
 from .models import Device, Hook
 from .tasks import async_slack_action
-from .serializers import DeviceSerializer, HookSerializer, HookSmallSerializer
+from .serializers import DeviceSerializer, HookSerializer
 from breathecode.services.slack.client import Slack
 import traceback
 
@@ -72,6 +72,33 @@ def slack_command(request):
         return Response(str(e), status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_sample_data(request):
+
+    items = Hook.objects.filter(user__id=request.user.id)
+    event = request.GET.get('event', None)
+    if event is not None:
+        filtered = True
+        items = items.filter(event__in=event.split(','))
+
+    service_id = request.GET.get('service_id', None)
+    if service_id is not None:
+        filtered = True
+        items = items.filter(service_id__in=service_id.split(','))
+
+    like = request.GET.get('like', None)
+    if like is not None:
+        items = items.filter(Q(event__icontains=like) | Q(target__icontains=like))
+
+    single = items.first()
+    if single is None:
+        return Response({'details': 'No hook found with this filters for sample data'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(single.sample_data)
+
+
 class HooksView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -83,18 +110,16 @@ class HooksView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
 
         items = Hook.objects.filter(user__id=request.user.id)
-        lookup = {}
 
-        start = request.GET.get('event', None)
-        if start is not None:
-            start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
-            lookup['created_at__gte'] = start_date
+        event = request.GET.get('event', None)
+        if event is not None:
+            filtered = True
+            items = items.filter(event__in=event.split(','))
 
-        if 'event' in self.request.GET:
-            param = self.request.GET.get('event')
-            lookup['event'] = param
-
-        items = items.filter(**lookup)
+        service_id = request.GET.get('service_id', None)
+        if service_id is not None:
+            filtered = True
+            items = items.filter(service_id__in=service_id.split(','))
 
         like = request.GET.get('like', None)
         if like is not None:
@@ -127,11 +152,29 @@ class HooksView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, hook_id):
+    def delete(self, request, hook_id=None):
 
-        items = Hook.objects.filter(id=hook_id, user__id=request.user.id)
+        filtered = False
+        items = Hook.objects.filter(user__id=request.user.id)
+        if hook_id is not None:
+            items = items.filter(id=hook_id)
+            filtered = True
+        else:
+            event = request.GET.get('event', None)
+            if event is not None:
+                filtered = True
+                items = items.filter(event__in=event.split(','))
 
+            service_id = request.GET.get('service_id', None)
+            if service_id is not None:
+                filtered = True
+                items = items.filter(service_id__in=service_id.split(','))
+
+        if not filtered:
+            raise ValidationException('Please include some filter in the URL')
+
+        total = items.count()
         for item in items:
             item.delete()
 
-        return Response(None, status=status.HTTP_204_NO_CONTENT)
+        return Response({'details': f'Unsubscribed from {total} hooks'}, status=status.HTTP_200_OK)
