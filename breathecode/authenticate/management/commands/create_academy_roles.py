@@ -576,6 +576,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_session',
             'crud_mentorship_bill',
             'read_mentorship_bill',
+            'crud_freelancer_bill',
             'get_gitpod_user',
             'update_gitpod_user',
         ]
