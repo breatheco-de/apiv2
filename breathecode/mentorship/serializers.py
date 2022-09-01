@@ -449,7 +449,7 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
             except Exception as e:
                 raise ValidationException(str(e))
 
-        return super().validate(data)
+        return data
 
 
 class SessionListSerializer(serializers.ListSerializer):
