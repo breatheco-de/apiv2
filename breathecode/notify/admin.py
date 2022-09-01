@@ -153,7 +153,7 @@ class HookForm(forms.ModelForm):
 
     @classmethod
     def get_admin_events(cls):
-        return [(x, x) for x in HookModel.HOOK_EVENTS.keys()]
+        return [(x, x) for x in HookManager.HOOK_EVENTS.keys()]
 
 
 class HookAdmin(admin.ModelAdmin):

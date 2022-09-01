@@ -1,7 +1,10 @@
+import logging
 from django.conf import settings
 from ..tasks import async_deliver_hook
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured
+
+logger = logging.getLogger(__name__)
 
 
 class HookManagerClass(object):
@@ -104,6 +107,17 @@ class HookManagerClass(object):
 
         filters = {'event': event_name}
 
+        # only process hooks from instances from the same academy
+        if hasattr(instance, 'academy') and instance.academy is not None:
+            superadmins = User.objects.filter(is_superuser=True).values_list('username', flat=True)
+            filters['user__username__in'] = [instance.academy.slug] + list(superadmins)
+        else:
+            logger.debug(
+                f'Only admin will receive hook notification for {event_name} because entity has not academy property'
+            )
+            # Only the admin can retrieve events from objects that don't belong to any academy
+            filters['user__is_superuser'] = True
+
         # Ignore the user if the user_override is False
         if user_override is not False:
             if user_override:
@@ -114,15 +128,8 @@ class HookManagerClass(object):
                 filters['user'] = instance
             else:
                 raise Exception('{} has no `user` property. REST Hooks needs this.'.format(repr(instance)))
-        # NOTE: This is probably up for discussion, but I think, in this
-        # case, instead of raising an error, we should fire the hook for
-        # all users/accounts it is subscribed to. That would be a genuine
-        # usecase rather than erroring because no user is associated with
-        # this event.
 
         HookModel = self.get_hook_model()
-
-        print('filters', HookModel)
         hooks = HookModel.objects.filter(**filters)
         for hook in hooks:
             self.deliver_hook(hook, instance, payload_override=payload_override)
@@ -146,6 +153,7 @@ class HookManagerClass(object):
         If event_name is not found or is invalidated, then just quit silently.
         If payload_override is passed, then it will be passed into HookModel.deliver_hook
         """
+
         if event_name is False and (model is False or action is False):
             raise TypeError('process_model_event() requires either `event_name` argument or '
                             'both `model` and `action` arguments.')
@@ -170,11 +178,11 @@ class HookManagerClass(object):
                         user_override = False
         else:
             event_actions_config = self.get_event_actions_config()
-
             event_name, ignore_user_override = event_actions_config.get(model, {}).get(action, (None, False))
             if ignore_user_override:
                 user_override = False
 
+        logger.debug(f'process_model_event for event_name={event_name}')
         if event_name:
             self.find_and_fire_hook(event_name,
                                     instance,
@@ -199,7 +207,8 @@ class HookManagerClass(object):
         if callable(payload):
             payload = payload(hook, instance)
 
-        deliver_hook.delay(hook.target, payload, hook=hook)
+        logger.debug(f'Calling delayed task deliver_hook for hook {hook.id}')
+        async_deliver_hook.delay(hook.target, payload, hook=hook.id)
 
         return None
 

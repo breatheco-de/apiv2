@@ -1,5 +1,6 @@
-import logging, os
+import logging, os, requests, json
 from celery import shared_task, Task
+from django.core.serializers.json import DjangoJSONEncoder
 from .actions import sync_slack_team_channel, sync_slack_team_users, send_email_message
 from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
@@ -69,6 +70,7 @@ def async_slack_action(post_data):
 
 @shared_task
 def async_deliver_hook(target, payload, instance=None, hook_id=None, **kwargs):
+    logger.debug('Starting async_deliver_hook')
     from .utils.hook_manager import HookManager
     """
     target:     the url to receive the payload.
