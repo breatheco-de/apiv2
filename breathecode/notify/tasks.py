@@ -1,6 +1,7 @@
 import logging, os, requests, json
 from celery import shared_task, Task
 from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import timezone
 from .actions import sync_slack_team_channel, sync_slack_team_users, send_email_message
 from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
@@ -82,9 +83,14 @@ def async_deliver_hook(target, payload, instance=None, hook_id=None, **kwargs):
                              data=json.dumps(payload, cls=DjangoJSONEncoder),
                              headers={'Content-Type': 'application/json'})
 
-    if response.status_code == 410 and hook_id:
+    if hook_id:
         HookModel = HookManager.get_hook_model()
         hook = HookModel.object.get(id=hook_id)
-        hook.delete()
+        if response.status_code == 410:
+            hook.delete()
 
-    # would be nice to log this, at least for a little while...
+        else:
+            hook.last_response_code = response.status_code
+            hook.last_call_at = timezone.now()
+            hook.total_calls = hook.total_calls + 1
+            hook.save()

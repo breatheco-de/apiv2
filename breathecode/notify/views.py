@@ -16,7 +16,7 @@ from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, P
 from .actions import get_template, get_template_content
 from .models import Device, Hook
 from .tasks import async_slack_action
-from .serializers import DeviceSerializer, HookSerializer, HookSmallSerializer
+from .serializers import DeviceSerializer, HookSerializer
 from breathecode.services.slack.client import Slack
 import traceback
 
@@ -127,9 +127,23 @@ class HooksView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, hook_id):
+    def delete(self, request, hook_id=None):
 
-        items = Hook.objects.filter(id=hook_id, user__id=request.user.id)
+        filtered = False
+        items = Hook.objects.filter(user__id=request.user.id)
+        if hook_id is not None:
+            items = items.filter(id=hook_id)
+            filtered = True
+        else:
+            event = request.GET.get('event', None)
+            if event is not None:
+                filtered = True
+                items = items.filter(event__in=event.split(','))
+
+            service_id = request.GET.get('service_id', None)
+            if service_id is not None:
+                filtered = True
+                items = items.filter(service_id__in=service_id.split(','))
 
         for item in items:
             item.delete()

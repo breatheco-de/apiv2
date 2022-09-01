@@ -13,13 +13,6 @@ class UserSerializer(serpy.Serializer):
     last_name = serpy.Field()
 
 
-class HookSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
-    user = UserSerializer()
-    target = serpy.Field()
-    event = serpy.Field()
-
-
 class DeviceSerializer(serpy.Serializer):
     id = serpy.Field()
     registration_id = serpy.Field()
