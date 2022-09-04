@@ -4,6 +4,7 @@ Collections of mixins used to login in authorize microservice
 
 
 class EventsQueriesMixin():
+
     def generate_events_queries(self):
         """Generate queries"""
         return {

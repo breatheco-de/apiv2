@@ -4,6 +4,7 @@ from breathecode.monitoring.models import Endpoint, MonitorScript
 
 
 class Monitoring:
+
     def __init__(self, context):
         self.context = context
 

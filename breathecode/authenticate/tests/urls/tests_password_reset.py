@@ -11,6 +11,7 @@ from ..mixins.new_auth_test_case import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     @patch('breathecode.notify.actions.send_email_message')
     def test_password_reset__post__without_data(self, mock):
         """Test /cohort/:id without auth"""
@@ -130,7 +131,7 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {'email': model['user'].email}
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
-        token, created = Token.get_or_create(model['user'])
+        token, created = Token.get_or_create(model['user'], token_type='temporal')
 
         self.assertNotEqual(content.find('Check your email for a password reset!'), -1)
 
@@ -140,7 +141,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
@@ -156,7 +157,7 @@ class AuthenticateTestSuite(AuthTestCase):
         }
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
-        token, created = Token.get_or_create(model['user'])
+        token, created = Token.get_or_create(model['user'], token_type='temporal')
 
         self.assertNotEqual(content.find('Check your email for a password reset!'), -1)
 
@@ -166,7 +167,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
@@ -200,7 +201,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'callback': 'https://naturo.io/',
         }
         response = self.client.post(url, data)
-        token, created = Token.get_or_create(model['user'])
+        token, created = Token.get_or_create(model['user'], token_type='temporal')
 
         self.assertEqual(response.url,
                          'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
@@ -210,7 +211,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
@@ -226,7 +227,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'callback': 'https://naturo.io/',
         }
         response = self.client.post(url, data)
-        token, created = Token.get_or_create(model['user'])
+        token, created = Token.get_or_create(model['user'], token_type='temporal')
 
         self.assertEqual(response.url,
                          'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
@@ -236,7 +237,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])

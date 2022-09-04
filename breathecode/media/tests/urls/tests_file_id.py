@@ -1,8 +1,8 @@
 """
 Test /answer
 """
-from breathecode.tests.mocks.requests import apply_requests_post_mock
-from unittest.mock import call, patch
+from breathecode.tests.mocks.requests import apply_requests_request_mock
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.tests.mocks import (
@@ -11,7 +11,15 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import MediaTestCase
 
-RESIZE_IMAGE_URL = 'https://us-central1-breathecode-197918.cloudfunctions.net/resize-image'
+RESIZE_IMAGE_URL = 'https://us-central1-labor-day-story.cloudfunctions.net/resize-image'
+
+
+def apply_get_env(configuration={}):
+
+    def get_env(key, value=None):
+        return configuration.get(key, value)
+
+    return get_env
 
 
 def bad_mime_response():
@@ -41,6 +49,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Without data
     """
+
     def test_file_id__without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -54,6 +63,11 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(self.all_media_dict(), [])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__without_data__with_mask_true(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -71,6 +85,11 @@ class MediaTestSuite(MediaTestCase):
     🔽🔽🔽 With data
     """
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -87,6 +106,11 @@ class MediaTestSuite(MediaTestCase):
                          }])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     @patch(REQUESTS_PATH['get'], apply_requests_get_mock([(200, 'https://potato.io', 'ok')]))
     def test_file_id_with_mask_true(self):
         """Test /answer without auth"""
@@ -109,6 +133,11 @@ class MediaTestSuite(MediaTestCase):
     🔽🔽🔽 Width in querystring
     """
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_width_in_querystring__bad_mime(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -126,6 +155,11 @@ class MediaTestSuite(MediaTestCase):
         }])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_width_in_querystring(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -135,7 +169,7 @@ class MediaTestSuite(MediaTestCase):
         with patch('google.oauth2.id_token.fetch_id_token') as token_mock:
             token_mock.return_value = 'blablabla'
 
-            with patch(REQUESTS_PATH['post'], apply_requests_post_mock([resized_response()])) as mock:
+            with patch(REQUESTS_PATH['request'], apply_requests_request_mock([resized_response()])) as mock:
                 url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?width=1000'
                 response = self.client.get(url)
 
@@ -143,13 +177,15 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_301_MOVED_PERMANENTLY)
 
         self.assertEqual(mock.call_args_list, [
-            call('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
+            call('POST',
+                 'https://us-central1-labor-day-story.cloudfunctions.net/resize-image',
                  data='{"width": "1000", "height": null, "filename": "harcoded", "bucket": "bucket-name"}',
                  headers={
                      'Authorization': 'Bearer blablabla',
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
-                 })
+                 },
+                 params={})
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -166,6 +202,11 @@ class MediaTestSuite(MediaTestCase):
             'width': 1000,
         }])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_width_in_querystring__resolution_exist(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -177,7 +218,7 @@ class MediaTestSuite(MediaTestCase):
                                      media_kwargs=media_kwargs,
                                      media_resolution_kwargs=media_resolution_kwargs)
 
-        with patch(REQUESTS_PATH['post'], apply_requests_post_mock([resized_response()])) as mock:
+        with patch(REQUESTS_PATH['request'], apply_requests_request_mock([resized_response()])) as mock:
             url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?width=1000'
             response = self.client.get(url)
 
@@ -198,6 +239,11 @@ class MediaTestSuite(MediaTestCase):
                 'hits': model['media_resolution'].hits + 1,
             }])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_width_in_querystring__bad_mime(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -207,7 +253,7 @@ class MediaTestSuite(MediaTestCase):
         with patch('google.oauth2.id_token.fetch_id_token') as token_mock:
             token_mock.return_value = 'blablabla'
 
-            with patch(REQUESTS_PATH['post'], apply_requests_post_mock([bad_size_response()])) as mock:
+            with patch(REQUESTS_PATH['request'], apply_requests_request_mock([bad_size_response()])) as mock:
                 url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?width=1000'
                 response = self.client.get(url)
                 json = response.json()
@@ -221,13 +267,15 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         self.assertEqual(mock.call_args_list, [
-            call('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
+            call('POST',
+                 'https://us-central1-labor-day-story.cloudfunctions.net/resize-image',
                  data='{"width": "1000", "height": null, "filename": "harcoded", "bucket": "bucket-name"}',
                  headers={
                      'Authorization': 'Bearer blablabla',
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
-                 })
+                 },
+                 params={})
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -238,6 +286,11 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(self.all_media_resolution_dict(), [])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_width_in_querystring__cloud_function_error(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -247,7 +300,8 @@ class MediaTestSuite(MediaTestCase):
         with patch('google.oauth2.id_token.fetch_id_token') as token_mock:
             token_mock.return_value = 'blablabla'
 
-            with patch(REQUESTS_PATH['post'], apply_requests_post_mock([bad_server_response()])) as mock:
+            with patch(REQUESTS_PATH['request'],
+                       apply_requests_request_mock([bad_server_response()])) as mock:
                 url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?width=1000'
                 response = self.client.get(url)
                 json = response.json()
@@ -261,13 +315,15 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         self.assertEqual(mock.call_args_list, [
-            call('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
+            call('POST',
+                 'https://us-central1-labor-day-story.cloudfunctions.net/resize-image',
                  data='{"width": "1000", "height": null, "filename": "harcoded", "bucket": "bucket-name"}',
                  headers={
                      'Authorization': 'Bearer blablabla',
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
-                 })
+                 },
+                 params={})
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -282,6 +338,11 @@ class MediaTestSuite(MediaTestCase):
     🔽🔽🔽 Height in querystring
     """
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_height_in_querystring__bad_mime(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -299,6 +360,11 @@ class MediaTestSuite(MediaTestCase):
         }])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_height_in_querystring(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -308,7 +374,7 @@ class MediaTestSuite(MediaTestCase):
         with patch('google.oauth2.id_token.fetch_id_token') as token_mock:
             token_mock.return_value = 'blablabla'
 
-            with patch(REQUESTS_PATH['post'], apply_requests_post_mock([resized_response()])) as mock:
+            with patch(REQUESTS_PATH['request'], apply_requests_request_mock([resized_response()])) as mock:
                 url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?height=1000'
                 response = self.client.get(url)
 
@@ -316,13 +382,15 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_301_MOVED_PERMANENTLY)
 
         self.assertEqual(mock.call_args_list, [
-            call('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
+            call('POST',
+                 'https://us-central1-labor-day-story.cloudfunctions.net/resize-image',
                  data='{"width": null, "height": "1000", "filename": "harcoded", "bucket": "bucket-name"}',
                  headers={
                      'Authorization': 'Bearer blablabla',
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
-                 })
+                 },
+                 params={})
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -339,6 +407,11 @@ class MediaTestSuite(MediaTestCase):
             'width': 1000,
         }])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_height_in_querystring__resolution_exist(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -350,7 +423,7 @@ class MediaTestSuite(MediaTestCase):
                                      media_kwargs=media_kwargs,
                                      media_resolution_kwargs=media_resolution_kwargs)
 
-        with patch(REQUESTS_PATH['post'], apply_requests_post_mock([resized_response()])) as mock:
+        with patch(REQUESTS_PATH['request'], apply_requests_request_mock([resized_response()])) as mock:
             url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?height=1000'
             response = self.client.get(url)
 
@@ -371,6 +444,11 @@ class MediaTestSuite(MediaTestCase):
                 'hits': model['media_resolution'].hits + 1,
             }])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_height_in_querystring__bad_mime(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -380,7 +458,7 @@ class MediaTestSuite(MediaTestCase):
         with patch('google.oauth2.id_token.fetch_id_token') as token_mock:
             token_mock.return_value = 'blablabla'
 
-            with patch(REQUESTS_PATH['post'], apply_requests_post_mock([bad_size_response()])) as mock:
+            with patch(REQUESTS_PATH['request'], apply_requests_request_mock([bad_size_response()])) as mock:
                 url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?height=1000'
                 response = self.client.get(url)
                 json = response.json()
@@ -394,13 +472,15 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         self.assertEqual(mock.call_args_list, [
-            call('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
+            call('POST',
+                 'https://us-central1-labor-day-story.cloudfunctions.net/resize-image',
                  data='{"width": null, "height": "1000", "filename": "harcoded", "bucket": "bucket-name"}',
                  headers={
                      'Authorization': 'Bearer blablabla',
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
-                 })
+                 },
+                 params={})
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -411,6 +491,11 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(self.all_media_resolution_dict(), [])
 
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'GOOGLE_PROJECT_ID': 'labor-day-story',
+               'MEDIA_GALLERY_BUCKET': 'bucket-name',
+           })))
     def test_file_id__with_height_in_querystring__cloud_function_error(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -420,7 +505,8 @@ class MediaTestSuite(MediaTestCase):
         with patch('google.oauth2.id_token.fetch_id_token') as token_mock:
             token_mock.return_value = 'blablabla'
 
-            with patch(REQUESTS_PATH['post'], apply_requests_post_mock([bad_server_response()])) as mock:
+            with patch(REQUESTS_PATH['request'],
+                       apply_requests_request_mock([bad_server_response()])) as mock:
                 url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?height=1000'
                 response = self.client.get(url)
                 json = response.json()
@@ -434,13 +520,15 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         self.assertEqual(mock.call_args_list, [
-            call('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
+            call('POST',
+                 'https://us-central1-labor-day-story.cloudfunctions.net/resize-image',
                  data='{"width": null, "height": "1000", "filename": "harcoded", "bucket": "bucket-name"}',
                  headers={
                      'Authorization': 'Bearer blablabla',
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
-                 })
+                 },
+                 params={})
         ])
 
         self.assertEqual(self.all_media_dict(),

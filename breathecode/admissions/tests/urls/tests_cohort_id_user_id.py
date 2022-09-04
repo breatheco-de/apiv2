@@ -16,6 +16,7 @@ from ..mixins import AdmissionsTestCase
 
 class CohortIdUserIdTestSuite(AdmissionsTestCase):
     """Test /cohort/:id/user/:id"""
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -131,7 +132,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
         model_dict = self.get_cohort_user_dict(1)
@@ -140,7 +141,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'cohort_id': model.cohort.id,
                                'user_id': model.user.id
                            })
-        data = {'specialty_mode': model.specialty_mode.id}
+        data = {'schedule': model.syllabus_schedule.id}
         response = self.client.put(url, data)
         json = response.json()
         expected = {
@@ -148,6 +149,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'role': model.cohort_user.role,
             'educational_status': model.cohort_user.educational_status,
             'finantial_status': model.cohort_user.finantial_status,
+            'watching': False,
         }
 
         self.assertEqual(json, expected)
@@ -163,7 +165,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
         url = reverse_lazy('admissions:cohort_id_user_id',
@@ -171,7 +173,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'cohort_id': model.cohort.id,
                                'user_id': 9999
                            })
-        data = {'specialty_mode': model.specialty_mode.id}
+        data = {'schedule': model.syllabus_schedule.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -183,7 +185,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
         url = reverse_lazy('admissions:cohort_id_user_id',
@@ -191,7 +193,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'cohort_id': 9999,
                                'user_id': model.user.id
                            })
-        data = {'specialty_mode': model.specialty_mode.id}
+        data = {'schedule': model.syllabus_schedule.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -203,7 +205,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
         url = reverse_lazy('admissions:cohort_id_user_id',
@@ -211,7 +213,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'cohort_id': model.cohort.id,
                                'user_id': model.user.id
                            })
-        data = {'specialty_mode': model.specialty_mode.id}
+        data = {'schedule': model.syllabus_schedule.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.count_cohort_user(), 0)
@@ -221,14 +223,13 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_unsuccess_task(self):
         """Test /cohort/:id/user/:id without auth"""
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
                                      cohort_user=True,
-                                     task=True,
-                                     task_status='PENDING',
-                                     task_type='PROJECT')
+                                     task=task)
         url = reverse_lazy('admissions:cohort_id_user_id',
                            kwargs={
                                'cohort_id': model.cohort.id,

@@ -2,6 +2,8 @@ import logging
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
+from django import forms
+from .utils.hook_manager import HookManager
 from .models import Device, SlackTeam, SlackChannel, SlackUser, UserProxy, CohortProxy, SlackTeam, SlackUserTeam
 from .actions import sync_slack_team_users, sync_slack_team_channel, send_slack
 from .tasks import async_slack_team_users
@@ -127,5 +129,39 @@ test_cohort_notification.short_description = '💬 Send slack test notification'
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
     actions = [test_cohort_notification]
+
+
+HookModel = HookManager.get_hook_model()
+
+
+class HookForm(forms.ModelForm):
+    """
+    Model form to handle registered events, asuring
+    only events declared on HOOK_EVENTS settings
+    can be registered.
+    """
+
+    class Meta:
+        model = HookModel
+        fields = ['user', 'target', 'event']
+
+    def __init__(self, *args, **kwargs):
+        super(HookForm, self).__init__(*args, **kwargs)
+        self.fields['event'] = forms.ChoiceField(choices=self.get_admin_events())
+
+    @classmethod
+    def get_admin_events(cls):
+        return [(x, x) for x in HookManager.HOOK_EVENTS.keys()]
+
+
+class HookAdmin(admin.ModelAdmin):
+    list_display = [f.name for f in HookModel._meta.fields]
+    raw_id_fields = [
+        'user',
+    ]
+    form = HookForm
+
+
+admin.site.register(HookModel, HookAdmin)

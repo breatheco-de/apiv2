@@ -2,10 +2,14 @@
 
 import os
 import sys
+from time import sleep
 
+from scripts.utils.get_pip_path import get_pip_path
+
+pip_path = get_pip_path()
 commands = ';\n'.join([
-    'pip install --upgrade pip',
-    'pip install --upgrade yapf pipenv',
+    f'{pip_path} install --upgrade pip',
+    f'{pip_path} install --upgrade yapf pipenv toml',
     '',
 ])
 

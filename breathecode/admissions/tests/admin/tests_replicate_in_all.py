@@ -1,9 +1,8 @@
 """
-Test /cohort/user
+Test replicate_in_all
 """
-from unittest.mock import patch
-from breathecode.tests.mocks.django_contrib import DJANGO_CONTRIB_PATH, apply_django_contrib_messages_mock
-from breathecode.admissions.models import SpecialtyModeTimeSlot
+from unittest.mock import MagicMock, call, patch
+from breathecode.admissions.models import SyllabusSchedule
 from breathecode.admissions.admin import replicate_in_all
 from ..mixins import AdmissionsTestCase
 from django.http.request import HttpRequest
@@ -14,143 +13,213 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 With zero Academy
     """
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
-    def test_replicate_in_all(self):
+
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_zero_schedules(self):
+        from django.contrib import messages
+
         request = HttpRequest()
-        queryset = SpecialtyModeTimeSlot.objects.all()
+        queryset = SyllabusSchedule.objects.all()
 
         replicate_in_all(None, request, queryset)
 
-        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusSchedule'), [])
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusScheduleTimeSlot'), [])
+        self.assertEqual(messages.add_message.call_args_list,
+                         [call(request, 20, 'All academies in sync with those syllabus schedules')])
 
     """
-    🔽🔽🔽 With one Academy and zero SpecialtyMode
+    🔽🔽🔽 With one Academy and one SyllabusSchedule
     """
 
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
-    def test_replicate_in_all__with_zero_specialty_modes(self):
-        self.generate_models(academy=True)
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_one_schedule__just_the_same_academy(self):
+        from django.contrib import messages
+
+        model = self.bc.database.create(academy=1, syllabus_schedule=1)
 
         request = HttpRequest()
-        queryset = SpecialtyModeTimeSlot.objects.all()
-
-        replicate_in_all(None, request, queryset)
-        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
-
-    """
-    🔽🔽🔽 With one Academy and one SpecialtyMode
-    """
-
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
-    def test_replicate_in_all__with_one_specialty_mode(self):
-        self.generate_models(academy=True, specialty_mode=True)
-
-        request = HttpRequest()
-        queryset = SpecialtyModeTimeSlot.objects.all()
-
-        replicate_in_all(None, request, queryset)
-        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
-
-    """
-    🔽🔽🔽 With one Academy and one SpecialtyMode
-    """
-
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
-    def test_replicate_in_all__with_one_specialty_mode_type_slot(self):
-        model = self.generate_models(academy=True, specialty_mode=True, specialty_mode_time_slot=True)
-
-        request = HttpRequest()
-        queryset = SpecialtyModeTimeSlot.objects.all()
+        queryset = SyllabusSchedule.objects.all()
 
         replicate_in_all(None, request, queryset)
 
-        data = self.model_to_dict(model, 'specialty_mode_time_slot')
-        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [{**data, 'id': 2}])
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusSchedule'), [
+            self.bc.format.to_dict(model.syllabus_schedule),
+        ])
 
-    """
-    🔽🔽🔽 With one Academy, one SpecialtyMode and two Academy
-    """
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusScheduleTimeSlot'), [])
 
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
-    def test_replicate_in_all__with_one_specialty_mode_type_slot__with_two_academies(self):
-        model1 = self.generate_models(academy=True, specialty_mode=True, specialty_mode_time_slot=True)
-        model2 = self.generate_models(academy=True)
+        self.assertEqual(messages.add_message.call_args_list,
+                         [call(request, 20, 'All academies in sync with those syllabus schedules')])
+
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_one_schedule__two_academies__without_timezone(self):
+        from django.contrib import messages
+
+        model = self.bc.database.create(academy=2, syllabus_schedule=1)
 
         request = HttpRequest()
-        queryset = SpecialtyModeTimeSlot.objects.filter(id=1)
+        queryset = SyllabusSchedule.objects.all()
 
         replicate_in_all(None, request, queryset)
 
-        data = self.model_to_dict(model1, 'specialty_mode_time_slot')
-        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [{
-            **data,
-            'id': 2,
-        }, {
-            **data,
-            'id': 3,
-            'academy_id': model2.academy.id,
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusSchedule'), [
+            self.bc.format.to_dict(model.syllabus_schedule),
+        ])
 
-    """
-    🔽🔽🔽 Select many timeslots from diferent academies
-    """
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusScheduleTimeSlot'), [])
 
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
-    def test_replicate_in_all__with_many_timeslots_from_diferent_academies(self):
-        academy_model1 = self.generate_models(academy=True)
-        academy_model2 = self.generate_models(academy=True)
-        models = [
-            self.generate_models(
-                academy=academy_model1.academy, specialty_mode=True, specialty_mode_time_slot=True)
-            for _ in range(1, 3)
-        ] + [
-            self.generate_models(
-                academy=academy_model2.academy, specialty_mode=True, specialty_mode_time_slot=True)
-            for _ in range(1, 4)
-        ]
+        self.assertEqual(messages.add_message.call_args_list, [
+            call(
+                request, 40, f'The following academies ({model.academy[1].slug}) was skipped '
+                "because it doesn't have a timezone assigned")
+        ])
+
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_one_schedule__two_academies(self):
+        from django.contrib import messages
+
+        academy = {'timezone': 'Pacific/Pago_Pago'}
+        model = self.bc.database.create(academy=(2, academy), syllabus_schedule=1)
 
         request = HttpRequest()
-        queryset = SpecialtyModeTimeSlot.objects.filter().exclude(id=1).exclude(id=3)
+        queryset = SyllabusSchedule.objects.all()
 
         replicate_in_all(None, request, queryset)
 
-        data1 = self.model_to_dict(models[0], 'specialty_mode_time_slot')
-        data2 = self.model_to_dict(models[1], 'specialty_mode_time_slot')
-        data3 = self.model_to_dict(models[2], 'specialty_mode_time_slot')
-        data4 = self.model_to_dict(models[3], 'specialty_mode_time_slot')
-        data5 = self.model_to_dict(models[4], 'specialty_mode_time_slot')
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusSchedule'), [
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule)
+            },
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule),
+                'id': 2,
+                'academy_id': 2,
+            },
+        ])
 
-        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [
-            data1,
-            data3,
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusScheduleTimeSlot'), [])
+
+        self.assertEqual(messages.add_message.call_args_list, [
+            call(request, 20, 'All academies in sync with those syllabus schedules'),
+        ])
+
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_one_schedule__two_academies__zero_timeslots(self):
+        from django.contrib import messages
+
+        academy = {'timezone': 'Pacific/Pago_Pago'}
+        model = self.bc.database.create(academy=(2, academy), syllabus_schedule=1)
+
+        request = HttpRequest()
+        queryset = SyllabusSchedule.objects.all()
+
+        replicate_in_all(None, request, queryset)
+
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusSchedule'), [
             {
-                **data2,
-                'id': 6,
-                'academy_id': academy_model1.academy.id,
+                **self.bc.format.to_dict(model.syllabus_schedule)
             },
             {
-                **data4,
-                'id': 7,
-                'academy_id': academy_model1.academy.id,
+                **self.bc.format.to_dict(model.syllabus_schedule),
+                'id': 2,
+                'academy_id': 2,
+            },
+        ])
+
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusScheduleTimeSlot'), [])
+
+        self.assertEqual(messages.add_message.call_args_list, [
+            call(request, 20, 'All academies in sync with those syllabus schedules'),
+        ])
+
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_one_schedule__two_academies__one_timeslot(self):
+        from django.contrib import messages
+
+        academy = {'timezone': 'Pacific/Pago_Pago'}
+        model = self.bc.database.create(academy=(2, academy),
+                                        syllabus_schedule=1,
+                                        syllabus_schedule_time_slot=1)
+
+        request = HttpRequest()
+        queryset = SyllabusSchedule.objects.all()
+
+        replicate_in_all(None, request, queryset)
+
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusSchedule'), [
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule)
             },
             {
-                **data5,
-                'id': 8,
-                'academy_id': academy_model1.academy.id,
+                **self.bc.format.to_dict(model.syllabus_schedule),
+                'id': 2,
+                'academy_id': 2,
+            },
+        ])
+
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusScheduleTimeSlot'), [
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot)
             },
             {
-                **data2,
-                'id': 9,
-                'academy_id': academy_model2.academy.id,
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot),
+                'id': 2,
+                'schedule_id': 2,
+                'timezone': model.academy[1].timezone,
+            },
+        ])
+
+        self.assertEqual(messages.add_message.call_args_list, [
+            call(request, 20, 'All academies in sync with those syllabus schedules'),
+        ])
+
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_one_schedule__two_academies__two_timeslots(self):
+        from django.contrib import messages
+
+        academy = {'timezone': 'Pacific/Pago_Pago'}
+        model = self.bc.database.create(academy=(2, academy),
+                                        syllabus_schedule=1,
+                                        syllabus_schedule_time_slot=2)
+
+        request = HttpRequest()
+        queryset = SyllabusSchedule.objects.all()
+
+        replicate_in_all(None, request, queryset)
+
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusSchedule'), [
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule)
             },
             {
-                **data4,
-                'id': 10,
-                'academy_id': academy_model2.academy.id,
+                **self.bc.format.to_dict(model.syllabus_schedule),
+                'id': 2,
+                'academy_id': 2,
+            },
+        ])
+
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusScheduleTimeSlot'), [
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot[0])
             },
             {
-                **data5,
-                'id': 11,
-                'academy_id': academy_model2.academy.id,
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot[1])
             },
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot[0]),
+                'id': 3,
+                'schedule_id': 2,
+                'timezone': model.academy[1].timezone,
+            },
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot[1]),
+                'id': 4,
+                'schedule_id': 2,
+                'timezone': model.academy[1].timezone,
+            },
+        ])
+
+        self.assertEqual(messages.add_message.call_args_list, [
+            call(request, 20, 'All academies in sync with those syllabus schedules'),
         ])

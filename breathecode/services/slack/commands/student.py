@@ -9,27 +9,31 @@ Possible parameters for this command:
 
 """
 import os
+import random
 
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Profile
 from ..decorator import command
 from ..utils import to_string, jump
+from ..exceptions import SlackException
 
 
-@command(only='staff')
+@command(capable_of='read_student')
 def execute(users, academies, **context):
 
     if len(users) == 0:
-        raise Exception('No usernames found on the command')
+        raise SlackException('No usernames found on the command', slug='users-not-provided')
 
     cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=users[0],
                                              role='STUDENT',
                                              cohort__academy__id__in=[academies])
+
     user = cohort_users.first()
     if user is None:
-        raise Exception(
-            f'Student {users[0]} not found on any cohort for your available academies, if you feel you should have access to this information maybe you need to be added to the relevant academy for this student'
-        )
+        raise SlackException(
+            f'Student {users[0]} not found on any cohort for your available academies, if you feel you should have access " \
+                "to this information maybe you need to be added to the relevant academy for this student',
+            slug='cohort-user-not-found')
 
     user = user.user
 
@@ -41,13 +45,24 @@ def execute(users, academies, **context):
 
 def render_student(user, cohort_users):
 
-    avatar_url = os.getenv('API_URL', '') + '/static/img/avatar.png'
+    avatar_number = random.randint(1, 21)
+    avatar_url = os.getenv('API_URL', '') + f'/static/img/avatar-{avatar_number}.png'
     github_username = 'not set'
     phone = 'not set'
     try:
-        github_username = user.profile.github_username
-        avatar_url = user.profile.avatar_url
-        phone = user.profile.phone
+        if user.profile.github_username:
+            github_username = user.profile.github_username
+
+        if user.profile.phone:
+            phone = user.profile.phone
+
+        if user.profile.avatar_url:
+            avatar_url = user.profile.avatar_url
+
+        else:
+            user.profile.avatar_url = avatar_url
+            user.profile.save()
+
     except Profile.DoesNotExist:
         pass
 

@@ -1,11 +1,10 @@
-import logging
-import datetime
-import hashlib
-import requests
+import logging, time, datetime, hashlib, requests, csv
+from io import StringIO
 import json, re, os, subprocess, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
-from .models import Endpoint
+from breathecode.admissions.models import Academy
+from .models import Endpoint, CSVDownload
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
 logger = logging.getLogger(__name__)
@@ -55,9 +54,9 @@ def test_link(url, test_pattern=None):
         result['status_text'] = 'Connection Timeout'
     except requests.ConnectionError:
         result['status_code'] = 404
-        result['status_text'] = f'Connection Error {r.status_code}'
+        result['status_text'] = f'Connection Error 404'
 
-    logger.debug(f'Tested {url} {result["status_text"]} with {r.status_code}')
+    logger.debug(f'Tested {url} {result["status_text"]} with {result["status_code"]}')
     return result
 
 
@@ -243,8 +242,10 @@ def run_script(script):
         header = SCRIPT_HEADER
         content = header + \
             open(f'{dir_path}/scripts/{script.script_slug}.py').read()
+
     elif script.script_body:
         content = script.script_body
+
     else:
         raise Exception(f'Script not found or its body is empty: {script.script_slug}')
 
@@ -252,16 +253,32 @@ def run_script(script):
         local = {'result': {'status': 'OPERATIONAL'}}
         with stdoutIO() as s:
             try:
-                exec(content, {'academy': script.application.academy}, local)
+                if script.application is None:
+                    raise Exception(f'Script {script.script_slug} does not belong to any application')
+                exec(
+                    content, {
+                        'academy': script.application.academy,
+                        'ADMIN_URL': os.getenv('ADMIN_URL', ''),
+                        'API_URL': os.getenv('API_URL', ''),
+                    }, local)
                 script.status_code = 0
                 script.status = 'OPERATIONAL'
+                script.special_status_text = 'OK'
                 results['severity_level'] = 5
                 script.response_text = s.getvalue()
+
             except ScriptNotification as e:
                 script.status_code = 1
                 script.response_text = str(e)
                 if e.title is not None:
                     script.special_status_text = e.title
+
+                if e.btn_url is not None:
+                    results['btn'] = {'url': e.btn_url, 'label': 'More details'}
+                    if e.btn_label is not None:
+                        results['btn']['label'] = e.btn_label
+                else:
+                    results['btn'] = None
 
                 if e.status is not None:
                     script.status = e.status
@@ -270,16 +287,16 @@ def run_script(script):
                     script.status = 'MINOR'
                     results['severity_level'] = 5
                 results['error_slug'] = e.slug
-                print(e)
+
             except Exception as e:
                 import traceback
-                script.special_status_text = str(e)
+                script.special_status_text = str(e)[:255]
                 script.response_text = ''.join(traceback.format_exception(None, e, e.__traceback__))
                 script.status_code = 1
                 script.status = 'CRITICAL'
-                results['error_slug'] = 'uknown'
+                results['error_slug'] = 'unknown'
+                results['btn'] = None
                 results['severity_level'] = 100
-                print(e)
 
         script.last_run = timezone.now()
         script.save()
@@ -292,3 +309,55 @@ def run_script(script):
         return results
 
     return content is not None and script.status_code == 0
+
+
+def download_csv(module, model_name, ids_to_download, academy_id=None):
+
+    download = CSVDownload()
+
+    try:
+        downloads_bucket = os.getenv('DOWNLOADS_BUCKET', None)
+        if downloads_bucket is None:
+            raise Exception('Unknown DOWNLOADS_BUCKET configuration, please set env variable')
+
+        # separated downloads by academy
+        academy = Academy.objects.filter(id=academy_id).first()
+        download.name = ''
+        if academy is not None:
+            download.academy = academy
+            download.name += academy.slug
+
+        # import model (table) being downloaded
+        import importlib
+        model = getattr(importlib.import_module(module), model_name)
+
+        # finish the file name with <academy_slug>+<model_name>+<epoc_time>.csv
+        download.name = model_name + str(int(time.time())) + '.csv'
+        download.save()
+
+        meta = model._meta
+        field_names = [field.name for field in meta.fields]
+        # rebuild query from the admin
+        queryset = model.objects.filter(pk__in=ids_to_download)
+
+        #write csv
+        buffer = StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(field_names)
+        for obj in queryset:
+            writer.writerow((getattr(obj, field) for field in field_names))
+
+        # upload to google cloud bucket
+        from ..services.google_cloud import Storage
+        storage = Storage()
+        cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), download.name)
+        cloud_file.upload(buffer.getvalue(), content_type='text/csv')
+        download.url = cloud_file.url()
+        download.status = 'DONE'
+        download.save()
+        return True
+    except Exception as e:
+        download.status = 'ERROR'
+        download.status_message = str(e)
+        download.save()
+        return False

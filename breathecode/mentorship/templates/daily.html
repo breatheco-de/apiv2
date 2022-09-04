@@ -1,0 +1,80 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0;">
+	<meta name="format-detection" content="telephone=no" />
+	<style>
+        body{
+            overflow: hidden;
+        }
+		iframe{
+            border: 0px;
+        }
+        .navbar{
+            position: absolute;
+            z-index: 10;
+            width: 100vw;
+            height: 20px;
+            background: black;
+            padding: 5px;
+            display: flex;
+        }
+        .navbar > div{
+            display: table-cell;
+            vertical-align: middle;
+            line-height:20px;
+        }
+        .navbar .logo{
+            max-height: 20px;
+            max-width: 20px;
+            margin-right: 10px;
+        }
+	</style>
+
+	<!-- MESSAGE SUBJECT -->
+	<title>{{ subject }}</title>
+
+</head>
+<body topmargin="0" rightmargin="0" bottommargin="0" leftmargin="0" marginwidth="0" marginheight="0" width="100%" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; width: 100%; height: 100%; -webkit-font-smoothing: antialiased; text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; line-height: 100%;
+	background-color: #000000;
+	color: #d3d3d3;" bgcolor="#000000" text="#d3d3d3">
+    <div class="navbar">
+        <div>
+            <img class="logo" src="{{ session.mentor.service.academy.icon_url|default:"/static/assets/icon.png" }}" />
+        </div>
+        <div>
+            {{ session.service.academy.name }} {{ session.service.name }}
+        </div>
+    </div>
+
+    <script>
+        window.onload = function(){
+            callFrame = window.DailyIframe.createFrame({
+                showLeaveButton: true,
+                showFullscreenButton: true,
+                {% if userName and userName != "" %}
+                userName: '{{ userName }}',
+                {% endif %}
+                iframeStyle: {
+                    position: 'fixed',
+                    width: '100%',
+                    height: '100%',
+                },
+            });
+            callFrame.join({ url: '{{ room_url }}' });
+            callFrame.on('left-meeting', (event) => {
+                console.log('left meeting event', event);
+                {% if leave_url == "close" %}
+                window.close();
+                {% elif leave_url and leave_url is not None and leave_url != "" %}
+                window.location.href = '{{ leave_url }}';
+                {% endif %}
+                // callFrame.iframe().style.visibility = 'visible';
+            });
+        }
+    </script>
+    <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
+</body>
+
+</html>

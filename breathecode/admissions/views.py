@@ -1,30 +1,29 @@
-from breathecode.certificate.models import Specialty
-from breathecode.admissions.actions import sync_cohort_timeslots
 from breathecode.admissions.caches import CohortCache
 import logging
-import re
 import pytz
 from django.db.models import Q
-from django.http import HttpResponse
+from breathecode.utils import APIViewExtensions
 from django.utils import timezone
-from django.shortcuts import render
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import HeaderLimitOffsetPagination
 from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
-from .serializers import (AcademySerializer, GetSyllabusSerializer, SpecialtyModePUTSerializer,
-                          SpecialtyModeSerializer, SpecialtyModeTimeSlotSerializer, CohortSerializer,
-                          CohortTimeSlotSerializer, GETSpecialtyModeTimeSlotSerializer,
-                          GETCohortTimeSlotSerializer, GetCohortSerializer, GetSyllabusVersionSerializer,
-                          SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer,
-                          CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer,
-                          CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
-                          GetSpecialtyModeSerializer, GetSyllabusVersionSerializer, SyllabusVersionSerializer,
-                          GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer)
-from .models import (Academy, AcademySpecialtyMode, SpecialtyModeTimeSlot, CohortTimeSlot, CohortUser,
-                     SpecialtyMode, Cohort, Country, STUDENT, DELETED, Syllabus, SyllabusVersion)
+from .utils import CohortLog
+from .serializers import (
+    AcademySerializer, GetSyllabusSerializer, SyllabusSchedulePUTSerializer, SyllabusScheduleSerializer,
+    SyllabusScheduleTimeSlotSerializer, CohortSerializer, CohortTimeSlotSerializer,
+    GETSyllabusScheduleTimeSlotSerializer, GETCohortTimeSlotSerializer, GetCohortSerializer,
+    GetSyllabusVersionSerializer, SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer,
+    CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
+    UserDJangoRestSerializer, UserMeSerializer, GetSyllabusScheduleSerializer, GetSyllabusVersionSerializer,
+    SyllabusVersionSerializer, GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer,
+    GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer)
+from .models import (ACTIVE, Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule,
+                     Cohort, STUDENT, DELETED, Syllabus, SyllabusVersion)
+
+from .actions import update_asset_on_json, find_asset_on_json
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -32,10 +31,9 @@ from rest_framework import status
 from breathecode.utils import (localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
-
-from rest_framework.decorators import renderer_classes
-from rest_framework_csv import renderers as r
-from rest_framework.renderers import JSONRenderer
+from breathecode.utils import DatetimeInteger
+from breathecode.utils.find_by_full_name import query_like_by_full_name
+from breathecode.admissions.caches import CohortUserCache
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +50,23 @@ def get_timezones(request, id=None):
 def get_all_academies(request, id=None):
     items = Academy.objects.all()
     serializer = AcademySerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_public_syllabus(request, id=None):
+    items = Syllabus.objects.filter(private=False)
+
+    slug = request.GET.get('slug', None)
+    if slug is not None:
+        items = items.filter(slug__in=slug.split(','))
+
+    like = request.GET.get('like', None)
+    if like is not None:
+        items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+
+    serializer = GetSyllabusSmallSerializer(items, many=True)
     return Response(serializer.data)
 
 
@@ -90,6 +105,7 @@ def get_cohorts(request, id=None):
 
 
 class AcademyReportView(APIView):
+
     @capable_of('academy_reporting')
     def get(self, request, academy_id=None):
 
@@ -101,7 +117,22 @@ class AcademyReportView(APIView):
         return Response(users.data)
 
 
+class AcademyActivateView(APIView):
+
+    @capable_of('academy_activate')
+    def put(self, request, academy_id=None):
+
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        academy.status = 'ACTIVE'
+        academy.save()
+
+        serializer = GetAcademyWithStatusSerializer(academy)
+        return Response(serializer.data)
+
+
 class UserMeView(APIView):
+
     def get(self, request, format=None):
 
         try:
@@ -122,6 +153,7 @@ class AcademyView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_my_academy')
     def get(self, request, format=None, academy_id=None):
         item = Academy.objects.get(id=academy_id)
@@ -159,7 +191,17 @@ class CohortUserView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    def get(self, request, format=None):
+
+    extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
+
+    def get(self, request):
+
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
         items = CohortUser.objects.all()
 
         roles = request.GET.get('roles', None)
@@ -186,6 +228,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
         if users is not None:
             items = items.filter(user__id__in=users.split(','))
 
+        items = handler.queryset(items)
         serializer = GetCohortUserSerializer(items, many=True)
         return Response(serializer.data)
 
@@ -230,7 +273,8 @@ class CohortUserView(APIView, GenerateLookupsMixin):
                         CohortUser.objects.filter(user__id=x['user'], cohort__id=x['cohort']).first())
 
                 else:
-                    raise ValidationException('Cannot determine CohortUser in ' f'index {index}')
+                    raise ValidationException('Cannot determine CohortUser in '
+                                              f'index {index}')
 
         serializer = CohortUserPUTSerializer(current, data=request.data, context=context, many=many)
         if serializer.is_valid():
@@ -274,7 +318,8 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
     """
     List all snippets, or create a new snippet.
     """
-    @capable_of('read_cohort')
+
+    @capable_of('read_all_cohort')
     def get(self, request, format=None, cohort_id=None, user_id=None, academy_id=None):
         if user_id is not None:
             item = CohortUser.objects.filter(cohort__academy__id=academy_id,
@@ -304,9 +349,32 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             if cohorts is not None:
                 items = items.filter(cohort__slug__in=cohorts.split(','))
 
+            watching = request.GET.get('watching', None)
+            if watching is not None:
+                items = items.filter(watching=watching.lower() == 'true')
+
+            if 'cohort' in self.request.GET:
+                param = self.request.GET.get('cohort')
+                items = items.filter(cohort__name__icontains=param)
+
+            like = request.GET.get('like', None)
+            if like is not None:
+                items = query_like_by_full_name(like=like, items=items, prefix='user__')
+
+            syllabus = request.GET.get('syllabus', None)
+            if syllabus is not None:
+                items = items.filter(cohort__syllabus_version__syllabus__slug__in=syllabus.split(','))
+
+            distinct = request.GET.get('distinct', None)
+            if distinct is not None and distinct == 'true':
+                ids = items.distinct('user__id').order_by('user__id').values_list('id', flat=True)
+                items = items.filter(id__in=ids)
+
             users = request.GET.get('users', None)
             if users is not None:
                 items = items.filter(user__id__in=users.split(','))
+
+            items = items.order_by(request.GET.get('sort', '-role'))
 
         except Exception as e:
             raise ValidationException(str(e), 400)
@@ -361,7 +429,8 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
                         CohortUser.objects.filter(user__id=x['user'], cohort__id=x['cohort']).first())
 
                 else:
-                    raise ValidationException('Cannot determine CohortUser in ' f'index {index}')
+                    raise ValidationException('Cannot determine CohortUser in '
+                                              f'index {index}')
 
         serializer = CohortUserPUTSerializer(current, data=request.data, context=context, many=many)
         if serializer.is_valid():
@@ -401,7 +470,8 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
 
 
 class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
-    @capable_of('read_cohort')
+
+    @capable_of('read_all_cohort')
     def get(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
 
         if timeslot_id is not None:
@@ -430,9 +500,24 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if cohort_id and not cohort:
             raise ValidationException('Cohort not found', 404, slug='cohort-not-found')
 
-        request.data['cohort'] = cohort.id
+        timezone = Academy.objects.filter(id=academy_id).values_list('timezone', flat=True).first()
+        if not timezone:
+            raise ValidationException('Academy doesn\'t have a timezone assigned',
+                                      slug='academy-without-timezone')
 
-        serializer = CohortTimeSlotSerializer(data=request.data, many=False)
+        data = {
+            **request.data,
+            'cohort': cohort.id,
+            'timezone': timezone,
+        }
+
+        if 'starting_at' in data:
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
+
+        if 'ending_at' in data:
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
+
+        serializer = CohortTimeSlotSerializer(data=data, many=False)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -455,7 +540,24 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not item:
             raise ValidationException('Time slot not found', 404, slug='time-slot-not-found')
 
-        data = {**request.data, 'id': timeslot_id, 'cohort': cohort.id}
+        timezone = cohort.timezone or Academy.objects.filter(id=academy_id).values_list('timezone',
+                                                                                        flat=True).first()
+        if not timezone:
+            raise ValidationException('Academy doesn\'t have a timezone assigned',
+                                      slug='academy-without-timezone')
+
+        data = {
+            **request.data,
+            'id': timeslot_id,
+            'cohort': cohort.id,
+            'timezone': timezone,
+        }
+
+        if 'starting_at' in data:
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
+
+        if 'ending_at' in data:
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
 
         serializer = CohortTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
@@ -478,6 +580,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
 
 
 class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
+
     @capable_of('crud_certificate')
     def post(self, request, academy_id=None):
         cohort_ids = request.GET.get('cohort', '')
@@ -493,18 +596,22 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
             raise ValidationException('Cohort not found', 404, slug='cohort-not-found')
 
         for cohort in cohorts:
-            if not cohort.specialty_mode:
-                raise ValidationException("Cohort doesn't have any certificate",
+            if not cohort.schedule:
+                raise ValidationException("Cohort doesn't have any schedule",
                                           400,
                                           slug='cohort-without-specialty-mode')
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy.timezone:
+            raise ValidationException('Academy doesn\'t have any timezone assigned', slug='without-timezone')
 
         CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).delete()
 
         data = []
         for cohort in cohorts:
-            certificate_id = cohort.specialty_mode.id
-            certificate_timeslots = SpecialtyModeTimeSlot.objects.filter(academy__id=academy_id,
-                                                                         specialty_mode__id=certificate_id)
+            certificate_id = cohort.schedule.id
+            certificate_timeslots = SyllabusScheduleTimeSlot.objects.filter(schedule__academy__id=academy_id,
+                                                                            schedule__id=certificate_id)
 
             for certificate_timeslot in certificate_timeslots:
                 data.append({
@@ -513,6 +620,7 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
                     'ending_at': certificate_timeslot.ending_at,
                     'recurrent': certificate_timeslot.recurrent,
                     'recurrency_type': certificate_timeslot.recurrency_type,
+                    'timezone': cohort.timezone or academy.timezone,
                 })
 
         serializer = CohortTimeSlotSerializer(data=data, many=True)
@@ -522,24 +630,25 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
+class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
+
     @capable_of('read_certificate')
     def get(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
         if timeslot_id:
-            item = SpecialtyModeTimeSlot.objects.filter(academy__id=academy_id,
-                                                        specialty_mode__id=certificate_id,
-                                                        id=timeslot_id).first()
+            item = SyllabusScheduleTimeSlot.objects.filter(schedule__academy__id=academy_id,
+                                                           schedule__id=certificate_id,
+                                                           id=timeslot_id).first()
 
             if item is None:
                 raise ValidationException('Time slot not found', 404, slug='time-slot-not-found')
 
-            serializer = GETSpecialtyModeTimeSlotSerializer(item, many=False)
+            serializer = GETSyllabusScheduleTimeSlotSerializer(item, many=False)
             return Response(serializer.data)
 
-        items = SpecialtyModeTimeSlot.objects.filter(academy__id=academy_id,
-                                                     specialty_mode__id=certificate_id)
+        items = SyllabusScheduleTimeSlot.objects.filter(schedule__academy__id=academy_id,
+                                                        schedule__id=certificate_id)
 
-        serializer = GETSpecialtyModeTimeSlotSerializer(items, many=True)
+        serializer = GETSyllabusScheduleTimeSlotSerializer(items, many=True)
         return Response(serializer.data)
 
     @capable_of('crud_certificate')
@@ -549,21 +658,30 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
                                       400,
                                       slug='certificate-in-body')
 
-        academy_certificate = AcademySpecialtyMode.objects.filter(specialty_mode__id=certificate_id,
-                                                                  academy__id=academy_id).first()
+        certificate = SyllabusSchedule.objects.filter(id=certificate_id, academy__id=academy_id).first()
 
-        if certificate_id and not academy_certificate:
-            raise ValidationException('Certificate not found', 404, slug='certificate-not-found')
+        if certificate_id and not certificate:
+            raise ValidationException('Schedule not found', 404, slug='certificate-not-found')
 
-        certificate = academy_certificate.specialty_mode
+        timezone = Academy.objects.filter(id=academy_id).values_list('timezone', flat=True).first()
+        if not timezone:
+            raise ValidationException('Academy doesn\'t have a timezone assigned',
+                                      slug='academy-without-timezone')
 
         data = {
             **request.data,
             'academy': academy_id,
-            'specialty_mode': certificate.id,
+            'schedule': certificate.id,
+            'timezone': timezone,
         }
 
-        serializer = SpecialtyModeTimeSlotSerializer(data=data, many=False)
+        if 'starting_at' in data:
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
+
+        if 'ending_at' in data:
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
+
+        serializer = SyllabusScheduleTimeSlotSerializer(data=data, many=False)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -574,29 +692,36 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
         if 'certificate' in request.data or 'certificate_id' in request.data:
             raise ValidationException("Certificate can't be passed is the body", 400)
 
-        academy_certificate = AcademySpecialtyMode.objects.filter(specialty_mode__id=certificate_id,
-                                                                  academy__id=academy_id).first()
+        certificate = SyllabusSchedule.objects.filter(id=certificate_id, academy__id=academy_id).first()
 
-        if certificate_id and not academy_certificate:
+        if certificate_id and not certificate:
             raise ValidationException('Certificate not found', 404, slug='certificate-not-found')
 
-        certificate = academy_certificate.specialty_mode
-
-        item = SpecialtyModeTimeSlot.objects.filter(academy__id=academy_id,
-                                                    specialty_mode__id=certificate_id,
-                                                    id=timeslot_id).first()
+        item = SyllabusScheduleTimeSlot.objects.filter(schedule__id=certificate_id, id=timeslot_id).first()
 
         if not item:
             raise ValidationException('Time slot not found', 404, slug='time-slot-not-found')
+
+        timezone = Academy.objects.filter(id=academy_id).values_list('timezone', flat=True).first()
+        if not timezone:
+            raise ValidationException('Academy doesn\'t have a timezone assigned',
+                                      slug='academy-without-timezone')
 
         data = {
             **request.data,
             'id': timeslot_id,
             'academy': academy_id,
-            'specialty_mode': certificate.id,
+            'schedule': certificate.id,
+            'timezone': timezone,
         }
 
-        serializer = SpecialtyModeTimeSlotSerializer(item, data=data)
+        if 'starting_at' in data:
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
+
+        if 'ending_at' in data:
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
+
+        serializer = SyllabusScheduleTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -604,9 +729,9 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_certificate')
     def delete(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
-        item = SpecialtyModeTimeSlot.objects.filter(academy__id=academy_id,
-                                                    specialty_mode__id=certificate_id,
-                                                    id=timeslot_id).first()
+        item = SyllabusScheduleTimeSlot.objects.filter(schedule__academy__id=academy_id,
+                                                       schedule__id=certificate_id,
+                                                       id=timeslot_id).first()
 
         if not item:
             raise ValidationException('Time slot not found', 404, slug='time-slot-not-found')
@@ -616,31 +741,77 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class CohortMeView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(cache=CohortCache,
+                                   cache_per_user=True,
+                                   sort='-kickoff_date',
+                                   paginate=True)
+
+    @capable_of('read_single_cohort')
+    def get(self, request, cohort_id=None, academy_id=None):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        if cohort_id is not None:
+            if cohort_id.isnumeric():
+                cohort_user = CohortUser.objects.filter(user=request.user,
+                                                        academy__id=academy_id,
+                                                        cohort__id=cohort_id).first()
+            else:
+                cohort_user = CohortUser.objects.filter(user=request.user,
+                                                        academy__id=academy_id,
+                                                        cohort__slug=cohort_id).first()
+
+            if not cohort_user or not cohort_user.cohort:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+            serializer = GetCohortSerializer(cohort_user.cohort, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        cohorts_of_student = CohortUser.objects.filter(user=request.user).values_list('cohort__id', flat=True)
+        items = Cohort.objects.filter(academy__id=academy_id, id__in=cohorts_of_student)
+
+        upcoming = request.GET.get('upcoming', None)
+        if upcoming == 'true':
+            now = timezone.now()
+            items = items.filter(kickoff_date__gte=now)
+
+        stage = request.GET.get('stage', None)
+        if stage is not None:
+            items = items.filter(stage__in=stage.upper().split(','))
+        else:
+            items = items.exclude(stage='DELETED')
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+
+        items = handler.queryset(items)
+        serializer = GetCohortSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class AcademyCohortView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
     permission_classes = [IsAuthenticated]
-    cache = CohortCache()
+    extensions = APIViewExtensions(cache=CohortCache, sort='-kickoff_date', paginate=True)
 
-    @capable_of('read_cohort')
+    @capable_of('read_all_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
-        upcoming = request.GET.get('upcoming', None)
-        academy = request.GET.get('academy', None)
-        location = request.GET.get('location', None)
-        like = request.GET.get('like', None)
-        cache_kwargs = {
-            'resource': cohort_id,
-            'academy_id': academy_id,
-            'upcoming': upcoming,
-            'academy': academy,
-            'location': location,
-            'like': like,
-            **self.pagination_params(request),
-        }
+        handler = self.extensions(request)
 
-        cache = self.cache.get(**cache_kwargs)
-        if cache:
+        cache = handler.cache.get()
+        if cache is not None:
             return Response(cache, status=status.HTTP_200_OK)
 
         if cohort_id is not None:
@@ -654,37 +825,37 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
             serializer = GetCohortSerializer(item, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return handler.response(serializer.data)
 
         items = Cohort.objects.filter(academy__id=academy_id)
 
+        upcoming = request.GET.get('upcoming', None)
         if upcoming == 'true':
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
 
+        academy = request.GET.get('academy', None)
         if academy is not None:
             items = items.filter(academy__slug__in=academy.split(','))
 
+        location = request.GET.get('location', None)
         if location is not None:
             items = items.filter(academy__slug__in=location.split(','))
 
+        stage = request.GET.get('stage', None)
+        if stage is not None:
+            items = items.filter(stage__in=stage.upper().split(','))
+        else:
+            items = items.exclude(stage='DELETED')
+
+        like = request.GET.get('like', None)
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
-        sort = request.GET.get('sort', None)
-        if sort is None or sort == '':
-            sort = '-kickoff_date'
+        items = handler.queryset(items)
+        serializer = GetCohortSerializer(items, many=True)
 
-        items = items.order_by(sort)
-
-        page = self.paginate_queryset(items, request)
-        serializer = GetCohortSerializer(page, many=True)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data, cache=self.cache, cache_kwargs=cache_kwargs)
-        else:
-            self.cache.set(serializer.data, **cache_kwargs)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
     @capable_of('crud_cohort')
     def post(self, request, academy_id=None):
@@ -699,8 +870,8 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if syllabus is None:
             raise ValidationException('syllabus field is missing', slug='missing-syllabus-field')
 
-        # specialty_mode = request.data.get('specialty_mode')
-        # if specialty_mode is None:
+        # schedule = request.data.get('schedule')
+        # if schedule is None:
         #     raise ValidationException('specialty mode field is missing', slug='specialty-mode-field')
 
         if request.data.get('current_day'):
@@ -714,12 +885,15 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         for key in request.data:
             data[key] = request.data.get(key)
 
+        if 'timezone' not in data:
+            data['timezone'] = academy.timezone
+
         if 'syllabus_version' in data:
             del data['syllabus_version']
 
         serializer = CohortSerializer(data=data, context={'request': request, 'academy': academy})
         if serializer.is_valid():
-            self.cache.clear()
+
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -759,7 +933,6 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                                              'academy': academy,
                                          })
         if serializer.is_valid():
-            self.cache.clear()
             serializer.save()
 
             serializer = GetCohortSerializer(cohort, many=False)
@@ -790,7 +963,6 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 item.stage = DELETED
                 item.save()
 
-            self.cache.clear()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if cohort_id is None:
@@ -812,13 +984,16 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         cohort.stage = DELETED
         cohort.save()
 
-        self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class SpecialtyModeView(APIView, HeaderLimitOffsetPagination):
+class SyllabusScheduleView(APIView):
+    extensions = APIViewExtensions(paginate=True)
+
     def get(self, request):
-        items = SpecialtyMode.objects.filter()
+        handler = self.extensions(request)
+
+        items = SyllabusSchedule.objects.filter(academy__isnull=False)
 
         syllabus_id = request.GET.get('syllabus_id')
         if syllabus_id:
@@ -828,19 +1003,25 @@ class SpecialtyModeView(APIView, HeaderLimitOffsetPagination):
         if syllabus_slug:
             items = items.filter(syllabus__slug__in=syllabus_slug.split(','))
 
-        page = self.paginate_queryset(items, request)
-        serializer = GetSpecialtyModeSerializer(page, many=True)
+        academy_id = request.GET.get('academy_id')
+        if academy_id:
+            items = items.filter(academy__id__in=academy_id.split(','))
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        academy_slug = request.GET.get('academy_slug')
+        if academy_slug:
+            items = items.filter(academy__slug__in=academy_slug.split(','))
+
+        items = handler.queryset(items)
+        serializer = GetSyllabusScheduleSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
 
-class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
-        items = SpecialtyMode.objects.filter(syllabus__academy_owner__id=academy_id)
+        items = SyllabusSchedule.objects.filter(academy__id=academy_id)
 
         syllabus_id = request.GET.get('syllabus_id')
         if syllabus_id:
@@ -851,7 +1032,7 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
             items = items.filter(syllabus__slug__in=syllabus_slug.split(','))
 
         page = self.paginate_queryset(items, request)
-        serializer = GetSpecialtyModeSerializer(page, many=True)
+        serializer = GetSyllabusScheduleSerializer(page, many=True)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
@@ -867,7 +1048,14 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
         if not syllabus:
             raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
 
-        serializer = SpecialtyModeSerializer(data=request.data)
+        if 'academy' not in request.data:
+            raise ValidationException(f'Missing academy in the request', slug='missing-academy-in-request')
+
+        academy = Academy.objects.filter(id=request.data['academy']).exists()
+        if not academy:
+            raise ValidationException(f'Academy not found', code=404, slug='academy-not-found')
+
+        serializer = SyllabusScheduleSerializer(data=request.data)
 
         if serializer.is_valid():
             serializer.save()
@@ -875,11 +1063,15 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_certificate')
-    def put(self, request, certificate_id=None, certificate_slug=None, academy_id=None):
-        schedule = SpecialtyMode.objects.filter(
-            Q(id=certificate_id) | Q(slug=certificate_slug, slug__isnull=False)).first()
+    def put(self, request, certificate_id=None, academy_id=None):
+        schedule = SyllabusSchedule.objects.filter(id=certificate_id).first()
         if not schedule:
             raise ValidationException(f'Schedule not found', code=404, slug='specialty-mode-not-found')
+
+        if schedule.academy.id != int(academy_id):
+            raise ValidationException(f'You can\'t edit a schedule of other academy',
+                                      code=404,
+                                      slug='syllabus-schedule-of-other-academy')
 
         if 'syllabus' in request.data and not Syllabus.objects.filter(
                 Q(academy_owner__id=academy_id) | Q(private=False),
@@ -887,7 +1079,7 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
         ).exists():
             raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
 
-        serializer = SpecialtyModePUTSerializer(schedule, data=request.data)
+        serializer = SyllabusSchedulePUTSerializer(schedule, data=request.data)
 
         if serializer.is_valid():
             serializer.save()
@@ -902,9 +1094,9 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
         if not lookups:
             raise ValidationException('Missing parameters in the querystring', code=400)
 
-        ids = AcademySpecialtyMode.objects.filter(academy__id=academy_id).values_list('specialty_mode_id',
-                                                                                      flat=True)
-        items = SpecialtyMode.objects.filter(**lookups).filter(id__in=ids)
+        ids = SyllabusSchedule.objects.filter(academy__id=academy_id).values_list('id', flat=True)
+
+        items = SyllabusSchedule.objects.filter(**lookups).filter(id__in=ids)
 
         for item in items:
             item.delete()
@@ -913,11 +1105,11 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
 
 
 @api_view(['GET'])
-def get_single_course(request, certificate_slug):
-    certificates = SpecialtyMode.objects.filter(slug=certificate_slug).first()
+def get_schedule(request, schedule_id):
+    certificates = SyllabusSchedule.objects.filter(id=schedule_id).first()
     if certificates is None:
-        raise ValidationException('Certificate slug not found', code=404)
-    serializer = GetSpecialtyModeSerializer(certificates, many=False)
+        raise ValidationException('Schedule not found', slug='schedule-not-found', code=404)
+    serializer = GetSyllabusScheduleSerializer(certificates, many=False)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -925,8 +1117,13 @@ class SyllabusView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
+    extensions = APIViewExtensions(paginate=True)
+
     @capable_of('read_syllabus')
     def get(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
+        handler = self.extensions(request)
+
         if syllabus_id:
             syllabus = Syllabus.objects.filter(
                 Q(academy_owner__id=academy_id) | Q(private=False),
@@ -951,9 +1148,13 @@ class SyllabusView(APIView):
             serializer = GetSyllabusSerializer(syllabus, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        syllabus = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False))
-        serializer = GetSyllabusSerializer(syllabus, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        items = Syllabus.objects.filter(Q(academy_owner__id=academy_id)
+                                        | Q(private=False)).exclude(academy_owner__isnull=True)
+
+        items = handler.queryset(items)
+        serializer = GetSyllabusSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
     @capable_of('crud_syllabus')
     def post(self, request, academy_id=None):
@@ -977,7 +1178,6 @@ class SyllabusView(APIView):
 
     @capable_of('crud_syllabus')
     def put(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
-
         if 'slug' in request.data and not request.data['slug']:
             raise ValidationException('slug can\'t be empty', slug='empty-slug')
 
@@ -1003,24 +1203,70 @@ class SyllabusView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
+
+    # TODO: @has_permission('superadmin')
+    def get(self, request, asset_slug=None):
+
+        if asset_slug is None or asset_slug == '':
+            raise ValidationException('Please specify the asset slug you want to search',
+                                      slug='invalid-asset-slug')
+
+        findings = find_asset_on_json(asset_slug=asset_slug, asset_type=request.GET.get('asset_type', None))
+
+        return Response(findings, status=status.HTTP_200_OK)
+
+    # TODO: @has_permission('superadmin')
+    def put(self, request, asset_slug=None):
+
+        if asset_slug is None or asset_slug == '':
+            raise ValidationException('Please specify the asset slug you want to replace',
+                                      slug='invalid-asset-slug')
+        asset = request.data
+        if 'slug' not in asset or asset['slug'] == '':
+            raise ValidationException('Missing or invalid slug', slug='invalid-asset-slug')
+        if 'type' not in asset or asset['type'] == '':
+            raise ValidationException('Missing or invalid asset type', slug='invalid-asset-type')
+
+        simulate = True
+        if 'simulate' in asset and asset['simulate'] == False:
+            simulate = False
+
+        findings = update_asset_on_json(from_slug=asset_slug,
+                                        to_slug=asset['slug'],
+                                        asset_type=asset['type'],
+                                        simulate=simulate)
+
+        return Response(findings, status=status.HTTP_200_OK)
+
+
 class SyllabusVersionView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_syllabus')
     def get(self, request, syllabus_id=None, syllabus_slug=None, version=None, academy_id=None):
         if academy_id is None:
             raise ValidationException('Missing academy id', slug='missing-academy-id')
 
-        if version:
-            syllabus_version = SyllabusVersion.objects.filter(
-                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
-                Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
-                version=version,
-            ).first()
+        if version is not None:
+            syllabus_version = None
+            if version == 'latest':
+                syllabus_version = SyllabusVersion.objects.filter(
+                    Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                    Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                ).filter(status='PUBLISHED').order_by('-version').first()
+
+            if syllabus_version is None and version is not None and version != 'latest':
+                syllabus_version = SyllabusVersion.objects.filter(
+                    Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                    Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                    version=version,
+                ).first()
 
             if syllabus_version is None:
-                raise ValidationException('It syllabus version not found',
+                raise ValidationException(f'Syllabus version "{version}" not found or is a draft',
                                           code=404,
                                           slug='syllabus-version-not-found')
 
@@ -1030,7 +1276,11 @@ class SyllabusVersionView(APIView):
         syllabus_version = SyllabusVersion.objects.filter(
             Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
             Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
-        )
+        ).order_by('version')
+
+        _status = request.GET.get('status', None)
+        if _status is not None:
+            syllabus_version = syllabus_version.filter(status__in=_status.upper().split(','))
 
         serializer = GetSyllabusVersionSerializer(syllabus_version, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1040,10 +1290,13 @@ class SyllabusVersionView(APIView):
         syllabus = None
         if syllabus_id or syllabus_slug:
             syllabus = Syllabus.objects.filter(Q(id=syllabus_id)
-                                               | Q(slug=syllabus_slug, slug__isnull=False)).first()
+                                               | Q(slug=syllabus_slug, slug__isnull=False)).filter(
+                                                   academy_owner__id=academy_id).first()
 
             if not syllabus:
-                raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+                raise ValidationException(f'Syllabus not found for this academy',
+                                          code=404,
+                                          slug='syllabus-not-found')
 
         if not syllabus and 'syllabus' not in request.data:
             raise ValidationException(f'Missing syllabus in the request', slug='missing-syllabus-in-request')
@@ -1052,7 +1305,9 @@ class SyllabusVersionView(APIView):
             syllabus = Syllabus.objects.filter(id=request.data['syllabus']).first()
 
         if not syllabus:
-            raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+            raise ValidationException(f'Syllabus not found for this academy',
+                                      code=404,
+                                      slug='syllabus-not-found')
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
@@ -1093,3 +1348,80 @@ class SyllabusVersionView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PublicCohortUserView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = CohortUser.objects.all()
+
+        roles = request.GET.get('roles', None)
+        if roles is not None:
+            items = items.filter(role__in=roles.split(','))
+
+        syllabus = request.GET.get('syllabus', None)
+        if syllabus is not None:
+            items = items.filter(cohort__syllabus_version__syllabus__slug__in=syllabus.split(','))
+
+        users = request.GET.get('users', None)
+        if users is not None:
+            items = items.filter(user__id__in=users.split(','))
+
+        items = handler.queryset(items)
+        serializer = GetPublicCohortUserSerializer(items, many=True)
+        return Response(serializer.data)
+
+
+class AcademyCohortHistoryView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_cohort_log')
+    def get(self, request, cohort_id, academy_id):
+
+        item = None
+        if cohort_id.isnumeric():
+            item = Cohort.objects.filter(id=int(cohort_id), academy__id=academy_id).first()
+        else:
+            item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
+
+        if item is None:
+            raise ValidationException('Cohort not found on this academy', code=404, slug='cohort-not-found')
+
+        return Response(CohortLog(item).serialize())
+
+    @capable_of('crud_cohort_log')
+    def put(self, request, cohort_id, academy_id):
+
+        item = None
+        if cohort_id.isnumeric():
+            item = Cohort.objects.filter(id=int(cohort_id), academy__id=academy_id).first()
+        else:
+            item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
+
+        if item is None:
+            raise ValidationException('Cohort not found on this academy', code=404, slug='cohort-not-found')
+
+        try:
+            cohort_log = CohortLog(item)
+            cohort_log.logCurrentDay(request.data)
+            cohort_log.save()
+        except Exception as e:
+            logger.exception('Error logging the current day into the cohort')
+            raise ValidationException(str(e))
+
+        return Response(cohort_log.serialize())

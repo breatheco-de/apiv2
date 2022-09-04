@@ -11,6 +11,7 @@ from ..mixins import AdmissionsTestCase
 
 class CohortAllTestSuite(AdmissionsTestCase):
     """Test /cohort/all"""
+
     def test_cohort_all_without_auth(self):
         """Test /cohort/all without auth"""
         url = reverse_lazy('admissions:cohort_all')
@@ -72,6 +73,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'remote_available': model.cohort.remote_available,
             'language': model.cohort.language,
             'syllabus_version': {
+                'status': model.syllabus_version.status,
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
@@ -96,7 +98,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         } for model in ordened_models]
 
         self.assertEqual(json, expected)
@@ -140,6 +142,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
+                'status': model.syllabus_version.status,
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
@@ -164,7 +167,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -206,6 +209,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
+                'status': model.syllabus_version.status,
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
@@ -230,7 +234,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -259,6 +263,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
+                'status': model.syllabus_version.status,
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
@@ -283,7 +288,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -312,6 +317,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
+                'status': model.syllabus_version.status,
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
@@ -336,7 +342,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -380,6 +386,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
+                'status': model.syllabus_version.status,
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
@@ -404,7 +411,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -432,6 +439,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
+                'status': model.syllabus_version.status,
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
@@ -456,7 +464,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)

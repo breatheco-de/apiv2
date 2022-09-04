@@ -16,6 +16,7 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
+
     def test_syllabus_slug_version_without_auth(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
@@ -55,7 +56,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato')
@@ -77,7 +78,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato',
@@ -98,12 +99,22 @@ class CertificateTestSuite(AdmissionsTestCase):
             'slug': model['syllabus'].slug,
             'syllabus': 1,
             'version': model['syllabus_version'].version,
+            'academy_owner': {
+                'id': model['syllabus'].academy_owner.id,
+                'name': model['syllabus'].academy_owner.name,
+                'slug': model['syllabus'].academy_owner.slug,
+                'white_labeled': model['syllabus'].academy_owner.white_labeled,
+                'icon_url': model['syllabus'].academy_owner.icon_url,
+            },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
             'github_url': model.syllabus.github_url,
             'logo': model.syllabus.logo,
             'private': model.syllabus.private,
+            'main_technologies': None,
             'week_hours': model.syllabus.week_hours,
+            'change_log_details': model.syllabus_version.change_log_details,
+            'status': model.syllabus_version.status,
         }]
 
         self.assertEqual(json, expected)
@@ -120,7 +131,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -146,7 +157,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -173,7 +184,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -188,6 +199,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'syllabus': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'version': 1,
             **data,
         }
@@ -196,6 +209,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_syllabus_version_dict(), [{
             'id': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'json': {},
             'syllabus_id': 1,
             'version': 1
@@ -209,7 +224,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -225,6 +240,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'syllabus': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'version': model.syllabus_version.version + 1,
             **data,
         }
@@ -235,6 +252,8 @@ class CertificateTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'syllabus_version')
         }, {
             'id': 2,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'json': {},
             'syllabus_id': 1,
             'version': model.syllabus_version.version + 1,

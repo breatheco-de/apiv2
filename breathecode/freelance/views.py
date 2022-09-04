@@ -8,15 +8,23 @@ from .actions import sync_user_issues, generate_freelancer_bill, add_webhook
 from .models import Bill, Freelancer, Issue, RepositoryIssueWebhook, BILL_STATUS
 from .tasks import async_repository_issue_github
 from rest_framework.views import APIView
+from breathecode.utils.views import private_view
 from breathecode.notify.actions import get_template_content
+from breathecode.utils.decorators import capable_of
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.admissions.models import Academy
 from django.http import HttpResponse
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def render_html_all_bills(request):
+@private_view()
+def render_html_all_bills(request, token):
+
+    status_maper = {
+        'DUE': 'under review',
+        'APPROVED': 'ready to pay',
+        'PAID': 'already paid',
+        'IGNORED': 'ignored',
+    }
 
     lookup = {}
 
@@ -28,20 +36,17 @@ def render_html_all_bills(request):
     if 'academy' in request.GET:
         lookup['academy__id__in'] = request.GET.get('academy').split(',')
 
-    items = Bill.objects.filter(**lookup)
+    items = Bill.objects.filter(**lookup).exclude(academy__isnull=True)
     serializer = BigBillSerializer(items, many=True)
 
     total_price = 0
     for bill in serializer.data:
         total_price += bill['total_price']
 
-    status_maper = {
-        'DUE': 'Draft under review',
-        'APPROVED': 'Ready to pay',
-        'PAID': 'Already paid',
-    }
     data = {
         'status': status,
+        'token': token.key,
+        'title': f'Payments {status_maper[status]}',
         'possible_status': [(key, status_maper[key]) for key, label in BILL_STATUS],
         'bills': serializer.data,
         'total_price': total_price
@@ -59,7 +64,15 @@ def render_html_bill(request, id=None):
         return HttpResponse(template['html'])
     else:
         serializer = BigBillSerializer(item, many=False)
-        data = {**serializer.data, 'issues': SmallIssueSerializer(item.issue_set.all(), many=True).data}
+        status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
+        data = {
+            **serializer.data, 'issues':
+            SmallIssueSerializer(item.issue_set.all(), many=True).data,
+            'status':
+            status_map[serializer.data['status']],
+            'title':
+            f'Freelancer { serializer.data["freelancer"]["user"]["first_name"] } { serializer.data["freelancer"]["user"]["last_name"] } - Invoice { item.id }'
+        }
         template = get_template_content('invoice', data)
         return HttpResponse(template['html'])
 
@@ -69,6 +82,7 @@ class BillView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, format=None):
 
         items = Bill.objects.all()
@@ -103,6 +117,7 @@ class SingleBillView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, id):
         item = Bill.objects.filter(id=id).first()
         if item is None:
@@ -111,10 +126,11 @@ class SingleBillView(APIView):
             serializer = BillSerializer(item, many=False)
             return Response(serializer.data)
 
-    def put(self, request, id=None):
-        item = Bill.objects.filter(id=id).first()
+    @capable_of('crud_freelancer_bill')
+    def put(self, request, id=None, academy_id=None):
+        item = Bill.objects.filter(id=id, academy__id=academy_id).first()
         if item is None:
-            raise serializers.ValidationError('Bill not found', code=404)
+            raise serializers.ValidationError('Bill not found for this academy', code=404)
 
         serializer = BillSerializer(item, data=request.data, many=False)
         if serializer.is_valid():
@@ -163,8 +179,8 @@ def get_latest_bill(request, user_id=None):
     if freelancer is None or reviewer is None:
         raise serializers.ValidationError('Freelancer or reviewer not found', code=404)
 
-    open_bill = generate_freelancer_bill(freelancer)
-    return Response(open_bill, status=status.HTTP_200_OK)
+    open_bills = generate_freelancer_bill(freelancer)
+    return Response(open_bills, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -182,5 +198,5 @@ def issue_webhook(request, academy_slug):
         async_repository_issue_github.delay(webhook.id)
         return Response(payload, status=status.HTTP_200_OK)
     else:
-        logger.debug('Error at procesing webhook from github')
-        raise ValidationException('Error at procesing webhook from github')
+        logger.debug('Error at processing webhook from github')
+        raise ValidationException('Error at processing webhook from github')

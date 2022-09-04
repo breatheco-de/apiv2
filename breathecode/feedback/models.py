@@ -3,23 +3,27 @@ from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.events.models import Event
-from .signals import survey_answered
+from breathecode.mentorship.models import MentorshipSession
+import breathecode.feedback.signals as signals
 from breathecode.authenticate.models import Token
 
 __all__ = ['UserProxy', 'CohortUserProxy', 'CohortProxy', 'Survey', 'Answer']
 
 
 class UserProxy(User):
+
     class Meta:
         proxy = True
 
 
 class CohortUserProxy(CohortUser):
+
     class Meta:
         proxy = True
 
 
 class CohortProxy(Cohort):
+
     class Meta:
         proxy = True
 
@@ -38,7 +42,7 @@ SURVEY_STATUS = (
 
 class Survey(models.Model):
     """
-    Multiple questions/answers for one single person, survays can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
+    Multiple questions/answers for one single person, surveys can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
     1. How is your teacher?
     2. How is the academy?
     3. How is the blabla..
@@ -51,12 +55,8 @@ class Survey(models.Model):
     max_assistants_to_ask = models.IntegerField(default=2)
     max_teachers_to_ask = models.IntegerField(default=1)
 
-    avg_score = models.CharField(max_length=250,
-                                 default=None,
-                                 blank=True,
-                                 null=True,
-                                 help_text='The avg from all the answers taken under this survey',
-                                 editable=False)
+    scores = models.JSONField(default=None, blank=True, null=True)
+    response_rate = models.FloatField(default=None, blank=True, null=True)
 
     status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
     status_json = models.JSONField(default=None, null=True, blank=True)
@@ -86,6 +86,7 @@ SURVEY_STATUS = (
 
 
 class Answer(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(Answer, self).__init__(*args, **kwargs)
         self.__old_status = self.status
@@ -96,6 +97,11 @@ class Answer(models.Model):
     lang = models.CharField(max_length=3, blank=True, default='en')
 
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    mentorship_session = models.ForeignKey(MentorshipSession,
+                                           on_delete=models.SET_NULL,
+                                           default=None,
+                                           blank=True,
+                                           null=True)
     mentor = models.ForeignKey(User,
                                related_name='mentor_set',
                                on_delete=models.SET_NULL,
@@ -124,16 +130,18 @@ class Answer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
     opened_at = models.DateTimeField(default=None, blank=True, null=True)
+    sent_at = models.DateTimeField(default=None, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def save(self, *args, **kwargs):
 
-        if self.__old_status != self.status and self.status == 'ANSWERED':
-            # signal the updated answer
-            survey_answered.send(instance=self, sender=Answer)
-
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
+        if self.__old_status != self.status and self.status == 'ANSWERED':
+
+            # signal the updated answer
+            signals.survey_answered.send(instance=self, sender=Answer)
 
 
 class ReviewPlatform(models.Model):
@@ -173,7 +181,7 @@ class Review(models.Model):
         blank=True,
         null=True,
         default=None,
-        help_text='Automatically calculated based on NPS survay responses')
+        help_text='Automatically calculated based on NPS survey responses')
     total_rating = models.FloatField(blank=True, null=True, default=None)
     public_url = models.URLField(blank=True, null=True, default=None)
 

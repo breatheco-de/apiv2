@@ -1,9 +1,10 @@
-import requests, json
-from requests.auth import HTTPBasicAuth
+import os
+import requests
+import json
+import logging
 import breathecode.services.activecampaign.actions as actions
 from breathecode.utils import APIException
 from slugify import slugify
-import logging, re, os, json, inspect, urllib
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class ActiveCampaign:
             raise Exception('Invalid webhook')
 
         if not webhook.webhook_type:
-            raise Exception('Imposible to webhook_type')
+            raise Exception('Impossible to webhook_type')
 
         action = webhook.webhook_type
         logger.debug(f'Executing ActiveCampaign Webhook => {action}')
@@ -112,18 +113,19 @@ class ActiveCampaign:
         return resp.json()
 
     def get_contact_by_email(self, email):
+        import requests
+
         #/api/3/deals/id
         #Api-Token
         resp = requests.get(f'{self.host}/api/3/contacts',
                             headers={'Api-Token': self.token},
                             params={'email': email})
-        logger.debug(f'Get contact by email {self.host}/api/3/contacts', resp.status_code)
+        logger.debug(f'Get contact by email {self.host}/api/3/contacts {resp.status_code}')
         data = resp.json()
-        if 'contacts' in data and len(data['contacts']) == 1:
+        if data and 'contacts' in data and len(data['contacts']) == 1:
             return data['contacts'][0]
         else:
-            logger.error(f'Problem fetching contact in activecampaign with email {email}')
-            return None
+            raise Exception(f'Problem fetching contact in activecampaign with email {email}')
 
     def get_deal_customfields(self, deal_id):
         #/api/3/deals/id
@@ -144,46 +146,83 @@ class ActiveCampaign:
         return None
 
     def add_tag_to_contact(self, contact_id: int, tag_id: int):
+        import requests
+
         #/api/3/deals/id
         #Api-Token
         body = {'contactTag': {'contact': contact_id, 'tag': tag_id}}
-        resp = requests.post(f'{self.host}/api/3/contactTags', headers={'Api-Token': self.token}, json=body)
+        headers = {
+            'Api-Token': self.token,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        }
+        resp = requests.post(f'{self.host}/api/3/contactTags', headers=headers, json=body)
         logger.debug(f'Add tag to contact')
 
-        if resp.status_code == 201:
+        # can return status 200 if the contact have has been tagged, this case is not a error
+        if resp.status_code < 400:
             data = resp.json()
             if data and 'contactTag' in data:
                 return data['contactTag']
             else:
                 raise Exception(f'Bad response format from ActiveCampaign when adding a new tag to contact')
         else:
-            logger.debug(resp.json())
+            logger.error(resp.json())
             raise Exception(f'Failed to add tag to contact {contact_id} with status={resp.status_code}')
 
     def create_tag(self, slug: str, description: str):
+        import requests
+
         #/api/3/deals/id
         #Api-Token
         body = {'tag': {'tag': slugify(slug), 'tagType': 'contact', 'description': description}}
         resp = requests.post(f'{self.host}/api/3/tags', headers={'Api-Token': self.token}, json=body)
-        logger.debug(f'Creating tag {body["tag"]["tag"]} on active campaign')
+        logger.warn(f'Creating tag `{body["tag"]["tag"]}` on active campaign')
 
         if resp.status_code == 201:
-            logger.debug(f'Tag created successfully')
+            logger.warn(f'Tag created successfully')
             body = resp.json()
+
             if 'tag' in body:
                 return body['tag']
+
             else:
-                logger.debug(f'Error creating ta {slug}')
-                logger.debug(error)
-                raise Exception(f'Failed to create tag {slug}, status_code={str(resp.status_code)}')
+                logger.error(f'Failed to create tag `{slug}` because the structure of response was changed')
+                raise Exception(
+                    f'Failed to create tag `{slug}` because the structure of response was changed')
+
         else:
-            logger.debug(f'Error creating tag {slug} with status= {str(resp.status_code)}')
+            logger.error(f'Error creating tag `{slug}` with status={str(resp.status_code)}')
+
             error = resp.json()
-            logger.debug(error)
-            raise Exception(f'Failed to create tag {slug}, status_code={str(resp.status_code)}')
+            logger.error(error)
+
+            raise Exception(f'Error creating tag `{slug}` with status={str(resp.status_code)}')
+
+    def delete_tag(self, tag_id: str):
+        import requests
+
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.delete(
+            f'{self.host}/api/3/tags/{tag_id}',
+            headers={'Api-Token': self.token},
+        )
+        logger.debug(f'Deleting tag {str(tag_id)} on active campaign')
+
+        if resp.status_code == 200 or resp.status_code == 404:
+            logger.debug(
+                f'Tag deleted successfully or not existent {str(resp.status_code)} /api/3/tag/{tag_id}')
+            return True
+        else:
+            logger.error(f'Error deleting tag `{str(tag_id)}` with status={str(resp.status_code)}')
+            error = resp.json()
+            logger.error(error)
+            raise Exception(f'Error deleting tag `{str(tag_id)}` with status={str(resp.status_code)}')
 
 
 class Contacts(object):
+
     def __init__(self, client):
         self.client = client
 
@@ -295,6 +334,7 @@ class Contacts(object):
 
 
 class AC_Old_Client(object):
+
     def __init__(self, url, apikey):
 
         if url is None:

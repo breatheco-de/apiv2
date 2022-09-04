@@ -3,8 +3,8 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from breathecode.tests.mixins.headers_mixin import HeadersMixin
-from mixer.backend.django import mixer
 from breathecode.tests.mixins import DateFormatterMixin
+from .utils import is_valid, create_models, just_one, get_list
 
 
 class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
@@ -38,121 +38,141 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      **kwargs):
         models = models.copy()
 
-        if not 'profile' in models and profile:
+        if not 'profile' in models and is_valid(profile):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
-            kargs = {**kargs, **profile_kwargs}
-            models['profile'] = mixer.blend('authenticate.Profile', **kargs)
+            models['profile'] = create_models(profile, 'authenticate.Profile', **{**kargs, **profile_kwargs})
 
-        if not 'capability' in models and capability:
+        if not 'capability' in models and is_valid(capability):
             kargs = {
                 'slug': capability,
                 'description': capability,
             }
 
-            kargs = {**kargs, **capability_kwargs}
-            models['capability'] = mixer.blend('authenticate.Capability', **kargs)
+            models['capability'] = create_models(profile, 'authenticate.Capability', **{
+                **kargs,
+                **capability_kwargs
+            })
 
-        if not 'role' in models and role:
+        if not 'role' in models and (is_valid(role) or is_valid(profile_academy)):
             kargs = {
                 'slug': role,
                 'name': role,
-            }
+            } if isinstance(role, str) else {}
 
             if capability:
-                kargs['capabilities'] = [models['capability']]
+                kargs['capabilities'] = get_list(models['capability'])
 
-            kargs = {**kargs, **role_kwargs}
-            models['role'] = mixer.blend('authenticate.Role', **kargs)
+            models['role'] = create_models(role if not isinstance(role, str) else {}, 'authenticate.Role', **{
+                **kargs,
+                **role_kwargs
+            })
 
-        if not 'user_invite' in models and user_invite:
+        if not 'user_invite' in models and is_valid(user_invite):
             kargs = {}
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             if 'cohort' in models:
-                kargs['cohort'] = models['cohort']
+                kargs['cohort'] = just_one(models['cohort'])
 
             if 'role' in models:
-                kargs['role'] = models['role']
+                kargs['role'] = just_one(models['role'])
 
             if 'user' in models:
-                kargs['author'] = models['user']
+                kargs['author'] = just_one(models['user'])
 
-            kargs = {**kargs, **user_invite_kwargs}
-            models['user_invite'] = mixer.blend('authenticate.UserInvite', **kargs)
+            models['user_invite'] = create_models(user_invite, 'authenticate.UserInvite', **{
+                **kargs,
+                **user_invite_kwargs
+            })
 
-        if not 'profile_academy' in models and profile_academy:
+        if not 'profile_academy' in models and is_valid(profile_academy):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             if 'role' in models:
-                kargs['role'] = models['role']
+                kargs['role'] = just_one(models['role'])
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
-            kargs = {**kargs, **profile_academy_kwargs}
-            models['profile_academy'] = mixer.blend('authenticate.ProfileAcademy', **kargs)
+            models['profile_academy'] = create_models(profile_academy, 'authenticate.ProfileAcademy', **{
+                **kargs,
+                **profile_academy_kwargs
+            })
 
-        if not 'credentials_github' in models and credentials_github:
+        if not 'credentials_github' in models and is_valid(credentials_github):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
-            kargs = {**kargs, **credentials_github_kwargs}
-            models['credentials_github'] = mixer.blend('authenticate.CredentialsGithub', **kargs)
+            models['credentials_github'] = create_models(credentials_github, 'authenticate.CredentialsGithub',
+                                                         **{
+                                                             **kargs,
+                                                             **credentials_github_kwargs
+                                                         })
 
-        if not 'credentials_slack' in models and credentials_slack:
+        if not 'credentials_slack' in models and is_valid(credentials_slack):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
-            kargs = {**kargs, **credentials_slack_kwargs}
-            models['credentials_slack'] = mixer.blend('authenticate.CredentialsSlack', **kargs)
+            models['credentials_slack'] = create_models(credentials_slack, 'authenticate.CredentialsSlack',
+                                                        **{
+                                                            **kargs,
+                                                            **credentials_slack_kwargs
+                                                        })
 
-        if not 'credentials_facebook' in models and credentials_facebook:
+        if not 'credentials_facebook' in models and is_valid(credentials_facebook):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
-            kargs = {**kargs, **credentials_facebook_kwargs}
-            models['credentials_facebook'] = mixer.blend('authenticate.CredentialsFacebook', **kargs)
+            models['credentials_facebook'] = create_models(credentials_facebook,
+                                                           'authenticate.CredentialsFacebook', **{
+                                                               **kargs,
+                                                               **credentials_facebook_kwargs
+                                                           })
 
-        if not 'credentials_quick_books' in models and credentials_quick_books:
+        if not 'credentials_quick_books' in models and is_valid(credentials_quick_books):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
-            kargs = {**kargs, **credentials_quick_books_kwargs}
-            models['credentials_quick_books'] = mixer.blend('authenticate.CredentialsQuickBooks', **kargs)
+            models['credentials_quick_books'] = create_models(credentials_quick_books,
+                                                              'authenticate.CredentialsQuickBooks', **{
+                                                                  **kargs,
+                                                                  **credentials_quick_books_kwargs
+                                                              })
 
-        if not 'token' in models and token:
+        if not 'token' in models and is_valid(token):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
-            kargs = {**kargs, **token_kwargs}
-            models['token'] = mixer.blend('authenticate.Token', **kargs)
+            models['token'] = create_models(token, 'authenticate.Token', **{**kargs, **token_kwargs})
 
-        if not 'device_id' in models and device_id:
+        if not 'device_id' in models and is_valid(device_id):
             kargs = {}
 
-            kargs = {**kargs, **device_id_kwargs}
-            models['device_id'] = mixer.blend('authenticate.DeviceId', **kargs)
+            models['device_id'] = create_models(device_id, 'authenticate.DeviceId', **{
+                **kargs,
+                **device_id_kwargs
+            })
 
         return models

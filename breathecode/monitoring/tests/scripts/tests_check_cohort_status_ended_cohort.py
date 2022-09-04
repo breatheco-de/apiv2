@@ -16,6 +16,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     """
     🔽🔽🔽 Check for cohort.stage == 'ENDED'
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -97,9 +98,10 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         del script['title']
 
         expected = {
-            'severity_level': 5,
-            'status': 'MINOR',
-            'error_slug': None,
+            'btn': None,
+            'severity_level': 100,
+            'status': 'CRITICAL',
+            'error_slug': 'cohort-stage-should-be-ended',
         }
 
         self.assertEqual(script, expected)

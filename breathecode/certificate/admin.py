@@ -111,7 +111,9 @@ def user_bulk_certificate(modeladmin, request, queryset):
         for u in users:
             logger.debug(f'Generating certificate for user {u.id}')
             generate_certificate(u)
+
         messages.success(request, message='Certificates generated sucessfully')
+
     except Exception as e:
         logger.exception('Problem generating certificates')
         messages.error(request, message=str(e))
@@ -142,5 +144,5 @@ cohort_bulk_certificate.short_description = '🥇 Generate Cohort Certificates'
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
     actions = [cohort_bulk_certificate]

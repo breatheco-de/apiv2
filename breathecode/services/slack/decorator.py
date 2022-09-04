@@ -3,26 +3,33 @@ from breathecode.services.slack import commands
 from breathecode.services.slack import actions
 from breathecode.authenticate.models import ProfileAcademy
 
+from .exceptions import SlackException
+
 logger = logging.getLogger(__name__)
 
 
-def command(only=None):
+def command(capable_of=None):
+
     def decorator(function):
+
         def wrapper(*args, **kwargs):
 
             if 'context' not in kwargs or kwargs['context'] is None:
-                raise Exception('Missing scope information on slack command')
+                raise SlackException('Missing scope information on slack command', slug='context-missing')
             context = kwargs['context']
 
             profiles = None
-            if only == 'staff':
-                profiles = ProfileAcademy.objects.filter(
-                    user__slackuser__slack_id=context['user_id'],
-                    academy__slackteam__slack_id=context['team_id']).values_list('academy__id', flat=True)
+            if capable_of is not None:
+
+                profiles = ProfileAcademy.objects.filter(user__slackuser__slack_id=context['user_id'],
+                                                         academy__slackteam__slack_id=context['team_id'],
+                                                         role__capabilities__slug=capable_of).values_list(
+                                                             'academy__id', flat=True)
+
                 if len(profiles) == 0:
-                    raise Exception(
-                        f"Your user {context['user_id']} don't have permissions to query this student, are you a staff on this academy?"
-                    )
+                    raise SlackException(
+                        f"Your user {context['user_id']} don't have permissions to query this student/cohort, are you a staff on this academy?",
+                        slug='unauthorized-user')
 
             kwargs['academies'] = profiles
             kwargs['user_id'] = context['user_id']
@@ -39,7 +46,9 @@ def command(only=None):
 
 
 def action(only=None):
+
     def decorator(function):
+
         def wrapper(*args, **kwargs):
             if 'payload' not in kwargs or kwargs['payload'] is None:
                 raise Exception('Missing payload information on slack action')
@@ -50,6 +59,7 @@ def action(only=None):
                 profiles = ProfileAcademy.objects.filter(
                     user__slackuser__slack_id=context['user']['id'],
                     academy__slackteam__slack_id=context['team']['id']).values_list('academy__id', flat=True)
+
                 if len(profiles) == 0:
                     raise Exception(
                         f"Your user {context['user']['id']} don't have permissions execute this action")

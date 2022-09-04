@@ -37,26 +37,26 @@
 
 ## Documentation
 
-You can find the development documentation [on the webside](https://breatheco-de.github.io/apiv2/).
+You can find the development documentation [on the website](https://breatheco-de.github.io/apiv2/).
 
 Check out the [Postman docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef), [Swagger](https://breathecode.herokuapp.com/swagger/) or [Redoc](https://breathecode.herokuapp.com/swagger/).
 
 The documentation is divided into several sections:
 
-- [No Installation (with gitpod)](#working-inside-gitpod-no-instalation)
-  - [How to work Gitpod](#how-to-work-gitpod)
-  - [Add the browser extension](#add-the-browser-extension)
-  - [How to use Gitpod browser extension](#how-to-use-gitpod-browser-extension)
-- [Installation inside Docker (easier)](#working-inside-docker-easier)
-  - [Build BreatheCode Dev docker image](#build-breathecode-dev-docker-image)
-  - [Testing inside BreatheCode Dev](#testing-inside-breathecode-dev)
-  - [Run BreatheCode API as docker service](#run-breathecode-api-as-docker-service)
-- [Installation in your local machine (a bit harder but more performant)](#working-in-your-local-machine-recomended)
-  - [Installation in your local machine](#installation-in-your-local-machine)
-  - [Testing in your local machine](#testing-in-your-local-machine)
-  - [Run BreatheCode API in your local machine](#run-breathecode-api-in-your-local-machine)
+-   [No Installation (with gitpod)](#working-inside-gitpod-no-instalation)
+    -   [How to work Gitpod](#how-to-work-gitpod)
+    -   [Add the browser extension](#add-the-browser-extension)
+    -   [How to use Gitpod browser extension](#how-to-use-gitpod-browser-extension)
+-   [Installation inside Docker (easier)](#working-inside-docker-easier)
+    -   [Build BreatheCode Dev docker image](#build-breathecode-dev-docker-image)
+    -   [Testing inside BreatheCode Dev](#testing-inside-breathecode-dev)
+    -   [Run BreatheCode API as docker service](#run-breathecode-api-as-docker-service)
+-   [Installation in your local machine (a bit harder but more performant)](#working-in-your-local-machine-recomended)
+    -   [Installation in your local machine](#installation-in-your-local-machine)
+    -   [Testing in your local machine](#testing-in-your-local-machine)
+    -   [Run BreatheCode API in your local machine](#run-breathecode-api-in-your-local-machine)
 
-## Working inside Gitpod (no instalation)
+## Working inside Gitpod (no installation)
 
 ### `How to work Gitpod`
 
@@ -66,8 +66,8 @@ Creating a workspace is as easy as prefixing any GitHub URL with `gitpod.io/#`.
 
 Gitpod provide the extension for:
 
-- [Chrome](https://chrome.google.com/webstore/detail/gitpod-online-ide/dodmmooeoklaejobgleioelladacbeki) - also works for Edge, Brave and other Chromium-based browsers.
-- [Firefox](https://addons.mozilla.org/firefox/addon/gitpod/)
+-   [Chrome](https://chrome.google.com/webstore/detail/gitpod-online-ide/dodmmooeoklaejobgleioelladacbeki) - also works for Edge, Brave and other Chromium-based browsers.
+-   [Firefox](https://addons.mozilla.org/firefox/addon/gitpod/)
 
 ### `How to use Gitpod browser extension`
 
@@ -134,10 +134,10 @@ docker-compose logs -f bc-dev
 
 ### `Installation in your local machine`
 
-Install [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
 ```bash
-# Check which dependencies you need install in you operating system
+# Check which dependencies you need install in your operating system
 python -m scripts.doctor
 
 # Setting up the redis and postgres database, you also can install manually in your local machine this databases

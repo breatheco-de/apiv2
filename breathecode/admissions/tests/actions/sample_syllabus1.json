@@ -1,0 +1,1272 @@
+{
+    "days": [
+        {
+            "id": 1,
+            "label": "HTML/CSS",
+            "lessons": [
+                {
+                    "slug": "intro-to-4geeks",
+                    "title": "Introduction to 4Geeks Academy"
+                },
+                {
+                    "slug": "what-is-html-learn-html",
+                    "title": "What is HTML? It's time to learn HTML and its structure"
+                },
+                {
+                    "slug": "what-is-css-learn-css",
+                    "title": "Learn CSS: What is CSS Meant for?"
+                },
+                {
+                    "slug": "css-layouts",
+                    "title": "CSS Layouts: Create and Build Layouts with CSS"
+                },
+                {
+                    "slug": "mastering-css-selectors",
+                    "title": "Mastering CSS Selectors"
+                }
+            ],
+            "project": {
+                "title": "Build a Digital Postcard with HTML/CSS",
+                "instructions": "https://projects.breatheco.de/project/postcard"
+            },
+            "quizzes": [
+                {
+                    "url": "",
+                    "slug": "internet-architecture",
+                    "title": "What do you know about the internet architecture?",
+                    "target": "self",
+                    "mandatory": true
+                },
+                {
+                    "url": "",
+                    "slug": "html-advanced",
+                    "title": "Learn about HTML",
+                    "target": "self"
+                }
+            ],
+            "replits": [
+                { "slug": "css-exercises", "title": "Learn CSS Interactively" },
+                { "slug": "forms-exercises", "title": "Learn HTML Forms" }
+            ],
+            "homework": "Students must finish their project and must remember to read the next lesson before next class.",
+            "position": 1,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-postcard",
+                    "slug": "postcard",
+                    "title": "Build a Digital Postcard with HTML/CSS",
+                    "target": "self"
+                },
+                {
+                    "url": "https://github.com/breatheco-de/exercise-instagram-post",
+                    "slug": "instagram-post",
+                    "title": "Instagram Post",
+                    "target": "self"
+                },
+                {
+                    "url": "https://github.com/breatheco-de/exercise-instagram-feed",
+                    "slug": "instagram-feed",
+                    "title": "Simple Instagram Photo Feed with HTML/CSS",
+                    "target": "self"
+                }
+            ],
+            "description": "During the pre-work you learn some basic CSS and HTML, and hopefully how to use the flex-box to create simple layouts. The first day we will review the pre-work completion and introduce a more  evolved CSS that enables amazing layouts and the amazing Bootstrap framework that will make you life so much easier with the \"component oriented\" approach.",
+            "key-concepts": [
+                "Everything is text",
+                "Always be closing",
+                "Client vs Server",
+                "HTTP request vs response",
+                "HTML vs CSS",
+                "DRY Technique",
+                "Flex Box",
+                "Component",
+                "Workflow: Identify Component, Copy&Paste, the customize it",
+                "Helper/utility Clasees that come with Bootstrap"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Students know already basic CSS and HTML, just go over the concepts really fast but stop and explain carefully the Display and Position rules, specifically talk about the FlexBox as the main tool to build layouts. ",
+            "extended_instructions": "# The Internet, HTML, CSS and Bootstrap\n\n## `20 min` Small presentation about the bootcamp, [click here to open it](https://docs.google.com/presentation/d/1--0xX43xyfngGTWVQEgmcbLuE7QCCz-jovL2JBOEPY0/edit#slide=id.g555ffcabca_1_0).\n\n## `15 min` Play a game to get to know each other.\n\n- Everyone writes in an anonimus piece of paper with something about themselves. E.g: \"I like dogs\" or \"I work on sales\", etc.\n- Put all papers inside a cup and start the game.\n- Choose one student to start introducing himself:\n    - First name and last.\n    - What would you like to be called?\n    - What do you do now? (for work)\n    - What do you plan on doing when you become a developer?\n- Then, that student must pick one random paper from the cup and guess how is the person that wrote it.\n- After guessing, the person who wrote it must come next and introduce himself and pick another paper... etc.\n\n## `5 min` Present the team\n\nEveryone introduces himself: Chief of Admissions, Chief of Career Support, Chief of Education, Main instructor, and teacher assistant.\n\n## `15 min` Install the tools\n\nStart with Gitpod, invite all students, and make sure they are able to create workspaces and what the academy boilerplates are. \n\n## `10 min` Go over prework concepts really fast\n\nCheck if the students completed the prework, if ~70% of the students finished the prework you can continue with the rest of the class, otherwise you will have to postpone today's topics and today's focus only con starting/completing the prework projects and concepts with the students.\n\n\n## If 70% of the students completed the prework you can continue with the rest of the day:\n\n### How does the internet works?\n\n1. The world is divided between servers and clients.\n2. We call \"clients\" the computers with browsers or mobile apps.\n3. We call servers where the centralized database is.\n\n### HTTP Request vs Response**\n\n- The rules used for this client-sever communication is called HTTP, which stands for Hyper Text Transfer Protocol.\n- The way that you get the website is by sending a \"Request\" to the server. This tells the server what website or resource you are looking to view/use. The server then responds with the information.\n- The server then sends a response, which tells will confirm the receipt of the request and let your computer know that it will begin sending data.\n- This back and forth process will continue with more Request=>Response pairs until you have finished loading your remote resource.\n\n### Everything is text!\n\n- With HTTP, it’s important to focus on the first T in the acronym, which stands for `Text`. In this protocol, everything is sent back and forth as TEXT.\n- While there are other protocols out there, for now, we want to remember that with HTTP – Everything is TEXT.\n- Make students open a picture with Notepad/TextEdit they will see the text that represents the image.\n\n### Browser Interpretation\n\n- After your browser uses the HTTP protocol and receives the data as text, it then has the job of interpreting that text and converting it to the correct visual format.\n\n#### HTML\n\n- The first TEXT-based format we will see is HTML.\n- HTML its all about `<tags>` you open and close tags to give them basic format.\n- There are a lot of HTML tags but you only have to know a few and you can always google them.\n    - Explain the basic tags like `<p>`,`<div>`,`<a>`,`<span>`, headings (`<h1>`,`<h2>`,etc).\n\n[[demo]]\n| :point_up: The most important thing to remember in HTML is to ALWAYS BE CLOSING!\n\n#### Always Be Closing and Indentation Matters**\n\n- Everything is going to be done in blocks of code.\n- First you open the block, then you close the block.\n\n### CSS vs HTML\n```css\n#id_selector { property: value; }\n.class_selector { property: value; }\ntag_selector { property: value; }\n```\n\n## `20 min` Start the new content: Advanced CSS\n\n### Specificity\n\n- Do not use ID as CSS selectors (use specificity).\n- The class selector is the most used because it can be reused all over your website.\n- Show this [video that explains](https://www.youtube.com/watch?v=In78mSOHmls) specificity to the class.\n- Combine selectors to get more specific about which element you are styling\n- Ask if anyone remembers what we said DRY Programming means? Don’t repeat yourself.\nYou may think it’s funny that they call the opposite of DRY -  WET programming, which they have given the following titles to:  \"write everything twice\", \"we enjoy typing\" or \"waste everyone's time\"**\n\n\n### Box Model\n\n- Box layout means that most elements can be thought of as boxes: with margin, padding, with and height.\n- There are 4 main parts to the typical box model: (draw the following on the board or show picture from breathcode)\n    - Content: this is what is inside the box\n    - Padding: this is spacing between the border and content (inside box also)\n    - Border: this is the edge of the box\n    - Margin: this is spacing between the outside of the box and the next element over in any direction. (which could be the edge of the page, another div, a paragraph, or even an image)\n- You can also have a background color or image, this will show in the content area of your box.\n\n#### The Display Property:\n\n- Compare `display:block` vs `display:inline`: Display block its what makes an element behave like a box, inline elements have no margins.\n- Compare `display:block` vs `display:inline-block`.\n- Display: flex; its the main tool for building complex layouts because it easily allows having several divs on the same line (columns).\n- I recommend going over the CSS and HTML [cheat sheets that we have available on the breathco.de platform under Assets](https://breatheco.de/assets/).\n \n## Display Flex and how important it is.\n\nTake some time to explain display:flex and how it is used on today's project.\n\n#### The Position Property:\n\n- Position:fixed follows the user, it is mainly used for anoying modals or popups.\n- If one element has position:relative must always be companioned by one or more childs with position:absolute. Its broadly used for relating two elements to each other (one follows the other)\n- Compare `display:block` vs `display:inline-block`.\n\n## `2:30 hr` Start the project!\n\nRead the instructions out loud with the class, make sure they understand.\n\nStudents must start discussing on the whiteboard a strategy about the project.\n- From top to bottom identify the tags you will be using.\n- When to use `display:inline-block` and/or `position:absolute` or `position:relative`.\n- Setup the project with one `index.html` and one `styles.css`\n\n## `20 min` Bootstrap\n\n### What is bootstrap?\n\nJust a predefined stylesheet inveted by [a guy at twitter (Mark Otto)](https://twitter.com/mdo?lang=en).\n\n### Why?\n\n- Because doing styles is repetitive, it was about time someone did a boilerplate.\n- Its component oriented.\n- It makes websites easier and faster to build.\n\n### Bootstrap versions & download\n\nBootstrap has many versions, always check if you are using the last version of Bootstrap on your project, here you can find all the available versions: [https://getbootstrap.com/docs/versions/](https://getbootstrap.com/docs/versions/)\n\nWe recomend using a CDN to import bootstrap in your HTML like this one: [https://www.bootstrapcdn.com/](https://www.bootstrapcdn.com/)\n\n### The Most Important (Used) Components\n\n1. Navbar\n2. Card\n3. Modal: https://getbootstrap.com/docs/4.0/components/modal/#live-demo\n\n### The Basic Workflow (asuming you have a wireframe or design)\n\n1. Build your basic layout with the Grid (container, row and collumns)\n1. Identify the components you will need (use piece of paper)\n2. Copy & Paste the component code into your website.\n3. Customize the component for your specific design.\n4. Adjust anything else overriding with css styles on your own sylesheet.\n5. Remember the utility classes to avoid doing to much custom CSS.\n\n### Helper/Utility Classes that come with bootstrap*\n\nThese are classes you can attach that do things such as control margin or padding, control borders, or even float elements.\nFor example, if you wanted no margin on the left of the element, you can add the class ml-0 to the element and it will set the left margin to zero.\n\n### Layout using Grid system\n\n- Explain 12 column layout and how it works\n- every line is a Row\n- this row holds columns as immediate childs\n- every Row on a page has 12 columns\n- columns are equally measured in percentages so they are responsive.\n- the basic sizes are: col, col-xs, col-sm, col-md, col-lg, col-xl\n\n### Bootstrap does not have fonts or icons\n\nWe use google fonts and font awesome for that.\n\n## `2:30min` Have class work on bootstrap instagram.\n\n- Students gather in pairs tos strategize first (best practice)\n- Read instructions out loud and have them build a strategy\n- Have them identify the components.\n\nDo not talk more, they will not be able to process it because they are overwhelmed, just help them code.\n\nAnswer questions individually with your teacher assistants.\n"
+        },
+        {
+            "id": 2,
+            "label": "Bootstrap",
+            "lessons": [
+                {
+                    "slug": "bootstrap-tutorial-of-bootstrap-4",
+                    "title": "Bootstrap Tutorial: Learn Bootstrap 4 in 10 minutes"
+                }
+            ],
+            "project": {
+                "title": "Instagram Photo Feed with Bootstrap",
+                "instructions": "https://projects.breatheco.de/project/instagram-feed-bootstrap"
+            },
+            "quizzes": [
+                {
+                    "url": "https://assets.breatheco.de/apps/quiz/bootstrap",
+                    "slug": "bootstrap-quiz",
+                    "title": "Bootstrap",
+                    "mandatory": true
+                }
+            ],
+            "replits": [
+                {
+                    "slug": "bootstrap-exercises",
+                    "title": "Learn Bootstrap Tutorial"
+                }
+            ],
+            "homework": "",
+            "position": 2,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-instagram-feed-bootstrap",
+                    "slug": "instagram-feed-bootstrap",
+                    "title": "Instagram Photo Feed with Bootstrap",
+                    "target": "self"
+                }
+            ],
+            "description": "After a few years, developers started to re-use the same styles for most applications because you would always do the same classes (reusability), that is when Bootstrap was published by 2 ex-twitter employees.",
+            "key-concepts": [
+                "bootstrap is just a stylesheet with useful classes",
+                "everything is split into components",
+                "bootstra grid: rows vs columns",
+                "bootstrap utility classes"
+            ],
+            "technologies": [
+                { "slug": "bootstrap", "title": "bootstrap" },
+                { "slug": "css", "title": "css" }
+            ],
+            "teacher_instructions": "Explain Bootstrap and how it solves 99% of the pain: everything is a component from now on and you copy paste the necessary portions of HTML/CSS from the docs. There is a greed with rows and cols, its mobile first but responsive for 4 sizes."
+        },
+        {
+            "id": 3,
+            "label": "Command Line Challenge",
+            "lessons": [
+                {
+                    "slug": "the-command-line-the-terminal",
+                    "title": "The Command Line (a.k.a: The Terminal) "
+                }
+            ],
+            "project": {
+                "title": "Command Line Challenge",
+                "instructions": "https://projects.breatheco.de/project/exercise-terminal-challenge"
+            },
+            "quizzes": [],
+            "replits": [
+                {
+                    "url": "https://cmdchallenge.com/",
+                    "slug": "command-line-exercises",
+                    "title": "Command line exercises",
+                    "mandatory": true
+                }
+            ],
+            "homework": "Students must remember to read the next lesson before next class.",
+            "position": 3,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-terminal-challenge",
+                    "slug": "exercise-terminal-challenge",
+                    "title": "Command Line Challenge",
+                    "target": "self"
+                }
+            ],
+            "description": "A text editor and the console - that's all you need to be a great coder. Time to master the second one.",
+            "key-concepts": [
+                "Most used CMD commands",
+                "File Directory Hierarchy",
+                "Relative vs Absolute Paths",
+                "Moving up...",
+                "Autocomplete with TAB",
+                "GIT in general"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Teach the command line to your students, use the CMD challenge to make it very fun! Start with a small explanation about the importance of the CMD and then explain each command after its respective challenge is completed\n",
+            "extended_instructions": "# Command Line Interface\n\n Check if students were able to finish the Bootstrap Instagram\n\n ## `10 min` Small theory about the command line (do not explain the commands)\n\n```md\n⚠ ️IMPORTANT:\nPlease don't explain every command, it is better if during the challenge the students find the commands in google or in the breathecode lesson.\n\nStudents can do searches like: \"How to get into a computer directory\", etc.\nForce them to start searching in google!!\n```\n\n- Computers can be entirely managed without a windows interface, you can do everything from the command line.\n- Make sure to make students understand how important the command line (developers use it every day all the time and it is impossible to avoid).\n- Relative path vs absolute path.\n- Explain that we are in Gitpod, which uses ubuntu and we have to familiarize we the ubuntu command line.\n- Talk about the file hierarchy and how is represented in the command line, what the dot  .  and double dot  ..  represents. Draw on the board a file hierarchy and show if at the same time how the command line shows it (compare both).\n- Explain the use of the autocomplete command: [using tab one time for autocomplete or two times to show options](https://www.howtogeek.com/195207/use-tab-completion-to-type-commands-faster-on-any-operating-system/).\n- This is a [very good series of videos](https://www.youtube.com/watch?v=AO0jzD1hpXc&t=267s&index=8&list=PL8A83A276F0D85E70) explaining the command line that students can **watch later.**\n- Share this [cheat sheet with the most used commands.](https://ucarecdn.com/61c6474b-5760-43db-9a2c-dfbea2ccdd76/Comandlinecheatsheet.pdf)\n\n## `1:20 hr` Start The CMD Challenge\n\n- Have students create a project in Gitpod\n- Help them to clone the repo for the project (paste it in the slack channel so they can use the link)**\n    1. git init\n    2. git clone\n- Run the react presentation\n\n```md\n📝 The command line will make students practice the most important commands, explain each command after the each challenge is completed, the student that successfully completed it can explain to other students.\n```\n\n## `1:30min` Take some time the class explaining git in a general way\n\nGit will be the first applicacion we will be using inside the command line, students must read about it and wat videos about it.\n\n### What is git?\n\nGit is an online, central code storage that allows developers to manage a code base in teams.\n\nSome of the things you can do with git include:\n\n1. You can collaborate on projects easily\n2. see a history of revisions\n3. Roll back to previous versions if a revision fails (version control)\n4. Resolve code conflicts so that 2 developers don’t overwrite each other’s code.\n\nGit is a necessity to any developer working today as it’s resolved many of the issues of working on a team or keeping version history on a project.\n\n## For Next Class\n\nNext class we will review GIT in more detail. If you haven’t already, please read the lesson on GIT in the breatheco.de platform.**Hello *World*!"
+        },
+        {
+            "id": 4,
+            "label": "Github",
+            "lessons": [
+                { "slug": "learn-in-public", "title": "Learn in Public" },
+                {
+                    "slug": "how-to-use-git-version-control-system",
+                    "title": "How to use GIT: Version Control System"
+                }
+            ],
+            "project": {
+                "title": "Fix the Misspell Challenge",
+                "instructions": "https://projects.breatheco.de/project/fix-the-misspell"
+            },
+            "quizzes": [],
+            "replits": [
+                {
+                    "url": "https://4geeksacademy.github.io/git-interactive-tutorial/",
+                    "slug": "git-interactive",
+                    "title": "Interactive Github Tutorial",
+                    "mandatory": true
+                }
+            ],
+            "homework": "Stundents should finish their project and remember to read the next lesson before next class.",
+            "position": 4,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/the-misspell-chalenge",
+                    "slug": "fix-the-misspell",
+                    "title": "Fix the Misspell Challenge",
+                    "target": "self"
+                },
+                {
+                    "url": "https://github.com/4GeeksAcademy/learn-in-public",
+                    "slug": "learn-in-public",
+                    "title": "Learn in Public",
+                    "target": "self"
+                }
+            ],
+            "description": "The CMD Line has millions of tools, it's time to learn the first ones: GIT & Github - together they make collaboration amazing!",
+            "key-concepts": [
+                "Do not explain Git with SSH credentials  in detail, students must use HTTP",
+                "Why using Github?",
+                "It will be impossible to avoid using Github",
+                "Github vs Git",
+                "How to commit directly on github",
+                "How to find great repostories",
+                "Example of a great github profile",
+                "Github as a portfolio"
+            ],
+            "technologies": [{ "slug": "github", "title": "github" }],
+            "teacher_instructions": "Start explaining Github as a social network, how it stores 90% of the world's codebase, how you can review all major coding projects, follow the most influential developers, and the role of open source.\n\nThen explain GIT without being very technical, the \"Github for poets\" video does a great explanation, we will get more technical the next class that we will collaborate on building a landing page.",
+            "extended_instructions": "# Welcome to Github\n\n**Welcome everyone, Check if they were able to finish all the lessons, exercises, and projects up till now.**\n\n### Explaining Github\n\n1. As we mentioned in previous classes, Github & Git have become a staple of every development workflow.\n\n2. You will use this in EVERY development job you have from here forward.\n\n3. Show the main profile screen and explain parts\n\n    - Use [https://github.com/gaearon](https://github.com/gaearon) as example.\n    - Explain about the github activity graph, how github tracks your entire activity and other developers and recruiters can see it\n\n\n4. Explain how to create a repository\n\n    - click repository tab > new repo button > fill out data\n\n5. Show what a repository looks like\n\n   - explain the contents of the repository and the importance of the Readme file in a project.\n   - Show popular repositories like react, vue, flask, etc. Show them the README files.\n   - show [the git collaboration readme](https://github.com/breatheco-de/exercise-collaborative-html-website) as an example \n\n## The role of open-source\n\n- Explain about open source, how the most important projects in the coding world are open source like: Chrome, Windows, React, Pyhton, Flask, Django, etc.\n\n- In the open source world anyone can pull request anything, there are maintainers that review and approve changes.\n- 4Geeks Academy syllabus is open source and you can Pull Request (lessons and projects)\n\n\n## `1 hr` Project: Fixing Misspells as the perfect Open Source Ice-Breaker\n\nShow students how every lesson on breathecode has the github logo on the top, and you can contrute or fix any lesson by clicking on the github logo and then editing the lesson file on github.\n    \nCreate repositories for all previous workspaces and upload all your code to their corresponding repo’s. Then submit the assignments on your student.breatheco.de  **(DUE MONDAY). Also, work on all repl’its and get caught up. Be ready for the next class which is on Wireframing and design process.**\n\n## `1hr` The student External Profile\n\nEncourage students to do their first pull request with the student external profile: [sep.4geeksacademy.co](https://sep.4geeksacademy.co)"
+        },
+        {
+            "id": 5,
+            "label": "Git & Gitflow",
+            "lessons": [],
+            "project": {
+                "title": "Building a website collaborative",
+                "instructions": "https://projects.breatheco.de/project/collaborative-html-website"
+            },
+            "quizzes": [],
+            "replits": [],
+            "homework": "Students must remember to read the next lesson before next class and finish all their projects, next class they start with Javascript!",
+            "position": 5,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-collaborative-html-website",
+                    "slug": "collaborative-html-website",
+                    "title": "Building a website collaborative",
+                    "target": "self"
+                }
+            ],
+            "description": "Now you know Github & GIT and together they make collaboration amazing! ",
+            "key-concepts": [
+                "Coders collaborate with each other",
+                "team work ",
+                "In real jobs, you work in tems",
+                "Pull request",
+                "branches",
+                "Merge",
+                "The commit object",
+                "Push vs Pull",
+                "Why Pull Request instead of Push directly",
+                "All major companies use Pull Request"
+            ],
+            "technologies": [{ "slug": "git", "title": "Git" }],
+            "teacher_instructions": "Time to explain and practice with GIT in detail, create a repository for your Landing Page GIT project and make them clone it and upload their piece of the project. Review the key concepts. Do a live demonstration on how to use Github, branches, resolve conflicts. Introduce students on how to contribute on Github by fixing misspells.",
+            "extended_instructions": "# First time using Git\n\nLast class you have introduced GitHub, students must have finish reading and watching videos and building their public profile with YML.\n\n### About the GIT authentication:\n\nThe academy does not want to explain much about GIT SSH Authentication because it can be a cumbersome concept for now, we strongly recomend always using HTTP during the course and let students learn about SSH later.\n\n### The Commit Object\n\nHere is the lesson that talks about that: [https://content.breatheco.de/lesson/how-to-use-git-version-control-system#commit-objects](https://content.breatheco.de/lesson/how-to-use-git-version-control-system#commit-objects) \n\nBasically, a commit is a snapshot (picture) of what your project looked at during the moment of your commit. \n\nCommits represent a change in the current code, so if you don’t have any changes, you will receive a message saying there is nothing to commit.\n\nThere are four main parts in a commit:\n\n1. Set of files which make up your snapshot at that time\n2. Instructions pointing to the Parent commit objects\n3. An SH1 (hash) name that serves as a unique identifier for that specific commit.\n4. Commits also typically have comments, which should explain what was changed or addressed in the current commit\n\n### The HEAD\n\nThe heads of the repository are like the \"revision history of the project.\"  \n\nA revision history is a list of commit objects that altogether contain all the changes that you and your other team members have made to the project files.\n\nEvery time you make a new commit, the head will move to that new commit.  (This way you are able to have access to the entire project history of commits.)\n\nIt is possible to move the head to a different commit, however, you must remember that commits made after the commit to which the head is pointing at are not possible to be reviewed.\n\n### The Stage\n\nWhen creating a commit, you select which files you wish to add to the commit. This is called \"staging\" your commit. (basically, preparing your formal commit object)\n\nTypically, you will use \"git add .\" which adds all files to your stage for the current commit, then follow it with your commit.\n\n### Branch\n\nA branch allows you to work on a specific feature of code without compromising the main code in a repository.  [http://content.breatheco.de/lesson/how-to-use-git-version-control-system#a-head-object-is-a-list-of-commits](http://content.breatheco.de/lesson/how-to-use-git-version-control-system#a-head-object-is-a-list-of-commits) \n\nThat means that each branch is a separate revision history.\n\nThe main branch of code in the repository is called \"Master\" typically\n\nYou can have as many different branches as you want in a repository/project.\n\nEach branch has it’s own head which resides on the last commit of that branch. So if you have two branches, \"Master\" and “login”, each will have their own head on the last commit.\n\nWhen you are satisfied with the feature you developed, you can merge it back in to master and it will bring all code changes, along with replace the head on master with the new head.\n\n### Typical Flow\n\n1. All new projects have to be initialized with git.  (git init)\n    - This creates a git folder with all elements that define the git project.\n    - At this point, it’s also good to set the remote for your project. This will tell the project what the address is for your repository so that you can push changes later.\n\n 2. the command for this is:  git remote add origin https://github.com/user/repo.git \n\n 3. where the address at the end is your repository address or SSH address.\n\n26. Whenever you have to stage your changes, you use \"git add\". As mentioned before, to add all file changes, “git add .” \n\n > Note: conversely, you can condense this into the git commit by adding a flag \"-a\" which means add all files to the commit stage\n\n4. Once you made changes to your code and you are ready to commit: You create a commit object by using \"git commit -m ‘commit message’\" or if you have not used git add, you can use the -a flag as mentioned before.\n\n5. At this point, you want to use ‘git push’ to upload your changes\n\n6. If you need to create a new branch:\n\n    - git checkout -b [branch name]\n\n    - next you need to switch to that branch to work on it\n\n        3. git checkout [branch name]\n\n    - when you complete your changes on a new branch, you merge the changes back in using the following:\n\n        4. git merge [other branch name]\n\n\n## Commit vs PUSH\n\nWe already discussed that a commit will allow you to create a new commit object. This is a local bundle you are preparing to upload.\n\nWhen you finish your commit, you have to attempt to upload that code to the repository.\n\nThis is where git push comes in. It allows you to attempt to upload your changes to the repository.\n\nIf there are any issues where a conflict has arisen, you will have to resolve the conflicts before pushing your changes.\n\n## Resolving Conflicts\n\nFor conflicts, git will notify you that there are issues.\n\n- this typically occurs when two people are trying to modify the same file(s).\n\nTo proceed you need to:\n\n- Get the new changes downloaded to your computer with ‘git pull’ or if you are on a branch, ‘git pull origin branch-name’\n\n- Then you will be asked to merge the changes \n\n- Here you will have to edit the files with conflicts and resolve any changes. \n\n- Once you have resolved the conflicts, you can attempt to push changes again.\n\n## Start Coding With The Students!\n\n** At this point we will start the assignment for the git collaborative portfolio project.**\n\n** Break the class into groups and assign a section of the portfolio project**\n\n** [https://github.com/breatheco-de/exercise-collaborative-html-website/blob/master/website1/designs/guide.jpg]**(https://github.com/breatheco-de/exercise-collaborative-html-website/blob/master/website1/designs/guide.jpg)\n\n* Use peer programming to complete the section quickly, then upload the changes to the repository your professor has provided.\n\nTeacher will clone the repo in a new class repository and will handle updating the name of the template parts so that the site functions properly.\n\n### Students Homework: \n\nFinish all pending projects including todays."
+        },
+        {
+            "id": 6,
+            "label": "Intro to JS",
+            "lessons": [
+                {
+                    "slug": "what-is-javascript-learn-to-code-in-javascript",
+                    "title": "What is JavaScript? Learn to Code in JavaScript"
+                },
+                {
+                    "slug": "conditionals-in-programing-coding",
+                    "title": "Conditionals in Programming or Coding"
+                },
+                {
+                    "slug": "working-with-functions",
+                    "title": "Working with Functions"
+                }
+            ],
+            "quizzes": [],
+            "replits": [
+                {
+                    "slug": "javascript-beginner-exercises",
+                    "title": "Javascript Beginner Tutorial (interactive)"
+                }
+            ],
+            "scrollY": 1809,
+            "homework": "Remember to read the next lesson before next class. Students should finish their project.",
+            "position": 6,
+            "assignments": [],
+            "description": "HTML & CSS are great, but the world needed interactive pages (not just beautiful text documents). JavaScript comes to help us generate HTML & CSS based commands after the initial text document has already loaded.  JavaScript will also re-write the website live, based on the user's activity.\",",
+            "key-concepts": [
+                "Data-types in Javasrcipt",
+                "what is a variable",
+                "arrays",
+                "You can skip lines with conditionals",
+                "do not explain looping yet",
+                "Null vs Undefined",
+                "Generate random numbers",
+                "The code is a procedure from top to bottom (for now)"
+            ],
+            "technologies": [{ "slug": "js", "title": "Javascript" }],
+            "teacher_instructions": "Explain the basic coding concepts (variables, data-types, functions, loops, arrays, etc.), Practice: Students take turns on the screen, one at a time (peer programing) the screen and tries completing the exercise, and the others help, every student must go around at least two times. Stop the class and explain JS concepts when needed.",
+            "extended_instructions": "# Javascript Variables, DataTypes and Arrays\n\nStart anwering any questions students may have.\n\n## `20min` Javascript Intro:\n\n**Warning**: Please do not explain the DOM or Events, also, don't explain loops or functions yet. Students will be overwhelmed.\n\n### Why Javascript?\n\nStatic websites are just blog posts, but was about interactive applications like Instagram, Facebook, etc.?\n\nJavascript lets us create dynamic HTML and CSS based on user or system interactions, for example:\n- Adding an `li` to a `ul` when the user clicks on a button.\n- Showing a banner or ad (publicity) based on the user IP address.\n- Ask for information to a database.\n- Write on a database using AJAX.\n- etc.\n\nBasically: Javascript its a programming language to generate HTML and CSS (text) based on events.\n\n## The`<script>` tag:\n\nAll javascript must be done on a separate sheet (best practice).\nYou have to import to put that tag **right before the body closing tag**.\nThe code execution starts on the `window.onload = function(){}` like this:\n```\n//index.js\n\nwindow.onload = function(){\n    //your code here\n}\n\n//you can declar other functions here, but please don't write code outside functions\n```\n\n**Warning**: Carefull explaining the windown.onload, because today we are not suppose to overwhelme them with events and functions.\n\n### Explain Variables:\n\nVariables are javascript’s version of containers that hold some information.\n\nAn example of this is:\n\n1. Let’s say we needed to store someone’s birthday for an age verification script\n2. One of our variables might be: `var day = 29;`\n3. There are three things going on here:\n    - First, the computer interprets the letters VAR as the beginnig of a variable declaration.\n    - After `VAR` it must always come the variable name: in our case is called `day`.\n    - Secondly, we are storing a value of 29 in that variable.\n    - Finally, notice the syntax. All javascript lines typically end with semicolon. There will be some cases where you don’t use semicolon and we will learn those later but for now, all lines are with semicolon.\n\n3. Given that we defined the var above, `var day = 29;` if we want to display it for testing, we can show use the javascript console:\n    - Explain how to open the google inspector console\n    - So to display the variable, you would use: `console.log(day);`\n    - will print on the console `29`\n\n### Data Types\n\nYou can store 6 differnt types of values: Strings, Integers, Booleans, Arrays, Objects, Functions, Null and Undefined.\n\n- Boolean - true/false\n- String - always in quotes\n- Number - any type of number -  integer numbers, negative numbers, decimal numbers, floats, etc.\n- Undefined - nothing was set or specified for the variable. so the variable has no value\n- Null - When a database or function returns nothing, it returns null\n- Array - data sets [2,3,4,\"cat\",242,\"d\"]\n- Object - You can explain objects like real life objects that are comprised by other datatypes, you can use the analogy with HTML Tags because the tags have properties taht describe them further. Objects behave the same way.\n\nNote: Data Types on Breatheco.de: [http://content.breatheco.de/lesson/what-is-javascript-learn-to-code-in-javascript#data-types](http://content.breatheco.de/lesson/what-is-javascript-learn-to-code-in-javascript#data-types)\n\n### String Contatenation\n\nSuming two integers its not the same as suming two strings, as web developers we are going to be creating HTML using Javascript, we will contatenate like crazy!\n\n### Arrays\n\nSince we just learned what an array is, let’s look at some basic properties of an array:\n\n1. value or item: The value stored on each position.\n2. index or position: the position of the given value in the array `note: the first position starts at 0`\n3. length - the total length of the array\n\nDeclaring an array [http://content.breatheco.de/lesson/what-is-an-array-define-array](http://content.breatheco.de/lesson/what-is-an-array-define-array#how-to-declare-an-array)\n\nTo initialize an array , you can use the following:\n```js\nlet myArray = [];\n```\nThis defines the array as an empty set so that you can add values later.\n\nNote: Don’t use, use let or const.\n\nYou can also initialize an array with a value in it**\n```js\nlet myArray = [1,2,3,4,5];\n```\nDisplaying the value of an array using console, we can show it as `console.log(myArray[0]);`\n\nUpdating a specific position: `myArray[4]=3;`\n\nGenerating a random number using `Math.rand()`\n\n## Javascript Exercises and Learnpack\n\nExplain to the students how they learnpack exercises work:\n\nThere are 4 main exercises: Begin JS, Arrays, Functions, and Mastering Javascript, and they are supposed to be done in parallel because they share the same concepts E.g: You need to know about strings to know about functions because you probably will use a string within a function.\n\n1. They can start any series of exercises by clicking on the gitpod button in GitHub (using the gitpod extensions)\n2. Once the exercise engine is loaded and the exercises are running they can click \"next\" for each exercise.\n3. If the engine is down the can type `learnpack start` to restart the engine.\n\nThey have to complete all exercises by the end of the Bootcamp and repeat some of them if possible, particularly the \"arrays\" exercises.\n\n## Start Practicing\n\nOpen the begin js exercises and have the class take turns on the screen to complete each exercise during the class hours hours.\n\nNote: You can stop the class anytime and explain a javascript concept if you see they need to re-enforce the concept."
+        },
+        {
+            "id": 7,
+            "label": "Excuse Generat",
+            "lessons": [],
+            "project": {
+                "title": "Code an Excuse Generator in Javascript",
+                "instructions": "https://projects.breatheco.de/project/excuse-generator"
+            },
+            "quizzes": [],
+            "replits": [
+                {
+                    "slug": "javascript-functions-exercises-tutorial",
+                    "title": "Practice Javascript Functions Tutorial"
+                }
+            ],
+            "scrollY": 1945,
+            "homework": "",
+            "position": 7,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/tutorial-project-excuse-generator-javascript",
+                    "slug": "excuse-generator",
+                    "title": "Code an Excuse Generator in Javascript",
+                    "target": "self"
+                }
+            ],
+            "description": "The only way to master coding is thru practice, today we'll show you how practice must be done, and we hope you continue practicing on your own time.",
+            "key-concepts": [
+                "how gitpod exercises work",
+                "how important it is to practice",
+                "how to work with strings",
+                "how to work with functions",
+                "how to work with arrays"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Start the excuse generator is a great way to explain how JavaScript and HTML/CSS can play together. Use the VanillaJS boilerplate, that way students will start getting used to it\n\nThe rest of the class do the exercises with the students.",
+            "extended_instructions": "## `20min` JS Review\n\n- Start the class going over the same concepts of js again, make the class answer your questions about: \n- 1. What are variables?\n- 2. What are data-types? \n- 3. What is the scope? \n- 4. What are functions?\n- 5. What is the window.onload? Why do we use it?\n- 6. What is a string and how to concatenate strings?\n- 7. What is an HTML String? how can we generate HTML Strings as js devs.\n\n## `2 hrs` First JS Project (Excuse Generator)\n\n- Read the instructions with the students, and introduce the problem: How can we create a excuse? What are the pieces that we need to build?\n- Students MUST discuss with each other how to approach the problem of creating an excuse, guide them.\n- The project does not have to be fully finished at the end of the class, some students are slower than others, but at  least tgey should be half way and with a clear idea.\n- To include the excuse into the document you can tell them tu use `document.querySelector('body').innerHTML = excuse;` but don't try to explain the DOM, that is for another class and they are already overwhelmed.\n\nExplain to the students how they learnpack exercises work:\n\nThere are 4 main exercises: Begin JS, Arrays, Functions, and Mastering Javascript, and they are supposed to be done in parallel because they share the same concepts E.g: You need to know about strings to know about functions because you probably will use a string within a function.\n\n1. They can start any series of exercises by clicking on the gitpod button in GitHub (using the gitpod extensions)\n2. Once the exercise engine is loaded and the exercises are running they can click \"next\" for each exercise.\n3. If the engine is down the can type `learnpack start` to restart the engine.\n\nThey have to complete all exercises by the end of the Bootcamp and repeat some of them if possible, particularly the \"arrays\" exercises.\n\n## `30min` Continue Practicing and give homework\n\nOpen the function js exercises and have the class take turns on the screen to complete each exercise during the 3 hours.\n\nNote: You can stop the class anytime and explain a javascript concept if you see they need to re-enforce the concept."
+        },
+        {
+            "id": 8,
+            "label": "Domain Name Generator",
+            "lessons": [
+                {
+                    "slug": "what-is-an-array-define-array",
+                    "title": "It's Time To Learn What is an Array"
+                }
+            ],
+            "project": {
+                "title": "Domain Name Generator",
+                "instructions": "https://projects.breatheco.de/project/domain-generator"
+            },
+            "quizzes": [],
+            "replits": [
+                {
+                    "slug": "javascript-array-loops-exercises",
+                    "title": "Learn Javascript Arrays and Loops Interactive"
+                }
+            ],
+            "homework": "Students must remember to read the next lesson before next class and finish the domain name generator and work hard on the JS replits for Begin JS, Arrays, Functions.",
+            "position": 8,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-domain-generator",
+                    "slug": "domain-generator",
+                    "title": "Domain Name Generator",
+                    "target": "self"
+                }
+            ],
+            "description": "Arrays are the only way to have a list of things in programming, and they are challenging because developers need to master the art of getting or setting values from arrays using loops\n           ",
+            "key-concepts": [
+                "Functions anonymous vs normal",
+                "forEach",
+                "Every Javascript code starts OnLoad",
+                "String concatenation",
+                "Main website events: PreLoad & OnLoad",
+                "The-runtime (after OnLoad)",
+                " Introduce the DOM",
+                " Use queryselector() to select DOM Elements just like you do with CSS",
+                " Include your bundle on index.html (only one script tag from now on)"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Review everything we have seen so far very quick, reinforce that we are building HTML using JS now, ask the students and ask them to strategize on the white board, before starting to code reinforce the ONLOAD function as the beginning of your application, start using the breathecode-cli and vanilla-js",
+            "extended_instructions": "# Looping and Arrays\n\nWelcome class.\n\n## `1 min` Remind students the importance about finishing the JS exercises\n\nStudents should be completing those exercises HARD: Begin JS, Loops, Arrays, Functions and optionally Mastering JS.\nRemind students that reading will do no help, this phase is about practice, practice and more practice.\n\n## `5 min` Review last class\n\n- We started generating HTML Strings for the first time, that is the developers ultimate goal.\n- Data Types, Variables and Arrays.\n- Algorithms run from top to bottom, line by line.\n- You can skip lines with conditionals, repeat lines with loops and reuse lines with functions.\n- Arrays have items (or values) and index (or position), they start at 0. And you can get the length with `myArray.length`.\n- Concatenate stringgs using + and the new amazing type of quotes '`' that is easier for creating big dynamic strings.\n\n## `10 min` Talk about looping: with and without arrays (for vs foreach).\n\n- The main objective for a loop is to repeat a bunch of lines of code from the openin curly brace to the closing curly brace.\n- There are several ways of looping but we will focus mainly in the `for` loop for now.\n- Here is a 12min video explaining [all the different ways of looping](https://www.youtube.com/watch?v=U3ZlQSOcOI0).\n- You can add elements to an array with `push`.\n\n## `10 min` Talk more in detail about functions\n\n- Functions are the last thing to learn about basic algorithms (encouragement).\n- You create a function when you find yourself doing the same thing all over.\n- Functions purpose is to receive an input and return an output.\n- The function stops executing after returning.\n- Functions SHOULD USE VARIABLES declared ourside of them (best practice).\n- Anonymus function vs normal function.\n- In javascript, we will only use arrow functions (no the original type of function) because they are more similar to other programming languages functions.\n\n## `2:20 min` hours Start coding with the students!\n\n- Ask students to use the boilerplate for vanila.js.\n- Read the instructions for the domain name generator and ask students to discuss and build the strategy on the whiteboard.\n\n## ⚠ ️IMPORTANT `before leaving` Invite them to the coding weekend\n\nThis is the most important coding weekend of the entire course because they have to understand JS well to be able to continue learning more stuff.\n"
+        },
+        {
+            "id": 9,
+            "label": "Catch up",
+            "lessons": [],
+            "quizzes": [],
+            "replits": [],
+            "homework": "Students must remember to read the next lesson before next class and must finish all pending project and exercises.",
+            "position": 9,
+            "assignments": [],
+            "description": "You have a lot of things to cach up on, finish and deliver the replit exercises and projects. Make sure to review the last replit of events (todo list). Use your time wisely...",
+            "key-concepts": [],
+            "technologies": [],
+            "teacher_instructions": "Help students finish the replit exercises and projects. Make sure to review the last replit of events (todo list). IMPORTANT: This next coding weekend will be the last before getting into react, encourage students to attend.",
+            "extended_instructions": "# Practice Day (replits and projects)\n\n## `5 min` Take any questions about javascript\n\nRemind everyone that the all the replits about Javascript are extremelly important, the only way to become better is practicing.\n\n## `10 min` Last review about JS (really fast)\n\n- Everything starts on the window.onload\n- A non declared variable value is `undefined` (this will help them read the console errors)\n- If you forget to return, the function will return `undefined` (this will help them read the console errors)\n- Our main purpose for a front-end coder is to **generate dynamic HTML and CSS**, you will be using algorithms to do so (the need to understand that for better react.js learning curve)\n- All ways of looping are important, including the `for` loop because its the only one with total freedom and we not only loop arrays, we also loop for other reasons.\n- Map vs Foreach: In react we will map all the time because it creates a new array and that is really important.\n- Functions goal is: Receive an input and return and output. The execution stops after returning.\n- What is `myArray.find` and `myArray.filter`. In React we will use them all the time.\n\n## `2 hours` Last Repl.it/Project Intensive before The DOM!!\n\n☢ 😰 🤯 ️Students are overwhelmed!\n\nThis is the most delicate part of the course, there is a **lot of risk on students droping**. Please make sure all of them do lots of replits today.\nDo not teach new concepts!\n\n💡 Tell students that today the MUST ask questions after 5 min of being stuck, They cannot try on their own for 30 minutes before asking, not today.\nThey will have planty of challenges to keep learning on their own tomorrow.\n\n## `45 min` before the class finished, do the student exernal profile with them:\n    - Breafly explain open source and why its important, examples of great software build like that.\n    - Explain that developers like to collaborate in open source and why its important for them.\n    - Pull Request are the best mechanism for collaboration because you don't need permission to push.\n    - Students are required to do a real collaboration to a real open source project by the end of the class to an open source project.\n    - Talk about the importance of having green dots on your github activity graph.\n    - Explain YML breafly.\n    - Help them do they YML file and push a draft of their profile (don't worry about content, just structure).\n    - Once they do their PR they can see their live profile because we are [automatically merging](https://mergify.io/) and deploying.\n    - If the automatic merge does not occur, its probably because their YML has syntax problem, you can review the travis execution log on the pull request details.\n\nNote: They students don't have to worry about the content, today its just about the YML and making it work and show up on the [student list](http://sep.4geeksacademy.co/students/).\n\n5. After their `Student External Profile` is done, they may continue doing replits and finishing their previous projects."
+        },
+        {
+            "id": 10,
+            "label": "Conditional Profile Card ",
+            "lessons": [],
+            "project": {
+                "title": "Conditional Profile Card Generator",
+                "instructions": "https://projects.breatheco.de/project/conditional-profile-card"
+            },
+            "quizzes": [],
+            "replits": [
+                {
+                    "slug": "master-javascript-exercises",
+                    "title": "Mastering Javascript"
+                }
+            ],
+            "scrollY": 2632,
+            "homework": "Students must remember to read the next lesson before next class and finish the profile card and exercises to date.",
+            "position": 10,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-conditional-profile-card",
+                    "slug": "conditional-profile-card",
+                    "title": "Conditional Profile Card Generator",
+                    "target": "self"
+                }
+            ],
+            "description": "What we call \\\"thinking\\\" is basically the process of making decisions based on some information (variables) that we have available. You can replicate the same behavior in a computer by using conditionals and logical operations.",
+            "key-concepts": [
+                "Every Javascript code starts OnLoad",
+                "String concatenation",
+                "Variable Initialization",
+                "If...else",
+                "Sometimes you don't need else",
+                "What is compiling",
+                "Why does the Javascript community decided to Bundle (compatibility, ES6, performance, etc)",
+                "Bundling JS, CSS and Images",
+                "Include your bundle on index.html"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Ask students to gather and create a flow chart on the whiteboard with the decision process behind building the html for the profile card project. Finish conditional profile card and all previous exercises. ",
+            "extended_instructions": "## Conditionally Rendering\n\n1. Rendering means printing or displaying.\n2. In HTTP you can only print text, it can be an HTML Text, CSS Text, JSON Text, Javascript Test.\n3. Basically it means generating strings dynamically.\n4. Conditional rendering is what makes your website interactive.\n\n\n### There are 2 ways of writing conditions:  \n\nUsing the `if....else`  statement.  \n\n```js\nlet canDrive = false;\nif(age > 16){\n    // do something\n    canDrive = true;\n}\nelse{\n    canDrive = false;\n}\n```\nOr using a ternary (the most popular for conditional rendering):\n\n```js\nlet canDrive = (age > 16) ? true : false;\n```\nNote: as you can see the ternary is smaller, it's a great and agile resource.\n\n## What is conditional rendering?\n\nIt means using conditions to generate HTML dynamically. Basically, your HTML will be different depending on certain **conditions** that you determine.\n\nFor example, using the same condition before:\n```js\nlet canDrive = (age > 16) ? \"can\" : \"cannot\";\nlet myHTML = 'I ' + canDrive + \" drive\";\n\n// myHTML will be either \"I can drive\" or \"I cannot drive\"\n```\n\nWith the javascript template literrals is even easier to generate strings dynamically.\n\n```js\n\nlet person = {\n    name: \"Alejandro\",\n    age: 17\n}\nlet myHTML = `\n    <div>\n          <p>My name is ${person.name}</p>\n          <p>and I am ${person.age > 21 ? \"capable\" : \"not capable\"} to drink</p>\n    </div>\n`;\n```\nThis javascript code will output the following HTML:\n\n```html\n    <div>\n          <p>My name is Alejandro</p>\n          <p>and I am capable to drink</p>\n    </div>\n```\n\n"
+        },
+        {
+            "id": 11,
+            "label": "The DOM",
+            "lessons": [
+                {
+                    "slug": "what-is-front-end-development",
+                    "title": "What is Front-End Development"
+                },
+                {
+                    "slug": "what-is-dom-define-dom",
+                    "title": "What is DOM: Document Object Model"
+                },
+                {
+                    "slug": "event-driven-programming",
+                    "title": "Event Driven Programming"
+                }
+            ],
+            "quizzes": [],
+            "replits": [
+                {
+                    "slug": "the-dom-exercises",
+                    "title": "Learn how to manipulate The DOM with JS"
+                },
+                {
+                    "slug": "javascript-events-exercises",
+                    "title": "Javascript Events"
+                }
+            ],
+            "scrollY": 2824,
+            "homework": "Students must remember to read the next lesson before next class and finish the random card and the dom and events exercises.",
+            "position": 11,
+            "assignments": [],
+            "description": "Ok but how do we use JavaScript to build websites? You have to interact with The DOM to create dynamic HTML/CSS and wait for events to occur.",
+            "key-concepts": [
+                "Main website events: Preload & OnLoad",
+                "The-Runtime (after download)",
+                "Instroduce the DOM",
+                "Use queryselector() to select DOM Elements just like you do with CSS",
+                "Add/remove CSS classes to DOM elements",
+                "Please do not attempt to explain Webpack config.",
+                "Bundling JS, CSS and Images",
+                "Include your bundle on index.html"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Explain the DOM in detail and do the exercises about the DOM with the students, students take turns on the screen to complete each exercise.",
+            "extended_instructions": "# Day 10 -  The DOM\n\nBefore the class, teacher assistants can sti with students and responde eny coding questions.\n\n## `30 min` Introduction about the DOM\n\nNo we are goign to be using Javascript to create or change HTML code: The DOM.\n\n- Once the browser recieves the server response it starts building The DOM until `window.onload` gets triggered.\n- The DOM is a LIVE hierarchy that represents the HTML document.\n- The DOM its not the same as the source code, the source code will be the first version of the DOM ants its quickly overriten by the LIVE changes.\n- Draw a DOM example on the whiteboard vs a its corresponding HTML code.\n- Show on the browser the google inspector with the DOM opened (the elements tab).\n- Show how it changes live based on the user/system activity clicks/mouseover/etc.\n- The `querySelector` and `querySelectorAll` will be our main way to use The DOM, the other methods are deprecated: getElementById, byTagName, etc.\n- Once you select DOM element and store it on a variable you can change any of its properties: Styles, Classes, Values, etc. ANY PROPERTY!\n- Code on the google inspector console a small 2 line script showing a querySelector and changing a style:\n\n```js  \nconst anyDOMElement = document.querySelector(‘.anyClass’);\n//changing a background\nanyDOMElement.style.backgroundColor = ‘black’;\n//adding a class\nanyDOMElement.addClass('d-none');\nanyDOMElement.removeClass('d-none');\n// inner html\nanyDOMElement.innerHTML = \"html string that will be included inside the selector\"\n```\n\n## `10 min` Reinforce what is webpack and npm\n\nJust a brief reminder about bundling, `npm install`, `npm run build`, etc.\n\n## `2:20min ` Start the DOM exercises\n\nEach student rotates the screan, one at a time."
+        },
+        {
+            "id": 12,
+            "label": "Random Card Generator",
+            "lessons": [],
+            "project": {
+                "title": "Random Card Generator",
+                "instructions": "https://projects.breatheco.de/project/random-card"
+            },
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 2886,
+            "homework": "",
+            "position": 12,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-random-card",
+                    "slug": "random-card",
+                    "title": "Random Card Generator",
+                    "target": "self"
+                }
+            ],
+            "description": "Let's build our first project using the DOM, manipulate syles, classes and HTML code using Javascript during the runtime.",
+            "key-concepts": [
+                "Main website events: Preload & OnLoad",
+                "The-Runtime (after download)",
+                "Instroduce the DOM",
+                "Use queryselector() to select DOM Elements just like you do with CSS",
+                "Add/remove CSS classes to DOM elements",
+                "Please do not attempt to explain Webpack config",
+                "Bundling JS, CSS and Images",
+                "Include your bundle on index.html"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Focus ",
+            "extended_instructions": "## Answer questions\n\nThe first 15min of the class are ideal to answer questions while the students connect.\n\n## `10 min` Review the DOM again\n\n- Once the browser recieves the server response it starts building The DOM until `window.onload` gets triggered.\n- The DOM is a LIVE hierarchy that represents the HTML document.\n- The DOM its not the same as the source code, the source code will be the first version of the DOM ants its quickly overriten by the LIVE changes.\n- Draw a DOM example on the whiteboard vs a its corresponding HTML code.\n- Show on the browser the google inspector with the DOM opened (the elements tab).\n- Show how it changes live based on the user/system activity clicks/mouseover/etc.\n- The `querySelector` and `querySelectorAll` will be our main way to use The DOM, the other methods are deprecated: getElementById, byTagName, etc.\n- Once you select DOM element and store it on a variable you can change any of its properties: Styles, Classes, Values, etc. ANY PROPERTY!\n- Code on the google inspector console a small 2 line script showing a querySelector and changing a style:\n- \n```js  \nconst anyDOMElement = document.querySelector(‘.anyClass’);\n//changing a background\nanyDOMElement.style.backgroundColor = ‘black’;\n//adding a class\nanyDOMElement.addClass('d-none');\nanyDOMElement.removeClass('d-none');\n// inner html\nanyDOMElement.innerHTML = \"html string that will be included inside the selector\"\n```\n\n## `20 min` Reinforce what is webpack and the vanilla js boilerplate\n\n1. Explain how to start using the boilerplate.\n2. Show students that the README.md has everything they need to start coding.\n3. Show how to see errors on the terminal.\n4. Show how to see errors on the INSPECTOR.\n\n## `20` Strategize the project!\n\nReact instructions carefully with students and plan a strategy!\n\n- Start strategizing the HTML/CSS.\n- After having one hard coded card and suite, how can you change it dynamically?: \n    - Approach A: Dynamically changing the card css classes. E.g: havin a class `card` and 4 classes `diamons`, `club`, `spade` and `heart`.\n    - Approach B: Using `domElement.styles.color = 'red';` instead of using classes.\n- Use the whiteboard with the students.\n- Every student must participate.\n\n## `2:20` Code the project\n\nOnce the strategy is clear in written down, help students implement it.\n\n## Ask students to finish replits about the DOM."
+        },
+        {
+            "id": 13,
+            "label": "Unit Testing with Jest",
+            "lessons": [
+                {
+                    "slug": "how-to-create-unit-testing-with-Javascript-and-Jest",
+                    "title": "How to create unit testing with JEST"
+                }
+            ],
+            "project": {
+                "title": "Your first unit tests with Javascript's Jest Framework",
+                "instructions": "https://projects.breatheco.de/project/unit-test-with-jest"
+            },
+            "quizzes": [],
+            "replits": [],
+            "homework": "Finish pending JS exercises and jest project.",
+            "position": 13,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-unit-test-with-jest",
+                    "slug": "unit-test-with-jest",
+                    "title": "Your first unit tests with Javascript's Jest Framework",
+                    "target": "self"
+                }
+            ],
+            "description": "Quality Assurance is one of the most valued skills in big tech major companies, today we are learning how you can write code that tests your previously written code in an automated way. Welcome to unit testing!",
+            "key-concepts": [
+                "What is a unit test",
+                "Very simple test case",
+                "Some times there are several correct answers",
+                "What is an assertion",
+                "Jest Framework",
+                "You have to test succes AND failure"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Explain how unit testing works with a very simple example (sum function) and then show the students how the exercises are auto-graded with unite tests, open one of the simplest JS exercises, and show how the tests work. Then start with today's project.",
+            "extended_instructions": "# `20min` Unit testing\n\nWhat is a unit test and why do we need it? Explan a simple function like the `sum` function that sums two numbers and how to test it:\n\n\n```js\n\nfunction sum(a,b){\n     // leave the function without implementation\n}\n\n```\n\nWhat should this function return? a+b\n\nIf I pass `5` and `7` to this function, what should the function return? `12`\n\nUnit tests are HARD CODED tests with very specific inputs to function and very specific expectations about the result of those functions.\n\n## How can you assert?\n\nThe word \"assert\" is used in many programming languages testing frameworks, asserting basically means comparing.\n\nWe are going to be learning in Javascript and Jest, instead of `assert` you have to say `expect`.\n\nDepending on the framework the syntax varies, but in javascript we assert with Jest like this:\n```js\nexpect(something).toBe(somehitngElse)\n```\n\nFor example: \n```js\ntest(\"If 5 and.7 are passed, then the function must return 12\", function(){\n    const sum  = require('./sum.js');\n    const total = sum(5,7);\n    expect(total).toBe(12);\n});\n```\n\nYou can find all the [jest expect functions here](https://jestjs.io/docs/en/expect.html).\n\n## Testing for failure instead of success\n\n1. Try testing your functions for weird scenarios\n2. Try to break your functions with the wrong parameters.\n3. Think about all the possible scenarios.\n\n## `2hr` Start the interactive project\n\nThere is an interactive project available that will explain a lot to the students, start the project with them and let them finish it on their own."
+        },
+        {
+            "id": 14,
+            "label": "Landing Page with React",
+            "lessons": [
+                {
+                    "slug": "javascript-import",
+                    "title": "JavaScript Import and Export of Modules"
+                },
+                {
+                    "slug": "learn-react-js-tutorial",
+                    "title": "Learn React Here : React Js Tutorial"
+                },
+                {
+                    "slug": "making-react-components",
+                    "title": "Creating React Components"
+                }
+            ],
+            "project": {
+                "title": "Landing Page with React",
+                "instructions": "https://projects.breatheco.de/project/landing-page-with-react"
+            },
+            "quizzes": [],
+            "replits": [
+                {
+                    "slug": "react-js-exercises",
+                    "title": "Learn React.js Interactively"
+                }
+            ],
+            "homework": "Students must remember to read the next lesson before nest class and finish their landing page with react.",
+            "position": 14,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-landing-page-with-react",
+                    "slug": "landing-page-with-react",
+                    "title": "Landing Page with React",
+                    "target": "self"
+                }
+            ],
+            "description": "But working with the DOM can get tricky and it's resource consuming, for that and many other reasons libraries like React.js got popular in the last couple of years. The let you create HTML and CSS using JS in a very intuitive way",
+            "key-concepts": [
+                "Export -> Import Modules",
+                "You can create your own tags",
+                "Create a component as a function",
+                "JSX Syntax",
+                "Component properties",
+                "You will find on the internet syntax for class components (legacy)"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Make students create their first react components and explain the use of JSX. Only talk about functional components, class components are deprecated and we will be using only hooks. ",
+            "extended_instructions": "# Introduction to React.js\n\n## `5 min` Take any theorical questions about DOM/Javascript\n\n## `30 min` Beginnin of todays new topic\n\nToday we will be covering the beginning of creating our first React.js Applications!\nThis topic will be broken up in a few lessons with the overview being today and more detail over the coming days.\nPLEASE DON’T MISS CLASS and make sure to go to catch up and your own time and saturdays.\n\n### Export -> Import variables among your files\n\nThanks to webpack we can split our code in many files now.\nAll we have to do is expecify what variables we want to share with other files using the `export` sentence.\nOn the other file we can `import` the variable like this:\n```js\n//on file2.js we can declare a function and store it on a variable\nexport let sum = (a,b) => (\n  return a + b;\n);\n\n//on file1.js we can import that function and use it like this:\nimport { sum } from 'path/to/file2.js';\n\nconsole.log(sum(2,7));\n```\n\n\n### React JS Introduction\n\nA front end javascript library that is used to create advanced HTML/CSS/JS projects.\nIt’s highly in demand in the job market right now and growing.\n\n#### Why React?\n\n- No more DOM. React handles all of that. You will create your own components and tell react what component to render and when; react handles all interaction with DOM on the front end.\n- Now its all about component based, its a lot easier to re-use your code int he future.\n- It’s much faster than traditional javascript. Instead of re-rendering the whole page when a single change occurs, React renders individual items that change. \n\n#### You can create your own tags\n\n- Before, you learned that HTML Tags are set functions that the browser knows how to interpret.\n- Now in React, You can create your own tags by creating usable components.\n- Just create a function that returns HTML and that will become its own tag.\n- JSX its like HTML+JS you have to get use to it.\n- You have to use braces in the middle of your HTML to include dynamic JS.\n```jsx\nconst Alert = function(props){\n    return (<div className=\"any-class-name\">{props.children}</div>);\n}\n\nReactDOM.render(<div className=\"any-class-name\">{props.children}</div>)\n```\n- You have to use [proptypes](https://reactjs.org/docs/typechecking-with-proptypes.html) (best practice).\n```js\nAlert.propTypes = {\n  children: PropTypes.node,\n  // any other property...\n};\n```\n\n## `1:25 min` Do the React Exercises with the students\n\nThe transition to react its hard for the students, that is why we will be doing the react exercises with them.\n\n## `60 min before class ends` Start the class project (Landing Page)\n\n- This project will be do in groups of two. \n- Every team must share the same git repository.\n- Take some time to read the instructions with the students and have them setup they boilerplate and repository.\n- Each group will strategize privatly how to approach the exercise."
+        },
+        {
+            "id": 15,
+            "label": "Simple Counter",
+            "lessons": [],
+            "project": {
+                "title": "Simple Counter",
+                "instructions": "https://projects.breatheco.de/project/simple-counter-react"
+            },
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 5629.5,
+            "homework": "Students must work on their simple counter.",
+            "position": 15,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-simple-counter-react",
+                    "slug": "simple-counter-react",
+                    "title": "Simple Counter",
+                    "target": "self"
+                }
+            ],
+            "description": "Its the first time you've heard or learn about react, we have given you a lot of exercises to practice. Please practice like crazy with all of them. Ask questions",
+            "key-concepts": [
+                "component properties",
+                "setTimeout",
+                "what is a component",
+                "passing the counter seconds as properties"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Use half of the class to explain Hooks. Students have now a lot of homework: The React Replits, Counter and the Landing page. Work with students to help them complete the developments.\",\n",
+            "extended_instructions": "# Continue working on the Landing Page\n\nIf the landing page is not finished, they can work on that for a few minutes.\n\n# Start the simple counter\n\n1. Strategy first.\n2. HTML/CSS first.\n3. Then make the component."
+        },
+        {
+            "id": 16,
+            "label": "Component State",
+            "lessons": [
+                {
+                    "slug": "react-hooks-explained",
+                    "title": "React Hooks Explained"
+                }
+            ],
+            "project": {
+                "title": "Traffic Light",
+                "instructions": "https://projects.breatheco.de/project/traffic-light-react"
+            },
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 5486,
+            "homework": "Students must finish all their pending projects and exercises.",
+            "position": 16,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-traffic-light-react",
+                    "slug": "traffic-light-react",
+                    "title": "Traffic Light",
+                    "target": "self"
+                }
+            ],
+            "description": "So far you know that React components have properties (props), but there is one more important concept in react components: The State. ",
+            "key-concepts": [],
+            "technologies": [],
+            "teacher_instructions": "Do not explain react components with classes, it's still being used in the industry but less every day. Let's focus on mastering the useState function.",
+            "extended_instructions": "# Creating Components with States\n\n## `10 min` Take any questions about javascript/react/bootstrap/html/css\n\nRemind everyone that doing the replits about Javascript is extremelly important, the only way to become better is practicing, not reading or waching videos.\n\n## `10 min` Review React.js\n\n- React is about components (component names MUST be named in `PascalCase` notation)\n- You build components by creating functions that later will become `<Tags>` (with capital first letter)\n- Component Functions must **always** return HTML.\n- Those component functions can receive information in the form of Properties `<Tag property={value}>`\n- Now its className intead of class.\n- Everything starts on ReactDOM.render()\n- JSX is great because you can mix HTML with JS using braces/curly brackets.\n\n## `20 min` The state\n\n- The function useState must be used when information inside the component o website changes over time, for Example: \n    - A timer: the current time changes every second (or even milisec).\n    - Todo list: the array of todos grows over time.\n    - Fetch requests: When information comes from a nother server it was empty first and then it changes.\n\n- State vs Props:\n      1. State is declared inside the component.\n      2. Props are declared outside of the component and are read only within the inside of the component.\n\n- Show an example os using the useState.\n```js\n\n//            ⬇ value  ⬇ modifier                  ⬇ default\nconst [ value, setValue ] = useState(defaultValue);\n```\n- you can have as many states as you want\n\n### The state is inmutable:\n\nThis is wrong:\n```jsx\nconst [ todos, setTodos ] = useState([]);\n\n// ⬇  WRONG!!!!!  ⬇\nconst addTodo = (text) => {\n  todos.push(text)\n  setTodos(todos);\n}\n\n\n// ⬇  GOOD!!!!!  ⬇\nconst addTodo = (text) => {\n const newTodos =  todos.concat([text])\n  setTodos(newTodos);\n}\n```"
+        },
+        {
+            "id": 17,
+            "label": "Todo List",
+            "lessons": [
+                {
+                    "slug": "controlled-vs-uncontrolled-inputs-react-js",
+                    "title": "What are controlled and/or uncontrolled inputs in React.js"
+                }
+            ],
+            "project": {
+                "title": "Todolist Application Using React",
+                "instructions": "https://projects.breatheco.de/project/todo-list"
+            },
+            "quizzes": [],
+            "replits": [],
+            "homework": "Students must remember to read the next lesson before next class and must finish their Todo List.\n\n",
+            "position": 17,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-todo-list",
+                    "slug": "todo-list",
+                    "title": "Todolist Application Using React",
+                    "target": "self"
+                }
+            ],
+            "description": "Finally we can create our own HTML tags and re-use them on several projects and views. The key to understand a component is understanding Props and The State. Please start working on the Todo-List Application. This project will be useful in your future as a coder!",
+            "key-concepts": [
+                "Controlled inputs",
+                "Coditional rendering",
+                "the component state",
+                "the state is inmutable",
+                "state vs props",
+                "Using const, map, filter and concat to prevent state mutation",
+                "deleting and addig  Todos"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Review landing page. React as rendering engine: Students need to understand that now they can finally create their own HTML tags (React Components) and how to use the State and the Props. Have the class discuss the strategy for todo-list.IMPORTANT: Students should be able to add & delete tasks from their Todolist(or at least have some notion).\n           ",
+            "extended_instructions": "# Creating Components with States\n\n## `10 min` Take any questions publicly\n\nRemind everyone that doing the exercises about Javascript is extremely important, the only way to become better is practicing, not reading or watching videos.\n\n## `10 min` Review React.js (yes, again)\n\n- React is about components (component names MUST be named in `PascalCase` notation)\n- You build components by creating functions (the only function in the worls of JS that MUST start in capital letters)\n- Functions must return HTML.\n- Those functions can receive information in the form of Properties `<Tag property={value}>`\n- Now its className intead of class.\n- Everything starts on ReactDOM.render()\n- JSX is great because you can mix HTML with JS using braces/curly brackets.\n\n## `20min` Go over the component `useState` hook again\n\n- Properties are defined **ouside** of the component.\n- The State is defined **inside** of the component.\n- The state is needed when information inside the component will **change over time**.\n- You can have as many states as you want.\n- Talk about controlled inputs with an example.\n\n\n## `2:25 min` Start the todolist with the students\n\nAny other project the student may have until this day (like the Traffic Light) is supposed to be done on their own time.\n\n- You can help them a lot on this exercise, but always do it on the whiteboard.\n- Help them do the strategy first and later help them complete the exercise.\n- This exercise is challenging for the majority of the students, but you will be able to manage if you continue helping them individually."
+        },
+        {
+            "id": 18,
+            "label": "Todo List with React and Fetch",
+            "lessons": [
+                {
+                    "slug": "asynchronous-algorithms-async-await",
+                    "title": "Creating asynchronous algorithms"
+                },
+                {
+                    "slug": "the-fetch-javascript-api",
+                    "title": "The Fetch API"
+                },
+                {
+                    "slug": "understanding-rest-apis",
+                    "title": " Understanding Rest APIs"
+                }
+            ],
+            "project": {
+                "title": "Todolist Application Using React and Fetch",
+                "instructions": "https://projects.breatheco.de/project/todo-list-react-with-fetch"
+            },
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 5241,
+            "homework": "Students must continue to work in their project.",
+            "position": 18,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-todo-list-react-with-fetch",
+                    "slug": "todo-list-react-with-fetch",
+                    "title": "Todolist Application Using React and Fetch",
+                    "target": "self"
+                }
+            ],
+            "description": "Most of the applications build on the internet require some king of database syncronization, normal made through several API requests",
+            "key-concepts": [
+                "çusing fetch to retrieve information from the server",
+                "Displaying a 'loading' before the data arrives",
+                "Reseting the state when fetch finalizes",
+                "POSTing, PUTing and DELETEing data to the server",
+                "Sync the stae with the server",
+                "asynchrounous programming",
+                "HTTP ",
+                "How to use POSTMAN (set environment variables and use collections)",
+                "JSON is a Javascript object but as a TEXT",
+                "The goal is to send / recieve everything as JSON ",
+                "Serialize>send>Unserialize",
+                "What is serialization and how to do it",
+                "Why use several request types: GET, POST, PUT, DELETE"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Introduce the concept of fetching help students finish the todo list(unstuck them) and incorporate the synconization with the API. Then, introduce the new Todo List with React and Fetch.\n",
+            "extended_instructions": "# Using Fetch to request information from API's\n\n## `5 min` Take any questions about javascript/react\n\nRemind everyone that doing the replits extremelly important, the only way to become better is practicing, not reading or waching videos.\n\n## `10 min` Review React.js\n\n- React is about components (component names MUST have the first letter written in caps)\n- You build components by creating functions (the only function in the world of JS that MUST start in capital letters)\n- Functions must return HTML.\n- Those functions can receive information in the form of Properties `<Tag property={value}>`\n- Now its className intead of class.\n- Everything starts on ReactDOM.render()\n- JSX is great because you can mix HTML with JS using braces/curly brackets.\n- Props vs State (props are external, state is internal)\n\n## `20 min` Review the Basics of HTTP and segway to API concepts\n\n- Client and Servers interact in the form of text\n- As a client, your job is to setup and send `Requests` with these 4 properties: \n    Method: GET=Read POST=Create PUT=Update DELETE=DELETE\n    Body: the payload (only applies to POST and PUT) and must be formated in csv,json,xml or similar.\n    Content-Type: the format that the payload will have.\n    URL: Where the request is going to be sent.\n- Go over the concept of serialization (form json string -> to real object in javascript)\n- You have to wait for the response using Promises (do not explain async/await yet)\n- This is how a typical [API documentation looks](http://assets.breatheco.de/apis/fake/todos/), next project we will be using a real life Starwars API.\n\n## `20 min` Consuming API's using the Fetch method in Javascript\n\nNow, for the first time, we have a way of askin for aditional information during runtime\n\n```js\nfetch('url/to/fetch', additionalSettings)\n    .then(resp => {\n        console.log(resp.ok); // will be tru if the response is successfull\n        console.log(resp.status); // the status code = 200 or code = 400 etc.\n        console.log(resp.text()); // will try return the exact result as string\n        return resp.json(); // (returns promise) will try to parse the result as json as return a promise that you can .then for results\n    })\n    .then(data => {\n        //here is were your code should start after the fetch finishes\n        console.log(data); //this will print on the console the exact object received from the server\n    })\n    .catch(error => {\n        //error handling\n        console.log(error);\n    })\n```\n# Consuming REST API's to GET, POST, PUT and DELETE\n\nToday we will be using the Fetch API to create POST/PUT/DELETE methods.\n\n## Explain how to code a fetch request to successfully implemente the GET/POST/PUT/DELETE with JS\n\nIn the following example, the `additionalSettings` variable has the key to everything, you can specify the Content-Type, Method, and Body of the request.\n\n```js\n\nconst additionalSettings = {\n    \"headers\": {\n        \"method\": \"POST\",\n        \"Content-Type\": \"application/json\",\n        \"body\": JSON.stringify(someObject)\n    }\n}\n\nfetch('url/to/fetch', additionalSettings)\n    .then(resp => {\n        console.log(resp.ok); // will be tru if the response is successfull\n        console.log(resp.status); // the status code = 200 or code = 400 etc.\n        console.log(resp.text()); // will try return the exact result as string\n        return resp.json(); // (returns promise) will try to parse the result as json as return a promise that you can .then for results\n    })\n    .then(data => {\n        //here is were your code should start after the fetch finishes\n        console.log(data); //this will print on the console the exact object received from the server\n    })\n    .catch(error => {\n        //error handling\n        console.log(error);\n    })\n```\n\n## `2:30min` Start Todo list with React and Fetch\n\nThis project uses everything we have seen so far: The Context API, Fetch, HTML/CSS, etc.\nThe idea is to practice everything but the only new concept will be doing POST/PUT/DELETE.\n\n\n"
+        },
+        {
+            "id": 19,
+            "label": "Catch up",
+            "lessons": [],
+            "quizzes": [],
+            "replits": [],
+            "homework": "Students must remember to read the next lesson before next class and must finish the all replits and projects.",
+            "position": 19,
+            "assignments": [],
+            "description": "You have a lot of things to cach up on, finish your exercises and deliver your Todo lists!",
+            "key-concepts": [],
+            "technologies": [],
+            "teacher_instructions": "Encourage to finish their projects and exercises and to to ask questions (create a safe environment).",
+            "extended_instructions": "# Continue Todo list with React and Fetch\n\nThis project might be hard, take some time to review the questions from the students and go over any concept you feel that needs reinforcement.\n\n## Important concepts to reinfoce:\n\n- Props vs State\n- React Router (passing variables on the URL)\n- Context API\n- FLUX (action and store)"
+        },
+        {
+            "id": 20,
+            "label": "Star wars blog reading list",
+            "lessons": [
+                {
+                    "slug": "routing-our-views-with-react-router",
+                    "title": "Routing our Views with React Router"
+                }
+            ],
+            "project": {
+                "title": "Starwars blog reading list",
+                "instructions": "https://projects.breatheco.de/project/starwars-blog-reading-list"
+            },
+            "quizzes": [],
+            "replits": [],
+            "homework": "Students should continue with the project and prepare their questions for next class, encourage them to. Recomend them to read the lesson on \"How to make questions\".",
+            "position": 20,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-starwars-blog-reading-list",
+                    "slug": "starwars-blog-reading-list",
+                    "title": "Starwars blog reading list",
+                    "target": "self"
+                }
+            ],
+            "description": "This project is all about URLs and Routing. Each student must build two views/pages: One List and one Single. For example: List of Space Ships and a view for a single Space Ship. The have to make sure the URL's are propery setup on the reouter and also that the information is fetch on the didmount of the respectiv view. Also, you will be using the Context API for MVC (Store, View, Actions)",
+            "key-concepts": [
+                "Connecting components to URLs (routing)",
+                "Defining parameters on the URL path",
+                "Retrieving URL parameters with match.params",
+                "Using Props for components not connected directly to the <Route>",
+                "Redirecting history.push"
+            ],
+            "technologies": [],
+            "teacher_instructions": "You know exactly how to build small js apps, but what if your application will have several pages/views? E.g.: Having a 'Settings' page on the Spotify clone. We need to connect different URLs to our React Components. Welcome to the world of Routing.",
+            "extended_instructions": "# Using Context.API (with fetch)\n\n## Time for some motivation!\n\nIt is probable that students don't understand things entirely. The probably feel overwhelmed.\n\nGood encouragment ideas:\n\n- Today is the last class we are introducing new concepts for front end.\n- This is everything your need to succeed as a developer for the next 5 years.\n- The next time you will have to study so much, you will do it with a great sallary!!\n\n## `5 min` Take any questions about fetch.js or any other theorical concept.\n\n## `10 min` Review React.js and Fetch\n\n- React is about components (component names MUST be written in caps)\n- You build components by creating functions or classes (both MUST start in capital letters)\n- Review how to create a class vs functional component\n- The component objective is to create HTML.\n- You can pass props to compoentns `<Tag property={value}>`\n- You can persist those variables to the DOM using `this.setState`\n- API Calls (fetch) should be done on `componentDidMount`\n- Review how to code a fetch\n\n```js\nfetch('url/to/fetch', additionalSettings)\n    .then(resp => {\n        console.log(resp.ok); // will be tru if the response is successfull\n        console.log(resp.status); // the status code = 200 or code = 400 etc.\n        console.log(resp.text()); // will try return the exact result as string\n        return resp.json(); // (returns promise) will try to parse the result as json as return a promise that you can .then for results\n    })\n    .then(data => {\n        //here is were your code should start after the fetch finishes\n        console.log(data); //this will print on the console the exact object received from the server\n    })\n    .catch(error => {\n        //error handling\n        console.log(error);\n    })\n```\n\n# `20 min` Introduce FLUX\n\n- React created a way to share a store within the entire application.\n- Flux can be seen as an implementation of MVC on the front end side.\n- MVC = Model View Controller\n- Instead of Model View Controller here it is called: Model, View, Actions\n- The context-api will take care of propagating the store to all the views (re-render)\n\n![Context API](https://ucarecdn.com/051c4b0f-1c52-4cbe-a1b0-1d5fb074b8c4/)\n\n⚠️ Its a great idea to install the [react-hello-webapp boilerplate](https://github.com/4GeeksAcademy/react-hello-webapp) and show/explain the demonstration that comes with it.\n\nInstall it with the class.\n\n### The Views\n\n- The views are your components that you don't re-use, like `<AboutUs />` or `<Home />`.\n- You other componets are not called views because they are meant to be reused in several projects like: `<Card />`, `<Carousel />` or `<Navbar />`\n\n```jsx\n    //example render method accessin the store and actions\n    render(){\n\t\treturn <Context.Consumer>\n            {({ actions, store }) => {\n\t\t\t\treturn (\n\t\t\t\t    <ul>\n\t\t\t\t    {\n\t\t\t\t        store.favorites.map(f => \n\t\t\t\t            <li onClick={() => actions.someAction(f)}>\n\t\t\t\t                {f.name}\n\t\t\t\t            </li>\n\t\t\t\t        )\n\t\t\t\t    }\n\t\t\t\t    </ul>\n\t\t\t\t)\n\t\t\t}}\n\t\t</Context.Consumer>\n\t}\n```\n\n### The Actions\n\n- Actions are triggered by the views onClick, onMouseOver or any other event.\n- Actions have only two purposes: \n    - Call API's to update the database.  \n    - Update the store for any particular purpose (add, update, delete).\n- Examples of actions can be: login, createStudent, removeStudent, etc. Actions names should be descriptive about the business.\n\n```js\n\tconst addToFavorites = elm => {\n\t\tconst store = getStore();\n\t\tsetStore({ favorites: store.favorites.concat([elm]) });\n\t};\n```\n\n### The Store\n\nIts a container of information shared on your entire application:\n\n- You have to initilize the store with `null` or `[]` or `''` depending on your the data-type your are storing.\n- The biggest challenge on the store is modeling your data: What structures should y use? What is better to store like an array than an object?\n- You can access your store from your views in a read-only mode.\n\n```js\n\tlet exampleStoreObject = {\n\t    favorites: [\n\t        { name: 'Luke Sky Walker', age: 32 },\n\t        { name: 'Chiwawa', age: 12 },\n\t        ...\n\t    ]\n\t};\n```\n\n\n## `2 hr` Project Time!\n\nReact the instructions for the starwars blog and strategize with the students:\n\n- How many views are needed?\n- What components you should create?\n- What are the actions that will be coded?\n- What data-struture do we need for the store?"
+        },
+        {
+            "id": 21,
+            "label": "Star Wars blog - Live Coding ",
+            "lessons": [
+                {
+                    "slug": "what-is-react-flux",
+                    "title": "Learn What is React Flux"
+                },
+                {
+                    "slug": "context-api",
+                    "title": "Global state with the Context API"
+                }
+            ],
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 5816,
+            "homework": "Students must remember to read the next lesson before next class and they should finish all exercises and projects.",
+            "position": 21,
+            "assignments": [],
+            "description": "It's time for some real live coding! Ask all the questions you have prepared and wrap the last things about the Star Wars blog reading list because we are about to dive into an exiting journey inside the world of backend! :)",
+            "key-concepts": ["Routing", "Connecting components"],
+            "technologies": [],
+            "teacher_instructions": "Do a live demonstration on how you would solve the Star Wars Blog project. Encourage students to ask questions. Help students finish the starwars blog and also any other previous exercises and project and publish them to github (be patient some of them may be overwhelmed)",
+            "extended_instructions": "# React Router \n\n## Time for some motivation!\n\nIt is probable that students don't understand things entirely. The probably feel overwhelmed. \nGood encouragement ideas:\n\n- Today is the last class we are introducing new concepts for the front end.\n- This is everything your need to succeed as a developer for the next 5 years.\n- The next time you will have to study so much, you will do it with a great sallary!!\n\n## `5 min` Take any questions about fetch.js or any other theorical concept.\n\n## `10 min` Review React.js and Fetch\n\n- React is about components (component names MUST be written in caps)\n- You build components by creating functions or classes (both MUST start in capital letters)\n- Review how to create a class vs functional component\n- The component objective is to create HTML.\n- You can pass props to compoentns `<Tag property={value}>`\n- You can persist those variables to the DOM using `this.setState`\n- API Calls (fetch) should be done on `componentDidMount`\n- Review how to code a fetch\n\n```js\nfetch('url/to/fetch', additionalSettings)\n    .then(resp => {\n        console.log(resp.ok); // will be tru if the response is successfull\n        console.log(resp.status); // the status code = 200 or code = 400 etc.\n        console.log(resp.text()); // will try return the exact result as string\n        return resp.json(); // (returns promise) will try to parse the result as json as return a promise that you can .then for results\n    })\n    .then(data => {\n        //here is were your code should start after the fetch finishes\n        console.log(data); //this will print on the console the exact object received from the server\n    })\n    .catch(error => {\n        //error handling\n        console.log(error);\n    })\n```\n\n# `20 min` Introduce React Router\n\n- Most applications have multiple views, or urls.\n- You don't want the server to take care of \"routing\", all traffic must be redirected to index.html\n- The fronn't end will take care of routing the URL path with a particular View (a react component)\n- Views are react components that you don't typically re-use, like: contact-us, about-us, home, dashboard, etc.\n- React Router is the most popular library to \"route\" in React.\n\n## How to route\n\n- You need to create a parent component that will be instanciated first and take care of routing.\n- That component must use `<BrowserRouter>` and several `<Route>`'s inside like this:\n\n```jsx\n<BrowserRouter>\n     <Switch>\n          <Route path=\"/home\"><AnyView /></Route>\n          <Route path=\"/Dashboard\"><AnyOtherView /></Route>\n     </Switch>\n</BrowserRouter>\n```\n\nNote: We also need a `<Switch>` because we only one to display one route at time.\n\n### Passing arguments between views using the querystring\n\n- HTTP has something call a `queryString` \n- QueryStrings are a way to pass more information to a URL like this: [google.com/?q=what is react router](google.com/?q=what%20is%20react%20router)\n\nAs you can see there is a question mark `?` at the end of the URL and then there is a variable `q` equal to `what is react router`.\n\nBasically you can tell google.com that you want to query for \"what is react router\" thru the querystring.\n\nThe query string always starts with a question mark and then you add unlimited variables and values separated by amperson `&`, for example:\n\n`https://www.google.com/search?q=what+is+react+router&start=20`\n\nIn this case we are passing two variables: `q` and `start`, we are telling google.com that we want to search for \"what is react router\" and we want to display from the result number 20 instead of 1, we are skipping the first 20 results.\n\n#### Retreiving the querystring\n\nYou can access the querystring from any react component like this:\n\n```jsx\nconst MyComponent = () => {\n    const urlParams = new URLSearchParams(window.location.search);\n    const q = urlParams.get('q');\n    const start = urlParams.get('start');\n\n    return <p>You want to query in google {q} starting from result {start}</p>\n}\n```\n\n### Passing arguments to views using params\n\nAside from the queryString there is another tool to pass information to views in react router, The Params.\n\n```jsx\n<BrowserRouter>\n     <Switch>\n          <Route path=\"/planets\"><AnyView /></Route>\n          <Route path=\"/single_planet/:planet_name\"><SinglePlanet /></Route>\n     </Switch>\n</BrowserRouter>\n```\n\nWe have two views in this example: `/planets` and `/single_planet/:planet_name`, the first one is going to render a list with all the planets in the solar system, the second one is going to display information about just ONE specific planet. At the end of the `/single_planet/:planet_name` URL you can see there is a color `:` like this: `:planet_name`, this means that `planet_name` will become a variable that will be replaced later with a value, for example:\n\n```txt\n/single_planet/earth\n/single_planet/mars\n/single_planet/neptune\n/single_planet/jupiter\n/single_planet/mercury\n```\n\nThe last part of that URL can vary with different planet_name's, and we can retrieve that information from the component view like this:\n\n```jsx\n\nimport { useParams } from \"react-router\";\n\nconst SinglePlanet = () => {\n    const { planet_name } = useParams();\n\n    return <p>You are displaying currently the planet {planetName}</p>\n}\n```\n\n## `2 hr` Project Time!\n\nReact the instructions for the starwars blog and strategize with the students:\n\n- How many views are needed?\n- What components you should create?\n- What are the actions that will be coded?\n- Today we don't care about the store or actions, lets focus on building the HTML views and the URL paths using react router."
+        },
+        {
+            "id": 22,
+            "label": "Work on SQL exercises",
+            "lessons": [
+                {
+                    "slug": "what-is-sql-database",
+                    "title": "Mastering Databases: What is SQL Database"
+                }
+            ],
+            "quizzes": [],
+            "replits": [
+                {
+                    "url": "https://sqlbolt.com/",
+                    "slug": "sql",
+                    "title": "SQL Bolt Interactive"
+                }
+            ],
+            "homework": "Students must remember to read the next lesson before next class and should finish all their project and exercises.",
+            "position": 22,
+            "assignments": [],
+            "description": "Database engines are not related particular languages (like Python, PHP or Node) and they run on a different server than the website or application. For that reason and many others databases have their own language: SQL",
+            "key-concepts": [
+                "SQL table",
+                "Table relations: 1-1 1-N N-N",
+                "Metadata vs data",
+                "INSERT, UPDATE, DELETE",
+                "ALTER, DROP",
+                "Transactions",
+                "COMMIT, ROLLBACK, SAVEPOINT",
+                "CREATE"
+            ],
+            "technologies": [],
+            "teacher_instructions": "It is time to explain how SQL database work and how to write some SQL to interact with them, look at the full teacher instrutcions for more details",
+            "extended_instructions": "# First backend day! (Data-structures)\n\nThe front end is all about rendering and requesting for data.\nThe backend is all about databases/structures and responding the data.\n\nToday we are starting backend by going over all the previous exercises we have done and thinking about how the data was structured on those exercises.\n\n## Data structures\n\nDifferent Types of Data Structures (with examples):\n\n### Structuring with Primitive values\n\nThese are the most basic structures of data: Amost no structure, you cannot even have list of things.\n\n### Structuring with Arrays\n\nIs the first read structure we saw, its ideal to store lists of `anything`:\n\n```js\nlet todos = [];\n//add a task\ntodos.push(value);\n//remove a task\ntodos = task.filter(t => t != value);\n```\n\n### Object Literals\n\nThanks to object literals our tasks can now have status instead of just the task name.\n```js\nlet todos = [];\n//add a task\ntodos.push({\n    status: 'pending',\n    name: value\n});\n//remove a task\ntodos = task.filter(t => t.value != value);\n```\n\n### Classes (Object Orienetd)\n\nIts very formal, but thanks to classes now we can validate our task creation:\n\n```js\nclass TodoList{\n    constructor(){\n        this.tasks = [];\n    }\n    add(task){\n        if(valtaskue.status != 'pending' || task.status != 'done') throw new Error('The task status must be pending or done');\n        if(typeof task.name != 'string' || task.name == '') throw new Error('The task name must be a not empty string');\n        this.tasks.push(value);\n    }\n    remove(name){\n        this.tasks = this.tasks.filter(t => t.name != name);\n    }\n}\n\nlet todos = new TodoList();\n//now if you try adding a task with the wrong status if will give you an error\ntodos.add({\n    status: 'pending',\n    name: 'Make the bed'\n});\ntodos.remove('Make the bed');\n```\n\n## `5 min` Take 5 minutes to explain the difference beween data-structures and data-models\n\nYou can think about data-structures like he RAM Memory repersentation of data-models, for example:\n\n- Data structures are stuff like: Arrays, Queues (FIFO, FILO), Classes, etc.\n- Data models are ways of structuring the database.\n\nThe data-structure of your Reac.tjs projects will: The Store (RAM Memory).\nBut the data-model is only represented on the backend database.\n\n## `60min` Data Structuring Previous Projects\n\nStudents must discuss and finish recognizing the data structures use don previous projects.\n\n## `Rest of the class` Work on the SQL Exercises (the link is at the end of the lesson)."
+        },
+        {
+            "id": 23,
+            "label": "Building Starwars Data Model",
+            "lessons": [
+                {
+                    "slug": "everything-you-need-to-start-using-sqlalchemy",
+                    "title": "Everything you need to know about SQLAlchemy"
+                }
+            ],
+            "project": {
+                "title": "Data Modeling a StarWars Blog",
+                "instructions": "https://projects.breatheco.de/project/data-modeling-starwars"
+            },
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 6413,
+            "homework": "Students must remember to read the next lesson before next class and finish their project.",
+            "position": 23,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-starwars-data-modeling",
+                    "slug": "data-modeling-starwars",
+                    "title": "Data Modeling a StarWars Blog",
+                    "target": "self"
+                },
+                {
+                    "url": "https://github.com/breatheco-de/exercise-instagram-data-modeling",
+                    "slug": "instagram-data-modeling",
+                    "title": "Building Instagram.com Database Model",
+                    "target": "self"
+                }
+            ],
+            "description": "The backend its all about data, structures and databases. Let's review how to createt a database model.",
+            "key-concepts": [
+                "Why do we have to draw the database first?",
+                "It is hard to change the database in the middle of development",
+                "UML has become the standard for diagrams",
+                "SQL Alchemy is the most popular library for python database",
+                "Insstead of SQL we will use ORM's for 90% of our data needs",
+                "Databases have more data-types tha programming languages"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Take some time to go over how to model your data using Entity Relationship Diagram, use Intagram example with the entire class and then let the students do the Startwars Entity Relationship Diagram in groups of 2-3 students.",
+            "extended_instructions": "# Data Modeling whith UML\n\n## `5 min` Take 5 minutes to explain the difference between data-structures and data-models\n\nYou can think about data-structures like he RAM Memory repersentation of data-models, for example:\n\n- Data structures are stuff like: Arrays, Trees, Queues (FIFO, FILO), Classes, etc.\n- Data models are ways of structuring the database data.\n\nThe data-structure of your Reac.tjs projects will: The Store (RAM Memory).\nBut the data-model is only represented on the backend database.\n\n## `20 min` Today it is about: Data Modeling\n\n[This video](https://www.youtube.com/watch?v=UI6lqHOVHic&list=PLUoebdZqEHTxNC7hWPPwLsBmWI0KEhZOd) shows how to create a UML diagram, make students watch the video.\nExplain the basics of UML with a simple Car dealer example: Vehicle, Client, Purchase.\n\n- What are the possible data-types in a car dealer? Number, Boolean, String, etc.\n- What properties can a Vehicle, Client or Purchase have?\n- What are tthe relationships between the models (one-to-one, one-to-many, many-to-many)?\n    - How many Vehicles a Client can have?\n    - How many y Purchases a Client can do?\n    - How many Vehicles can a Purchase contain?\n\n## `2:30` Data-Modeling projects\n\nHelp students model the StarWars Blog using SQLAlchemy model diagram generator. Read the project instructions with them."
+        },
+        {
+            "id": 24,
+            "label": "Intro to Python",
+            "lessons": [
+                {
+                    "slug": "backend-developer",
+                    "title": "Knowing What is Behind a Back-End Developer"
+                },
+                {
+                    "slug": "python-syntax",
+                    "title": "Understanding Python Syntax"
+                },
+                {
+                    "slug": "conditionals-in-programing-python",
+                    "title": "Logical conditions in Python explained"
+                },
+                {
+                    "slug": "what-is-a-python-list",
+                    "title": "Working with Lists in Python"
+                },
+                {
+                    "slug": "working-with-functions-python",
+                    "title": "Working with Functions in Python"
+                }
+            ],
+            "quizzes": [],
+            "replits": [
+                {
+                    "slug": "python-beginner-exercises",
+                    "title": "Learn Python Interactively (beginner)"
+                },
+                {
+                    "slug": "python-function-exercises",
+                    "title": "Learn Python Functions Interactively"
+                },
+                {
+                    "slug": "python-loops-lists-exercises",
+                    "title": "Learn Python Loops and lists Interactively"
+                },
+                {
+                    "slug": "master-python-exercises",
+                    "title": "Master Python by practice (interactive)"
+                }
+            ],
+            "scrollY": 7004,
+            "homework": "Students must remember to read the next lesson before next class and they must finish the all replits and projects.",
+            "position": 24,
+            "assignments": [],
+            "description": "The backend side of the web is all about creating API's for data storing and processing; and integrating with 3rd party API's. The first step of that process is storing the information.",
+            "key-concepts": [
+                "Different types of Data Structures (with examples)",
+                "Object vs Array",
+                "calculated properties like age",
+                "lamda function"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Now that students finished the data-model for the StarWars blog its time they dive into python, start explaining the difference between back-end and front-end, all the things you could do with Python backends, then go over the syntax differences between python and javascript and what thi",
+            "extended_instructions": "# Introduction to Python\n\nStudents only know about JS and the Browser, today is important they understand:\n\n- That backend programs have access to the entire computer (not just the browser).\n- Backend programs don't need to bundle or use webpack.\n- Backend programs are compiled into C++ and Assembly.\n\n## Python Introduction\n\n- Show students how you can just create a file.py and run it using the command line `$ python file.py`\n- Compare javascript with python: `console.log` vs `print`\n- How variables work and what are de datatypes\n- Looping with python (for and foreach, loop, while loop)\n- Python dictionaries are like javascript objects but we call them dictionaries and they use `[` instead of `.` to access keys, for example:  `person['name']` instead of `person.name`.\n\n## Take the rest of the class for python exercises\n"
+        },
+        {
+            "id": 25,
+            "label": "Star Wars blog - Building endpoints",
+            "lessons": [
+                {
+                    "slug": "building-apis-with-python-flask",
+                    "title": "Building RESTful API's using Flask"
+                }
+            ],
+            "project": {
+                "title": "Todo List API with Python Flask Interactive",
+                "instructions": "https://projects.breatheco.de/project/python-flask-api-tutorial"
+            },
+            "quizzes": [{ "slug": "html", "title": "Basics of HTML" }],
+            "replits": [{ "slug": "html", "title": "Learn HTML" }],
+            "scrollY": 7117,
+            "homework": "",
+            "position": 25,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/python-flask-api-tutorial",
+                    "slug": "python-flask-api-tutorial",
+                    "title": "Todo List API with Python Flask Interactive",
+                    "target": "self"
+                },
+                {
+                    "url": "https://github.com/breatheco-de/exercise-starwars-blog-api",
+                    "slug": "exercise-starwars-blog-api",
+                    "title": "Build a StarWars REST API",
+                    "target": "self"
+                }
+            ],
+            "description": "The back-end side has almost no limitations, you have access to the entire computer, printers or anything you need. Your life as a back-end developer will start by doing API's because it is the most needed skill in the market. We really hope you like it as much as we do!",
+            "key-concepts": [
+                "Python has access to the entire machine",
+                "Python has packages just like NPM but it is calles Pipenv",
+                "The pipfile is like the package.json",
+                "Flask is the most popular Python Framework",
+                "workflow for creating and enpoint in Flask (same MVC pattern but now on the backend)",
+                "Flask easily works with SQLAlchemy (models.py)",
+                "what is serialization (jsonify)"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Explain API concepts and how to build an API using flask, follow with the students the interactive Flask tutorial and explain the sample API that comes with it (Todo List API), then ask the students to build the API for the Star Wars blog they already coded on the front-end.",
+            "extended_instructions": "## Building an API with Flask\n\n## `10min` Intro to backend API's\n\n- Go over HTTP, request vs response.\n- Open postman and review with students how to create requests with postman:\n     1. How to choose your method GET, PUT, POST, DELETE\n     2. How to set the URL\n    3. How to set the content-type JSON\n    4. where to look for the response\n- Postman will be our main way to test our API until we have a front-end.\n- The two most important API frameworks in Python are Django and Flask.\n- Flask is increasing in popularity because is meant for microservices and that it's very lightweight.\n\n### What is a server?\n\n- A server is just a script that waits for requests, it never ends.\n- When a server receives a request it maps the request with a function that we call the \"request handler\".\n- Basically building an API is mapping a bunch of endpoints with functions. One endpoint ==> One function\n\n```py\n@app.route('/')\ndef hello_world():\n    return 'Hello, World!'\n```\n\nExplain the rest of the process on building an API:  \nhttps://content.breatheco.de/en/lesson/building-apis-with-python-flask\n\n## `1hr` Follow the Interactive Flask API Tutorial\n\nHave the class work on following the API tutorial with Flask (todo list).\n\n## `1:30min` Start the StarWars with the class\n\n- The academy is providing documentation for the Flask Boilerplate here: [start.4geeksacademy.com](https://start.4geeksacademy.com)\n- Explain the backend boilerplate before starting the project\n- The models.py (based on the database diagram)\n- Where to add your endpoints\n- How to communicate between Python and your database using SQLAlchemy:\n   - How to query information.\n   - How to add, delete and update new records.\n- Build the first endpoint with the class\n- How to test your endpoints with postman\n\nThe class must continue working on the API until next day (homework)\n\n\n\n\n"
+        },
+        {
+            "id": 26,
+            "label": "Authentication JWT",
+            "lessons": [
+                {
+                    "slug": "token-based-api-authentication",
+                    "title": "Token Based Authentication in your API",
+                    "mandatory": true
+                },
+                {
+                    "slug": "what-is-JWT-and-how-to-implement-with-Flask",
+                    "title": "Understanding JWT and how to implement a simple JWT with Flask",
+                    "mandatory": true
+                }
+            ],
+            "project": {
+                "title": "Authentication sistem with Python Flask and React.js",
+                "instructions": "https://projects.breatheco.de/project/jwt-authentication-with-flask-react"
+            },
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 7656,
+            "homework": "",
+            "position": 26,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/jwt-authentication-with-flask-react",
+                    "slug": "jwt-authentication-with-flask-react",
+                    "title": "Authentication sistem with Python Flask and React.js",
+                    "target": "self"
+                }
+            ],
+            "description": "Almost every application in the world has an authentication system, usually, you choose a username and password and those become your \"credentials\", you use them every time you want to identify yourself.\nTody we learn how to implement an authentication system using Tokens and JWT, one of the most modern standards for token based API Authentication.",
+            "key-concepts": [
+                "What is a Token",
+                "Token Based Authentication",
+                "What is a session",
+                "HTTP has no sessions",
+                "The Auth Token travels on the headers (usually)",
+                "API's have private and public endpoints",
+                "Every request to a private method must contain the Authorization Header",
+                "Types of Authentication (JWT, Bearer, Basic, etc.)",
+                "Benefits of JWT (no token storate)",
+                "How to use Postman",
+                "How to send authenticated request in postman",
+                "About the authorization header"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Explain how authentication works, what is a hash, and how HTTP has no persistent session and we need to generate tokens to simulate the concept of a session, show the documentation of the JWT Extended and help students implement it on their StarWars blog to save favorites on their user account.",
+            "extended_instructions": "## Authentication\n\n- Start with explaning how HTTP works: request vs response\n- We have done request anonymously during the entire course, its time to include authentication in our requests.\n- Every request must be \"signed\" to be able to execute.\n- There are many ways to sign requests, usually you do it by appending a unique number (hash/token) that only the authenticated user should know.\n- Usually authentication information travels on the header of the request.\n- If authentication is invalid the server must returns status code 401 (invalid auth) or 403 (missing auth info).\n- What is a token? A unique number that represents the \"session\".\n- How big is the token? Enough to be unique for everyone else.\n\n## Go over the lessons with the student\n\nTake some time to scroll through the lessons and review each of the concepts.\n\n## Use postman to demonstrate an authentication:\n\n  - Start with login (wrong and success credentials)\n  - Append the header token to the request.\n  - What is the response code we are getting?\n  - What happens if I add the wrong headers or token? What status code?\n\n## Documentation for JWT Extended\n\n- Show students the documentation for the [JWT Extended package](https://flask-jwt-extended.readthedocs.io/en/stable/basic_usage/).\n- Help students understand how to read a documentation.\n  - What to look first? The quickstart?\n  - How many weekly downloads the package has?\n  - How actively maintained it is?\n  - Are there a lot of pending issues?\n  - Has anyone else tried the package?\n- Write on the board the 4 steps to implement it: \n\n## Allow students to implement the login and protected routs on the API\n\nAsk students to follow the documentation steps on their own and ask for questions.\n\n## Front-end:\n\n- Implementing the fetch function to post `/token` and get a new token.\n- Storing the token on the localStorage\n- Appending the token to the fetch headers on every private request \n\n## The Startwars API should have authentication for next class\n"
+        },
+        {
+            "id": 27,
+            "label": " Front-Back Star Wars API integration",
+            "lessons": [],
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 9649,
+            "homework": "",
+            "position": 27,
+            "assignments": [],
+            "description": "Let's finish all of our pending projects and exercises.",
+            "key-concepts": ["Async/Await", "Insomnia", "Postman"],
+            "technologies": [],
+            "teacher_instructions": "The last day to finish the StarWars project.",
+            "extended_instructions": "Work with students on finishing pending projects."
+        },
+        {
+            "id": 28,
+            "label": "Family API",
+            "lessons": [],
+            "project": {
+                "title": "Family Static API with Flask",
+                "instructions": "https://projects.breatheco.de/project/family-static-api"
+            },
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 8576,
+            "homework": "Students must finish python exercises and pending projects.",
+            "position": 28,
+            "assignments": [
+                {
+                    "url": "https://github.com/breatheco-de/exercise-family-static-api",
+                    "slug": "family-static-api",
+                    "title": "Family Static API with Flask",
+                    "target": "self"
+                }
+            ],
+            "description": "Lets keep working on the backend and get more familiar with Python's dictionaries, lists and the lamdba function",
+            "key-concepts": [
+                "Python has dictionaries instead of literal objects",
+                "Python has lambda instead of arrow functions",
+                "Python has lists and tuples instead of arrays",
+                "Explain how to map an array with lambda"
+            ],
+            "technologies": [
+                { "slug": "queue", "title": "queue" },
+                { "slug": "python", "title": "python" },
+                { "slug": "pytest", "title": "Pytest" },
+                { "slug": "flask", "title": "flask" }
+            ],
+            "teacher_instructions": "This lesson is about data-structures + API. We are trying to make students use a class/data-structure to build the API around it. Lets build another API but now using more complicated data-structures on the Backend",
+            "extended_instructions": "# Data-Structures and Family Tree\n\nToday's objective is to start introducing students with the concept of data-structures:\n\n- These are [the available python data-structures](https://github.com/breatheco-de/content/blob/master/src/assets/images/data-structures-python.png?raw=true).\n- Mainly divided in primitive and non-primitive.\n- We already know all primitives and some of the non-primitives.\n- Today we focus on the Tree.\n\n## About Tree's (data-structure)\n\n- Tree are not sequential data-structures like the arrays or lists.\n- Trees only have connections between its nodes (items) thru parent->chid links.\n- Trees are useful to represent things with hierarchies like the computer file structure, or organizational charts or families.\n\n## Work with the students on the project\n\nWe are doing another API to continue practicing Flask but without a database model, only ram memory.\nUse dictonaries and try representing a Tree structure (you cannot have all the family members in one array, you must use parent->child connectors.\n\n"
+        },
+        {
+            "id": 29,
+            "label": "Catch up",
+            "lessons": [],
+            "quizzes": [],
+            "replits": [],
+            "homework": "Students must remember to read the next lesson before next class and finish all pending projects.\n",
+            "position": 29,
+            "assignments": [],
+            "description": "Continue working on the family tree API...",
+            "key-concepts": [],
+            "technologies": [],
+            "teacher_instructions": "Help students finish pending backend projects and unstuck them.",
+            "extended_instructions": "# Continue working and finish all pending Projects\n\nTake some time to review the questions form the students and go over any concept you feel that needs reinforcement.\n\n\n\n## `5 last min` Warning about the final project\n\nThe next class students must come with a clear idea on what will be their final project about, they have to group in teams of 3 (prefered) or 2 people.\n- [Here are](https://projects.breatheco.de/d/full-stack-project-stories-and-wireframes#readme) the requirements on the final project.\n- Ask publicly what projects ideas they have and write them on the whiteboard, that will help other students to join the ideas.\n- If a student doesn't have a project maybe he can talk to other students and join them on their project.\n- As a teach, make sure the teams are good-enough to have something done by the end of the cohort.Hello *World*!"
+        },
+        {
+            "id": 30,
+            "label": "User Stories ",
+            "lessons": [
+                {
+                    "slug": "user-stories-examples",
+                    "title": "Creating User Stories: Learn with User Stories Examples"
+                },
+                {
+                    "slug": "agile-development",
+                    "title": "Intro to Professional and Agile Development"
+                }
+            ],
+            "quizzes": [],
+            "replits": [],
+            "homework": "Students must finish the user stories by next class, remember that the student projects must meet certain conditions to be accepted.",
+            "position": 30,
+            "assignments": [],
+            "description": "Time to start the Final project! Lets review how software is built today, you'll learn and follow the same methods used by the top tech companies in the world",
+            "key-concepts": [
+                "What is a Kanban board and how does it work",
+                "How to use Github's kanban automated board",
+                "Adding an issue per user story",
+                "Writting stories from the user's point of view",
+                "Acceptance criteria",
+                "Your application scope: roles and capabilities",
+                "Standup meeting"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Time to start the Final project! Let's give the students a break and dive into User Stories and the SCRUM methodology. Students must pick their projects & partner, and start building the user stories using Github Project. Create a project with them.",
+            "extended_instructions": "# Time To Start the Final Project\n\nWe are going to use github for SCRUM project management, that way students get more green points on the activity graph and they get more familiar with github.\n\n## `10min` Creating user stories\n\nThis video is great about user stories: https://www.youtube.com/watch?v=LGeDZmrWwsw\nThis is the lesson: http://content.breatheco.de/lesson/user-stories-examples\n\n- Don't undermine stories: 70% of the projects fail because the requirements are not clear enough.\n- User stories have to be worded on the user point of view.\n- They need to have a clear **Acceptance Criteria**.\n- You application roles & capabilities, make sure the stories involve them: `as a students I would like to sort my lessons by difficulty`\n- SPRINT: Its a coding iteration (Every week maybe?) from start to finish: Write the stories -> Prioritize -> Code -> Test -> Deliver.\n- Velocity: How many points are being delivered per sprint.\n- SCRUM Meeting: Its when the team strategizes and plans a new sprint: decides what features are going to be included into the sprint.\n- Standup Meeting: Every day, the group gathers for 10 minutes and answers 2 questions:\n    1. Are you stuck?\n    2. What do you need from me?\n\n## `10min` Using Github for Agile: Issues and Projects\n\n- There are plenty of agile methodologies but we decided to use Kanban as it is one of the most popular ones.\n- Explain github issues and how you can create one issue for eavery feature/bug/problem/etc.\n- Github issues can connect to github projects automatically.\n- Create a github project with the students: What is a Kanban board and how does it work: 4 Columns (Backlog, Selected for Development, In Progress, Done).\n- How to use Github's kanban automated board: Issues will automatically opened and closed.\n\n## `20min` Students must pick their final project\n\n- Have a brainstorming on the project, here are some examples:\n    1. Doing an SMS based todo list application.\n    2. Doing a real-time polling platform like pollanywhere: https://www.polleverywhere.com/\n    3. Doing a Markdown editor to take notes and save them in the cloud.\n    4. Doing a detting platform where games can bet on anyone playing a video game.\n    5. Online store.\n- Once you ahve teams and ideas ready the teams must gather up and one of each team must create their repository.\n- Each team must start adding github issues with their user stories.\n\n## `2:20min` Build project stories\n\nStudents must work in group with their teams to finish the first batch of user stories and wireframes and publish them into github.\n\n"
+        },
+        {
+            "id": 31,
+            "label": "UI/UX and MOCKUPS",
+            "lessons": [],
+            "quizzes": [],
+            "replits": [],
+            "homework": "Sit with every project team and discuss how to split the code into Views vs Components, students must finish their project home layout by next class.",
+            "position": 31,
+            "assignments": [],
+            "description": "Today you will be coding your final project HTML Views and making them React Views",
+            "key-concepts": [
+                "Reinforce the Minimum Viable Product concept",
+                "Students should not get excited about npm packages, use only a handfull",
+                "Using React-Strap is a great idea to save some time"
+            ],
+            "technologies": [],
+            "teacher_instructions": "Continue working on the final project but now start building the React Views, use the FLUX boilerplate with the students and start organizing eveyrthing from Layout.jsx",
+            "extended_instructions": "# Help Students Start coding their React Views\n\nToday we should start coding the final project, but first:\n\n## `20min` Final Review to Project Requirements\n\n- Students have a clear idea on what they will be developing: User stories and Wireframes almost done.\n- Make sure they have a small project, its hard to finish a project with more than 3-4 views.\n- Make sure also that their database is small (3-5 tables at the most) or it will be imposible to finish.\n- Sit down with each group and give your feedback.\n\n## `20min` Help students setup the project code\n\n- Start the boilerplate with them.\n- Make sure they understand the Layour.js and are able to add their routes.\n- Make sure they know how to add styles.\n- Make sure they have properly planned their components and views and are ready to start coding the wireframe si very good for that).\n\n## `2:20min` Students start coding their views\n\nLets students start coding, help with one-on-one mentorships.\n\n\n\n"
+        },
+        {
+            "id": 32,
+            "label": "",
+            "lessons": [],
+            "quizzes": [],
+            "replits": [],
+            "scrollY": 11459,
+            "homework": "Students must deliver the first views of their projects.",
+            "position": 32,
+            "assignments": [],
+            "description": "Work on your final project, validate with your teacher that you are building an impressive project with all the minimum requirements from the academy to graduate.\n",
+            "key-concepts": [],
+            "technologies": [],
+            "teacher_instructions": "Work with students during until final presentation rehearsal the last day of the cohort.",
+            "extended_instructions": "# Coach students on their development\n\nIt is the first time students code a big project, they are probably making lots of mistakes, they have probably ugly designs or maybe they don;t event know what they are doing.\n\n## Sit with each team separately and help them with the following:\n\n#### Were to look for mistakes\n\n- The overcomplicate things.\n- They spend too much time on non-important stuff.\n- They use libraries that don't work.\n- They want to add so many features to their projects that they forget its going to be impossible to finish.\n\n#### Were to look for bad UX/UI designs:\n\n- Use a maximum of 3 colors on your projects.\n- Use bootstrap components all the way: Reactstrap or Materialize is a great recomendation.\n- Someone form the team should focus on little details a lot, like a full time job.\n\n### Make sure they are following SCRUM\n\n- Are they using github project?\n- Are they moving the ard in the Kanban board?"
+        },
+        {
+            "id": 33,
+            "label": "Final presentation rehersal",
+            "lessons": [],
+            "quizzes": [],
+            "replits": [],
+            "homework": "",
+            "position": 33,
+            "assignments": [],
+            "description": "A great way of rehearsing is by presenting the final project to your classmates",
+            "key-concepts": [],
+            "technologies": [],
+            "teacher_instructions": "Create a 'rehersal day' and let the students present the project to their classmates."
+        },
+        {
+            "id": 34,
+            "label": "Pitch day",
+            "lessons": [],
+            "quizzes": [],
+            "replits": [],
+            "homework": "",
+            "position": 34,
+            "assignments": [],
+            "description": "You have worked a lot during these weeks, it's time to present the final project and enjoy with your family and friends!",
+            "key-concepts": [],
+            "technologies": [],
+            "teacher_instructions": "Answer any question students may have,"
+        }
+    ],
+    "slug": "full-stack",
+    "label": "Full Stack PT",
+    "profile": "full-stack",
+    "version": 7,
+    "description": "",
+    "academy_author": "4"
+}

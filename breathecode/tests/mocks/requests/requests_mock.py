@@ -6,8 +6,13 @@ from .response_mock import ResponseMock
 
 
 def request_mock(endpoints=[]):
-    def base(url: str, **kwargs):
+
+    def base(url: str, *args, **kwargs):
         """Requests get mock"""
+        if (url == 'GET' or url == 'POST' or url == 'PUT' or url == 'PATCH' or url == 'DELETE'
+                or url == 'HEAD' or url == 'REQUEST'):
+            url = args[0]
+
         match = [(status, data) for (status, endpoint, data) in endpoints if url == endpoint]
 
         if match:

@@ -8,6 +8,7 @@ from breathecode.services import datetime_to_iso_format
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_github_reset_link_without_auth(self):
         """Test /auth/member/<profile_academy_id>/token"""
         url = reverse_lazy('authenticate:profile_academy_reset_github_link', kwargs={'profile_academy_id': 3})
@@ -75,7 +76,10 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'user': {
                     'id': 1,
-                    'email': profile_academy.user.email
+                    'email': profile_academy.user.email,
+                    'first_name': profile_academy.user.first_name,
+                    'last_name': profile_academy.user.last_name,
+                    'username': profile_academy.user.username,
                 },
                 'key': f'{token}',
                 'reset_password_url': f'http://localhost:8000/v1/auth/password/{token}',

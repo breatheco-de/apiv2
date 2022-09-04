@@ -1,7 +1,10 @@
 from breathecode.services.google_cloud.credentials import resolve_credentials
 
+__all__ = ['NDB']
+
 
 class NDB:
+
     def __init__(self, Model):
         from google.cloud import ndb
         resolve_credentials()

@@ -1,7 +1,8 @@
 from breathecode.authenticate.models import ProfileAcademy
 import logging
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import has_permission
 from .models import Specialty, Badge, UserSpecialty, LayoutDesign
 from breathecode.admissions.models import CohortUser
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
@@ -46,16 +47,11 @@ def get_certificate(request, token):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@receiver(post_save, sender=UserSpecialty)
-def post_save_course_dosomething(sender, instance, **kwargs):
-    if instance.preview_url is None or instance.preview_url == '' and instance.status == 'PERSISTED':
-        take_screenshot.delay(instance.id)
-
-
 class LayoutView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_layout')
     def get(self, request, academy_id=None):
 
@@ -69,6 +65,7 @@ class CertificateView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_certificate')
     def get(self, request, cohort_id, student_id, academy_id=None):
 
@@ -96,9 +93,9 @@ class CertificateView(APIView):
 
         if cu is None:
             raise ValidationException('Student not found for this cohort', code=404, slug='student-not-found')
-
         cert = generate_certificate(cu.user, cu.cohort, layout_slug)
         serializer = UserSpecialtySerializer(cert, many=False)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -106,6 +103,7 @@ class CertificateCohortView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_certificate')
     def get(self, request, cohort_id, academy_id=None):
 
@@ -159,6 +157,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
         items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
@@ -213,12 +212,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 
     @capable_of('crud_certificate')
     def post(self, request, academy_id=None):
-        if isinstance(request.data, list):
-            data = request.data
-
-        else:
-            data = [request.data]
-
+        data = request.data if isinstance(request.data, list) else [request.data]
         cohort_users = []
 
         if len(data) > 0:
@@ -315,3 +309,17 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 #             serializer.save()
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CertificateMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @has_permission('get_my_certificate')
+    def get(self, request):
+        handler = self.extensions(request)
+
+        items = UserSpecialty.objects.filter(user=request.user)
+        items = handler.queryset(items)
+        serializer = UserSpecialtySerializer(items, many=True)
+
+        return handler.response(serializer.data)

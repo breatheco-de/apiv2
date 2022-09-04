@@ -8,6 +8,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 import serpy, re
 from django.utils import timezone
+import breathecode.feedback.actions as actions
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -85,7 +86,6 @@ class AnswerSerializer(serpy.Serializer):
     created_at = serpy.Field()
     user = UserSerializer(required=False)
 
-    score = serpy.Field()
     academy = GetAcademySerializer(required=False)
     cohort = GetCohortSerializer(required=False)
     mentor = UserSerializer(required=False)
@@ -96,8 +96,10 @@ class SurveySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     lang = serpy.Field()
     cohort = GetCohortSerializer()
-    avg_score = serpy.Field()
+    scores = serpy.Field()
+    response_rate = serpy.Field()
     status = serpy.Field()
+    status_json = serpy.Field()
     duration = serpy.Field()
     created_at = serpy.Field()
     sent_at = serpy.Field()
@@ -144,9 +146,11 @@ class ReviewSmallSerializer(serpy.Serializer):
     cohort = GetCohortSerializer()
     author = UserSmallSerializer()
     platform = ReviewPlatformSerializer()
+    updated_at = serpy.Field()
 
 
 class AnswerPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Answer
         exclude = ('token', )
@@ -190,24 +194,27 @@ class SurveySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json')
+        exclude = ('scores', 'status_json', 'response_rate')
 
     def validate(self, data):
 
-        if not 'cohort' in data:
-            raise ValidationException('No cohort has been specified for this survey')
-
         if data['cohort'].academy.id != int(self.context['academy_id']):
             raise ValidationException(
-                f'You don\'t have rights for this cohort academy {self.context["academy_id"]}')
+                f'You don\'t have rights for this cohort academy {self.context["academy_id"]}.',
+                code=400,
+                slug='cohort-academy-needs-rights')
 
         reg = re.compile('^[0-9]{0,3}\s[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}$')
         if 'duration' in data and data['duration'] < timezone.timedelta(hours=1):
-            raise ValidationException(f'Minimum duration for surveys is one hour')
+            raise ValidationException(f'Minimum duration for surveys is one hour.',
+                                      code=400,
+                                      slug='minimum-survey-duration-1h')
 
         cohort_teacher = CohortUser.objects.filter(cohort=data['cohort'], role='TEACHER')
         if cohort_teacher.count() == 0:
-            raise ValidationException('This cohort must have a teacher assigned to be able to survey it', 400)
+            raise ValidationException('This cohort must have a teacher assigned to be able to survey it',
+                                      code=400,
+                                      slug='cohort-needs-teacher-assigned')
 
         return data
 
@@ -227,7 +234,7 @@ class SurveySerializer(serializers.ModelSerializer):
         result = super().create(validated_data)
 
         if send_now:
-            send_survey_group(survey=result)
+            actions.send_survey_group(survey=result)
 
         return result
 
@@ -238,7 +245,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json', 'status')
+        exclude = ('scores', 'status_json', 'status', 'response_rate')
 
     def validate(self, data):
 
@@ -271,6 +278,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
 
 class ReviewPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Review
         exclude = ('created_at', 'updated_at', 'author', 'platform', 'nps_previous_rating')

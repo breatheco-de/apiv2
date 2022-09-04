@@ -1,11 +1,8 @@
 import logging
 from django.contrib import admin, messages
-from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import CohortAdmin
-from .models import Assessment, UserAssessment, UserProxy, Question, Option, Answer
+from .models import Assessment, UserAssessment, UserProxy, Question, Option
 from .actions import send_assestment
-# from .tasks import send_cohort_survey
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +31,7 @@ class UserAdmin(UserAdmin):
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
     search_fields = ['title', 'user__first_name', 'user__last_name', 'user__email', 'academy__slug']
-    list_display = ('title', 'academy', 'comment', 'created_at')
+    list_display = ('slug', 'lang', 'title', 'academy', 'created_at')
     list_filter = ['private', 'academy__slug']
     # def entity(self, object):
     #     return f"{object.entity_slug} (id:{str(object.entity_id)})"

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+body {
+  font-family: "Roboto", sans-serif;
+  background-color: #f9f9f9;
+  margin: 0;
+  padding: 0;
+}
+a{text-decoration: none;}
+.card {
+  background-color: white;
+  width: auto;
+  box-sizing: content-box;
+  padding: 20px 24px;
+  box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  margin: 0px auto;
+  max-width: 400px;
+}
+.card .card-title {
+  border-left: 8px solid #00aeef;
+  padding: 16px 30px;
+  margin-left: -24px;
+  font-size: 1.5em;
+  font-weight: 400;
+}
+
+.sh-list {
+  min-width: 340px;
+}
+.sh-list .sh-list-item {
+  padding: 16px;
+  cursor: pointer;
+}
+.sh-list .sh-list-item:hover {
+  background-color: #f3f3f3;
+}
+.sh-list .sh-list-item .sh-list-content,
+.sh-list .sh-list-item .sh-list-icon {
+  vertical-align: middle;
+  display: table-cell;
+  background-size: contain;
+}
+.sh-list .sh-list-item .whitespace{
+  content: "a";
+  width: 10px;
+  background: transparent;
+  display: table-cell;
+}
+.sh-list .sh-list-item .sh-list-item-title {
+  color: #2c2d30;
+  padding: 2px 0;
+  font-weight: 600;
+  font-size: 16px;
+}
+.sh-list .sh-list-item .days-ago {
+  margin: 0;
+  font-weight: 100;
+}
+
+.sh-list .sh-list-item .sh-list-item-sub-title {
+  color: #717274;
+  font-weight: 200;
+  font-size: 12px;
+}
+.sh-list .sh-list-item .sh-list-icon {
+  margin-right: 10px;
+  background-color: #d2d2d2;
+  width: 40px;
+  height: 40px;
+  text-align: center;
+  display: table-cell;
+  line-height: 42px;
+  font-size: 1.2em;
+  font-weight: 100;
+  color: white;
+  border-radius: 50%;
+}
+.sh-list .sh-list-item .sh-list-icon.add {
+  background-color: #00aeef;
+}
+.sh-list .sh-list-item .sufix {
+  display: inline-block;
+  font-size: 24px;
+  margin-right: 24px;
+  float: right;
+}
+.sh-list .sh-list-item .sufix i {
+  margin-top: 10px;
+}
+h4 {
+  display: block;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 16px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.54);
+}
+.m-0{ margin: 0; }
+</style>
+<div class="content text-center">
+    <tr>
+        <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+			padding-bottom: 5px;">
+            <div class=card>
+                <div class="card-title">Close session</div>
+                <div class="sh-list">
+                  <div class="sh-list-item">
+                  {{ message|safe }}
+                  </div>
+                  {% if sessions|length > 0 %}
+                  <div class="sh-list-item">
+                    We also found the following sessions that need to be resolved:
+                  </div>
+                  {% endif %}
+                  {% for s in sessions %}
+                  <div class="sh-list-item">
+                    <a href="/mentor/meet/{{ s.mentor.slug }}?token={{ token }}&session={{s.id}}">
+                        <div class="sh-list-icon" style="background-image: url('{{s.mentee.user.profile.avatar_url}}')">
+                          {% if not s.mentee.user.profile.avatar_url or s.mentee.user.profile.avatar_url != '' %}
+                          <i class="fas fa-user-friends"></i>
+                          {% endif %}
+                        </div>
+                        <div class="whitespace"></div>
+                        <div class="sh-list-content">
+                          {% if s.mentee %}
+                            <div class="sh-list-item-title">{{ s.mentee.first_name }} {{ s.mentee.last_name }}</div>
+                          {% else %}
+                            <div class="sh-list-item-title">No student ever joined</div>
+                          {% endif %}
+                          <div class="sh-list-item-sub-title">
+                            <p class="days-ago"><small>joined {{ s.ends_at|timesince }} ago</small></p>
+                            {{ s.service.name }}
+                          </div>
+                        </div>
+                        <div class=sufix><i class="fas fa-angle-right"></i></div>
+                    </a>
+                  </div>
+                  {% endfor %}
+              </div>
+              </div>
+
+
+        </td>
+    </tr>
+</div>
+{% endblock %}

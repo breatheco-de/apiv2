@@ -4,8 +4,8 @@ Collections of mixins used to login in authorize microservice
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from breathecode.tests.mixins.headers_mixin import HeadersMixin
 from breathecode.authenticate.models import Token
-from mixer.backend.django import mixer
 from breathecode.tests.mixins import DateFormatterMixin
+from .utils import is_valid, create_models, get_list
 
 
 class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
@@ -19,20 +19,44 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                              manual_authenticate=False,
                              cohort_user=False,
                              slack_team=False,
+                             group=False,
+                             permission=False,
+                             mentor_profile=False,
                              profile_academy='',
                              user_kwargs={},
+                             group_kwargs={},
+                             permission_kwargs={},
                              models={},
                              **kwargs):
         models = models.copy()
 
-        if not 'user' in models and (user or authenticate or profile_academy or manual_authenticate
-                                     or cohort_user or task or slack_team):
+        if not 'permission' in models and is_valid(permission):
+            kargs = {}
+            models['permission'] = create_models(permission, 'auth.Permission', **{
+                **kargs,
+                **permission_kwargs
+            })
+
+        if not 'group' in models and is_valid(group):
             kargs = {}
 
-            kargs = {**kargs, **user_kwargs}
-            models['user'] = mixer.blend('auth.User', **kargs)
-            models['user'].set_password(self.password)
-            models['user'].save()
+            if 'permission' in models:
+                kargs['permissions'] = get_list(models['permission'])
+
+            models['group'] = create_models(group, 'auth.Group', **{**kargs, **group_kwargs})
+
+        if not 'user' in models and (is_valid(user) or is_valid(authenticate) or is_valid(profile_academy)
+                                     or is_valid(manual_authenticate) or is_valid(cohort_user)
+                                     or is_valid(task) or is_valid(slack_team) or is_valid(mentor_profile)):
+            kargs = {}
+
+            if 'group' in models:
+                kargs['groups'] = get_list(models['group'])
+
+            if 'permission' in models:
+                kargs['user_permissions'] = get_list(models['permission'])
+
+            models['user'] = create_models(user, 'auth.User', **{**kargs, **user_kwargs})
 
         if authenticate:
             self.client.force_authenticate(user=models['user'])

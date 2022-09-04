@@ -1,0 +1,13 @@
+{% extends "base.txt" %}
+{% block content %}
+
+Details for invoice #{{ id }} for mentor  {{ mentor.user.first_name }} {{ mentor.user.last_name }}:
+
+Status: {{ status }}
+Created: {{ created_at }}
+Paid: {{ paid_at }}
+Invoice {{ total_duration_in_hours }}
+
+Please login to see more details.
+
+{% endblock %}

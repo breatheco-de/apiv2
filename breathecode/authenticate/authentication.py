@@ -12,13 +12,14 @@ class ExpiringTokenAuthentication(TokenAuthentication):
     It expires every 24hrs requiring client to supply valid username
     and password for new one to be created.
     '''
+
     def authenticate_credentials(self, key, request=None):
         token = Token.objects.select_related('user').filter(key=key).first()
         if token is None:
             raise AuthenticationFailed({'error': 'Invalid or Inactive Token', 'is_authenticated': False})
 
         if not token.user.is_active:
-            raise AuthenticationFailed({'error': 'Invalid or innactive user', 'is_authenticated': False})
+            raise AuthenticationFailed({'error': 'Invalid or inactive user', 'is_authenticated': False})
 
         now = timezone.now()
         if token.expires_at is not None and token.expires_at < now:
