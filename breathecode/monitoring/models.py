@@ -165,6 +165,6 @@ class CSVUpload(models.Model):
     status_message = models.TextField(null=True, blank=True, default=None)
     log = models.CharField(max_length=50)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, blank=True, default=None)
-
+    hash = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     finished_at = models.DateTimeField(auto_now=True, editable=False)

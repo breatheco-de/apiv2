@@ -696,110 +696,66 @@ class UploadView(APIView):
 
     # upload was separated because in one moment I think that the serializer
     # not should get many create and update operations together
-    def upload(self, request, academy_id=None, update=False):
+    def upload(self, file, academy_id=None, update=False):
         from ..services.google_cloud import Storage
-
-        files = request.data.getlist('file')
-        names = request.data.getlist('name')
 
         result = {
             'data': [],
             'instance': [],
         }
 
-        file = request.data.get('file')
-
         if not file:
             raise ValidationException('Missing file in request', code=400)
 
-        if not len(files):
-            raise ValidationException('empty files in request')
-
-        if not len(names):
-            for file in files:
-                names.append(file.name)
-
-        elif len(files) != len(names):
-            raise ValidationException('numbers of files and names not match')
-
         # files validation below
-        for index in range(0, len(files)):
-            file = files[index]
-            if file.content_type != MIME_ALLOW:
-                raise ValidationException(f'You can upload only files on the following formats: {MIME_ALLOW}')
+        if file.content_type != MIME_ALLOW:
+            raise ValidationException(f'You can upload only files on the following formats: {MIME_ALLOW}')
 
-        for index in range(0, len(files)):
-            file = files[index]
-            name = names[index] if len(names) else file.name
-            file_bytes = file.read().decode('utf-8')
-            print('file_bytes', file_bytes)
-            with open(file.name, 'w') as f:
-                f.write(file_bytes)
+        file_bytes = file.read().decode('utf-8')
 
-            df = pd.read_csv(file.name)
-            os.remove(file.name)
-            print('csv_reader', len(df))
-            print(df.iloc[0]['first_name'])
-            required_fields = ['first_name', 'last_name']
+        file_name = hash(file_bytes)
 
-            for item in required_fields:
-                if item not in df.keys():
-                    return ValidationException(f'{item} field missing inside of csv')
+        with open(file.name, 'w') as f:
+            f.write(file_bytes)
 
-            for num in range(len(df)):
-                value = df.iloc[num]
-                tasks.create_form_entry.delay(dict(value))
+        df = pd.read_csv(file.name)
+        os.remove(file.name)
+        print('csv_reader', len(df))
+        print(df.iloc[0])
+        required_fields = ['first_name', 'last_name', 'email', 'location', 'phone', 'language']
 
-            # for line in csv_reader:
-            #     print(line)
+        # Think about uploading correct files and leaving out incorrect ones
+        for item in required_fields:
+            if item not in df.keys():
+                return ValidationException(f'{item} field missing inside of csv')
 
-            data = {
-                'mime': file.content_type,
-                'name': name,
-                'academy': academy_id,
-            }
+        for num in range(len(df)):
+            value = df.iloc[num]
+            tasks.create_form_entry.delay(dict(value))
 
-            # upload file section
-            storage = Storage()
-            cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), hash)
-            cloud_file.upload(file, content_type=file.content_type)
+        data = {'file_name': file.name, 'status': 'PENDING', 'message': 'Despues'}
 
-            csv_upload = CSVUpload()
-            csv_upload.url = cloud_file.url()
-            csv_upload.name = file.name
-            print(academy_id)
-            csv_upload.academy = academy_id
+        # upload file section
+        storage = Storage()
+        cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), file_name)
+        cloud_file.upload(file, content_type=file.content_type)
 
-            result['data'].append(data)
+        csv_upload = CSVUpload()
+        csv_upload.url = cloud_file.url()
+        csv_upload.name = file.name
+        csv_upload.hash = file_name
+        csv_upload.academy_id = academy_id
 
-        # from django.db.models import Q
-        # query = None
-        # datas_with_id = [x for x in result['data'] if 'id' in x]
-        # for x in datas_with_id:
-        #     if query:
-        #         query = query | Q(id=x['id'])
-        #     else:
-        #         query = Q(id=x['id'])
+        return data
 
-        # if query:
-        #     result['instance'] = FormEntry.objects.filter(query)
-
-        # return result
-        return ''
-
-    # @capable_of('crud_media')
+    @capable_of('crud_media')
     def put(self, request, academy_id=None):
-        upload = self.upload(request, academy_id, update=True)
-        return Response(None, status=status.HTTP_204_NO_CONTENT)
-        serializer = PutFormEntrySerializer(upload['instance'],
-                                            data=upload['data'],
-                                            context=upload['data'],
-                                            many=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        files = request.data.getlist('file')
+        result = []
+        for file in files:
+            upload = self.upload(file, academy_id, update=True)
+            result.append(upload)
+        return Response(result, status=status.HTTP_200_OK)
 
 
 def get_real_conversion_name(slug):

@@ -130,47 +130,64 @@ class MarketingTestSuite(MarketingTestCase):
         # list of name, degree, score
         first_names = [self.bc.fake.first_name() for _ in range(0, 3)]
         last_names = [self.bc.fake.last_name() for _ in range(0, 3)]
+        emails = [self.bc.fake.email() for _ in range(0, 3)]
+        locations = [self.bc.fake.country() for _ in range(0, 3)]
+        phone_numbers = [self.bc.fake.phone_number() for _ in range(0, 3)]
+        languages = [self.bc.fake.language_name() for _ in range(0, 3)]
 
         # dictionary of lists
-        obj = {'first_name': first_names, 'last_name': last_names}
+        obj = {
+            'first_name': first_names,
+            'last_name': last_names,
+            'email': emails,
+            'location': locations,
+            'phone': phone_numbers,
+            'language': languages,
+        }
 
         df = pd.DataFrame(obj)
 
         # saving the dataframe
         df.to_csv(file.name)
 
-        print(dir(file))
-        # with open(file.name, 'wb') as f:
-        # writer = csv.writer(file)
-        # writer.writerow(['first_name', 'last_name'])
-        # writer.writerow([self.bc.fake.first_name(), self.bc.fake.last_name()])
-
-        with open(file.name, 'rb') as data:
-            hash = hashlib.sha256(data.read()).hexdigest()
-
         with open(file.name, 'rb') as data:
             response = self.client.put(url, {'name': file.name, 'file': data})
             json = response.json()
 
-            self.assertHash(hash)
-
-            expected = [{
-                'academy': 1,
-                'categories': [],
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'text/csv',
-                'name': 'filename.csv',
-                'slug': 'filename-csv',
-                'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }]
+            file_name = file.name.split('/')[-1]
+            expected = [{'file_name': file_name, 'message': 'Despues', 'status': 'PENDING'}]
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-            self.assertEqual(create_form_entry.delay.call_args_list(), [call()])
+            self.assertEqual(create_form_entry.delay.call_args_list, [
+                call({
+                    'Unnamed: 0': 0,
+                    'first_name': df.iloc[0]['first_name'],
+                    'last_name': df.iloc[0]['last_name'],
+                    'email': df.iloc[0]['email'],
+                    'location': df.iloc[0]['location'],
+                    'phone': df.iloc[0]['phone'],
+                    'language': df.iloc[0]['language'],
+                }),
+                call({
+                    'Unnamed: 0': 1,
+                    'first_name': df.iloc[1]['first_name'],
+                    'last_name': df.iloc[1]['last_name'],
+                    'email': df.iloc[1]['email'],
+                    'location': df.iloc[1]['location'],
+                    'phone': df.iloc[1]['phone'],
+                    'language': df.iloc[1]['language'],
+                }),
+                call({
+                    'Unnamed: 0': 2,
+                    'first_name': df.iloc[2]['first_name'],
+                    'last_name': df.iloc[2]['last_name'],
+                    'email': df.iloc[2]['email'],
+                    'location': df.iloc[2]['location'],
+                    'phone': df.iloc[2]['phone'],
+                    'language': df.iloc[2]['language'],
+                })
+            ])
 
             self.assertEqual(
                 self.all_media_dict(),
