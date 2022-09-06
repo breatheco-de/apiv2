@@ -353,12 +353,15 @@ class Token(rest_framework.authtoken.models.Token):
                                                       | Q(expires_at__isnull=True)).first()
 
     @classmethod
-    def validate_and_destroy(cls, user: User, hash: str) -> None:
-        token = Token.objects.filter(key=hash, user=user, token_type='one_time').first()
+    def validate_and_destroy(cls, hash: str) -> User:
+        token = Token.objects.filter(key=hash, token_type='one_time').first()
         if not token:
             raise TokenNotFound()
 
+        user = token.user
         token.delete()
+
+        return user
 
     class Meta:
         # ensure user and name are unique

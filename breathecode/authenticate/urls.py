@@ -13,8 +13,6 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-# from django.contrib import admin
-# from rest_framework.authtoken import views
 from django.urls import path
 from .views import (ProfileMePictureView, TokenTemporalView, WaitingListView, get_users,
                     get_user_by_id_or_email, UserMeView, LoginView, LogoutView, TemporalTokenView,
@@ -69,7 +67,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     # get a another token (temporal), from a logged in user
     path('academy/token/', AcademyTokenView.as_view(), name='academy_token'),
-    path('token/me', TemporalTokenView.as_view(), name='token'),
+    path('token/me', TemporalTokenView.as_view(), name='token_me'),
     path('token/<str:token>', get_token_info, name='token'),  # get token information
     path('password/reset', reset_password_view, name='password_reset'),
     path('member/<int:profileacademy_id>/password/reset',
