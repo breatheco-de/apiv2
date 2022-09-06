@@ -161,11 +161,13 @@ class MentorProfile(models.Model):
         return f'{name} ({self.id})'
 
 
+RECALCULATE = 'RECALCULATE'
 DUE = 'DUE'
 APPROVED = 'APPROVED'
 PAID = 'PAID'
 IGNORED = 'IGNORED'
 BILL_STATUS = (
+    (RECALCULATE, 'Recalculate'),
     (DUE, 'Due'),
     (APPROVED, 'Approved'),
     (PAID, 'Paid'),
