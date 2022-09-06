@@ -341,9 +341,9 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def create_form_entry(self, item):
+def create_form_entry(self, item, csv_upload_id):
     form_entry = FormEntry()
-    form_entry.log = ''
+    csv_upload.log = ''
     if 'first_name' in item:
         form_entry.first_name = item['first_name']
     if 'last_name' in item:
@@ -355,19 +355,23 @@ def create_form_entry(self, item):
     if 'academy' in item:
         form_entry.academy = item['academy']
 
+    form_entry.save()
+
     # if not form_entry.first_name or not form_entry.last_name or not form_entry.email or not form_entry.location or not form_entry.academy:
 
+    csv_upload = CSVUpload()
+
     if not form_entry.first_name:
-        form_entry.log += 'No first name in form entry, '
+        csv_upload.log += 'No first name in form entry, '
 
     if not form_entry.last_name:
-        form_entry.log += 'No last name in form entry, '
+        csv_upload.log += 'No last name in form entry, '
 
     if not form_entry.email:
-        form_entry.log += 'No email in form entry, '
+        csv_upload.log += 'No email in form entry, '
 
     if not form_entry.location or not form_entry.academy:
-        form_entry.log += 'No location or academy in form entry, '
+        csv_upload.log += 'No location or academy in form entry, '
 
-    if form_entry.log.endswith(', '):
-        form_entry.log = form_entry.log[0:-2]
+    if csv_upload.log.endswith(', '):
+        csv_upload.log = csv_upload.log[0:-2]

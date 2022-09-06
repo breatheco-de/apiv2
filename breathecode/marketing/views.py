@@ -690,7 +690,6 @@ class UploadView(APIView):
         Upload a file to Google Cloud.
     """
     parser_classes = [MultiPartParser, FileUploadParser]
-    permission_classes = [AllowAny]
 
     # permission_classes = [AllowAny]
 
@@ -711,9 +710,11 @@ class UploadView(APIView):
         if file.content_type != MIME_ALLOW:
             raise ValidationException(f'You can upload only files on the following formats: {MIME_ALLOW}')
 
-        file_bytes = file.read().decode('utf-8')
+        file_bytes = file.read()
 
-        file_name = hash(file_bytes)
+        file_name = hashlib.sha256(file_bytes).hexdigest()
+
+        file_bytes = file_bytes.decode('utf-8')
 
         with open(file.name, 'w') as f:
             f.write(file_bytes)
@@ -729,10 +730,6 @@ class UploadView(APIView):
             if item not in df.keys():
                 return ValidationException(f'{item} field missing inside of csv')
 
-        for num in range(len(df)):
-            value = df.iloc[num]
-            tasks.create_form_entry.delay(dict(value))
-
         data = {'file_name': file.name, 'status': 'PENDING', 'message': 'Despues'}
 
         # upload file section
@@ -745,6 +742,12 @@ class UploadView(APIView):
         csv_upload.name = file.name
         csv_upload.hash = file_name
         csv_upload.academy_id = academy_id
+
+        csv_upload.save()
+
+        for num in range(len(df)):
+            value = df.iloc[num]
+            tasks.create_form_entry.delay(dict(value), csv_upload.id)
 
         return data
 

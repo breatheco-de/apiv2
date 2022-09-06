@@ -11,6 +11,9 @@ from rest_framework import status
 from ..mixins import MarketingTestCase
 from breathecode.marketing.views import MIME_ALLOW
 import pandas as pd
+from django.utils import timezone, dateparse
+
+UTC_NOW = timezone.now()
 
 
 class MarketingTestSuite(MarketingTestCase):
@@ -73,7 +76,7 @@ class MarketingTestSuite(MarketingTestCase):
         upload=MagicMock(),
         url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
         create=True)
-    def test_upload_without_data(self):
+    def test_upload_with_csv_file(self):
         from breathecode.services.google_cloud import Storage, File
 
         self.headers(academy=1)
@@ -83,16 +86,13 @@ class MarketingTestSuite(MarketingTestCase):
                                      capability='crud_media',
                                      role='potato')
         url = reverse_lazy('marketing:upload')
-        data = {}
-        response = self.client.put(url, data)
+
+        response = self.client.put(url, {})
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Missing file in request',
-            'status_code': 400,
-        })
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_media_dict(), [])
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'), [])
 
         self.assertEqual(Storage.__init__.call_args_list, [])
         self.assertEqual(File.__init__.call_args_list, [])
@@ -112,6 +112,7 @@ class MarketingTestSuite(MarketingTestCase):
         upload=MagicMock(),
         url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
         create=True)
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_upload_random(self):
         from breathecode.services.google_cloud import Storage, File
         from breathecode.marketing.tasks import create_form_entry
@@ -151,6 +152,9 @@ class MarketingTestSuite(MarketingTestCase):
         df.to_csv(file.name)
 
         with open(file.name, 'rb') as data:
+            hash = hashlib.sha256(data.read()).hexdigest()
+
+        with open(file.name, 'rb') as data:
             response = self.client.put(url, {'name': file.name, 'file': data})
             json = response.json()
 
@@ -160,48 +164,50 @@ class MarketingTestSuite(MarketingTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(create_form_entry.delay.call_args_list, [
-                call({
-                    'Unnamed: 0': 0,
-                    'first_name': df.iloc[0]['first_name'],
-                    'last_name': df.iloc[0]['last_name'],
-                    'email': df.iloc[0]['email'],
-                    'location': df.iloc[0]['location'],
-                    'phone': df.iloc[0]['phone'],
-                    'language': df.iloc[0]['language'],
-                }),
-                call({
-                    'Unnamed: 0': 1,
-                    'first_name': df.iloc[1]['first_name'],
-                    'last_name': df.iloc[1]['last_name'],
-                    'email': df.iloc[1]['email'],
-                    'location': df.iloc[1]['location'],
-                    'phone': df.iloc[1]['phone'],
-                    'language': df.iloc[1]['language'],
-                }),
-                call({
-                    'Unnamed: 0': 2,
-                    'first_name': df.iloc[2]['first_name'],
-                    'last_name': df.iloc[2]['last_name'],
-                    'email': df.iloc[2]['email'],
-                    'location': df.iloc[2]['location'],
-                    'phone': df.iloc[2]['phone'],
-                    'language': df.iloc[2]['language'],
-                })
+                call(
+                    {
+                        'Unnamed: 0': 0,
+                        'first_name': df.iloc[0]['first_name'],
+                        'last_name': df.iloc[0]['last_name'],
+                        'email': df.iloc[0]['email'],
+                        'location': df.iloc[0]['location'],
+                        'phone': df.iloc[0]['phone'],
+                        'language': df.iloc[0]['language'],
+                    }, 1),
+                call(
+                    {
+                        'Unnamed: 0': 1,
+                        'first_name': df.iloc[1]['first_name'],
+                        'last_name': df.iloc[1]['last_name'],
+                        'email': df.iloc[1]['email'],
+                        'location': df.iloc[1]['location'],
+                        'phone': df.iloc[1]['phone'],
+                        'language': df.iloc[1]['language'],
+                    }, 1),
+                call(
+                    {
+                        'Unnamed: 0': 2,
+                        'first_name': df.iloc[2]['first_name'],
+                        'last_name': df.iloc[2]['last_name'],
+                        'email': df.iloc[2]['email'],
+                        'location': df.iloc[2]['location'],
+                        'phone': df.iloc[2]['phone'],
+                        'language': df.iloc[2]['language'],
+                    }, 1)
             ])
 
-            self.assertEqual(
-                self.all_media_dict(),
-                [{
-                    'academy_id': 1,
-                    'hash': hash,
-                    'hits': 0,
-                    'id': 1,
-                    'mime': 'image/csv',
-                    'name': 'filename.csv',
-                    'slug': 'filename-csv',
-                    'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
-                    'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-                }])
+            self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
+                             [{
+                                 'academy_id': 1,
+                                 'hash': hash,
+                                 'finished_at': UTC_NOW,
+                                 'id': 1,
+                                 'name': file_name,
+                                 'status': 'PENDING',
+                                 'log': '',
+                                 'status_message': None,
+                                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+                             }])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -212,11 +218,8 @@ class MarketingTestSuite(MarketingTestCase):
 
             self.assertEqual(len(File.upload.call_args_list), 1)
             self.assertEqual(len(args), 1)
-            self.assertEqual(len(args), 1)
 
             self.assertEqual(args[0].name, os.path.basename(file.name))
-            self.assertEqual(args[0].size, 1024)
             self.assertEqual(kwargs, {'content_type': 'text/csv'})
 
             self.assertEqual(File.url.call_args_list, [call()])
-            assert False
