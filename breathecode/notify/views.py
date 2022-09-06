@@ -9,13 +9,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from breathecode.utils import capable_of
-from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.utils import (capable_of, GenerateLookupsMixin, ValidationException,
+                               HeaderLimitOffsetPagination, APIViewExtensions)
+from breathecode.admissions.models import Cohort, CohortUser, Academy
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile, CredentialsSlack
 from .actions import get_template, get_template_content
-from .models import Device
+from .models import Device, Hook
 from .tasks import async_slack_action
-from .serializers import DeviceSerializer
+from .serializers import DeviceSerializer, HookSerializer, HookSmallSerializer
 from breathecode.services.slack.client import Slack
 import traceback
 
@@ -69,3 +70,68 @@ def slack_command(request):
     except Exception as e:
 
         return Response(str(e), status=status.HTTP_200_OK)
+
+
+class HooksView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        items = Hook.objects.filter(user__id=request.user.id)
+        lookup = {}
+
+        start = request.GET.get('event', None)
+        if start is not None:
+            start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
+            lookup['created_at__gte'] = start_date
+
+        if 'event' in self.request.GET:
+            param = self.request.GET.get('event')
+            lookup['event'] = param
+
+        items = items.filter(**lookup)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(Q(event__icontains=like) | Q(target__icontains=like))
+
+        items = handler.queryset(items)
+        serializer = HookSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    def post(self, request):
+
+        serializer = HookSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, hook_id):
+
+        hook = Hook.objects.filter(id=hook_id, user__id=request.user.id).first()
+        if hook is None:
+            raise ValidationException(f'Hook {hook_id} not found for this user', slug='hook-not-found')
+
+        serializer = HookSerializer(instance=hook, data=request.data, context={
+            'request': request,
+        })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, hook_id):
+
+        items = Hook.objects.filter(id=hook_id, user__id=request.user.id)
+
+        for item in items:
+            item.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
