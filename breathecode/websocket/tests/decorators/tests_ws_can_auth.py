@@ -64,30 +64,41 @@ class ConsumerTestSuite(WebsocketTestCase):
 
     async def test__async__bad_token(self):
 
-        communicator = WebsocketCommunicator(ROUTER, 'testws/async/',
-                                             [('authorization', f'Token {self.bc.fake.slug()}')])
+        communicator = WebsocketCommunicator(ROUTER, f'testws/async/?token={self.bc.fake.slug()}')
         connected, subprotocol = await communicator.connect()
 
         self.assertTrue(connected)
 
         message = await communicator.receive_json_from(MAX_TIMEOUT)
 
-        self.assertEqual(message, {
-            'details': {
-                'error': 'Invalid or Inactive Token',
-                'is_authenticated': 'False'
-            },
-            'status_code': 401
-        })
+        self.assertEqual(message, {'details': 'Token not found', 'status_code': 401})
 
         # Close
         await communicator.disconnect()
 
-    async def test__async__with_token(self):
-        model = await self.bc.database.async_create(token=1, user=1)
+    async def test__async__with_token__bad_token_type(self):
+        types = ['permanent', 'temporal', 'login']
+        for t in types:
+            token = {'token_type': t}
+            model = await self.bc.database.async_create(token=token, user=1)
 
-        communicator = WebsocketCommunicator(ROUTER, 'testws/async/',
-                                             [('authorization', f'Token {model.token.key}')])
+            communicator = WebsocketCommunicator(ROUTER, f'testws/async/?token={model.token.key}')
+            connected, subprotocol = await communicator.connect()
+
+            self.assertTrue(connected)
+
+            message = await communicator.receive_json_from(MAX_TIMEOUT)
+
+            self.assertEqual(message, {'details': 'Token not found', 'status_code': 401})
+
+            # Close
+            await communicator.disconnect()
+
+    async def test__async__with_token(self):
+        token = {'token_type': 'one_time'}
+        model = await self.bc.database.async_create(token=token, user=1)
+
+        communicator = WebsocketCommunicator(ROUTER, f'testws/async/?token={model.token.key}')
         connected, subprotocol = await communicator.connect()
 
         self.assertTrue(connected)
@@ -115,30 +126,41 @@ class ConsumerTestSuite(WebsocketTestCase):
 
     async def test__sync__bad_token(self):
 
-        communicator = WebsocketCommunicator(ROUTER, 'testws/sync/',
-                                             [('authorization', f'Token {self.bc.fake.slug()}')])
+        communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={self.bc.fake.slug()}')
         connected, subprotocol = await communicator.connect()
 
         self.assertTrue(connected)
 
         message = await communicator.receive_json_from(MAX_TIMEOUT)
 
-        self.assertEqual(message, {
-            'details': {
-                'error': 'Invalid or Inactive Token',
-                'is_authenticated': 'False'
-            },
-            'status_code': 401
-        })
+        self.assertEqual(message, {'details': 'Token not found', 'status_code': 401})
 
         # Close
         await communicator.disconnect()
 
-    async def test__sync__with_token(self):
-        model = await self.bc.database.async_create(token=1, user=1)
+    async def test__sync__with_token__bad_token_type(self):
+        types = ['permanent', 'temporal', 'login']
+        for t in types:
+            token = {'token_type': t}
+            model = await self.bc.database.async_create(token=token, user=1)
 
-        communicator = WebsocketCommunicator(ROUTER, 'testws/sync/',
-                                             [('authorization', f'Token {model.token.key}')])
+            communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={model.token.key}')
+            connected, subprotocol = await communicator.connect()
+
+            self.assertTrue(connected)
+
+            message = await communicator.receive_json_from(MAX_TIMEOUT)
+
+            self.assertEqual(message, {'details': 'Token not found', 'status_code': 401})
+
+            # Close
+            await communicator.disconnect()
+
+    async def test__sync__with_token(self):
+        token = {'token_type': 'one_time'}
+        model = await self.bc.database.async_create(token=token, user=1)
+
+        communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={model.token.key}')
         connected, subprotocol = await communicator.connect()
 
         self.assertTrue(connected)

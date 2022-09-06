@@ -109,7 +109,14 @@ class TemporalTokenView(ObtainAuthToken):
 
     def post(self, request):
 
-        token, created = Token.get_or_create(user=request.user, token_type='temporal')
+        token_type = request.data.get('token_type', 'temporal')
+
+        allowed_token_types = ['temporal', 'one_time']
+        if token_type not in allowed_token_types:
+            raise ValidationException(f'The token type must be one of {", ".join(allowed_token_types)}',
+                                      slug='token-type-invalid-or-not-allowed')
+
+        token, created = Token.get_or_create(user=request.user, token_type=token_type)
         return Response({
             'token': token.key,
             'token_type': token.token_type,

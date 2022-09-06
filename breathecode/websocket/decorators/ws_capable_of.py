@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+from urllib.parse import parse_qsl
 from channels.generic.websocket import JsonWebsocketConsumer, AsyncJsonWebsocketConsumer
 
 from breathecode.utils.exceptions import ProgramingError
@@ -21,7 +22,8 @@ class SyncWsCapableOf:
     def sync_wrapper(self: JsonWebsocketConsumer, instance: WsCapableOf):
 
         try:
-            request = FakeRequest(header_parser(self.scope['headers']))
+            querystring = dict(parse_qsl(self.scope['query_string'].decode('utf-8')))
+            request = FakeRequest(querystring)
             decorator = SyncWsCapableOf.sync_decorator(self, instance, request)
             request.set_user(self.scope['user'])
             decorator(request)
@@ -33,7 +35,12 @@ class SyncWsCapableOf:
 
         except Exception as e:
             self.accept()
-            self.send_json({'details': str(e), 'status_code': 403}, close=True)
+            self.send_json(
+                {
+                    'details': str(e).replace("'Academy' header", "'academy' query param"),
+                    'status_code': 403
+                },
+                close=True)
             return
 
     def sync_decorator(self, instance: WsCapableOf, request: FakeRequest):
@@ -55,7 +62,8 @@ class AsyncWsCapableOf:
     async def async_wrapper(self: AsyncJsonWebsocketConsumer, instance: WsCapableOf):
 
         try:
-            request = FakeRequest(header_parser(self.scope['headers']))
+            querystring = dict(parse_qsl(self.scope['query_string'].decode('utf-8')))
+            request = FakeRequest(querystring)
             request.set_user(self.scope['user'])
             event = threading.Event()
             await instance.async_decorator(self, request, event)
@@ -68,7 +76,12 @@ class AsyncWsCapableOf:
 
         except Exception as e:
             await self.accept()
-            await self.send_json({'details': str(e), 'status_code': 403}, close=True)
+            await self.send_json(
+                {
+                    'details': str(e).replace("'Academy' header", "'academy' query param"),
+                    'status_code': 403
+                },
+                close=True)
             return
 
     @database_sync_to_async
