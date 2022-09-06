@@ -356,11 +356,12 @@ with open(sql_keywords_path, 'r') as f:
 # Django Rest Hooks
 HOOK_EVENTS = {
     # 'any.event.name': 'App.Model.Action' (created/updated/deleted)
-    'form_entry.added': 'marketing.FormEntry.created',
+    'form_entry.added': 'marketing.FormEntry.created+',
     'form_entry.changed': 'marketing.FormEntry.updated+',
+    'profile_academy.added': 'authenticate.ProfileAcademy.created+',
+    'profile_academy.changed': 'authenticate.ProfileAcademy.updated+',
     # and custom events, no extra meta data needed
     # 'book.read':         'bookstore.Book.read',
-    'user.logged_in': None
 }
 
 # Websocket
