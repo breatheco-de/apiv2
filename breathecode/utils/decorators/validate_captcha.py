@@ -27,17 +27,12 @@ def validate_captcha(function):
                 raise IndexError()
 
             project_id = os.getenv('GOOGLE_PROJECT_ID', '')
-            print('project_id')
-            print(project_id)
+
             site_key = os.getenv('GOOGLE_CAPTCHA_KEY', '')
-            print('site_key')
-            print(site_key)
+
             token = data['token'] if 'token' in data else None
-            print('token')
-            print(token)
+
             recaptcha_action = data['action'] if 'action' in data else None
-            print('recaptcha_action')
-            print(recaptcha_action)
 
             recaptcha = Recaptcha()
             response = recaptcha.create_assessment(project_id=project_id,
