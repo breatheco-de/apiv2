@@ -820,6 +820,15 @@ class CohortUserSerializer(CohortUserSerializerMixin):
     cohort = CohortSerializer(many=False, read_only=True)
     user = UserDJangoRestSerializer(many=False, read_only=True)
 
+    def validate(self, data):
+        prohibited_stages = ['INNACTIVE', 'DELETED', 'ENDED']
+        if data['cohort'].stage not in prohibited_stages:
+            stage = data['cohort'].stage
+            raise ValidationException(f'You cannot add a student to a cohort that is {stage}.',
+                                      slug='adding-student-to-a-closed-cohort')
+
+        return data
+
     class Meta:
         model = CohortUser
         fields = ['id', 'user', 'cohort', 'role']
