@@ -877,6 +877,13 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         if request.data.get('current_day'):
             raise ValidationException('current_day field is not allowed', slug='current-day-not-allowed')
 
+        language = request.data.get('language')
+        if language is not None:
+            if type(language) == str:
+                request.data['language'] = language.lower()
+            else:
+                raise ValidationException(f'Language property should be a string not a {type(language)}')
+
         data = {
             'academy': academy,
             'current_day': 0,
@@ -924,6 +931,13 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
 
         if 'syllabus_version' in data:
             del data['syllabus_version']
+
+        if 'language' in data:
+            if type(data['language']) == str:
+                data['language'] = data['language'].lower()
+            else:
+                raise ValidationException(
+                    f'Language property should be a string not a {type(data["language"])}')
 
         serializer = CohortPUTSerializer(cohort,
                                          data=data,

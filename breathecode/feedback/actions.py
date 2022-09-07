@@ -20,7 +20,7 @@ def send_survey_group(survey=None, cohort=None):
         raise ValidationException('Missing survey or cohort', slug='missing-survey-or-cohort')
 
     if survey is None:
-        survey = Survey(cohort=cohort, lang=cohort.language)
+        survey = Survey(cohort=cohort, lang=cohort.language.lower())
 
     result = {'success': [], 'error': []}
     try:
@@ -89,7 +89,7 @@ def send_question(user, cohort=None):
             slug='without-cohort-or-cannot-determine-cohort')
 
     answer.cohort = cu.cohort
-    answer.lang = answer.cohort.language
+    answer.lang = answer.cohort.language.lower()
     answer.save()
 
     has_slackuser = hasattr(user, 'slackuser')
@@ -120,7 +120,7 @@ def send_question(user, cohort=None):
         answer.title = question['title']
         answer.lowest = question['lowest']
         answer.highest = question['highest']
-        answer.lang = answer.cohort.language
+        answer.lang = answer.cohort.language.lower()
         answer.save()
 
     token, created = Token.get_or_create(user, token_type='temporal', hours_length=48)
@@ -135,7 +135,7 @@ def send_question(user, cohort=None):
         'LOWEST': answer.lowest,
         'SUBJECT': question['title'],
         'ANSWER_ID': answer.id,
-        'BUTTON': strings[answer.cohort.language]['button_label'],
+        'BUTTON': strings[answer.cohort.language.lower()]['button_label'],
         'LINK': f'https://nps.breatheco.de/{answer.id}?token={token.key}',
     }
 

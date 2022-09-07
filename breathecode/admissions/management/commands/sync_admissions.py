@@ -312,7 +312,7 @@ class Command(BaseCommand):
                                                     DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
         cohort.current_day = data['current_day']
         cohort.stage = stages[data['stage']]
-        cohort.language = data['language']
+        cohort.language = data['language'].lower()
         if 'kickoff_date' in data and data['ending_date'] is not None:
             cohort.ending_date = datetime.strptime(data['ending_date'],
                                                    DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
