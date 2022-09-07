@@ -388,8 +388,7 @@ ROLES = [
             'read_keyword',
             'read_my_academy',
             'read_asset',
-            'crud_asset',
-            'crud_technology',
+            'crud_asset'
         ],
     },
     {
@@ -498,8 +497,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Syllabus Coordinator',
         'caps':
-        extend(roles, ['staff']) +
-        ['crud_syllabus', 'crud_media', 'crud_asset', 'read_asset', 'read_keywordcluster', 'read_keyword']
+        extend(roles, ['staff', 'content_writer']) +
+        ['crud_syllabus', 'crud_media', 'crud_technology','read_freelancer_bill', 'crud_freelancer_bill']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
