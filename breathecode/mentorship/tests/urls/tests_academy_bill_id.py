@@ -109,7 +109,7 @@ def get_mente_joined(obj):
     if obj.started_at is None:
         return 'Session did not start because mentee never joined'
     else:
-        return None
+        return True
 
 
 def get_rating(obj):
@@ -134,7 +134,7 @@ def get_sessions(self, obj):
         'ended_at': session.ended_at,
         'extra_time': get_extra_time(session),
         'id': session.id,
-        'mente_joined': get_mente_joined(session),
+        'mentee_joined': get_mente_joined(session),
         'mentee': {
             'email': session.mentee.email,
             'first_name': session.mentee.first_name,
