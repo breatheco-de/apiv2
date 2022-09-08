@@ -493,7 +493,6 @@ class AcademyAssetActionView(APIView):
                 report.start()
 
         except Exception as e:
-            raise e
             pass
 
         asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
