@@ -184,7 +184,8 @@ class CertificateTestSuite(CertificateTestCase):
             'layout': {
                 'name': model['layout_design'].name,
                 'background_url': model['layout_design'].background_url,
-                'slug': model['layout_design'].slug
+                'slug': model['layout_design'].slug,
+                'foot_note': model['layout_design'].foot_note
             },
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
