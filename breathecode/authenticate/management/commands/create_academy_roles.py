@@ -382,13 +382,8 @@ ROLES = [
         'name':
         'Content Writer (Base)',
         'caps': [
-            'read_keywordcluster',
-            'read_member',
-            'read_media',
-            'read_keyword',
-            'read_my_academy',
-            'read_asset',
-            'crud_asset'
+            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
+            'read_asset', 'crud_asset'
         ],
     },
     {
@@ -498,7 +493,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Syllabus Coordinator',
         'caps':
         extend(roles, ['staff', 'content_writer']) +
-        ['crud_syllabus', 'crud_media', 'crud_technology','read_freelancer_bill', 'crud_freelancer_bill']
+        ['crud_syllabus', 'crud_media', 'crud_technology', 'read_freelancer_bill', 'crud_freelancer_bill']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
