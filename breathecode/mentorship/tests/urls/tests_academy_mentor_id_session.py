@@ -101,7 +101,7 @@ def get_mente_joined(obj):
     if obj.started_at is None:
         return 'Session did not start because mentee never joined'
     else:
-        return None
+        return True
 
 
 def get_rating(obj):
@@ -129,7 +129,7 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
         get_extra_time(mentorship_session),
         'id':
         mentorship_session.id,
-        'mente_joined':
+        'mentee_joined':
         get_mente_joined(mentorship_session),
         'mentee': {
             'email': user.email,
