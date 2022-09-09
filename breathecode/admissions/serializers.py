@@ -575,6 +575,13 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             raise ValidationException('A cohort most have ending date or it should be marked as ever_ends',
                                       slug='cohort-without-ending-date-and-never-ends')
 
+        language = data['language']
+        if language is not None:
+            if type(language) == str:
+                data['language'] = language.lower()
+            else:
+                raise ValidationException(f'Language property should be a string not a {type(language)}')
+
         # if cohort is being activated the online_meeting_url should not be null
         if self.instance is not None and (self.instance.online_meeting_url is None
                                           or self.instance.online_meeting_url

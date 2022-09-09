@@ -71,7 +71,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
             'ending_date': model.cohort.ending_date,
             'remote_available': model.cohort.remote_available,
-            'language': model.cohort.language,
+            'language': model.cohort.language.lower(),
             'syllabus_version': {
                 'status': model.syllabus_version.status,
                 'name': model.syllabus.name,
@@ -139,7 +139,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'private': model['cohort'].private,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
             'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language,
+            'language': model.cohort.language.lower(),
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
                 'status': model.syllabus_version.status,
@@ -260,7 +260,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'private': model['cohort'].private,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
             'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language,
+            'language': model.cohort.language.lower(),
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
                 'status': model.syllabus_version.status,
@@ -314,7 +314,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'private': model['cohort'].private,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
             'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language,
+            'language': model.cohort.language.lower(),
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
                 'status': model.syllabus_version.status,
@@ -383,7 +383,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language,
+            'language': model.cohort.language.lower(),
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
                 'status': model.syllabus_version.status,
@@ -436,7 +436,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'private': model['cohort'].private,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
             'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language,
+            'language': model.cohort.language.lower(),
             'remote_available': model.cohort.remote_available,
             'syllabus_version': {
                 'status': model.syllabus_version.status,
