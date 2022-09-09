@@ -382,14 +382,8 @@ ROLES = [
         'name':
         'Content Writer (Base)',
         'caps': [
-            'read_keywordcluster',
-            'read_member',
-            'read_media',
-            'read_keyword',
-            'read_my_academy',
-            'read_asset',
-            'crud_asset',
-            'crud_technology',
+            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
+            'read_asset', 'crud_asset'
         ],
     },
     {
@@ -498,8 +492,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Syllabus Coordinator',
         'caps':
-        extend(roles, ['staff']) +
-        ['crud_syllabus', 'crud_media', 'crud_asset', 'read_asset', 'read_keywordcluster', 'read_keyword']
+        extend(roles, ['staff', 'content_writer']) +
+        ['crud_syllabus', 'crud_media', 'crud_technology', 'read_freelancer_bill', 'crud_freelancer_bill']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
@@ -576,6 +570,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_session',
             'crud_mentorship_bill',
             'read_mentorship_bill',
+            'crud_freelancer_bill',
             'get_gitpod_user',
             'update_gitpod_user',
         ]
