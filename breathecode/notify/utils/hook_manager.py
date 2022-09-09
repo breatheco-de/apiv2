@@ -119,15 +119,15 @@ class HookManagerClass(object):
             filters['user__is_superuser'] = True
 
         # Ignore the user if the user_override is False
-        if user_override is not False:
-            if user_override:
-                filters['user'] = user_override
-            elif hasattr(instance, 'user'):
-                filters['user'] = instance.user
-            elif isinstance(instance, User):
-                filters['user'] = instance
-            else:
-                raise Exception('{} has no `user` property. REST Hooks needs this.'.format(repr(instance)))
+        # if user_override is not False:
+        #     if user_override:
+        #         filters['user'] = user_override
+        #     elif hasattr(instance, 'user'):
+        #         filters['user'] = instance.user
+        #     elif isinstance(instance, User):
+        #         filters['user'] = instance
+        #     else:
+        #         raise Exception('{} has no `user` property. REST Hooks needs this.'.format(repr(instance)))
 
         HookModel = self.get_hook_model()
         hooks = HookModel.objects.filter(**filters)
@@ -182,8 +182,8 @@ class HookManagerClass(object):
             if ignore_user_override:
                 user_override = False
 
-        logger.debug(f'process_model_event for event_name={event_name}')
         if event_name:
+            logger.debug(f'process_model_event for event_name={event_name}, user_override={user_override}')
             self.find_and_fire_hook(event_name,
                                     instance,
                                     user_override=user_override,
@@ -208,7 +208,7 @@ class HookManagerClass(object):
             payload = payload(hook, instance)
 
         logger.debug(f'Calling delayed task deliver_hook for hook {hook.id}')
-        async_deliver_hook.delay(hook.target, payload, hook=hook.id)
+        async_deliver_hook.delay(hook.target, payload, hook_id=hook.id)
 
         return None
 
