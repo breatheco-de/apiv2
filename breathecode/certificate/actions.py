@@ -103,13 +103,17 @@ def generate_certificate(user, cohort=None, layout=None):
     try:
         uspe.academy = cohort.academy
 
-        tasks_pending = Task.objects.filter(user__id=user.id, task_type='PROJECT', revision_status='PENDING')
+        tasks_pending = Task.objects.filter(user__id=user.id,
+                                            cohort__id=cohort.id,
+                                            task_type='PROJECT',
+                                            revision_status='PENDING')
         mandatory_slugs = []
         for task in tasks_pending:
             if 'days' in task.cohort.syllabus_version.__dict__['json']:
                 for day in task.cohort.syllabus_version.__dict__['json']['days']:
                     for assignment in day['assignments']:
-                        if 'mandatory' not in assignment or ('mandatory' in assignment and assignment['mandatory'] == True):
+                        if 'mandatory' not in assignment or ('mandatory' in assignment
+                                                             and assignment['mandatory'] == True):
                             mandatory_slugs.append(assignment['slug'])
 
         tasks_count_pending = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(
