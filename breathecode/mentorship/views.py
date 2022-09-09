@@ -18,6 +18,7 @@ from .forms import CloseMentoringSessionForm
 from .actions import close_mentoring_session, render_session, generate_mentor_bills
 from breathecode.mentorship import actions
 from breathecode.notify.actions import get_template_content
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 from .serializers import (
     GetAcademySmallSerializer,
     GETServiceSmallSerializer,
@@ -685,7 +686,18 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
 
         mentor = request.GET.get('mentor', None)
         if mentor is not None:
-            lookup['mentor__id__in'] = mentor.split(',')
+            if ',' in mentor or mentor.isnumeric():
+                lookup['mentor__id__in'] = mentor.split(',')
+            else:
+                items = query_like_by_full_name(like=mentor, items=items, prefix='mentor__user__')
+
+        mentee = request.GET.get('student', None)
+        if mentee is not None:
+            items = query_like_by_full_name(like=mentee, items=items, prefix='mentee__')
+
+        service = request.GET.get('service', None)
+        if service is not None:
+            lookup['service__name__icontains'] = service
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
