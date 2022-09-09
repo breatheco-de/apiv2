@@ -1,11 +1,12 @@
 import traceback
+from urllib.parse import parse_qsl
+from django.contrib.auth.models import User
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import JsonWebsocketConsumer, AsyncJsonWebsocketConsumer
+from breathecode.authenticate.exceptions import TokenNotFound
 
 from breathecode.authenticate.models import Token
-from breathecode.authenticate.authentication import ExpiringTokenAuthentication
-from .utils import FakeRequest
 
 __all__ = ['ws_can_auth']
 
@@ -14,21 +15,21 @@ class SyncWsCanAuth:
     """This class contain the handlers to the JsonWebsocketConsumer"""
 
     def sync_wrapper(self, cls: JsonWebsocketConsumer, connect: callable):
-        found_headers = [
-            x for x in self.scope['headers'] if x[0] == b'authorization' or x[0] == 'authorization'
-        ]
-        if not found_headers:
+        querystring = dict(parse_qsl(self.scope['query_string'].decode('utf-8')))
+
+        if 'token' not in querystring:
             return connect(self)
 
-        key, value = found_headers[0]
-        request = FakeRequest({key: value})
-
         try:
-            user, token = WsCanAuth.sync_get_token(None, request)
+            user = WsCanAuth.sync_get_token(None, querystring['token'])
+
+        except TokenNotFound as e:
+            self.accept()
+            self.send_json({'details': str(e), 'status_code': 401}, close=True)
+            return
 
         except Exception as e:
             if not hasattr(e, 'detail'):
-                print(traceback.print_exc())
                 self.accept()
                 self.send_json({'details': str(e), 'status_code': 500}, close=True)
                 return
@@ -40,27 +41,33 @@ class SyncWsCanAuth:
         self.scope['user'] = user
         return connect(self)
 
-    def sync_get_token(self, request: FakeRequest) -> tuple[Token, bool]:
-        return ExpiringTokenAuthentication().authenticate(request)
+    def sync_get_token(self, token: str) -> User:
+        return Token.validate_and_destroy(token)
 
 
 class AsyncWsCanAuth:
     """This class contain the handlers to the AsyncJsonWebsocketConsumer"""
 
     async def async_wrapper(self, cls: AsyncJsonWebsocketConsumer, connect: callable):
-        found_headers = [
-            x for x in self.scope['headers'] if x[0] == b'authorization' or x[0] == 'authorization'
-        ]
-        if not found_headers:
+        querystring = dict(parse_qsl(self.scope['query_string'].decode('utf-8')))
+
+        if 'token' not in querystring:
             return await connect(self)
 
-        key, value = found_headers[0]
-        request = FakeRequest({key: value})
-
         try:
-            user, token = await WsCanAuth.async_get_token(request)
+            user = await WsCanAuth.async_get_token(querystring['token'])
+
+        except TokenNotFound as e:
+            await self.accept()
+            await self.send_json({'details': str(e), 'status_code': 401}, close=True)
+            return
 
         except Exception as e:
+            if not hasattr(e, 'detail'):
+                self.accept()
+                self.send_json({'details': str(e), 'status_code': 500}, close=True)
+                return
+
             await self.accept()
             await self.send_json({'details': e.detail, 'status_code': e.status_code}, close=True)
             return
@@ -69,8 +76,8 @@ class AsyncWsCanAuth:
         return await connect(self)
 
     @database_sync_to_async
-    def async_get_token(self, request: FakeRequest) -> tuple[Token, bool]:
-        return ExpiringTokenAuthentication().authenticate(request)
+    def async_get_token(self, token: str) -> User:
+        return Token.validate_and_destroy(token)
 
 
 class WsCanAuth(SyncWsCanAuth, AsyncWsCanAuth):
