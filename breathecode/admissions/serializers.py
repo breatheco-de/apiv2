@@ -900,7 +900,7 @@ class SyllabusSerializer(serializers.ModelSerializer):
 
 class SyllabusVersionSerializer(serializers.ModelSerializer):
     json = serializers.JSONField()
-
+    
     class Meta:
         model = SyllabusVersion
         fields = ['json', 'version', 'syllabus', 'status', 'change_log_details']
@@ -931,11 +931,12 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
 
 class SyllabusVersionPutSerializer(serializers.ModelSerializer):
-    json = serializers.JSONField()
-
+    json = serializers.JSONField(required=False)
+    status = serializers.CharField(required=False)
+    
     class Meta:
         model = SyllabusVersion
-        fields = ['json', 'version', 'syllabus']
+        fields = ['json', 'version', 'syllabus', 'status']
         exclude = ()
         extra_kwargs = {
             'syllabus': {
