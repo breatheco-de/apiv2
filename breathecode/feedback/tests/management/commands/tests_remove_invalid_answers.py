@@ -11,6 +11,7 @@ class TokenTestSuite(FeedbackTestCase):
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('sys.stdout.write', MagicMock())
     @patch('sys.stderr.write', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_run_handler(self):
         surveys = [{'cohort_id': n} for n in range(1, 4)]
         cohort_users = [{'cohort_id': n, 'user_id': n} for n in range(1, 4)]
