@@ -601,12 +601,14 @@ class SEOReport(models.Model):
         self.__log.append({'rating': rating, 'msg': msg})
 
     def get_rating(self):
-        total_rating = 0
+        total_rating = 100
         for entry in self.__log:
             total_rating += entry['rating']
 
         if total_rating < 0:
             return 0
+        elif total_rating > 100:
+            return 100
         else:
             return total_rating
 
