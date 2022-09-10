@@ -15,5 +15,5 @@ def keyword_density(client, report):
 
     if asset.readme is None:
         report.fatal('Asset not content')
-        
+
     report.good('No errors found on keyword density')
