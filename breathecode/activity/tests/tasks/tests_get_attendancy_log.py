@@ -6,34 +6,11 @@ from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
-from django.urls.base import reverse_lazy
-from rest_framework import status
 from breathecode.utils import NDB
-
-from breathecode.services.google_cloud import Datastore
 
 from ...models import Activity
 from ..mixins import MediaTestCase
 from breathecode.activity.tasks import get_attendancy_log
-import random
-
-# get_attendancy_log
-TOTAL = 15
-
-DATASTORE_SEED = [{
-    'academy_id': 1,
-    'cohort': None,
-    'created_at': (timezone.now() + timedelta(days=1)).isoformat() + 'Z',
-    'data': {
-        'cohort': 'santiago-pt-24',
-        'day': '10',
-    },
-    'day': 13,
-    'email': 'konan@naruto.io',
-    'slug': 'classroom_attendance',
-    'user_agent': 'bc/test',
-    'user_id': 1,
-}]
 
 
 def get_datastore_seed(slug, day, data={}):
@@ -52,13 +29,6 @@ def get_datastore_seed(slug, day, data={}):
         'user_id': 1,
         **data,
     }
-
-
-def generate_data(num_objs):
-    datastore_seed = []
-    for _ in range(num_objs):
-        datastore_seed.append(DATASTORE_SEED[0])
-    return datastore_seed
 
 
 def datastore_fetch_mock(first_fetch=[]):
@@ -103,7 +73,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
-    @patch.object(NDB, 'fetch', MagicMock(return_value=DATASTORE_SEED))
+    @patch.object(NDB, 'fetch', MagicMock(return_value=[]))
     def test_not_found(self):
         get_attendancy_log.delay(1)
 
@@ -122,7 +92,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
-    @patch.object(NDB, 'fetch', MagicMock(return_value=DATASTORE_SEED))
+    @patch.object(NDB, 'fetch', MagicMock(return_value=[]))
     def test_syllabus_not_found(self):
         model = self.bc.database.create(cohort=1)
 
@@ -149,7 +119,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
-    @patch.object(NDB, 'fetch', MagicMock(return_value=DATASTORE_SEED))
+    @patch.object(NDB, 'fetch', MagicMock(return_value=[]))
     def test_syllabus_version_with_json_with_bad_format(self):
         syllabus_versions = [
             {

@@ -1,6 +1,6 @@
 import logging, os
 from celery import shared_task
-from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.admissions.models import Cohort
 from .models import Activity
 from breathecode.utils import NDB
 
