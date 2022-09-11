@@ -31,40 +31,6 @@ def get_datastore_seed(slug, day, data={}):
     }
 
 
-def datastore_fetch_mock(first_fetch=[]):
-
-    class Vars():
-        fetch_call_counter = 0
-        fetch_call_one = first_fetch
-
-    Vars.fetch_call_counter = 0
-
-    def fetch(**kwargs):
-        Vars.fetch_call_counter += 1
-
-        if Vars.fetch_call_counter % 2 == 1:
-            result = Vars.fetch_call_one
-            offset = kwargs['offset'] if 'offset' in kwargs else 0
-            try:
-                limit = kwargs['limit']
-                # offset = kwargs['offset']
-            except:
-                return result
-            if limit is not None:
-                return result[offset:offset + limit]
-        return []
-
-    return MagicMock(side_effect=fetch)
-
-
-def datastore_count_mock(how_many):
-
-    def count(**kwargs):
-        return how_many
-
-    return MagicMock(side_effect=count)
-
-
 class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Cohort not found
