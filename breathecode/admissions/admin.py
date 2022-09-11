@@ -11,6 +11,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
 from breathecode.utils import getLogger
 from django.db.models import QuerySet
+from breathecode.activity.tasks import get_attendancy_log
 
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
 from .models import (Academy, SyllabusSchedule, Cohort, CohortUser, Country, City, SyllabusVersion,
@@ -196,9 +197,15 @@ def add_cohort_slug_to_active_campaign(modeladmin, request, queryset):
 
 add_cohort_slug_to_active_campaign.short_description = 'Add cohort slug to active campaign'
 
+
+def get_attendancy_logs(modeladmin, request, queryset):
+    for x in queryset:
+        get_attendancy_log.delay(x.id)
+
+
 cohort_actions = [
     sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots,
-    add_cohort_slug_to_active_campaign
+    add_cohort_slug_to_active_campaign, get_attendancy_log
 ]
 
 if os.getenv('ENVIRONMENT') == 'DEVELOPMENT':
