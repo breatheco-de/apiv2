@@ -252,7 +252,22 @@ class MediaTestSuite(MediaTestCase):
                     'user_id': 1,
                     'day': 3,
                 }),
-            ], [], [1], []),
+                get_datastore_seed(self.bc.fake.slug(), 1, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 1,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 2, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 2,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 3, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 3,
+                }),
+            ], [], [1, 2], []),
             ([], [
                 get_datastore_seed(self.bc.fake.slug(), 1, {
                     'slug': 'classroom_unattendance',
@@ -269,7 +284,22 @@ class MediaTestSuite(MediaTestCase):
                     'user_id': 1,
                     'day': 3,
                 }),
-            ], [], [1]),
+                get_datastore_seed(self.bc.fake.slug(), 1, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 1,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 2, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 2,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 3, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 3,
+                }),
+            ], [], [1, 2]),
             ([
                 get_datastore_seed(self.bc.fake.slug(), 1, {
                     'slug': 'classroom_attendance',
@@ -284,6 +314,21 @@ class MediaTestSuite(MediaTestCase):
                 get_datastore_seed(self.bc.fake.slug(), 3, {
                     'slug': 'classroom_attendance',
                     'user_id': 1,
+                    'day': 3,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 1, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 1,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 2, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 2,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 3, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
                     'day': 3,
                 }),
             ], [
@@ -302,7 +347,22 @@ class MediaTestSuite(MediaTestCase):
                     'user_id': 1,
                     'day': 3,
                 }),
-            ], [1], [1]),
+                get_datastore_seed(self.bc.fake.slug(), 1, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 1,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 2, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 2,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 3, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 3,
+                }),
+            ], [1, 2], [1, 2]),
         ]
         syllabus_version = {
             'json': {
@@ -355,13 +415,13 @@ class MediaTestSuite(MediaTestCase):
             NDB.__init__.call_args_list = []
 
     """
-    🔽🔽🔽 The students attended all days
+    🔽🔽🔽 The students attended all days, duration_in_days more than 1
     """
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
-    def test_the_students_attended_all_days__(self):
+    def test_the_students_attended_all_days__duration_in_days(self):
         cases = [
             ([
                 get_datastore_seed(self.bc.fake.slug(), 1, {
@@ -399,7 +459,42 @@ class MediaTestSuite(MediaTestCase):
                     'user_id': 1,
                     'day': 7,
                 }),
-            ], [], [1], []),
+                get_datastore_seed(self.bc.fake.slug(), 1, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 1,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 2, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 2,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 3, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 3,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 4, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 4,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 5, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 5,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 6, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 6,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 7, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 7,
+                }),
+            ], [], [1, 2], []),
             ([], [
                 get_datastore_seed(self.bc.fake.slug(), 1, {
                     'slug': 'classroom_unattendance',
@@ -436,7 +531,42 @@ class MediaTestSuite(MediaTestCase):
                     'user_id': 1,
                     'day': 7,
                 }),
-            ], [], [1]),
+                get_datastore_seed(self.bc.fake.slug(), 1, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 1,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 2, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 2,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 3, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 3,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 4, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 4,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 5, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 5,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 6, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 6,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 7, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 7,
+                }),
+            ], [], [1, 2]),
             ([
                 get_datastore_seed(self.bc.fake.slug(), 1, {
                     'slug': 'classroom_attendance',
@@ -471,6 +601,41 @@ class MediaTestSuite(MediaTestCase):
                 get_datastore_seed(self.bc.fake.slug(), 7, {
                     'slug': 'classroom_attendance',
                     'user_id': 1,
+                    'day': 7,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 1, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 1,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 2, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 2,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 3, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 3,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 4, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 4,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 5, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 5,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 6, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
+                    'day': 6,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 7, {
+                    'slug': 'classroom_attendance',
+                    'user_id': 2,
                     'day': 7,
                 }),
             ], [
@@ -509,7 +674,42 @@ class MediaTestSuite(MediaTestCase):
                     'user_id': 1,
                     'day': 7,
                 }),
-            ], [1], [1]),
+                get_datastore_seed(self.bc.fake.slug(), 1, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 1,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 2, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 2,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 3, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 3,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 4, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 4,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 5, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 5,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 6, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 6,
+                }),
+                get_datastore_seed(self.bc.fake.slug(), 7, {
+                    'slug': 'classroom_unattendance',
+                    'user_id': 2,
+                    'day': 7,
+                }),
+            ], [1, 2], [1, 2]),
         ]
         syllabus_version = {
             'json': {
