@@ -6,16 +6,19 @@ import requests
 import base64
 from django.contrib import admin
 from django import forms
+from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
+from breathecode.utils.datetime_interger import from_now
 from breathecode.utils import getLogger
 from django.db.models import QuerySet
 
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
 from .models import (Academy, SyllabusSchedule, Cohort, CohortUser, Country, City, SyllabusVersion,
                      UserAdmissions, Syllabus, CohortTimeSlot, SyllabusScheduleTimeSlot)
-from .actions import ImportCohortTimeSlots
+from .actions import ImportCohortTimeSlots, test_syllabus
+from .tasks import async_test_syllabus
 from breathecode.assignments.actions import sync_student_tasks
 from random import choice
 from django.db.models import Q
@@ -326,17 +329,61 @@ class SyllabusAdmin(admin.ModelAdmin):
     actions = [pull_from_github]
 
 
+def test_syllabus_integrity(modeladmin, request, queryset):
+    syllabus_versions = queryset.all()
+    for version in syllabus_versions:
+        version.integrity_status = 'PENDING'
+        version.integrity_check_at = timezone.now()
+        version.save()
+        try:
+            report = test_syllabus(version.json)
+            version.integrity_report = report.serialize()
+            if report.http_status() == 200:
+                version.integrity_status = 'OK'
+            else:
+                version.integrity_status = 'ERROR'
+            version.save()
+
+        except Exception as e:
+            version.integrity_report = {'errors': [str(e)], 'warnings': []}
+            version.integrity_status = 'ERROR'
+            version.save()
+            raise e
+
+
+def async_test_syllabus_integrity(modeladmin, request, queryset):
+    syllabus_versions = queryset.all()
+    for version in syllabus_versions:
+        async_test_syllabus.delay(version.syllabus.slug, version.version)
+
+
 @admin.register(SyllabusVersion)
 class SyllabusVersionAdmin(admin.ModelAdmin):
-    list_display = ('version', 'syllabus', 'owner')
+    list_display = ('version', 'syllabus', 'integrity', 'owner')
     search_fields = ['syllabus__name', 'syllabus__slug']
     list_filter = ['syllabus__private', 'syllabus__academy_owner']
+    actions = [test_syllabus_integrity, async_test_syllabus_integrity]
 
     def owner(self, obj):
         if obj.syllabus.academy_owner is None:
             return format_html(f'<span class="badge bg-error">No academy owner</span>')
 
         return format_html(f'<span>{obj.syllabus.academy_owner.name}</span>')
+
+    def integrity(self, obj):
+        colors = {
+            'PENDING': 'bg-warning',
+            'OK': 'bg-success',
+            'ERROR': 'bg-error',
+            'WARNING': 'bg-warning',
+        }
+        when = 'Never tested'
+        if obj.integrity_check_at is not None:
+            when = from_now(obj.integrity_check_at) + ' ago'
+        return format_html(f"""<table>
+            <p class='d-block badge {colors[obj.integrity_status]}'>{obj.integrity_status}</p>
+            <small>{when}</small>
+</table>""")
 
 
 class CohortTimeSlotForm(forms.ModelForm):
