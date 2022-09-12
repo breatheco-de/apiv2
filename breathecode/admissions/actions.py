@@ -208,3 +208,71 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
                                          asset_type=asset_type)
 
     return findings
+
+
+class SyllabusLog(object):
+    errors = []
+    warnings = []
+
+    def error(self, msg):
+        if len(self.errors) > 10:
+            raise Exception('Too many errors on syllabus')
+
+        self.errors.append(msg)
+
+    def warn(self, msg):
+        self.warnings.append(msg)
+
+    def concat(self, log):
+        self.errors += log.errors
+        self.warnings += log.warnings
+
+    def serialize(self):
+        return {'errors': self.errors, 'warnings': self.warnings}
+
+    def http_status(self):
+        if len(self.errors) == 0:
+            return 200
+        return 400
+
+
+def test_syllabus(syl, validate_assets=False):
+    from breathecode.registry.models import AssetAlias
+
+    if isinstance(syl, str):
+        syl = json.loads(syl)
+
+    syllabus_log = SyllabusLog()
+    if 'days' not in syl:
+        syllabus_log.error("Syllabus must have a 'days' or 'modules' property")
+        return syllabus_log
+
+    def validate(type, _log, day, index):
+        if type not in day:
+            _log.error(f'Missing {type} property on module {index}')
+            return False
+        for a in day[type]:
+            if 'slug' not in a:
+                _log.error(f'Missing slug on {type} property on module {index}')
+            if not isinstance(a['slug'], str):
+                _log.error(f'Slug property must be a string for {type} on module {index}')
+
+            if validate_assets:
+                exists = AssetAlias.objects.filter(slug=a['slug']).first()
+                if exists is None:
+                    _log.error(f'Missing {type} with slug {a["slug"]} on module {index}')
+        return True
+
+    count = 0
+
+    for day in syl['days']:
+        count += 1
+        validate('lessons', syllabus_log, day, count)
+        validate('quizzes', syllabus_log, day, count)
+        validate('replits', syllabus_log, day, count)
+        validate('projects', syllabus_log, day, count)
+        if 'teacher_instructions' not in day or day['teacher_instructions'] == '':
+            syllabus_log.warn(f'Empty teacher instructions on module {count}')
+
+    print(f'Done...')
+    return syllabus_log

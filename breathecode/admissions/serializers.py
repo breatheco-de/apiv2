@@ -7,6 +7,7 @@ from breathecode.utils import ValidationException, localize_query, SerpyExtensio
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from .actions import test_syllabus
 from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
                      Syllabus, SyllabusVersion, COHORT_STAGE)
 
@@ -945,6 +946,23 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
                 'read_only': True
             },
         }
+
+    def validate(self, data):
+
+        _data = super().validate(data)
+        if 'json' in data:
+            try:
+                _log = test_syllabus(data['json'])
+                if _log.http_status() == 200:
+                    raise ValidationException(
+                        'There are some errors in your syllabus, please validate before submitting',
+                        slug='syllabus-with-errors')
+            except:
+                raise ValidationException(
+                    'There are some errors in your syllabus, please validate before submitting',
+                    slug='syllabus-with-errors')
+
+        return _data
 
 
 class AcademyReportSerializer(serpy.Serializer):
