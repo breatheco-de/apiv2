@@ -932,6 +932,13 @@ class BillView(APIView, HeaderLimitOffsetPagination):
 
                 if not (elem := MentorshipBill.objects.filter(id=obj['id']).first()):
                     raise ValidationException(f'Bill {obj["id"]} not found', code=404, slug='some-not-found')
+
+                if elem.status == 'RECALCULATE' and 'status' in obj and obj['status'] != 'RECALCULATE':
+                    raise ValidationException(
+                        f'This bill must be regenerated before you can update its status',
+                        code=400,
+                        slug='trying-edit-status-to-dirty-bill')
+
                 bill.append(elem)
 
         else:
@@ -945,6 +952,12 @@ class BillView(APIView, HeaderLimitOffsetPagination):
                 raise ValidationException('This bill does not exist for this academy',
                                           code=404,
                                           slug='not-found')
+
+            if bill.status == 'RECALCULATE' and 'status' in request.data and request.data[
+                    'status'] != 'RECALCULATE':
+                raise ValidationException(f'This bill must be regenerated before you can update its status',
+                                          code=400,
+                                          slug='trying-edit-status-to-dirty-bill')
 
         serializer = MentorshipBillPUTSerializer(bill,
                                                  data=request.data,
