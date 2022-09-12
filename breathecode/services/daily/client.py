@@ -1,4 +1,4 @@
-import re, logging, os, urllib, time
+import logging, os, urllib, time
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)

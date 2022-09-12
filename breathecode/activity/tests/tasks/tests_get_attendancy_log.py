@@ -160,7 +160,7 @@ class MediaTestSuite(MediaTestCase):
             self.bc.database.delete('admissions.SyllabusVersion')
 
     """
-    🔽🔽🔽 The student attended the first day
+    🔽🔽🔽 The student attended the first day, the rest of day are ignored
     """
 
     @patch('logging.Logger.info', MagicMock())
@@ -213,11 +213,7 @@ class MediaTestSuite(MediaTestCase):
                     'current_module': x['label'],
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
-                } for x in model.syllabus_version.json['days'][:1]] + [{
-                    'current_module': x['label'],
-                    'attendance_ids': None,
-                    'unattendance_ids': None,
-                } for x in model.syllabus_version.json['days'][1:]],
+                } for x in model.syllabus_version.json['days'][:1]],
             }])
 
             self.assertEqual(self.bc.database.list_of('admissions.SyllabusVersion'), [{
@@ -374,7 +370,9 @@ class MediaTestSuite(MediaTestCase):
             }
         }
 
-        model = self.bc.database.create(cohort=1, syllabus_version=syllabus_version)
+        cohort = {'current_day': 3}
+
+        model = self.bc.database.create(cohort=cohort, syllabus_version=syllabus_version)
 
         for attendance_seed, unattendance_seed, attendance_ids, unattendance_ids in cases:
             model.cohort.history_log = {}
@@ -415,7 +413,8 @@ class MediaTestSuite(MediaTestCase):
             NDB.__init__.call_args_list = []
 
     """
-    🔽🔽🔽 The students attended all days, duration_in_days more than 1
+    🔽🔽🔽 The students attended all days, duration_in_days more than 1, a day in datastore was ignored
+    because the syllabus does'nt include that
     """
 
     @patch('logging.Logger.info', MagicMock())
@@ -720,8 +719,9 @@ class MediaTestSuite(MediaTestCase):
                 } for x in range(1, 4)]
             }
         }
+        cohort = {'current_day': 6}
 
-        model = self.bc.database.create(cohort=1, syllabus_version=syllabus_version)
+        model = self.bc.database.create(cohort=cohort, syllabus_version=syllabus_version)
 
         for attendance_seed, unattendance_seed, attendance_ids, unattendance_ids in cases:
             model.cohort.history_log = {}

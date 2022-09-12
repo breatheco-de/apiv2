@@ -45,11 +45,17 @@ def get_attendancy_log(cohort_id: int):
     result = []
 
     offset = 0
+    current_day = 0
     for day in syllabus:
+        if current_day > cohort.current_day:
+            break
+
         for n in range(day['duration_in_days']):
-            attendance_ids = list([x['user_id'] for x in attendance if x['day'] == day['id'] + n + offset])
-            unattendance_ids = list(
-                [x['user_id'] for x in unattendance if x['day'] == day['id'] + n + offset])
+            current_day += 1
+            if current_day > cohort.current_day:
+                break
+            attendance_ids = list([x['user_id'] for x in attendance if x['day'] == current_day])
+            unattendance_ids = list([x['user_id'] for x in unattendance if x['day'] == current_day])
             has_attendance = bool(attendance_ids or unattendance_ids)
 
             result.append({
