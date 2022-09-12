@@ -555,11 +555,13 @@ def test_asset(asset):
     except AssetException as e:
         asset.status_text = str(e)
         asset.test_status = e.severity
+        asset.last_test_at = timezone.now()
         asset.save()
         raise e
     except Exception as e:
         asset.status_text = str(e)
         asset.test_status = 'ERROR'
+        asset.last_test_at = timezone.now()
         asset.save()
         raise e
 
