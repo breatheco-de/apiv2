@@ -107,7 +107,6 @@ def create_lead(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@validate_captcha
 def create_lead_from_app(request, app_slug=None):
     app_id = request.GET.get('app_id', None)
     if app_slug is None or app_id is None:

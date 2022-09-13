@@ -18,7 +18,6 @@ def get_urls_from_html(html_content):
 
 
 def test_url(url, allow_relative=False, allow_hash=True):
-
     if url is None or url == '':
         raise Exception(f'Empty url')
 
