@@ -137,7 +137,7 @@ def task_is_valid_for_notifications(task: Task) -> bool:
         logger.error('Can\'t determine the student cohort')
         return False
 
-    language = task.cohort.language
+    language = task.cohort.language.lower()
 
     if language not in NOTIFICATION_STRINGS:
         logger.error(f'The language {language} is not implemented in teacher_task_notification')
