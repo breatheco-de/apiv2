@@ -163,6 +163,17 @@ VERSION_STATUS = (
     (DRAFT, 'Draft'),
 )
 
+ERROR = 'ERROR'
+OK = 'OK'
+PENDING = 'PENDING'
+WARNING = 'WARNING'
+INTEGRITY_STATUS = (
+    (ERROR, 'Error'),
+    (PENDING, 'Pending'),
+    (WARNING, 'Warning'),
+    (OK, 'Ok'),
+)
+
 
 class SyllabusVersion(models.Model):
     json = models.JSONField()
@@ -171,6 +182,10 @@ class SyllabusVersion(models.Model):
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
+
+    integrity_status = models.CharField(max_length=15, choices=INTEGRITY_STATUS, default=PENDING)
+    integrity_check_at = models.DateTimeField(null=True, blank=True, default=None)
+    integrity_report = models.JSONField(null=True, blank=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
