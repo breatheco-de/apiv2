@@ -10,7 +10,7 @@ from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment)
 
-from .actions import AssetThumbnailGenerator, test_syllabus, test_asset, pull_from_github, test_asset
+from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
@@ -234,13 +234,6 @@ def get_translations(request):
     langs = set(langs)
 
     return Response([{'slug': l, 'title': l} for l in langs])
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def handle_test_syllabus(request):
-    report = test_syllabus(request.data)
-    return Response({'status': 'ok'})
 
 
 @api_view(['POST'])
@@ -493,7 +486,6 @@ class AcademyAssetActionView(APIView):
                 report.start()
 
         except Exception as e:
-            raise e
             pass
 
         asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()

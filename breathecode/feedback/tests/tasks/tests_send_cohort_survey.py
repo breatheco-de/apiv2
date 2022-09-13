@@ -100,6 +100,7 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_when_student_not_found(self):
 
         model = self.generate_models(cohort=1, user=1, survey=1, cohort_user={'role': 'STUDENT'})
@@ -120,6 +121,7 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_when_an_email_is_sent(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
@@ -163,6 +165,7 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.notify.actions.send_slack', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_when_an_email_is_sent_with_slack_team_and_user(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
