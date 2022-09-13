@@ -214,6 +214,10 @@ class SyllabusLog(object):
     errors = []
     warnings = []
 
+    def __init__(self):
+        self.errors = []
+        self.warnings = []
+    
     def error(self, msg):
         if len(self.errors) > 10:
             raise Exception('Too many errors on syllabus')
@@ -274,5 +278,4 @@ def test_syllabus(syl, validate_assets=False):
         if 'teacher_instructions' not in day or day['teacher_instructions'] == '':
             syllabus_log.warn(f'Empty teacher instructions on module {count}')
 
-    print(f'Done...')
     return syllabus_log
