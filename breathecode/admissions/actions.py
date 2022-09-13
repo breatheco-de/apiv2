@@ -217,7 +217,7 @@ class SyllabusLog(object):
     def __init__(self):
         self.errors = []
         self.warnings = []
-    
+
     def error(self, msg):
         if len(self.errors) > 10:
             raise Exception('Too many errors on syllabus')
