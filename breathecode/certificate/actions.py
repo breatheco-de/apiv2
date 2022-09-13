@@ -72,7 +72,7 @@ def generate_certificate(user, cohort=None, layout=None):
             cohort=cohort,
             token=hashlib.sha1((str(user.id) + str(utc_now)).encode('UTF-8')).hexdigest(),
             specialty=specialty,
-            signed_by_role=strings[cohort.language]['Main Instructor'],
+            signed_by_role=strings[cohort.language.lower()]['Main Instructor'],
         )
         if specialty.expiration_day_delta is not None:
             uspe.expires_at = utc_now + timezone.timedelta(days=specialty.expiration_day_delta)

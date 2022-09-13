@@ -229,7 +229,7 @@ class SurveySerializer(serializers.ModelSerializer):
         cohort = validated_data['cohort']
 
         if 'lang' not in validated_data:
-            validated_data['lang'] = cohort.language
+            validated_data['lang'] = cohort.language.lower()
 
         result = super().create(validated_data)
 
