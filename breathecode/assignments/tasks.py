@@ -28,7 +28,7 @@ def student_task_notification(self, task_id):
     if not task_is_valid_for_notifications(task):
         return
 
-    language = task.cohort.language
+    language = task.cohort.language.lower()
     revision_status = task.revision_status
     subject = NOTIFICATION_STRINGS[language]['student']['subject'].format(title=task.title)
     details = NOTIFICATION_STRINGS[language]['student'][revision_status]
@@ -55,7 +55,7 @@ def teacher_task_notification(self, task_id):
     if not task_is_valid_for_notifications(task):
         return
 
-    language = task.cohort.language
+    language = task.cohort.language.lower()
     subject = NOTIFICATION_STRINGS[language]['teacher']['subject'].format(first_name=task.user.first_name,
                                                                           last_name=task.user.last_name)
 
