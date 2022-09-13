@@ -247,20 +247,20 @@ def test_syllabus(syl, validate_assets=False):
         syllabus_log.error("Syllabus must have a 'days' or 'modules' property")
         return syllabus_log
 
-    def validate(type, _log, day, index):
-        if type not in day:
-            _log.error(f'Missing {type} property on module {index}')
+    def validate(_type, _log, day, index):
+        if _type not in day:
+            _log.error(f'Missing {_type} property on module {index}')
             return False
-        for a in day[type]:
+        for a in day[_type]:
             if 'slug' not in a:
-                _log.error(f'Missing slug on {type} property on module {index}')
+                _log.error(f'Missing slug on {_type} property on module {index}')
             if not isinstance(a['slug'], str):
-                _log.error(f'Slug property must be a string for {type} on module {index}')
+                _log.error(f'Slug property must be a string for {_type} on module {index}')
 
             if validate_assets:
                 exists = AssetAlias.objects.filter(slug=a['slug']).first()
                 if exists is None:
-                    _log.error(f'Missing {type} with slug {a["slug"]} on module {index}')
+                    _log.error(f'Missing {_type} with slug {a["slug"]} on module {index}')
         return True
 
     count = 0
