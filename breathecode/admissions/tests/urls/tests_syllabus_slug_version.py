@@ -209,6 +209,9 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_syllabus_version_dict(), [{
             'id': 1,
+            'integrity_check_at': None,
+            'integrity_report': None,
+            'integrity_status': 'PENDING',
             'change_log_details': None,
             'status': 'PUBLISHED',
             'json': {},
@@ -252,6 +255,9 @@ class CertificateTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'syllabus_version')
         }, {
             'id': 2,
+            'integrity_check_at': None,
+            'integrity_report': None,
+            'integrity_status': 'PENDING',
             'change_log_details': None,
             'status': 'PUBLISHED',
             'json': {},
