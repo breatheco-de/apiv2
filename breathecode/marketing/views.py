@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination, validate_captcha)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
@@ -36,6 +36,7 @@ from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
+from breathecode.services.google_cloud import Recaptcha
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,7 @@ def get_downloadable(request, slug=None):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@validate_captcha
 def create_lead(request):
 
     data = request.data.copy()
@@ -105,6 +107,7 @@ def create_lead(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@validate_captcha
 def create_lead_from_app(request, app_slug=None):
     app_id = request.GET.get('app_id', None)
     if app_slug is None or app_id is None:

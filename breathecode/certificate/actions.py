@@ -5,7 +5,7 @@ import hashlib
 import requests, os, logging
 from django.utils import timezone
 from urllib.parse import urlencode
-from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
+from breathecode.admissions.models import SyllabusVersion, Cohort, CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, APIException
 from .models import ERROR, PERSISTED, Specialty, UserSpecialty, LayoutDesign
@@ -102,9 +102,18 @@ def generate_certificate(user, cohort=None, layout=None):
 
     try:
         uspe.academy = cohort.academy
-        tasks_count_pending = Task.objects.filter(user__id=user.id,
-                                                  task_type='PROJECT',
-                                                  revision_status='PENDING').count()
+
+        tasks_pending = Task.objects.filter(user__id=user.id, task_type='PROJECT', revision_status='PENDING')
+        mandatory_slugs = []
+        for task in tasks_pending:
+            if 'days' in task.cohort.syllabus_version.__dict__['json']:
+                for day in task.cohort.syllabus_version.__dict__['json']['days']:
+                    for assignment in day['assignments']:
+                        if 'mandatory' not in assignment or ('mandatory' in assignment and assignment['mandatory'] == True):
+                            mandatory_slugs.append(assignment['slug'])
+
+        tasks_count_pending = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(
+            revision_status__in=['APPROVED', 'IGNORED']).count()
 
         if tasks_count_pending:
             raise ValidationException(f'The student has {tasks_count_pending} '
