@@ -2,6 +2,7 @@
 from .utils import AsyncJsonWebsocketConsumer
 from django.core.cache import cache
 from rest_framework.permissions import AllowAny
+from channels.exceptions import StopConsumer
 
 from breathecode.websocket.decorators import ws_can_auth
 
@@ -43,7 +44,8 @@ class OnlineStatusConsumer(AsyncJsonWebsocketConsumer):
 
     async def disconnect(self, close_code):
         if 'user' not in self.groups:
-            return
+            await super().close(close_code)
+            raise StopConsumer()
 
         currents = cache.get(self.groups['breathecode'])
         if self.scope['user'].id:
@@ -56,6 +58,9 @@ class OnlineStatusConsumer(AsyncJsonWebsocketConsumer):
                 'type': 'disconnected',
                 'id': self.user_id
             })
+
+        await super().close(close_code)
+        raise StopConsumer()
 
     async def history(self, event):
         currents = cache.get(self.groups['breathecode']) or []
