@@ -576,8 +576,8 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             raise ValidationException('A cohort most have ending date or it should be marked as ever_ends',
                                       slug='cohort-without-ending-date-and-never-ends')
 
-        language = data['language']
-        if language is not None:
+        if 'language' in data:
+            language = data['language']
             if type(language) == str:
                 data['language'] = language.lower()
             else:
