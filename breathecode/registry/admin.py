@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 lang_flags = {
     'en': '🇺🇸',
     'us': '🇺🇸',
+    'ge': '🇩🇪',
+    'po': '🇵🇹',
     'es': '🇪🇸',
     'it': '🇮🇹',
     None: '',
