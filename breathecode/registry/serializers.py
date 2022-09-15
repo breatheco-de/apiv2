@@ -247,10 +247,6 @@ class PostAssetSerializer(serializers.ModelSerializer):
         exclude = ()
 
     def validate(self, data):
-
-        if "all_translations" in data and len(data["all_translations"]) > 0 and isinstance(data["all_translations"][0], str):
-            assets_ids = Asset.objects.filter(slug__in=data["all_translations"]).values_list('id', flat=True)
-            data["all_translations"] = assets_ids
         
         validated_data = super().validate(data)
 
