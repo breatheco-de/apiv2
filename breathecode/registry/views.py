@@ -14,7 +14,7 @@ from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
-from .caches import AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache
+from .caches import AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache, CategoryCache
 
 from rest_framework.permissions import AllowAny
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
@@ -23,7 +23,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           PostAssetCommentSerializer, PutAssetCommentSerializer, AssetBigTechnologySerializer,
                           TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
                           PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
-                          AssetKeywordBigSerializer)
+                          AssetKeywordBigSerializer, CategorySerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -752,6 +752,60 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
 
         comment.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyCategoryView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(cache=CategoryCache, sort='-created_at', paginate=True)
+
+    @capable_of('read_category')
+    def get(self, request, category_slug=None, academy_id=None):
+
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = AssetCategory.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        like = request.GET.get('like', None)
+        if like is not None and like != 'undefined' and like != '':
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = CategorySerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of('crud_category')
+    def post(self, request, academy_id=None):
+
+        payload = {**request.data}
+
+        serializer = CategorySerializer(data=payload, context={'request': request, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_category')
+    def put(self, request, category_slug, academy_id=None):
+
+        cat = AssetCategory.objects.filter(slug=category_slug, academy__id=academy_id).first()
+        if cat is None:
+            raise ValidationException('This category does not exist for this academy', 404)
+
+        data = {**request.data}
+
+        serializer = CategorySerializer(cat, data=data, context={'request': request, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AcademyKeywordView(APIView, GenerateLookupsMixin):

@@ -1,4 +1,4 @@
-from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster
+from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.models import Academy
@@ -312,6 +312,25 @@ class PUTKeywordSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssetKeyword
         exclude = ('academy', )
+
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AssetCategory
+        exclude = ('academy', )
+
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super().create({
+            **validated_data,
+            'academy': academy,
+        })
 
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
