@@ -551,7 +551,7 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if not lookups and not service_id:
             raise ValidationException('provide arguments in the url',
                                       code=400,
-                                      slug='without-lookups-and-session-id')
+                                      slug='without-lookups-and-service-id')
 
         if lookups and service_id:
             raise ValidationException(
@@ -562,41 +562,29 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if lookups:
             alls = MentorshipService.objects.filter(**lookups)
-            print('lookups')
-            print(lookups)
             valids = alls.filter(academy__id=academy_id)
             from_other_academy = alls.exclude(academy__id=academy_id)
             with_mentor = MentorshipService.objects.none()
             with_sessions = MentorshipService.objects.none()
             for id in lookups['id__in']:
+
                 mentor = MentorProfile.objects.filter(academy__id=academy_id, services=id).first()
-                print('mentor')
-                print(mentor)
                 if mentor is not None:
                     with_mentor |= MentorshipService.objects.filter(id__in=mentor.services.all())
+
                 session = MentorshipSession.objects.filter(service=id).first()
                 if session is not None:
                     with_sessions |= MentorshipService.objects.filter(id=session.service.id)
-                valids = alls.exclude(mentorprofile__services=id)
-                valids = alls.exclude(mentorshipsession__service=id)
-            # valids = alls.exclude(id__in=with_mentor.id)
-            # valids = alls.exclude(id__in=with_sessions.id)
-            print('valids')
-            print(valids)
-            print('with_mentor')
-            print(with_mentor)
-            print('with_sessions')
-            print(with_sessions)
-            # with_mentor = alls.exclude(id=mentors.services)
-            # print(with_mentor)
-            # print('with_mentor')
+
+            valids = alls.exclude(
+                Q(id__in=with_mentor.all()) | Q(id__in=with_sessions.all())
+                | Q(id__in=from_other_academy.all()))
 
             responses = []
             if valids:
                 responses.append(MultiStatusResponse(code=204, queryset=valids))
 
             if from_other_academy:
-                print('from_other_academy append')
                 responses.append(
                     MultiStatusResponse('Service doest not exist or does not belong to this academy',
                                         code=400,
@@ -604,7 +592,6 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                         queryset=from_other_academy))
 
             if with_mentor:
-                print('with_mentor append')
                 responses.append(
                     MultiStatusResponse('Only services that are not assigned to a mentor can be deleted.',
                                         code=400,
@@ -612,7 +599,6 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                         queryset=with_mentor))
 
             if with_sessions:
-                print('with_sessions append')
                 responses.append(
                     MultiStatusResponse('Only services without a session can be deleted.',
                                         code=400,
@@ -633,8 +619,6 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                       slug='not-found')
 
         mentor = MentorProfile.objects.filter(academy__id=academy_id, services=service.id).first()
-        print('mentor')
-        print(mentor)
         if mentor is not None:
             raise ValidationException('Only services that are not assigned to a mentor can be deleted.',
                                       slug='service-with-mentor')
