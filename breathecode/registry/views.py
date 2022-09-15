@@ -661,6 +661,9 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             if isinstance(data['seo_keywords'][0], str):
                 data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list(
                     'pk', flat=True)
+                
+        if "all_translations" in data and len(data["all_translations"]) > 0 and isinstance(data["all_translations"][0], str):
+            data["all_translations"] = Asset.objects.filter(slug__in=data["all_translations"]).values_list('pk', flat=True)
 
         serializer = PostAssetSerializer(data=data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
