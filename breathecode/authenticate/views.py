@@ -1485,6 +1485,7 @@ def render_user_invite(request, token):
         })
 
 
+@permission_classes([AllowAny])
 def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
     _dict['token'] = token
