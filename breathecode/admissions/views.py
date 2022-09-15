@@ -206,23 +206,23 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         roles = request.GET.get('roles', None)
         if roles is not None:
-            items = items.filter(role__in=roles.split(','))
+            items = items.filter(role__in=roles.upper().split(','))
 
         finantial_status = request.GET.get('finantial_status', None)
         if finantial_status is not None:
-            items = items.filter(finantial_status__in=finantial_status.split(','))
+            items = items.filter(finantial_status__in=finantial_status.upper().split(','))
 
         educational_status = request.GET.get('educational_status', None)
         if educational_status is not None:
-            items = items.filter(educational_status__in=educational_status.split(','))
+            items = items.filter(educational_status__in=educational_status.upper().split(','))
 
         academy = request.GET.get('academy', None)
         if academy is not None:
-            items = items.filter(cohort__academy__slug__in=academy.split(','))
+            items = items.filter(cohort__academy__slug__in=academy.lower().split(','))
 
         cohorts = request.GET.get('cohorts', None)
         if cohorts is not None:
-            items = items.filter(cohort__slug__in=cohorts.split(','))
+            items = items.filter(cohort__slug__in=cohorts.lower().split(','))
 
         users = request.GET.get('users', None)
         if users is not None:
