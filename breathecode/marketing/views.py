@@ -78,7 +78,6 @@ def get_downloadable(request, slug=None):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@validate_captcha
 def create_lead(request):
 
     data = request.data.copy()
