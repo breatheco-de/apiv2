@@ -23,7 +23,7 @@ from .serializers import (
 from .models import (ACTIVE, Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule,
                      Cohort, STUDENT, DELETED, Syllabus, SyllabusVersion)
 
-from .actions import update_asset_on_json, find_asset_on_json
+from .actions import update_asset_on_json, find_asset_on_json, test_syllabus
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -51,6 +51,16 @@ def get_all_academies(request, id=None):
     items = Academy.objects.all()
     serializer = AcademySerializer(items, many=True)
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def handle_test_syllabus(request):
+    try:
+        syllabus_log = test_syllabus(request.data, validate_assets=True)
+        return Response(syllabus_log.serialize(), status=syllabus_log.http_status())
+    except Exception as e:
+        return Response({'details': str(e)}, status=400)
 
 
 @api_view(['GET'])
@@ -1329,8 +1339,11 @@ class SyllabusVersionView(APIView):
 
     @capable_of('crud_syllabus')
     def put(self, request, syllabus_id=None, syllabus_slug=None, version=None, academy_id=None):
+
         if not version:
             raise ValidationException('Missing syllabus version', code=400)
+        elif not version.isnumeric():
+            raise ValidationException(f'Syllabus version must be a number, received "{version}"', code=400)
 
         syllabus_version = SyllabusVersion.objects.filter(
             Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),

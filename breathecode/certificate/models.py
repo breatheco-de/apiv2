@@ -77,6 +77,7 @@ class LayoutDesign(models.Model):
 
     background_url = models.CharField(max_length=250, blank=False, null=False)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    foot_note = models.CharField(max_length=250, blank=False, null=True, default=None)
 
     def __str__(self):
         return self.name

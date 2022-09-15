@@ -43,6 +43,7 @@ class TinyLayoutDesignSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     background_url = serpy.Field()
+    foot_note = serpy.Field()
 
 
 class LayoutDesignSerializer(serpy.Serializer):

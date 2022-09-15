@@ -6,7 +6,7 @@ from datetime import timedelta
 import re, string
 from random import choice, choices, randint
 from mixer.main import Mixer
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import PropertyMock, patch, MagicMock, call
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from faker import Faker
@@ -23,6 +23,17 @@ fake = Faker()
 
 def random_string():
     return ''.join(choices(string.ascii_letters, k=10))
+
+
+class FakeRecaptcha:
+
+    class RiskAnalysis:
+
+        def __init__(self, *args, **kwargs):
+            self.score = 0.9
+
+    def __init__(self, *args, **kwargs):
+        self.risk_analysis = self.RiskAnalysis()
 
 
 def generate_form_entry_kwargs():
@@ -72,6 +83,11 @@ class LeadTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__without_data(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
@@ -184,6 +200,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__bad_data(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
@@ -202,6 +223,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__data(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
@@ -317,6 +343,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__data_active_campaign_slug(self):
         """Test /cohort/:id/user without auth"""
         self.generate_models(academy=True, academy_kwargs={'active_campaign_slug': 'midgard'})
@@ -434,6 +465,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__data_alias_active_campaign_slug(self):
         """Test /cohort/:id/user without auth"""
         self.generate_models(academy=True,
@@ -553,6 +589,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__data_active_campaign_slug_priority(self):
         """Test /cohort/:id/user without auth"""
         model1 = self.generate_models(academy=True, academy_kwargs={'active_campaign_slug': 'midgard'})
@@ -674,6 +715,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__create_lead(self):
         """Test /lead with create lead happening"""
 

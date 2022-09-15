@@ -504,7 +504,18 @@ class SessionPUTSerializer(serializers.ModelSerializer):
 
         mentor = MentorProfile.objects.filter(id=instance.mentor_id).first()
 
-        generate_mentor_bill(mentor, bill, bill.mentorshipsession_set.all())
+        sessions = bill.mentorshipsession_set.all()
+
+        success_status = ['APPROVED', 'PAID', 'IGNORED']
+        is_dirty = [x for x in sessions if x.bill.status not in success_status and not x.service]
+
+        # this prevent errors 500
+        if not is_dirty:
+            generate_mentor_bill(mentor, bill, bill.mentorshipsession_set.all())
+
+        else:
+            bill.status = 'RECALCULATE'
+            bill.save()
 
         return result
 

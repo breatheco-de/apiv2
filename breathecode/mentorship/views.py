@@ -18,6 +18,7 @@ from .forms import CloseMentoringSessionForm
 from .actions import close_mentoring_session, render_session, generate_mentor_bills
 from breathecode.mentorship import actions
 from breathecode.notify.actions import get_template_content
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 from .serializers import (
     GetAcademySmallSerializer,
     GETServiceSmallSerializer,
@@ -685,7 +686,18 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
 
         mentor = request.GET.get('mentor', None)
         if mentor is not None:
-            lookup['mentor__id__in'] = mentor.split(',')
+            if ',' in mentor or mentor.isnumeric():
+                lookup['mentor__id__in'] = mentor.split(',')
+            else:
+                items = query_like_by_full_name(like=mentor, items=items, prefix='mentor__user__')
+
+        mentee = request.GET.get('student', None)
+        if mentee is not None:
+            items = query_like_by_full_name(like=mentee, items=items, prefix='mentee__')
+
+        service = request.GET.get('service', None)
+        if service is not None:
+            lookup['service__name__icontains'] = service
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -706,15 +718,23 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('read_mentorship_session')
+    @capable_of('crud_mentorship_session')
     def put(self, request, academy_id=None, session_id=None):
 
         many = isinstance(request.data, list)
         if not many:
             current = MentorshipSession.objects.filter(id=session_id,
-                                                       mentor__service__academy__id=academy_id).first()
+                                                       mentor__services__academy__id=academy_id).first()
             if current is None:
-                raise ValidationException('This session does not exist on this academy', code=404)
+                raise ValidationException('This session does not exist on this academy',
+                                          code=404,
+                                          slug='not-found')
+
+            if current.bill and (current.bill.status == 'APPROVED' or current.bill.status == 'PAID'
+                                 or current.bill.status == 'IGNORED'):
+                raise ValidationException('Sessions associated with a closed bill cannot be edited',
+                                          code=400,
+                                          slug='trying-to-change-a-closed-bill')
 
             data = {}
             for key in request.data.keys():
@@ -726,12 +746,26 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
             for x in request.data:
                 index = index + 1
 
-                if 'id' in x:
-                    current.append(MentorshipSession.objects.filter(id=x['id']).first())
-
-                else:
+                if 'id' not in x:
                     raise ValidationException('Cannot determine session in '
-                                              f'index {index}')
+                                              f'index {index}',
+                                              slug='without-id')
+
+                instance = MentorshipSession.objects.filter(id=x['id'],
+                                                            mentor__services__academy__id=academy_id).first()
+
+                if not instance:
+                    raise ValidationException(f'Session({x["id"]}) does not exist on this academy',
+                                              code=404,
+                                              slug='not-found')
+                current.append(instance)
+
+                if instance.bill and (instance.bill.status == 'APPROVED' or instance.bill.status == 'PAID'
+                                      or instance.bill.status == 'IGNORED'):
+                    raise ValidationException(
+                        f'Sessions associated with a closed bill cannot be edited (index {index})',
+                        code=400,
+                        slug='trying-to-change-a-closed-bill')
 
         serializer = SessionPUTSerializer(current,
                                           data=data,
@@ -910,6 +944,13 @@ class BillView(APIView, HeaderLimitOffsetPagination):
 
                 if not (elem := MentorshipBill.objects.filter(id=obj['id']).first()):
                     raise ValidationException(f'Bill {obj["id"]} not found', code=404, slug='some-not-found')
+
+                if elem.status == 'RECALCULATE' and 'status' in obj and obj['status'] != 'RECALCULATE':
+                    raise ValidationException(
+                        f'This bill must be regenerated before you can update its status',
+                        code=400,
+                        slug='trying-edit-status-to-dirty-bill')
+
                 bill.append(elem)
 
         else:
@@ -923,6 +964,12 @@ class BillView(APIView, HeaderLimitOffsetPagination):
                 raise ValidationException('This bill does not exist for this academy',
                                           code=404,
                                           slug='not-found')
+
+            if bill.status == 'RECALCULATE' and 'status' in request.data and request.data[
+                    'status'] != 'RECALCULATE':
+                raise ValidationException(f'This bill must be regenerated before you can update its status',
+                                          code=400,
+                                          slug='trying-edit-status-to-dirty-bill')
 
         serializer = MentorshipBillPUTSerializer(bill,
                                                  data=request.data,

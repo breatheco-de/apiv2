@@ -275,7 +275,8 @@ def generate_mentor_bills(mentor, reset=False):
     def get_unpaid_sessions():
         return MentorshipSession.objects.filter(
             Q(bill__isnull=True)
-            | Q(bill__status='DUE', bill__academy=mentor.academy, bill__paid_at__isnull=True),
+            | Q(bill__status='DUE', bill__academy=mentor.academy, bill__paid_at__isnull=True)
+            | Q(bill__status='RECALCULATE', bill__academy=mentor.academy, bill__paid_at__isnull=True),
             service__isnull=False,
             allow_billing=True,
             mentor__id=mentor.id,
@@ -293,7 +294,9 @@ def generate_mentor_bills(mentor, reset=False):
     if not unpaid_sessions:
         return []
 
-    MentorshipBill.objects.filter(mentor__id=mentor.id, academy__id=mentor.academy.id, status='DUE').delete()
+    MentorshipBill.objects.filter(Q(status='DUE') | Q(status='RECALCULATE'),
+                                  mentor__id=mentor.id,
+                                  academy__id=mentor.academy.id).delete()
 
     pending_months = sorted({(x.year, x.month) for x in unpaid_sessions.values_list('started_at', flat=True)})
     for year, month in pending_months:

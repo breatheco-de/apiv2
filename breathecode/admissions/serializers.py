@@ -7,6 +7,7 @@ from breathecode.utils import ValidationException, localize_query, SerpyExtensio
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from .actions import test_syllabus
 from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
                      Syllabus, SyllabusVersion, COHORT_STAGE)
 
@@ -575,6 +576,13 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             raise ValidationException('A cohort most have ending date or it should be marked as ever_ends',
                                       slug='cohort-without-ending-date-and-never-ends')
 
+        if 'language' in data:
+            language = data['language']
+            if type(language) == str:
+                data['language'] = language.lower()
+            else:
+                raise ValidationException(f'Language property should be a string not a {type(language)}')
+
         # if cohort is being activated the online_meeting_url should not be null
         if self.instance is not None and (self.instance.online_meeting_url is None
                                           or self.instance.online_meeting_url
@@ -900,7 +908,7 @@ class SyllabusSerializer(serializers.ModelSerializer):
 
 class SyllabusVersionSerializer(serializers.ModelSerializer):
     json = serializers.JSONField()
-    
+
     class Meta:
         model = SyllabusVersion
         fields = ['json', 'version', 'syllabus', 'status', 'change_log_details']
@@ -933,7 +941,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 class SyllabusVersionPutSerializer(serializers.ModelSerializer):
     json = serializers.JSONField(required=False)
     status = serializers.CharField(required=False)
-    
+
     class Meta:
         model = SyllabusVersion
         fields = ['json', 'version', 'syllabus', 'status']
@@ -946,6 +954,23 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
                 'read_only': True
             },
         }
+
+    def validate(self, data):
+
+        _data = super().validate(data)
+        if 'json' in data:
+            try:
+                _log = test_syllabus(data['json'])
+                if _log.http_status() == 200:
+                    raise ValidationException(
+                        'There are some errors in your syllabus, please validate before submitting',
+                        slug='syllabus-with-errors')
+            except:
+                raise ValidationException(
+                    'There are some errors in your syllabus, please validate before submitting',
+                    slug='syllabus-with-errors')
+
+        return _data
 
 
 class AcademyReportSerializer(serpy.Serializer):
