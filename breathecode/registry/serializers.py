@@ -201,6 +201,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
 
 
 class AssetCategorySerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
