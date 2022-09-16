@@ -211,6 +211,7 @@ class MediaTestSuite(MediaTestCase):
                 **self.bc.format.to_dict(model.cohort),
                 'history_log': [{
                     'current_module': x['label'],
+                    'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
                 } for x in model.syllabus_version.json['days'][:1]],
@@ -400,6 +401,7 @@ class MediaTestSuite(MediaTestCase):
                 **self.bc.format.to_dict(model.cohort),
                 'history_log': [{
                     'current_module': x['label'],
+                    'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
                 } for x in model.syllabus_version.json['days']],
@@ -751,31 +753,37 @@ class MediaTestSuite(MediaTestCase):
             history_log = [
                 {
                     'current_module': day1['label'],
+                    'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
                 },
                 {
                     'current_module': day2['label'],
+                    'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
                 },
                 {
                     'current_module': day2['label'],
+                    'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
                 },
                 {
                     'current_module': day3['label'],
+                    'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
                 },
                 {
                     'current_module': day3['label'],
+                    'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
                 },
                 {
                     'current_module': day3['label'],
+                    'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
                 },
