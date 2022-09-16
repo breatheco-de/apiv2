@@ -1525,8 +1525,8 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'POST':
         form = InviteForm(_dict)
-        password1 = request.POST.get('password1', None)
-        password2 = request.POST.get('password2', None)
+        password1 = request.POST.get('password', None)
+        password2 = request.POST.get('repeat_password', None)
 
         invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
         if invite is None:
@@ -1615,7 +1615,7 @@ def render_invite(request, token, member_id=None):
                 return HttpResponseRedirect(redirect_to=uri)
         else:
             return render(request, 'message.html',
-                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
+                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in'})
 
 
 @private_view()

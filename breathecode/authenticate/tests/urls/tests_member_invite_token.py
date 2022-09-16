@@ -115,7 +115,7 @@ def render_page_post_successfully():
     request = None
 
     return loader.render_to_string('message.html', {
-        'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in',
+        'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in',
     }, request)
 
 
