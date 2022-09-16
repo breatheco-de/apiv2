@@ -208,7 +208,7 @@ def get_attendancy_logs(modeladmin, request, queryset):
 
 cohort_actions = [
     sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots,
-    add_cohort_slug_to_active_campaign, get_attendancy_log
+    add_cohort_slug_to_active_campaign, get_attendancy_logs
 ]
 
 if os.getenv('ENVIRONMENT') == 'DEVELOPMENT':
