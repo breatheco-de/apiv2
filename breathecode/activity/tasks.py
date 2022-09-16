@@ -39,7 +39,8 @@ def get_attendancy_log(self, cohort_id: int):
         # the child has the correct attributes?
         for day in syllabus:
             assert isinstance(day['id'], int)
-            assert isinstance(day['duration_in_days'], int)
+            duration_in_days = day.get('duration_in_days')
+            assert isinstance(duration_in_days, int) or duration_in_days == None
             assert isinstance(day['label'], str)
     except:
         logger.error(f'Cohort {cohort.slug} have syllabus with bad format')
@@ -57,7 +58,7 @@ def get_attendancy_log(self, cohort_id: int):
         if current_day > cohort.current_day:
             break
 
-        for n in range(day['duration_in_days']):
+        for n in range(day.get('duration_in_days', 1)):
             current_day += 1
             if current_day > cohort.current_day:
                 break
