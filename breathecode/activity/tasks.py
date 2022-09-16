@@ -1,5 +1,5 @@
 import logging, os
-from celery import shared_task
+from celery import shared_task, Task
 from breathecode.admissions.models import Cohort
 from .models import Activity
 from breathecode.utils import NDB
@@ -9,8 +9,15 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 
-@shared_task
-def get_attendancy_log(cohort_id: int):
+class BaseTaskWithRetry(Task):
+    autoretry_for = (Exception, )
+    #                                           seconds
+    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
+    retry_backoff = True
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def get_attendancy_log(self, cohort_id: int):
     logger.info('Executing get_attendancy_log')
     cohort = Cohort.objects.filter(id=cohort_id).first()
 
