@@ -778,7 +778,7 @@ class AcademyCategoryView(APIView, GenerateLookupsMixin):
             items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
 
         lang = request.GET.get('lang', None)
-        if like is not None:
+        if lang is not None:
             items = items.filter(lang=lang.upper())
 
         items = items.filter(**lookup)
