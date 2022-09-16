@@ -68,6 +68,7 @@ def get_attendancy_log(self, cohort_id: int):
 
             result.append({
                 'current_module': day['label'],
+                'teacher_comments': None,
                 'attendance_ids': attendance_ids if has_attendance else None,
                 'unattendance_ids': unattendance_ids if has_attendance else None,
             })
