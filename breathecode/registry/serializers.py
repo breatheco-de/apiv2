@@ -241,11 +241,10 @@ class TechSerializer(serializers.ModelSerializer):
 
 
 class PostAssetSerializer(serializers.ModelSerializer):
-    technologies = TechSerializer(many=True, required=False)
 
     class Meta:
         model = Asset
-        exclude = ()
+        exclude = ('academy', )
 
     def validate(self, data):
 
@@ -415,11 +414,12 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
 
 class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
+    slug = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
 
     class Meta:
         model = Asset
-        exclude = ('technologies', 'academy')
+        exclude = ('academy', )
 
     def validate(self, data):
 

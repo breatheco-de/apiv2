@@ -631,8 +631,33 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if asset is None:
             raise ValidationException('This asset does not exist for this academy', 404)
 
+        data = {
+            **request.data,
+        }
+
+        if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
+                data['technologies'][0], str):
+            technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
+                'pk', flat=True)
+            delta = len(data['technologies']) - len(technology_ids)
+            if delta != 0:
+                raise ValidationException(
+                    f'{delta} of the assigned technologies for this lesson are not found')
+
+            data['technologies'] = technology_ids
+
+        if 'seo_keywords' in data and len(data['seo_keywords']) > 0:
+            if isinstance(data['seo_keywords'][0], str):
+                data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list(
+                    'pk', flat=True)
+
+        if 'all_translations' in data and len(data['all_translations']) > 0 and isinstance(
+                data['all_translations'][0], str):
+            data['all_translations'] = Asset.objects.filter(slug__in=data['all_translations']).values_list(
+                'pk', flat=True)
+
         serializer = AssetPUTSerializer(asset,
-                                        data=request.data,
+                                        data=data,
                                         context={
                                             'request': request,
                                             'academy_id': academy_id
@@ -659,6 +684,17 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 data['all_translations'][0], str):
             data['all_translations'] = Asset.objects.filter(slug__in=data['all_translations']).values_list(
                 'pk', flat=True)
+
+        if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
+                data['technologies'][0], str):
+            technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
+                'pk', flat=True)
+            delta = len(data['technologies']) - len(technology_ids)
+            if delta != 0:
+                raise ValidationException(
+                    f'{delta} of the assigned technologies for this lesson are not found')
+
+            data['technologies'] = technology_ids
 
         serializer = PostAssetSerializer(data=data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
