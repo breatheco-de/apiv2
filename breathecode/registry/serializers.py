@@ -247,7 +247,7 @@ class PostAssetSerializer(serializers.ModelSerializer):
         exclude = ()
 
     def validate(self, data):
-        
+
         validated_data = super().validate(data)
 
         academy_id = self.context['academy']
@@ -317,7 +317,20 @@ class PUTKeywordSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class PUTCategorySerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=False)
+    title = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
+
+    class Meta:
+        model = AssetCategory
+        exclude = ('academy', )
+
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
+class POSTCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetCategory
@@ -331,9 +344,6 @@ class CategorySerializer(serializers.ModelSerializer):
             **validated_data,
             'academy': academy,
         })
-
-    def update(self, instance, validated_data):
-        return super().update(instance, validated_data)
 
 
 class TechnologyPUTSerializer(serializers.ModelSerializer):
