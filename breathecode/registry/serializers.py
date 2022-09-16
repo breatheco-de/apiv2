@@ -241,6 +241,7 @@ class TechSerializer(serializers.ModelSerializer):
 
 
 class PostAssetSerializer(serializers.ModelSerializer):
+    technologies = serializers.ListField(required=False)
 
     class Meta:
         model = Asset
@@ -414,6 +415,7 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
 
 class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
+    technologies = serializers.ListField(required=False)
     slug = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
 
