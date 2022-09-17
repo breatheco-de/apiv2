@@ -1,4 +1,4 @@
-from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster
+from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.models import Academy
@@ -201,6 +201,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
 
 
 class AssetCategorySerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
@@ -240,11 +241,10 @@ class TechSerializer(serializers.ModelSerializer):
 
 
 class PostAssetSerializer(serializers.ModelSerializer):
-    technologies = TechSerializer(many=True, required=False)
 
     class Meta:
         model = Asset
-        exclude = ()
+        exclude = ('academy', )
 
     def validate(self, data):
 
@@ -317,6 +317,35 @@ class PUTKeywordSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class PUTCategorySerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=False)
+    title = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
+
+    class Meta:
+        model = AssetCategory
+        exclude = ('academy', )
+
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
+class POSTCategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AssetCategory
+        exclude = ('academy', )
+
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super().create({
+            **validated_data,
+            'academy': academy,
+        })
+
+
 class TechnologyPUTSerializer(serializers.ModelSerializer):
     parent = serializers.CharField(required=False, allow_null=True)
 
@@ -385,11 +414,12 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
 
 class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
+    slug = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
 
     class Meta:
         model = Asset
-        exclude = ('technologies', 'academy')
+        exclude = ('academy', )
 
     def validate(self, data):
 

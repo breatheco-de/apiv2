@@ -311,6 +311,14 @@ CAPABILITIES = [
         'slug': 'crud_cohort_log',
         'description': 'Update and delete things like the cohort attendance, teacher comments, etc'
     },
+    {
+        'slug': 'read_category',
+        'description': 'Read categories from the content registry'
+    },
+    {
+        'slug': 'crud_category',
+        'description': 'Update and delete categories from the content registry'
+    },
 ]
 
 ROLES = [
@@ -383,7 +391,7 @@ ROLES = [
         'Content Writer (Base)',
         'caps': [
             'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
-            'read_asset', 'crud_asset'
+            'read_asset', 'crud_asset', 'read_category', 'crud_category'
         ],
     },
     {
