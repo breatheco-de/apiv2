@@ -294,9 +294,13 @@ def generate_mentor_bills(mentor, reset=False):
     if not unpaid_sessions:
         return []
 
-    MentorshipBill.objects.filter(Q(status='DUE') | Q(status='RECALCULATE'),
-                                  mentor__id=mentor.id,
-                                  academy__id=mentor.academy.id).delete()
+    # MentorshipBill.objects.filter(Q(status='DUE') | Q(status='RECALCULATE'),
+    #                               mentor__id=mentor.id,
+    #                               academy__id=mentor.academy.id).delete()
+
+    recalculate_bills = MentorshipBill.objects.filter(Q(status='DUE') | Q(status='RECALCULATE'),
+                                                      mentor__id=mentor.id,
+                                                      academy__id=mentor.academy.id)
 
     pending_months = sorted({(x.year, x.month) for x in unpaid_sessions.values_list('started_at', flat=True)})
     for year, month in pending_months:
@@ -306,11 +310,18 @@ def generate_mentor_bills(mentor, reset=False):
         end_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC) + relativedelta(
             months=1) - datetime.timedelta(microseconds=1)
 
-        open_bill = MentorshipBill(mentor=mentor,
-                                   academy=mentor.academy,
-                                   started_at=start_at,
-                                   ended_at=end_at)
-        open_bill.save()
+        open_bill = None
+        if recalculate_bills:
+            open_bill = recalculate_bills.filter(started_at__month=month, started_at__year=year).first()
+
+        if open_bill is None:
+            open_bill = MentorshipBill(mentor=mentor,
+                                       academy=mentor.academy,
+                                       started_at=start_at,
+                                       ended_at=end_at)
+            open_bill.save()
+        else:
+            open_bill.status = 'DUE'
 
         open_bill = generate_mentor_bill(mentor, open_bill, sessions_of_month, reset)
 
