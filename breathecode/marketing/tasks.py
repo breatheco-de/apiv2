@@ -8,6 +8,7 @@ from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.monitoring.actions import test_link
 from breathecode.utils import getLogger
 from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
+from breathecode.monitoring.models import CSVUpload
 from .actions import register_new_lead, save_get_geolocal, acp_ids
 
 logger = getLogger(__name__)
@@ -343,7 +344,7 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def create_form_entry(self, item, csv_upload_id):
     form_entry = FormEntry()
-    csv_upload.log = ''
+
     if 'first_name' in item:
         form_entry.first_name = item['first_name']
     if 'last_name' in item:
@@ -357,10 +358,8 @@ def create_form_entry(self, item, csv_upload_id):
 
     form_entry.save()
 
-    # if not form_entry.first_name or not form_entry.last_name or not form_entry.email or not form_entry.location or not form_entry.academy:
-
     csv_upload = CSVUpload()
-
+    csv_upload.log = ''
     if not form_entry.first_name:
         csv_upload.log += 'No first name in form entry, '
 

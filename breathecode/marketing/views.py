@@ -721,8 +721,6 @@ class UploadView(APIView):
 
         df = pd.read_csv(file.name)
         os.remove(file.name)
-        print('csv_reader', len(df))
-        print(df.iloc[0])
         required_fields = ['first_name', 'last_name', 'email', 'location', 'phone', 'language']
 
         # Think about uploading correct files and leaving out incorrect ones
