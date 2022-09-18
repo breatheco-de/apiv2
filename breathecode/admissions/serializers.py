@@ -7,7 +7,7 @@ from breathecode.utils import ValidationException, localize_query, SerpyExtensio
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from .actions import test_syllabus
+from .actions import test_syllabus, haversine
 from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
                      Syllabus, SyllabusVersion, COHORT_STAGE)
 
@@ -334,8 +334,6 @@ class PublicCohortSerializer(serpy.Serializer):
     distance = serpy.MethodField()
 
     def get_distance(self, obj):
-        from .actions import haversine
-
         if not obj.latitude or not obj.longitude or not obj.academy.latitude or not obj.academy.longitude:
             return None
 

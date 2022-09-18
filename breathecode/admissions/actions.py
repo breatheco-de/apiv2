@@ -15,6 +15,7 @@ def haversine(lon1, lat1, lon2, lat2):
     Calculate the great circle distance in kilometers between two points
     on the earth (specified in decimal degrees)
     """
+
     # convert decimal degrees to radians
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
 

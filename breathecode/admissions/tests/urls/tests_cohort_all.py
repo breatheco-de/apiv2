@@ -733,7 +733,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 **self.model_to_dict(model, 'cohort')
             }])
 
-    def test_with_data__good_coordinates__generating_correct_distance______(self):
+    def test_with_data__good_coordinates__sorting_the_distances(self):
         """Test /cohort/all without auth"""
         distance1 = 5081.175052677738
         distance2 = 11318.400937786448
