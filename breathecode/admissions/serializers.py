@@ -331,6 +331,15 @@ class PublicCohortSerializer(serpy.Serializer):
     schedule = GetSmallSyllabusScheduleSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
+    distance = serpy.MethodField()
+
+    def get_distance(self, obj):
+        from .actions import haversine
+
+        if not obj.latitude or not obj.longitude or not obj.academy.latitude or not obj.academy.longitude:
+            return None
+
+        return haversine(obj.longitude, obj.latitude, obj.academy.longitude, obj.academy.latitude)
 
 
 class GetSmallCohortSerializer(serpy.Serializer):

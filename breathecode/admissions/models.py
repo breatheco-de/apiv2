@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from .signals import student_edu_status_updated
+# from .actions import haversine
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
 logger = logging.getLogger(__name__)
@@ -282,6 +283,9 @@ class Cohort(models.Model):
 
     def __str__(self):
         return self.name + '(' + self.slug + ')'
+
+    # def calculate_distance(self, longitude: float, latitude: float) -> float:
+    #     return haversine(self.academy.longitude, self.academy.latitude, longitude, latitude)
 
     def save(self, *args, **kwargs):
         from .signals import cohort_saved
