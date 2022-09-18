@@ -3,11 +3,10 @@ from django.db.models.query_utils import Q
 from .models import Cohort, SyllabusScheduleTimeSlot, SyllabusVersion
 from breathecode.services.google_cloud import Storage
 from .signals import syllabus_asset_slug_updated
+from math import radians, cos, sin, asin, sqrt
 
 BUCKET_NAME = 'admissions-breathecode'
 logger = logging.getLogger(__name__)
-
-from math import radians, cos, sin, asin, sqrt
 
 
 def haversine(lon1, lat1, lon2, lat2):
