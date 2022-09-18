@@ -86,6 +86,8 @@ def get_cohorts(request, id=None):
 
     items = Cohort.objects.filter(private=False)
 
+    items = items.annotate(longitude=Value(None, FloatField()), latitude=Value(None, FloatField()))
+
     if isinstance(request.user, AnonymousUser) == False:
         # filter only to the local academy
         items = localize_query(items, request)
@@ -121,12 +123,15 @@ def get_cohorts(request, id=None):
         if longitude > 180 or longitude < -180:
             raise ValidationException('Bad longitude', slug='bad-longitude')
 
-        items = items.annotate(longitude=Value(longitude, FloatField()))
-        items = items.annotate(latitude=Value(latitude, FloatField()))
+        items = items.annotate(longitude=Value(longitude, FloatField()),
+                               latitude=Value(latitude, FloatField()))
 
-    else:
-        items = items.annotate(longitude=Value(None, FloatField()))
-        items = items.annotate(latitude=Value(None, FloatField()))
+    sass = request.GET.get('sass', '')
+    if sass == 'true':
+        items = items.filter(academy__available_as_sass=True)
+
+    elif sass == 'false':
+        items = items.filter(academy__available_as_sass=False)
 
     sort = request.GET.get('sort', None)
     if sort is None or sort == '':
