@@ -294,10 +294,6 @@ def generate_mentor_bills(mentor, reset=False):
     if not unpaid_sessions:
         return []
 
-    # MentorshipBill.objects.filter(Q(status='DUE') | Q(status='RECALCULATE'),
-    #                               mentor__id=mentor.id,
-    #                               academy__id=mentor.academy.id).delete()
-
     recalculate_bills = MentorshipBill.objects.filter(Q(status='DUE') | Q(status='RECALCULATE'),
                                                       mentor__id=mentor.id,
                                                       academy__id=mentor.academy.id)
