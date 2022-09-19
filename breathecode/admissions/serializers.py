@@ -783,9 +783,12 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 class CohortUserListSerializer(serializers.ListSerializer):
 
     def create(self, validated_data):
-        books = [CohortUser(**item) for item in validated_data]
-        items = CohortUser.objects.bulk_create(books)
 
+        
+        books = [CohortUser(**item) for item in validated_data]
+    
+        items = CohortUser.objects.bulk_create(books)
+    
         for key in range(0, len(items)):
             item = items[key]
             items[key].id = CohortUser.objects.filter(cohort__id=item.cohort_id,
@@ -821,9 +824,13 @@ class CohortUserSerializer(CohortUserSerializerMixin):
     user = UserDJangoRestSerializer(many=False, read_only=True)
 
     def validate(self, data):
+      
         prohibited_stages = ['INNACTIVE', 'DELETED', 'ENDED']
-        if data['cohort'].stage not in prohibited_stages:
+        
+        if 'cohort' in data and data['cohort'].stage not in prohibited_stages:
+
             stage = data['cohort'].stage
+
             raise ValidationException(f'You cannot add a student to a cohort that is {stage}.',
                                       slug='adding-student-to-a-closed-cohort')
 

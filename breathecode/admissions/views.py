@@ -396,8 +396,9 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             'user_id': user_id,
             'many': many,
         }
-
+      
         serializer = CohortUserSerializer(data=request.data, context=context, many=many)
+   
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -187,7 +187,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_bad_finantial_status(self):
+    def test_cohort_user_with_data_with_bad_financial_status(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True, cohort_user=True)
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
