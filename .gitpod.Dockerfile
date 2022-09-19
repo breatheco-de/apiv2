@@ -1,4 +1,4 @@
-FROM gitpod/workspace-postgres:latest 
+FROM gitpod/workspace-postgres:2022-09-11-15-11-40
 
 RUN sudo apt-get update \
     && sudo apt-get update \
