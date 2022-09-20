@@ -42,6 +42,11 @@ RUN echo "print('done!')" >> ./fix_pyenv.py
 
 RUN cat ./fix_pyenv.py
 RUN python ./fix_pyenv.py
+
+WORKDIR /home/gitpod/.pyenv
+RUN git status --porcelain
+WORKDIR /home/gitpod/
+
 RUN pyenv update && pyenv install 3.10.7 && pyenv global 3.10.7
 RUN pip install pipenv yapf
 
