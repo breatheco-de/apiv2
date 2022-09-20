@@ -49,6 +49,11 @@ def get_timezones(request, id=None):
 @permission_classes([AllowAny])
 def get_all_academies(request, id=None):
     items = Academy.objects.all()
+
+    status = request.GET.get('status')
+    if status:
+        items = items.filter(status__in=status.upper().split(','))
+
     serializer = AcademySerializer(items, many=True)
     return Response(serializer.data)
 
@@ -102,6 +107,12 @@ def get_cohorts(request, id=None):
     location = request.GET.get('location', None)
     if location is not None:
         items = items.filter(academy__slug__in=location.split(','))
+
+    stage = request.GET.get('stage')
+    if stage:
+        items = items.filter(stage__in=stage.upper().split(','))
+    else:
+        items = items.exclude(stage='DELETED')
 
     sort = request.GET.get('sort', None)
     if sort is None or sort == '':
@@ -166,6 +177,7 @@ class AcademyView(APIView):
 
     @capable_of('read_my_academy')
     def get(self, request, format=None, academy_id=None):
+        #FIXME: this endpoint can't work
         item = Academy.objects.get(id=academy_id)
         serializer = GetBigAcademySerializer(item)
         return Response(serializer.data)
@@ -345,15 +357,15 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
         try:
             roles = request.GET.get('roles', None)
             if roles is not None:
-                items = items.filter(role__in=roles.split(','))
+                items = items.filter(role__in=roles.upper().split(','))
 
             finantial_status = request.GET.get('finantial_status', None)
             if finantial_status is not None:
-                items = items.filter(finantial_status__in=finantial_status.split(','))
+                items = items.filter(finantial_status__in=finantial_status.upper().split(','))
 
             educational_status = request.GET.get('educational_status', None)
             if educational_status is not None:
-                items = items.filter(educational_status__in=educational_status.split(','))
+                items = items.filter(educational_status__in=educational_status.upper().split(','))
 
             cohorts = request.GET.get('cohorts', None)
             if cohorts is not None:
@@ -496,6 +508,10 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
             return Response(serializer.data)
 
         items = CohortTimeSlot.objects.filter(cohort__academy__id=academy_id, cohort__id=cohort_id)
+
+        recurrency_type = request.GET.get('recurrency_type')
+        if recurrency_type:
+            items = items.filter(recurrency_type__in=recurrency_type.upper().split(','))
 
         serializer = GETCohortTimeSlotSerializer(items, many=True)
         return Response(serializer.data)
@@ -657,6 +673,10 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
 
         items = SyllabusScheduleTimeSlot.objects.filter(schedule__academy__id=academy_id,
                                                         schedule__id=certificate_id)
+
+        recurrency_type = request.GET.get('recurrency_type')
+        if recurrency_type:
+            items = items.filter(recurrency_type__in=recurrency_type.upper().split(','))
 
         serializer = GETSyllabusScheduleTimeSlotSerializer(items, many=True)
         return Response(serializer.data)
@@ -1041,6 +1061,10 @@ class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, Generate
         if syllabus_slug:
             items = items.filter(syllabus__slug__in=syllabus_slug.split(','))
 
+        schedule_type = request.GET.get('schedule_type')
+        if schedule_type:
+            items = items.filter(schedule_type__in=schedule_type.upper().split(','))
+
         page = self.paginate_queryset(items, request)
         serializer = GetSyllabusScheduleSerializer(page, many=True)
 
@@ -1383,7 +1407,15 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
         roles = request.GET.get('roles', None)
         if roles is not None:
-            items = items.filter(role__in=roles.split(','))
+            items = items.filter(role__in=roles.upper().split(','))
+
+        finantial_status = request.GET.get('finantial_status', None)
+        if finantial_status is not None:
+            items = items.filter(finantial_status__in=finantial_status.upper().split(','))
+
+        educational_status = request.GET.get('educational_status', None)
+        if educational_status is not None:
+            items = items.filter(educational_status__in=educational_status.upper().split(','))
 
         syllabus = request.GET.get('syllabus', None)
         if syllabus is not None:

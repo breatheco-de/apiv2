@@ -1,6 +1,7 @@
 """
 Test /cohort/user
 """
+import random
 import re
 from random import choice
 from django.urls.base import reverse_lazy
@@ -14,7 +15,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Auth
     """
 
-    def test_academy_cohort_user__without_auth(self):
+    def test__without_auth(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -32,7 +33,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Without data
     """
 
-    def test_academy_cohort_user__without_data(self):
+    def test__without_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -51,7 +52,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With data
     """
 
-    def test_academy_cohort_user__with_data(self):
+    def test__with_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -103,7 +104,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Roles in querystring
     """
 
-    def test_academy_cohort_user__with_data__with_bad_roles(self):
+    def test__with_data__with_bad_roles(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -122,7 +123,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
-    def test_academy_cohort_user__with_data__with_roles(self):
+    def test__with_data__with_roles(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -131,8 +132,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
-        base_url = reverse_lazy('admissions:academy_cohort_user')
-        url = f'{base_url}?roles=' + model['cohort_user'].role
+        role = model['cohort_user'].role
+
+        if random.randint(0, 1):
+            role = role.lower()
+
+        url = reverse_lazy('admissions:academy_cohort_user') + f'?roles={role}'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -171,7 +176,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
-    def test_academy_cohort_user__with_data__with_roles__with_comma(self):
+    def test__with_data__with_roles__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -225,7 +230,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Finantial status in querystring
     """
 
-    def test_academy_cohort_user__with_data__with_bad_finantial_status(self):
+    def test__with_data__with_bad_finantial_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -244,7 +249,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
-    def test_academy_cohort_user__with_data__with_finantial_status(self):
+    def test__with_data__with_finantial_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -254,8 +259,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
-        base_url = reverse_lazy('admissions:academy_cohort_user')
-        url = f'{base_url}?finantial_status=' + model['cohort_user'].finantial_status
+        role = model['cohort_user'].finantial_status
+
+        if random.randint(0, 1):
+            role = role.lower()
+
+        url = reverse_lazy('admissions:academy_cohort_user') + f'?finantial_status={role}'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -294,7 +303,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
-    def test_academy_cohort_user__with_data__with_finantial_status__with_comma(self):
+    def test__with_data__with_finantial_status__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -348,7 +357,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Educational status in querystring
     """
 
-    def test_academy_cohort_user__with_data__with_bad_educational_status(self):
+    def test__with_data__with_bad_educational_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -367,7 +376,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
-    def test_academy_cohort_user__with_data__with_educational_status(self):
+    def test__with_data__with_educational_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -377,8 +386,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
-        base_url = reverse_lazy('admissions:academy_cohort_user')
-        url = f'{base_url}?educational_status=' + model['cohort_user'].educational_status
+        role = model['cohort_user'].educational_status
+
+        if random.randint(0, 1):
+            role = role.lower()
+
+        url = reverse_lazy('admissions:academy_cohort_user') + f'?educational_status={role}'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -417,7 +430,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
-    def test_academy_cohort_user__with_data__with_educational_status__with_comma(self):
+    def test__with_data__with_educational_status__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -472,7 +485,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Academy in querystring
     """
 
-    def test_academy_cohort_user__with_data__with_academy(self):
+    def test__with_data__with_academy(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -522,7 +535,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
-    def test_academy_cohort_user__with_data__with_academy__with_comma(self):
+    def test__with_data__with_academy__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -576,7 +589,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Cohorts in querystring
     """
 
-    def test_academy_cohort_user__with_data__with_bad_cohorts(self):
+    def test__with_data__with_bad_cohorts(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -595,7 +608,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
-    def test_academy_cohort_user__with_data__with_cohorts(self):
+    def test__with_data__with_cohorts(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -649,7 +662,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put without id
     """
 
-    def test_academy_cohort_user__put__without_id(self):
+    def test__put__without_id(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -669,7 +682,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put bulk mode
     """
 
-    def test_academy_cohort_user__put__in_bulk__without_data(self):
+    def test__put__in_bulk__without_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -686,7 +699,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_cohort_user_dict(), [])
 
-    def test_academy_cohort_user__put__in_bulk__without_data(self):
+    def test__put__in_bulk__without_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -703,7 +716,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_user_dict(), [])
 
-    def test_academy_cohort_user__put__in_bulk__with_one_item(self):
+    def test__put__in_bulk__with_one_item(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -735,7 +748,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'watching': False,
         }])
 
-    def test_academy_cohort_user__put__in_bulk__with_two_items(self):
+    def test__put__in_bulk__with_two_items(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -803,7 +816,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Post bulk mode
     """
 
-    def test_academy_cohort_user__post__in_bulk__0_items(self):
+    def test__post__in_bulk__0_items(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -821,7 +834,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_cohort_user_dict(), [])
 
-    def test_academy_cohort_user__post__in_bulk__1_item(self):
+    def test__post__in_bulk__1_item(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -886,7 +899,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'watching': False,
         }])
 
-    def test_academy_cohort_user__post_in_bulk__2_items(self):
+    def test__post_in_bulk__2_items(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         base = self.generate_models(authenticate=True,
@@ -962,10 +975,87 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }])
 
     """
+    🔽🔽🔽 Post in bulk, statuses in lowercase
+    """
+
+    def test__post__in_bulk__1_item__statuses_in_lowercase(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_cohort_user')
+        role = random.choice(['TEACHER', 'ASSISTANT', 'REVIEWER', 'STUDENT']).lower()
+        finantial_status = random.choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']).lower()
+        educational_status = random.choice(['ACTIVE', 'POSTPONED', 'GRADUATED', 'SUSPENDED',
+                                            'DROPPED']).lower()
+        data = [{
+            'role': role,
+            'finantial_status': finantial_status,
+            'educational_status': educational_status,
+            'user': model['user'].id,
+            'cohort': model['cohort'].id,
+        }]
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = [{
+            'id': 1,
+            'role': role.upper(),
+            'user': {
+                'id': model['user'].id,
+                'first_name': model['user'].first_name,
+                'last_name': model['user'].last_name,
+                'email': model['user'].email,
+            },
+            'cohort': {
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
+                'never_ends': False,
+                'remote_available': True,
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
+                'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
+                'academy': {
+                    'id': model['cohort'].academy.id,
+                    'name': model['cohort'].academy.name,
+                    'slug': model['cohort'].academy.slug,
+                    'country': model['cohort'].academy.country.code,
+                    'city': model['cohort'].academy.city.id,
+                    'street_address': model['cohort'].academy.street_address,
+                },
+                'schedule': None,
+                'syllabus_version': None,
+                'ending_date': model['cohort'].ending_date,
+                'stage': model['cohort'].stage,
+                'language': model['cohort'].language,
+                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
+            },
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            'cohort_id': 1,
+            'role': role.upper(),
+            'finantial_status': finantial_status.upper(),
+            'educational_status': educational_status.upper(),
+            'id': 1,
+            'user_id': 1,
+            'watching': False,
+        }])
+
+    """
     🔽🔽🔽 Delete in bulk
     """
 
-    def test_academy_cohort_user__delete__without_args_in_url_or_bulk(self):
+    def test__delete__without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -981,7 +1071,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_user_dict(), [])
 
-    def test_academy_cohort_user__delete__in_bulk__with_one(self):
+    def test__delete__in_bulk__with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         many_fields = ['id']
@@ -1008,7 +1098,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_cohort_user_dict(), [])
 
-    def test_academy_cohort_user__delete__in_bulk__with_two(self):
+    def test__delete__in_bulk__with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         many_fields = ['id']

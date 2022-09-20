@@ -494,6 +494,29 @@ class AcademySerializer(serializers.ModelSerializer):
         del validated_data['slug']
         return super().update(instance, validated_data)
 
+    def __init__(self, *args, **kwargs):
+        has_data = 'data' in kwargs
+
+        if has_data and isinstance(kwargs['data'], list):
+            kwargs['data'] = [self._format_values(x) for x in kwargs['data']]
+
+        elif has_data and isinstance(kwargs['data'], dict):
+            kwargs['data'] = self._format_values(kwargs['data'])
+
+        super().__init__(*args, **kwargs)
+
+    def _format_values(self, data):
+        attrs = ['status']
+
+        for attr in attrs:
+            try:
+                if data[attr] and isinstance(data[attr], str):
+                    data[attr] = data[attr].upper()
+            except:
+                ...
+
+        return data
+
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
 
@@ -668,14 +691,34 @@ class UserDJangoRestSerializer(serializers.ModelSerializer):
 class CohortUserSerializerMixin(serializers.ModelSerializer):
     index = -1
 
+    def __init__(self, *args, **kwargs):
+        has_data = 'data' in kwargs
+
+        if has_data and isinstance(kwargs['data'], list):
+            kwargs['data'] = [self._format_values(x) for x in kwargs['data']]
+
+        elif has_data and isinstance(kwargs['data'], dict):
+            kwargs['data'] = self._format_values(kwargs['data'])
+
+        super().__init__(*args, **kwargs)
+
+    def _format_values(self, data):
+        attrs = ['role', 'finantial_status', 'educational_status']
+
+        for attr in attrs:
+            try:
+                if data[attr] and isinstance(data[attr], str):
+                    data[attr] = data[attr].upper()
+            except:
+                ...
+
+        return data
+
     def count_certificates_by_cohort(self, cohort, user_id):
         return CohortUser.objects.filter(Q(educational_status='ACTIVE') | Q(educational_status__isnull=True),
                                          user_id=user_id,
                                          role='STUDENT',
                                          cohort__schedule=cohort.schedule).count()
-
-    def validate_just_one(self):
-        pass
 
     def validate(self, data):
         self.index = self.index + 1
@@ -828,6 +871,8 @@ class CohortUserSerializer(CohortUserSerializerMixin):
     cohort = CohortSerializer(many=False, read_only=True)
     user = UserDJangoRestSerializer(many=False, read_only=True)
 
+    role = serializers.CharField(required=False)
+
     class Meta:
         model = CohortUser
         fields = ['id', 'user', 'cohort', 'role']
@@ -842,12 +887,58 @@ class CohortTimeSlotSerializer(serializers.ModelSerializer):
         model = CohortTimeSlot
         fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type', 'timezone']
 
+    def __init__(self, *args, **kwargs):
+        has_data = 'data' in kwargs
+
+        if has_data and isinstance(kwargs['data'], list):
+            kwargs['data'] = [self._format_values(x) for x in kwargs['data']]
+
+        elif has_data and isinstance(kwargs['data'], dict):
+            kwargs['data'] = self._format_values(kwargs['data'])
+
+        super().__init__(*args, **kwargs)
+
+    def _format_values(self, data):
+        attrs = ['recurrency_type']
+
+        for attr in attrs:
+            try:
+                if data[attr] and isinstance(data[attr], str):
+                    data[attr] = data[attr].upper()
+            except:
+                ...
+
+        return data
+
 
 class SyllabusScheduleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusSchedule
         exclude = ()
+
+    def __init__(self, *args, **kwargs):
+        has_data = 'data' in kwargs
+
+        if has_data and isinstance(kwargs['data'], list):
+            kwargs['data'] = [self._format_values(x) for x in kwargs['data']]
+
+        elif has_data and isinstance(kwargs['data'], dict):
+            kwargs['data'] = self._format_values(kwargs['data'])
+
+        super().__init__(*args, **kwargs)
+
+    def _format_values(self, data):
+        attrs = ['schedule_type']
+
+        for attr in attrs:
+            try:
+                if data[attr] and isinstance(data[attr], str):
+                    data[attr] = data[attr].upper()
+            except:
+                ...
+
+        return data
 
 
 class SyllabusSchedulePUTSerializer(serializers.ModelSerializer):
@@ -877,6 +968,29 @@ class SyllabusScheduleTimeSlotSerializer(serializers.ModelSerializer):
             'recurrency_type',
             'timezone',
         ]
+
+    def __init__(self, *args, **kwargs):
+        has_data = 'data' in kwargs
+
+        if has_data and isinstance(kwargs['data'], list):
+            kwargs['data'] = [self._format_values(x) for x in kwargs['data']]
+
+        elif has_data and isinstance(kwargs['data'], dict):
+            kwargs['data'] = self._format_values(kwargs['data'])
+
+        super().__init__(*args, **kwargs)
+
+    def _format_values(self, data):
+        attrs = ['recurrency_type']
+
+        for attr in attrs:
+            try:
+                if data[attr] and isinstance(data[attr], str):
+                    data[attr] = data[attr].upper()
+            except:
+                ...
+
+        return data
 
 
 class CohortUserPOSTSerializer(serpy.Serializer):

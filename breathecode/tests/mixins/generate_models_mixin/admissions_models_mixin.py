@@ -64,12 +64,12 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    **kwargs):
         models = models.copy()
 
-        if not 'country' in models and is_valid(country):
+        if not 'country' in models and (is_valid(country) or is_valid(city) or is_valid(academy)):
             kargs = {}
 
             models['country'] = create_models(country, 'admissions.Country', **{**kargs, **country_kwargs})
 
-        if not 'city' in models and (is_valid(city) or is_valid(country)):
+        if not 'city' in models and (is_valid(city) or is_valid(country) or is_valid(academy)):
             kargs = {}
 
             if 'country' in models:

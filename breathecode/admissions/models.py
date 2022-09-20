@@ -89,11 +89,11 @@ class Academy(models.Model):
     zip_code = models.IntegerField(blank=True, null=True)
     white_labeled = models.BooleanField(default=False)
 
-    active_campaign_slug = models.SlugField(max_length=100, unique=False, null=True, default=None)
+    active_campaign_slug = models.SlugField(max_length=100, unique=False, null=True, default=None, blank=True)
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
 
-    timezone = models.CharField(max_length=50, null=True, default=None)
+    timezone = models.CharField(max_length=50, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -110,8 +110,15 @@ class Academy(models.Model):
     #     remove_bucket_object("location-"+self.slug)
     #     super(Image, self).delete(*args, **kwargs)
 
+    def clean(self):
+        if self.status:
+            self.status = self.status.upper()
+
     def save(self, *args, **kwargs):
         from .actions import get_bucket_object
+
+        self.full_clean()
+
         if os.getenv('ENV', '') == 'production':
             obj = get_bucket_object(f'location-{self.slug}')
             if obj is not None:
@@ -262,7 +269,7 @@ class Cohort(models.Model):
         default=True, help_text='True (default) if the students from other cities can take it from home')
     online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
-    timezone = models.CharField(max_length=50, null=True, default=None)
+    timezone = models.CharField(max_length=50, null=True, default=None, blank=True)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
@@ -272,8 +279,17 @@ class Cohort(models.Model):
         null=True,
         help_text='The cohort history will save attendancy and information about progress on each class')
 
-    syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.SET_NULL, default=None, null=True)
-    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.SET_NULL, default=None, null=True)
+    syllabus_version = models.ForeignKey(SyllabusVersion,
+                                         on_delete=models.SET_NULL,
+                                         default=None,
+                                         null=True,
+                                         blank=True)
+
+    schedule = models.ForeignKey(SyllabusSchedule,
+                                 on_delete=models.SET_NULL,
+                                 default=None,
+                                 null=True,
+                                 blank=True)
 
     language = models.CharField(max_length=2, default='en')
 
@@ -283,10 +299,16 @@ class Cohort(models.Model):
     def __str__(self):
         return self.name + '(' + self.slug + ')'
 
+    def clean(self):
+        if self.stage:
+            self.stage = self.stage.upper()
+
     def save(self, *args, **kwargs):
         from .signals import cohort_saved
 
         created = not self.id
+
+        self.full_clean()
         super().save(*args, **kwargs)
 
         cohort_saved.send(instance=self, sender=self.__class__, created=created)
@@ -339,16 +361,39 @@ class CohortUser(models.Model):
     watching = models.BooleanField(
         default=False, help_text='You can active students to the watch list and monitor them closely')
 
-    finantial_status = models.CharField(max_length=15, choices=FINANTIAL_STATUS, default=None, null=True)
-    educational_status = models.CharField(max_length=15, choices=EDU_STATUS, default=None, null=True)
+    #FIXME: this have a typo
+    finantial_status = models.CharField(max_length=15,
+                                        choices=FINANTIAL_STATUS,
+                                        default=None,
+                                        null=True,
+                                        blank=True)
+
+    educational_status = models.CharField(max_length=15,
+                                          choices=EDU_STATUS,
+                                          default=None,
+                                          null=True,
+                                          blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self):
+        if self.role:
+            self.role = self.role.upper()
+
+        if self.finantial_status:
+            self.finantial_status = self.finantial_status.upper()
+
+        if self.educational_status:
+            self.educational_status = self.educational_status.upper()
 
     def save(self, *args, **kwargs):
 
         if self.__old_edu_status != self.educational_status:
             student_edu_status_updated.send(instance=self, sender=CohortUser)
+
+        # check the fields before saving
+        self.full_clean()
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -400,6 +445,22 @@ class TimeSlot(models.Model):
 class SyllabusScheduleTimeSlot(TimeSlot):
     schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.CASCADE)
 
+    def clean(self):
+        if self.recurrency_type:
+            self.recurrency_type = self.recurrency_type.upper()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
 class CohortTimeSlot(TimeSlot):
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
+
+    def clean(self):
+        if self.recurrency_type:
+            self.recurrency_type = self.recurrency_type.upper()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
