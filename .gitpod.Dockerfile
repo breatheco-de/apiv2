@@ -13,15 +13,15 @@ RUN echo "import os" >> ./fix_pyenv.py
 RUN echo "import re" >> ./fix_pyenv.py
 RUN echo "import subprocess" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
-RUN echo $"command = 'git status --porcelain'" >> ./fix_pyenv.py
-RUN echo $"path = '/home/gitpod/.pyenv'" >> ./fix_pyenv.py
+RUN echo "command = 'git status --porcelain'" >> ./fix_pyenv.py
+RUN echo "path = '/home/gitpod/.pyenv'" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
 RUN echo "os.chdir(path)" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
 RUN echo "def get_path(s):" >> ./fix_pyenv.py
-RUN echo $"    result = s.split(' ')" >> ./fix_pyenv.py
-RUN echo $"    print('line')" >> ./fix_pyenv.py
+RUN echo "    result = s.split(' ')" >> ./fix_pyenv.py
+RUN echo "    print('line')" >> ./fix_pyenv.py
 RUN echo "    if result:" >> ./fix_pyenv.py
 RUN echo "        return result[-1]" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
