@@ -126,7 +126,7 @@ def get_cohorts(request, id=None):
         items = items.annotate(longitude=Value(longitude, FloatField()),
                                latitude=Value(latitude, FloatField()))
 
-    saas = request.GET.get('saas', '')
+    saas = request.GET.get('saas', '').lower()
     if saas == 'true':
         items = items.filter(academy__available_as_saas=True)
 
