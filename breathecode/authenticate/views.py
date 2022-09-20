@@ -520,6 +520,11 @@ class StudentView(APIView, GenerateLookupsMixin):
         if status is not None:
             items = items.filter(status__iexact=status)
 
+        cohort = request.GET.get('cohort', None)
+        if cohort is not None:
+            lookups = self.generate_lookups(request, many_fields=['cohort'])
+            items = items.filter(user__cohortuser__cohort__slug__in=lookups['cohort__in'])
+
         items = handler.queryset(items)
         serializer = GetProfileAcademySmallSerializer(items, many=True)
 
@@ -1492,6 +1497,7 @@ def render_user_invite(request, token):
         })
 
 
+@api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
@@ -1526,8 +1532,8 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'POST':
         form = InviteForm(_dict)
-        password1 = request.POST.get('password1', None)
-        password2 = request.POST.get('password2', None)
+        password1 = request.POST.get('password', None)
+        password2 = request.POST.get('repeat_password', None)
 
         invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
         if invite is None:
@@ -1616,7 +1622,7 @@ def render_invite(request, token, member_id=None):
                 return HttpResponseRedirect(redirect_to=uri)
         else:
             return render(request, 'message.html',
-                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
+                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in'})
 
 
 @private_view()
