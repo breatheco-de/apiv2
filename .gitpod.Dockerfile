@@ -8,6 +8,9 @@ RUN sudo apt-get update \
 
 RUN echo $PWD
 RUN ls
+
+COPY ./scripts/fix_pyenv.py ./scripts/fix_pyenv.py
+
 RUN python ./scripts/fix_pyenv.py
 RUN pyenv update && pyenv install 3.10.7 && pyenv global 3.10.7
 RUN pip install pipenv yapf
