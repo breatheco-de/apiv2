@@ -142,10 +142,10 @@ def add_to_active_campaign(contact, academy_id: int, automation_id: int):
 
 def register_new_lead(form_entry=None):
     if form_entry is None:
-        raise Exception('You need to specify the form entry data')
+        raise ValidationException('You need to specify the form entry data')
 
     if 'location' not in form_entry or form_entry['location'] is None:
-        raise Exception('Missing location information')
+        raise ValidationException('Missing location information')
 
     ac_academy = None
     alias = AcademyAlias.objects.filter(active_campaign_slug=form_entry['location']).first()
@@ -160,7 +160,7 @@ def register_new_lead(form_entry=None):
         ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry['location']).first()
 
     if ac_academy is None:
-        raise Exception(f"No academy found with slug {form_entry['location']}")
+        raise ValidationException(f"No academy found with slug {form_entry['location']}")
 
     automations = get_lead_automations(ac_academy, form_entry)
 
@@ -176,24 +176,25 @@ def register_new_lead(form_entry=None):
     LEAD_TYPE = tags[0].tag_type
     if (automations is None or len(automations) == 0) and len(tags) > 0:
         if tags[0].automation is None:
-            raise Exception('No automation was specified and the the specified tag has no automation either')
+            raise ValidationException(
+                'No automation was specified and the the specified tag has no automation either')
 
         automations = [tags[0].automation.acp_id]
 
     if not 'email' in form_entry:
-        raise Exception('The email doesn\'t exist')
+        raise ValidationException('The email doesn\'t exist')
 
     if not 'first_name' in form_entry:
-        raise Exception('The first name doesn\'t exist')
+        raise ValidationException('The first name doesn\'t exist')
 
     if not 'last_name' in form_entry:
-        raise Exception('The last name doesn\'t exist')
+        raise ValidationException('The last name doesn\'t exist')
 
     if not 'phone' in form_entry:
-        raise Exception('The phone doesn\'t exist')
+        raise ValidationException('The phone doesn\'t exist')
 
     if not 'id' in form_entry:
-        raise Exception('The id doesn\'t exist')
+        raise ValidationException('The id doesn\'t exist')
 
     # apply default language and make sure english is "en" and not "us"
     if 'utm_language' in form_entry and form_entry['utm_language'] == 'us':
@@ -224,10 +225,7 @@ def register_new_lead(form_entry=None):
     entry = FormEntry.objects.filter(id=form_entry['id']).first()
 
     if not entry:
-        raise Exception('FormEntry not found (id: ' + str(form_entry['id']) + ')')
-
-    # save geolocalization info
-    # save_get_geolocal(entry, form_enty)
+        raise ValidationException('FormEntry not found (id: ' + str(form_entry['id']) + ')')
 
     if 'contact-us' == tags[0].slug:
         send_email_message(
@@ -244,10 +242,13 @@ def register_new_lead(form_entry=None):
                 # "data": { **form_entry, **address },
             })
 
+    is_duplicate = entry.is_duplicate(form_entry)
     # ENV Variable to fake lead storage
     if SAVE_LEADS == 'FALSE':
-        logger.debug('Ignoring leads because SAVE_LEADS is FALSE on the env variables')
-        return form_entry
+        entry.storage_status_text = 'Saved but not send to AC because SAVE_LEADS is FALSE'
+        entry.storage_status = 'PERSISTED' if not is_duplicate else 'DUPLICATED'
+        entry.save()
+        return entry
 
     logger.debug('ready to send contact with following details: ', contact)
     old_client = AC_Old_Client(ac_academy.ac_url, ac_academy.ac_key)
@@ -260,7 +261,15 @@ def register_new_lead(form_entry=None):
 
     if 'subscriber_id' not in response:
         logger.error('error adding contact', response)
-        raise APIException('Could not save contact in CRM')
+        entry.storage_status = 'ERROR'
+        entry.storage_status_text = 'Could not save contact in CRM: Subscriber_id not found'
+        entry.save()
+
+    if entry.is_duplicate(form_entry):
+        entry.storage_status = 'DUPLICATED'
+        entry.save()
+        logger.debug('FormEntry is considered a duplicate, no automations or tags added')
+        return entry
 
     client = Client(ac_academy.ac_url, ac_academy.ac_key)
     if automations:
@@ -332,7 +341,7 @@ def sync_automations(ac_academy):
     response = client.automations.list_all_automations(limit=100)
 
     if 'automations' not in response:
-        print('Invalid automations incoming from AC')
+        logger.error('Invalid automations incoming from AC')
         return False
 
     automations = response['automations']
@@ -362,11 +371,12 @@ def save_get_geolocal(contact, form_entry=None):
 
     if 'latitude' not in form_entry or 'longitude' not in form_entry:
         form_entry = contact.toFormData()
-        if 'latitude' not in form_entry or 'longitude' not in form_entry:
-            return False
-        if form_entry['latitude'] == '' or form_entry[
-                'longitude'] == '' or form_entry['latitude'] is None or form_entry['longitude'] is None:
-            return False
+
+    if 'latitude' not in form_entry or 'longitude' not in form_entry:
+        return False
+    if form_entry['latitude'] == '' or form_entry[
+            'longitude'] == '' or form_entry['latitude'] is None or form_entry['longitude'] is None:
+        return False
 
     result = {}
     resp = requests.get(

@@ -1,7 +1,7 @@
 import os, re, json, logging
 from itertools import chain
 from django.db.models import Q
-from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook
+from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook, ProjectInvoice
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
 from schema import Schema, And, Use, Optional, SchemaError
@@ -55,9 +55,12 @@ def update_status_based_on_github_action(github_action, issue):
 def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_action=None, academy_slug=None):
 
     if isinstance(issue, dict) == False:
+        result = re.search(r'github.com\/([\w\-_]+)\/([\w\-_]+)\/.+', issue.html_url)
         issue = {
             'id': issue.number,
             'title': issue.title,
+            'url': issue.url,
+            'repository_url': f'https://github.com/{result.group(1)}/{result.group(2)}',
             'body': issue.body,
             'html_url': issue.html_url,
             'assignees': [({
@@ -106,6 +109,10 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
         _issue.body = issue['body'][:500]
 
     _issue.url = issue['html_url']
+    _issue.repository_url = issue['repository_url']
+
+    # To include it on the next invoice
+    _issue.invoice = ProjectInvoice.get_or_create(issue['repository_url'], academy_slug)
 
     if freelancer is None:
         if 'assignees' in issue and len(issue['assignees']) > 0:
@@ -159,21 +166,78 @@ def sync_user_issues(freelancer, academy_slug=None):
 
     g = Github(credentials.token)
     user = g.get_user()
+
     open_issues = user.get_user_issues(state='open')
 
     count = 0
     for issue in open_issues:
         count += 1
-        sync_single_issue(issue, freelancer=freelancer, academy_slug=academy_slug)
-    logger.debug(f'{str(count)} issues where synched for this Github user credentials {str(credentials)}')
+        _i = sync_single_issue(issue, freelancer=freelancer, academy_slug=academy_slug)
+        if _i is not None:
+            logger.debug(f'{_i.node_id} synched')
+    logger.debug(f'{str(count)} issues found for this Github user credentials {str(credentials)}')
 
-    return None
+    return count
 
 
 def change_status(issue, status):
     issue.status = status
     issue.save()
     return None
+
+
+def generate_project_invoice(project):
+    logger.debug('Generate invoice for project %s', project.title)
+    # reset all pending issues invoices, we'll start again
+    Issue.objects.filter(invoice__project__id=project.id).exclude(status='DONE').update(invoice=None)
+
+    # get next pending invoice
+    invoice = ProjectInvoice.get_or_create(project.repository, project.academy.slug)
+
+    # fetch for issues to be invoiced
+    done_issues = Issue.objects.filter(
+        academy__slug=project.academy.slug, url__contains=project.repository,
+        status='DONE').filter(Q(invoice__isnull=True)
+                              | Q(invoice__status='DUE'))
+
+    invoices = {}
+
+    for issue in done_issues:
+
+        issue.invoice = invoice
+        issue.status_message = ''
+
+        if str(issue.invoice.id) not in invoices:
+            invoices[str(issue.invoice.id)] = {
+                'minutes': 0,
+                'hours': 0,
+                'price': 0,
+                'instance': issue.invoice
+            }
+
+        if issue.status != 'DONE':
+            issue.status_message += 'Issue is still ' + issue.status
+        if issue.node_id is None or issue.node_id == '':
+            issue.status_message += 'Github node id not found'
+
+        if issue.status_message == '':
+            _hours = invoices[str(issue.invoice.id)]['hours'] + issue.duration_in_hours
+            invoices[str(issue.invoice.id)]['hours'] = _hours
+            invoices[str(issue.invoice.id)]['minutes'] = invoices[str(
+                issue.invoice.id)]['minutes'] + issue.duration_in_minutes
+            invoices[str(issue.invoice.id)]['price'] = invoices[str(
+                issue.invoice.id)]['price'] + (_hours * issue.freelancer.get_client_hourly_rate(project))
+
+        issue.save()
+
+    for inv_id in invoices:
+        invoices[inv_id]['instance'].total_duration_in_hours = invoices[inv_id]['hours']
+        invoices[inv_id]['instance'].total_duration_in_minutes = invoices[inv_id]['minutes']
+        invoices[inv_id]['instance'].total_price = invoices[inv_id]['price']
+
+        invoices[inv_id]['instance'].save()
+
+    return [invoices[inv_id]['instance'] for inv_id in invoices]
 
 
 def generate_freelancer_bill(freelancer):
@@ -210,16 +274,21 @@ def generate_freelancer_bill(freelancer):
             issue.status_message += 'Github node id not found'
 
         if issue.status_message == '':
-            bills[str(issue.bill.id)]['hours'] = bills[str(issue.bill.id)]['hours'] + issue.duration_in_hours
+            _hours = bills[str(issue.bill.id)]['hours'] + issue.duration_in_hours
+            bills[str(issue.bill.id)]['hours'] = _hours
             bills[str(
                 issue.bill.id)]['minutes'] = bills[str(issue.bill.id)]['minutes'] + issue.duration_in_minutes
+
+            project = issue.invoice.project if issue.invoice is not None else None
+            bills[str(issue.bill.id)]['price'] = bills[str(
+                issue.bill.id)]['price'] + (_hours * freelancer.get_hourly_rate(project))
 
         issue.save()
 
     for bill_id in bills:
         bills[bill_id]['instance'].total_duration_in_hours = bills[bill_id]['hours']
         bills[bill_id]['instance'].total_duration_in_minutes = bills[bill_id]['minutes']
-        bills[bill_id]['instance'].total_price = bills[bill_id]['hours'] * freelancer.price_per_hour
+        bills[bill_id]['instance'].total_price = bills[bill_id]['price']
         bills[bill_id]['instance'].save()
 
     return [bills[bill_id]['instance'] for bill_id in bills]
