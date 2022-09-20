@@ -126,12 +126,12 @@ def get_cohorts(request, id=None):
         items = items.annotate(longitude=Value(longitude, FloatField()),
                                latitude=Value(latitude, FloatField()))
 
-    sass = request.GET.get('sass', '')
-    if sass == 'true':
-        items = items.filter(academy__available_as_sass=True)
+    saas = request.GET.get('saas', '')
+    if saas == 'true':
+        items = items.filter(academy__available_as_saas=True)
 
-    elif sass == 'false':
-        items = items.filter(academy__available_as_sass=False)
+    elif saas == 'false':
+        items = items.filter(academy__available_as_saas=False)
 
     sort = request.GET.get('sort', None)
     if sort is None or sort == '':

@@ -791,30 +791,30 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.format.to_dict(model.cohort))
 
     """
-    🔽🔽🔽 sass in querystring
+    🔽🔽🔽 saas in querystring
     """
 
-    def test_with_data__empty_and_random_sass_in_querystring(self):
+    def test_with_data__empty_and_random_saas_in_querystring(self):
         cases = ['', self.bc.fake.slug()]
         academies = [
             {
-                'available_as_sass': True,
+                'available_as_saas': True,
             },
             {
-                'available_as_sass': False,
+                'available_as_saas': False,
             },
             {
-                'available_as_sass': True,
+                'available_as_saas': True,
             },
             {
-                'available_as_sass': False,
+                'available_as_saas': False,
             },
         ]
         cohorts = [{'academy_id': n} for n in range(1, 5)]
         model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
 
         for query in cases:
-            url = reverse_lazy('admissions:cohort_all') + f'?sass={query}'
+            url = reverse_lazy('admissions:cohort_all') + f'?saas={query}'
             response = self.client.get(url)
             json = response.json()
             expected = sorted([
@@ -835,25 +835,25 @@ class CohortAllTestSuite(AdmissionsTestCase):
             self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                              self.bc.format.to_dict(model.cohort))
 
-    def test_with_data__sass_is_false(self):
+    def test_with_data__saas_is_false(self):
         academies = [
             {
-                'available_as_sass': True,
+                'available_as_saas': True,
             },
             {
-                'available_as_sass': False,
+                'available_as_saas': False,
             },
             {
-                'available_as_sass': True,
+                'available_as_saas': True,
             },
             {
-                'available_as_sass': False,
+                'available_as_saas': False,
             },
         ]
         cohorts = [{'academy_id': n} for n in range(1, 5)]
         model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
 
-        url = reverse_lazy('admissions:cohort_all') + f'?sass=false'
+        url = reverse_lazy('admissions:cohort_all') + f'?saas=false'
         response = self.client.get(url)
         json = response.json()
         expected = sorted([
@@ -867,25 +867,25 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.format.to_dict(model.cohort))
 
-    def test_with_data__sass_is_true(self):
+    def test_with_data__saas_is_true(self):
         academies = [
             {
-                'available_as_sass': True,
+                'available_as_saas': True,
             },
             {
-                'available_as_sass': False,
+                'available_as_saas': False,
             },
             {
-                'available_as_sass': True,
+                'available_as_saas': True,
             },
             {
-                'available_as_sass': False,
+                'available_as_saas': False,
             },
         ]
         cohorts = [{'academy_id': n} for n in range(1, 5)]
         model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
 
-        url = reverse_lazy('admissions:cohort_all') + f'?sass=true'
+        url = reverse_lazy('admissions:cohort_all') + f'?saas=true'
         response = self.client.get(url)
         json = response.json()
         expected = sorted([

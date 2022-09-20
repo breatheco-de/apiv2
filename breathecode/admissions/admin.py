@@ -46,25 +46,25 @@ class AcademyForm(forms.ModelForm):
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
-def mark_as_available_as_sass(modeladmin, request, queryset):
-    queryset.update(available_as_sass=True)
+def mark_as_available_as_saas(modeladmin, request, queryset):
+    queryset.update(available_as_saas=True)
 
 
-mark_as_available_as_sass.short_description = 'Mark as available as SASS'
+mark_as_available_as_saas.short_description = 'Mark as available as SAAS'
 
 
-def mark_as_unavailable_as_sass(modeladmin, request, queryset):
-    queryset.update(available_as_sass=False)
+def mark_as_unavailable_as_saas(modeladmin, request, queryset):
+    queryset.update(available_as_saas=False)
 
 
-mark_as_unavailable_as_sass.short_description = 'Mark as unavailable as SASS'
+mark_as_unavailable_as_saas.short_description = 'Mark as unavailable as SAAS'
 
 
 @admin.register(Academy)
 class AcademyAdmin(admin.ModelAdmin):
     form = AcademyForm
     list_display = ('slug', 'name', 'city')
-    actions = [mark_as_available_as_sass, mark_as_unavailable_as_sass]
+    actions = [mark_as_available_as_saas, mark_as_unavailable_as_saas]
 
 
 @admin.register(Country)
