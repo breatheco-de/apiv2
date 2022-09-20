@@ -133,6 +133,10 @@ def get_cohorts(request, id=None):
     elif saas == 'false':
         items = items.filter(academy__available_as_saas=False)
 
+    syllabus_slug = request.GET.get('syllabus_slug', '')
+    if syllabus_slug:
+        items = items.filter(syllabus_version__syllabus__slug=syllabus_slug)
+
     sort = request.GET.get('sort', None)
     if sort is None or sort == '':
         sort = '-kickoff_date'
