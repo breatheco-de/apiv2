@@ -36,7 +36,7 @@ RUN echo "    if x" >> ./fix_pyenv.py
 RUN echo "]" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
 RUN echo "for file in output:" >> ./fix_pyenv.py
-RUN echo "    os.remove(file)" >> ./fix_pyenv.py
+RUN echo "    os.system(f'rm -R {file}')" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
 RUN echo "print('done!')" >> ./fix_pyenv.py
 
