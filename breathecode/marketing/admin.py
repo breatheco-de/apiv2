@@ -371,7 +371,7 @@ class LeadAppCustomForm(forms.ModelForm):
         super(LeadAppCustomForm, self).__init__(*args, **kwargs)
 
         try:
-            if default_automations in self.fields:
+            if 'default_automations' in self.fields:
                 self.fields['default_automations'].queryset = Automation.objects.filter(
                     ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
             self.fields['default_tags'].queryset = Tag.objects.filter(
