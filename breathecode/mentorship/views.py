@@ -13,6 +13,8 @@ from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
+from breathecode.utils import GenerateLookupsMixin, response_207
+from breathecode.utils.multi_status_response import MultiStatusResponse
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
 from .actions import close_mentoring_session, render_session, generate_mentor_bills
@@ -478,7 +480,7 @@ def end_mentoring_session(request, session_id, token):
         })
 
 
-class ServiceView(APIView, HeaderLimitOffsetPagination):
+class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_mentorship_service')
@@ -542,6 +544,94 @@ class ServiceView(APIView, HeaderLimitOffsetPagination):
             serializer = GETServiceBigSerializer(service, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_event')
+    def delete(self, request, academy_id=None, service_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if not lookups and not service_id:
+            raise ValidationException('provide arguments in the url',
+                                      code=400,
+                                      slug='without-lookups-and-service-id')
+
+        if lookups and service_id:
+            raise ValidationException(
+                'service_id in url '
+                'in bulk mode request, use querystring style instead',
+                code=400,
+                slug='lookups-and-session-id-together')
+
+        if lookups:
+            alls = MentorshipService.objects.filter(**lookups)
+            valids = alls.filter(academy__id=academy_id)
+            from_other_academy = alls.exclude(academy__id=academy_id)
+            with_mentor = MentorshipService.objects.none()
+            with_sessions = MentorshipService.objects.none()
+            for id in lookups['id__in']:
+
+                mentor = MentorProfile.objects.filter(academy__id=academy_id, services=id).first()
+                if mentor is not None:
+                    with_mentor |= MentorshipService.objects.filter(id__in=mentor.services.all())
+
+                session = MentorshipSession.objects.filter(service=id).first()
+                if session is not None:
+                    with_sessions |= MentorshipService.objects.filter(id=session.service.id)
+
+            valids = alls.exclude(
+                Q(id__in=with_mentor.all()) | Q(id__in=with_sessions.all())
+                | Q(id__in=from_other_academy.all()))
+
+            responses = []
+            if valids:
+                responses.append(MultiStatusResponse(code=204, queryset=valids))
+
+            if from_other_academy:
+                responses.append(
+                    MultiStatusResponse('Service doest not exist or does not belong to this academy',
+                                        code=400,
+                                        slug='not-found',
+                                        queryset=from_other_academy))
+
+            if with_mentor:
+                responses.append(
+                    MultiStatusResponse('Only services that are not assigned to a mentor can be deleted.',
+                                        code=400,
+                                        slug='service-with-mentor',
+                                        queryset=with_mentor))
+
+            if with_sessions:
+                responses.append(
+                    MultiStatusResponse('Only services without a session can be deleted.',
+                                        code=400,
+                                        slug='service-with-session',
+                                        queryset=with_sessions))
+
+            if from_other_academy or with_mentor or with_sessions:
+                response = response_207(responses, 'slug')
+                valids.delete()
+                return response
+
+            valids.delete()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        service = MentorshipService.objects.filter(academy__id=academy_id, id=service_id).first()
+        if service is None:
+            raise ValidationException('Service doest not exist or does not belong to this academy',
+                                      slug='not-found')
+
+        mentor = MentorProfile.objects.filter(academy__id=academy_id, services=service.id).first()
+        if mentor is not None:
+            raise ValidationException('Only services that are not assigned to a mentor can be deleted.',
+                                      slug='service-with-mentor')
+
+        session = MentorshipSession.objects.filter(service=service.id).first()
+
+        if session is not None:
+            raise ValidationException('Only services without a session can be deleted.',
+                                      slug='service-with-session')
+
+        service.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class MentorView(APIView, HeaderLimitOffsetPagination):
