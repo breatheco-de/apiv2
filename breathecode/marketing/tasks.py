@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 from celery import shared_task, Task
 from django.utils import timezone
@@ -12,6 +13,7 @@ from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignA
 from .actions import register_new_lead, save_get_geolocal, acp_ids
 
 logger = getLogger(__name__)
+is_test_env = os.getenv('ENV') == 'test'
 
 
 class BaseTaskWithRetry(Task):
@@ -37,14 +39,19 @@ def persist_leads():
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def persist_single_lead(self, form_data):
     logger.debug('Starting persist_single_lead')
+
+    entry = None
     try:
         entry = register_new_lead(form_data)
     except ValidationException as e:
-        entry.storage_status_text = str(e)
-        entry.status = 'ERROR'
-        entry.save()
+        if 'id' in form_data:
+            entry = FormEntry.objects.filter(id=form_data['id']).first()
+            if entry is not None:
+                entry.storage_status_text = str(e)
+                entry.status = 'ERROR'
+                entry.save()
 
-    if entry is not None and entry != False:
+    if entry is not None and entry != False and not is_test_env:
         save_get_geolocal(entry, form_data)
 
     return True
