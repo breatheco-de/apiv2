@@ -29,7 +29,7 @@ RUN echo "    return ''" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
 RUN echo "output = [" >> ./fix_pyenv.py
-RUN echo "    get_path(x) for x in subprocess.check_output(['git', 'status', '--porcelain']).decode('utf-8').split('\n')" >> ./fix_pyenv.py
+RUN echo "    get_path(x) for x in subprocess.check_output(['git', 'status', '--porcelain']).decode('utf-8').split('\\n')" >> ./fix_pyenv.py
 RUN echo "    if x" >> ./fix_pyenv.py
 RUN echo "]" >> ./fix_pyenv.py
 RUN echo "" >> ./fix_pyenv.py
