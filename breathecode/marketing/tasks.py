@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 from celery import shared_task, Task
 from django.utils import timezone
@@ -343,6 +344,30 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def create_form_entry(self, item, csv_upload_id):
+
+    # has_error = False
+
+    # if 'first_name' not in item:
+    #     logger.error('Missing first_name')
+    #     has_error = True
+    # if 'last_name' not in item:
+    #     logger.error('Missing last_name')
+    #     has_error = True
+    # if 'email' not in item:
+    #     logger.error('Missing email')
+    #     has_error = True
+    # if 'location' not in item:
+    #     logger.error('Missing location')
+    #     has_error = True
+    # if 'academy' not in item:
+    #     logger.error('Missing academy')
+    #     has_error = True
+
+    # if has_error:
+    #     logger.error('Missing field in received item')
+    #     logger.error(f'{item}')
+    #     return
+
     form_entry = FormEntry()
 
     if 'first_name' in item:
@@ -356,21 +381,65 @@ def create_form_entry(self, item, csv_upload_id):
     if 'academy' in item:
         form_entry.academy = item['academy']
 
-    form_entry.save()
-
     csv_upload = CSVUpload()
-    csv_upload.log = ''
+
+    error_message = ''
+
     if not form_entry.first_name:
-        csv_upload.log += 'No first name in form entry, '
+        message = 'No first name in form entry'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    if form_entry.first_name and not re.findall(r'^[A-Za-zÀ-ÖØ-öø-ÿ ]+$', form_entry.first_name):
+        message = 'first name has incorrect characters'
+        error_message += f'{message}, '
+        logger.error(message)
 
     if not form_entry.last_name:
-        csv_upload.log += 'No last name in form entry, '
+        message = 'No last name in form entry'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    if form_entry.last_name and not re.findall(r'^[A-Za-zÀ-ÖØ-öø-ÿ ]+$', form_entry.last_name):
+        message = 'last name has incorrect characters'
+        error_message += f'{message}, '
+        logger.error(message)
 
     if not form_entry.email:
-        csv_upload.log += 'No email in form entry, '
+        message = 'No email in form entry'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    EMAIL_PATTERN = r'(?:[a-z0-9!#$%&\'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&\'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])'
+
+    if form_entry.email and not re.findall(EMAIL_PATTERN, form_entry.email, re.IGNORECASE):
+        message = 'email has incorrect format'
+        error_message += f'{message}, '
+        logger.error(message)
 
     if not form_entry.location or not form_entry.academy:
-        csv_upload.log += 'No location or academy in form entry, '
+        message = 'No location or academy in form entry'
+        error_message += f'{message}, '
+        logger.error(message)
 
-    if csv_upload.log.endswith(', '):
-        csv_upload.log = csv_upload.log[0:-2]
+    # if form_entry.location and not re.findall(r'/^[a-z0-9]+(?:[a-z0-9-]+)+[a-z0-9]+$/', form_entry.location):
+
+    if form_entry.academy and not re.findall(r'/^[a-z0-9]+(?:[a-z0-9-]+)+[a-z0-9]+$/', form_entry.academy):
+        message = 'academy has incorrect format'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    if error_message.endswith(', '):
+        error_message = error_message[0:-2]
+        error_message = f'{error_message}. '
+
+    if error_message:
+        csv_upload.log = csv_upload.log or ''
+        csv_upload.log += error_message
+        logger.error('Missing field in received item')
+        logger.error(f'{item}')
+
+    csv_upload.save()
+
+    if not error_message:
+        form_entry.save()
