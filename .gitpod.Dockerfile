@@ -1,5 +1,7 @@
 FROM gitpod/workspace-postgres:latest
 
+SHELL ["/bin/bash", "-c"]
+
 RUN sudo apt-get update \
     && sudo apt-get update \
     && sudo apt-get install -y redis-server \
