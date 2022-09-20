@@ -7,7 +7,7 @@ from breathecode.utils import ValidationException, localize_query, SerpyExtensio
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from .actions import test_syllabus
+from .actions import test_syllabus, haversine
 from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
                      Syllabus, SyllabusVersion, COHORT_STAGE)
 
@@ -331,6 +331,13 @@ class PublicCohortSerializer(serpy.Serializer):
     schedule = GetSmallSyllabusScheduleSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
+    distance = serpy.MethodField()
+
+    def get_distance(self, obj):
+        if not obj.latitude or not obj.longitude or not obj.academy.latitude or not obj.academy.longitude:
+            return None
+
+        return haversine(obj.longitude, obj.latitude, obj.academy.longitude, obj.academy.latitude)
 
 
 class GetSmallCohortSerializer(serpy.Serializer):
