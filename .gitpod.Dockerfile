@@ -1,4 +1,4 @@
-FROM gitpod/workspace-postgres:2022-07-27-23-55-12
+FROM gitpod/workspace-postgres:latest
 
 RUN sudo apt-get update \
     && sudo apt-get update \
@@ -6,7 +6,8 @@ RUN sudo apt-get update \
     && sudo apt-get clean \
     && sudo rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
-RUN pyenv update && pyenv install 3.10.5 && pyenv global 3.10.5
+RUN python ./scripts/fix_pyenv.py
+RUN pyenv update && pyenv install 3.10.7 && pyenv global 3.10.7
 RUN pip install pipenv yapf
 
 # remove PIP_USER environment
