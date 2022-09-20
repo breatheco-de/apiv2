@@ -175,7 +175,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(self.count_form_entry(), 0)
         self.assertEqual(logging.Logger.info.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - You need to specify tags for this entry'),
+            call('You need to specify tags for this entry'),
         ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -510,27 +510,21 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        try:
-            persist_single_lead({
-                'location': model['academy'].slug,
-                'tags': model['tag'].slug,
-                'automations': model['automation'].slug,
-                'email': 'pokemon@potato.io',
-                'first_name': 'Konan',
-                'last_name': 'Amegakure',
-                'phone': '123123123',
-                'id': 123123123,
-            })
-            assert False
-        except Exception as e:
-            message = str(e)
-            self.assertEqual(message, 'FormEntry not found (id: 123123123)')
+        persist_single_lead({
+            'location': model['academy'].slug,
+            'tags': model['tag'].slug,
+            'automations': model['automation'].slug,
+            'email': 'pokemon@potato.io',
+            'first_name': 'Konan',
+            'last_name': 'Amegakure',
+            'phone': '123123123',
+            'id': 123123123,
+        })
 
         self.assertEqual(self.count_form_entry(), 0)
         self.assertEqual(logging.Logger.info.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - No automation was specified and the the specified tag has no automation either'
-                 ),
+            call('Status 400 - FormEntry not found (id: 123123123)'),
         ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -652,26 +646,20 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        try:
-            persist_single_lead({
-                'location': model['academy'].slug,
-                'tags': model['tag'].slug,
-                'automations': model['automation'].slug,
-                'email': 'pokemon@potato.io',
-                'first_name': 'Konan',
-                'last_name': 'Amegakure',
-                'phone': '123123123',
-                'id': model['form_entry'].id,
-            })
-            assert False
-        except Exception as e:
-            message = str(e)
-            self.assertEqual(message, "'error_message'")
+        persist_single_lead({
+            'location': model['academy'].slug,
+            'tags': model['tag'].slug,
+            'automations': model['automation'].slug,
+            'email': 'pokemon@potato.io',
+            'first_name': 'Konan',
+            'last_name': 'Amegakure',
+            'phone': '123123123',
+            'id': model['form_entry'].id,
+        })
 
         self.assertEqual(logging.Logger.info.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - No automation was specified and the the specified tag has no automation either'
-                 ),
+            call('Status 400 - \'error_message\''),
         ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
