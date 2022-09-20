@@ -11,9 +11,9 @@ os.chdir(path)
 
 
 def get_path(s):
-    result = re.findall(r' (.+)$', s)
+    result = s.split(' ')
     if result:
-        return result[0]
+        return result[-1]
 
     return ''
 
