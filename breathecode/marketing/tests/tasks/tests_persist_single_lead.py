@@ -2,6 +2,7 @@
 Test /answer/:id
 """
 from breathecode.marketing.tasks import persist_single_lead
+import logging
 import re, string, os
 from datetime import datetime
 from unittest.mock import patch, MagicMock, call
@@ -83,8 +84,14 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_no_form_entry(self):
         """Test /answer/:id without auth"""
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
         try:
             persist_single_lead(None)
             assert False
@@ -93,14 +100,25 @@ class AnswerIdTestSuite(MarketingTestCase):
             self.assertEqual(message, 'You need to specify the form entry data')
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     """Test /answer/:id"""
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_dict_empty(self):
         """Test /answer/:id without auth"""
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
         try:
             persist_single_lead({})
             assert False
@@ -109,12 +127,23 @@ class AnswerIdTestSuite(MarketingTestCase):
             self.assertEqual(message, 'Missing location information')
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_bad_location(self):
         """Test /answer/:id without auth"""
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
         try:
             persist_single_lead({'location': 'they-killed-kenny'})
             assert False
@@ -123,47 +152,68 @@ class AnswerIdTestSuite(MarketingTestCase):
             self.assertEqual(message, 'No academy found with slug they-killed-kenny')
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_location(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True, active_campaign_academy=True)
-        try:
-            persist_single_lead({'location': model['academy'].slug})
-            assert False
-        except Exception as e:
-            message = str(e)
-            self.assertEqual(message, 'You need to specify tags for this entry')
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        persist_single_lead({'location': model['academy'].slug})
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - You need to specify tags for this entry'),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_location_academy_alias(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
                                      active_campaign_academy=True,
                                      academy_alias=True,
                                      academy_alias_kwargs={'active_campaign_slug': 'odin'})
-        try:
-            persist_single_lead({'location': 'odin'})
-            assert False
-        except Exception as e:
-            message = str(e)
-            self.assertEqual(message, 'You need to specify tags for this entry')
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        persist_single_lead({'location': 'odin'})
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('You need to specify tags for this entry'),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_bad_tags(self):
         # TODO: this test should be reimplemented without depending on the message
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True, active_campaign_academy=True)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
         try:
             persist_single_lead({'location': model['academy'].slug, 'tags': 'they-killed-kenny'})
             assert False
@@ -175,29 +225,44 @@ class AnswerIdTestSuite(MarketingTestCase):
             )
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_tag_type(self):
         """Test /answer/:id without auth"""
+
         model = self.generate_models(academy=True,
                                      active_campaign_academy=True,
                                      tag=True,
                                      tag_kwargs={'tag_type': 'STRONG'})
-        try:
-            persist_single_lead({'location': model['academy'].slug, 'tags': model['tag'].slug})
-            assert False
-        except Exception as e:
-            message = str(e)
-            self.assertEqual(
-                message, 'No automation was specified and the the specified tag has no automation either')
 
-        self.assertEqual(self.count_form_entry(), 0)
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        persist_single_lead({'location': model['academy'].slug, 'tags': model['tag'].slug})
+        # self.assertEqual(
+        #     message, 'No automation was specified and the the specified tag has no automation either')
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_tag_type_automation(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
@@ -205,18 +270,24 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      tag=True,
                                      automation=True,
                                      tag_kwargs={'tag_type': 'STRONG'})
-        try:
-            persist_single_lead({'location': model['academy'].slug, 'tags': model['tag'].slug})
-            assert False
-        except Exception as e:
-            message = str(e)
-            self.assertEqual(message, "The email doesn't exist")
 
-        self.assertEqual(self.count_form_entry(), 0)
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        persist_single_lead({'location': model['academy'].slug, 'tags': model['tag'].slug})
+        # self.assertEqual(message, "The email doesn't exist")
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - The email doesn\'t exist'),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_automations(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
@@ -224,6 +295,10 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      tag=True,
                                      tag_kwargs={'tag_type': 'STRONG'},
                                      automation=True)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
         try:
             persist_single_lead({
                 'location': model['academy'].slug,
@@ -237,10 +312,17 @@ class AnswerIdTestSuite(MarketingTestCase):
                              'The specified automation they-killed-kenny was not found for this AC Academy')
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_automations_slug(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
@@ -249,6 +331,9 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      tag_kwargs={'tag_type': 'STRONG'},
                                      automation=True,
                                      automation_kwargs={'slug': 'they-killed-kenny'})
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
 
         try:
             persist_single_lead({
@@ -262,10 +347,17 @@ class AnswerIdTestSuite(MarketingTestCase):
             self.assertEqual(message, 'The email doesn\'t exist')
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_email(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
@@ -274,6 +366,9 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      tag_kwargs={'tag_type': 'STRONG'},
                                      automation=True,
                                      automation_kwargs={'slug': 'they-killed-kenny'})
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
 
         try:
             persist_single_lead({
@@ -288,10 +383,17 @@ class AnswerIdTestSuite(MarketingTestCase):
             self.assertEqual(message, 'The first name doesn\'t exist')
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_first_name(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
@@ -300,6 +402,9 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      tag_kwargs={'tag_type': 'STRONG'},
                                      automation=True,
                                      automation_kwargs={'slug': 'they-killed-kenny'})
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
 
         try:
             persist_single_lead({
@@ -315,10 +420,17 @@ class AnswerIdTestSuite(MarketingTestCase):
             self.assertEqual(message, 'The last name doesn\'t exist')
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_last_name(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
@@ -328,25 +440,30 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      automation=True,
                                      automation_kwargs={'slug': 'they-killed-kenny'})
 
-        try:
-            persist_single_lead({
-                'location': model['academy'].slug,
-                'tags': model['tag'].slug,
-                'automations': model['automation'].slug,
-                'email': 'pokemon@potato.io',
-                'first_name': 'Konan',
-                'last_name': 'Amegakure',
-            })
-            assert False
-        except Exception as e:
-            message = str(e)
-            self.assertEqual(message, 'The phone doesn\'t exist')
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        persist_single_lead({
+            'location': model['academy'].slug,
+            'tags': model['tag'].slug,
+            'automations': model['automation'].slug,
+            'email': 'pokemon@potato.io',
+            'first_name': 'Konan',
+            'last_name': 'Amegakure',
+        })
 
         self.assertEqual(self.count_form_entry(), 0)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - The phone doesn\'t exist'),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_phone(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
@@ -356,26 +473,31 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      automation=True,
                                      automation_kwargs={'slug': 'they-killed-kenny'})
 
-        try:
-            persist_single_lead({
-                'location': model['academy'].slug,
-                'tags': model['tag'].slug,
-                'automations': model['automation'].slug,
-                'email': 'pokemon@potato.io',
-                'first_name': 'Konan',
-                'last_name': 'Amegakure',
-                'phone': '123123123',
-            })
-            assert False
-        except Exception as e:
-            message = str(e)
-            self.assertEqual(message, 'The id doesn\'t exist')
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        persist_single_lead({
+            'location': model['academy'].slug,
+            'tags': model['tag'].slug,
+            'automations': model['automation'].slug,
+            'email': 'pokemon@potato.io',
+            'first_name': 'Konan',
+            'last_name': 'Amegakure',
+            'phone': '123123123',
+        })
 
         self.assertEqual(self.count_form_entry(), 0)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - The id doesn\'t exist'),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_id(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
@@ -384,6 +506,9 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      tag_kwargs={'tag_type': 'STRONG'},
                                      automation=True,
                                      automation_kwargs={'slug': 'they-killed-kenny'})
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
 
         try:
             persist_single_lead({
@@ -402,6 +527,11 @@ class AnswerIdTestSuite(MarketingTestCase):
             self.assertEqual(message, 'FormEntry not found (id: 123123123)')
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -499,6 +629,8 @@ class AnswerIdTestSuite(MarketingTestCase):
             {
                 'status': 'INVALID_REQUEST',
             })]))
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_form_entry_with_data_invalid(self):
         """Test /answer/:id without auth"""
         mock_mailgun = MAILGUN_INSTANCES['post']
@@ -517,6 +649,9 @@ class AnswerIdTestSuite(MarketingTestCase):
             form_entry_kwargs=generate_form_entry_kwargs(),
             active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
 
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
         try:
             persist_single_lead({
                 'location': model['academy'].slug,
@@ -532,6 +667,12 @@ class AnswerIdTestSuite(MarketingTestCase):
         except Exception as e:
             message = str(e)
             self.assertEqual(message, "'error_message'")
+
+        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Status 400 - No automation was specified and the the specified tag has no automation either'
+                 ),
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

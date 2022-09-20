@@ -20,6 +20,8 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin
         self.clear_cache()
 
     def setUp(self):
+        self.maxDiff = None
+
         self.generate_queries()
         self.set_test_instance(self)
 
