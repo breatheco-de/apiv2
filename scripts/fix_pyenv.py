@@ -12,6 +12,7 @@ os.chdir(path)
 
 def get_path(s):
     result = s.split(' ')
+    print('line')
     if result:
         return result[-1]
 
