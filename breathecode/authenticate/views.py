@@ -520,6 +520,11 @@ class StudentView(APIView, GenerateLookupsMixin):
         if status is not None:
             items = items.filter(status__iexact=status)
 
+        cohort = request.GET.get('cohort', None)
+        if cohort is not None:
+            lookups = self.generate_lookups(request, many_fields=['cohort'])
+            items = items.filter(user__cohortuser__cohort__slug__in=lookups['cohort__in'])
+
         items = handler.queryset(items)
         serializer = GetProfileAcademySmallSerializer(items, many=True)
 
