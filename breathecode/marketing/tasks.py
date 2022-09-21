@@ -44,6 +44,9 @@ def persist_single_lead(self, form_data):
     try:
         entry = register_new_lead(form_data)
     except ValidationException as e:
+        if not form_data:
+            return
+
         # logger.error(str(e))
         if 'id' in form_data:
 
@@ -54,6 +57,9 @@ def persist_single_lead(self, form_data):
                 entry.save()
 
     except Exception as e:
+        if not form_data:
+            return
+
         logger.error(str(e))
 
     if entry is not None and entry != False and not is_test_env:
