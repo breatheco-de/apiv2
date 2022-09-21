@@ -44,12 +44,22 @@ def persist_single_lead(self, form_data):
     try:
         entry = register_new_lead(form_data)
     except ValidationException as e:
+        if not form_data:
+            return
+
         if 'id' in form_data:
+
             entry = FormEntry.objects.filter(id=form_data['id']).first()
             if entry is not None:
                 entry.storage_status_text = str(e)
                 entry.status = 'ERROR'
                 entry.save()
+
+    except Exception as e:
+        if not form_data:
+            return
+
+        logger.error(str(e))
 
     if entry is not None and entry != False and not is_test_env:
         save_get_geolocal(entry, form_data)
