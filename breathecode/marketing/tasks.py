@@ -47,7 +47,6 @@ def persist_single_lead(self, form_data):
         if not form_data:
             return
 
-        # logger.error(str(e))
         if 'id' in form_data:
 
             entry = FormEntry.objects.filter(id=form_data['id']).first()
