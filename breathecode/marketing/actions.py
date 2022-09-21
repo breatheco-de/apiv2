@@ -66,7 +66,6 @@ def get_lead_tags(ac_academy, form_entry):
     if len(tags) != len(_tags):
         message = 'Some tag applied to the contact not found or have tag_type different than [STRONG, SOFT, DISCOVER, OTHER]: '
         message += f'Check for the follow tags:  {",".join(_tags)}'
-        logger.error(message)
         raise Exception(message)
 
     return tags
@@ -196,6 +195,9 @@ def register_new_lead(form_entry=None):
     if not 'id' in form_entry:
         raise ValidationException('The id doesn\'t exist')
 
+    if not 'course' in form_entry:
+        raise ValidationException('The course doesn\'t exist')
+
     # apply default language and make sure english is "en" and not "us"
     if 'utm_language' in form_entry and form_entry['utm_language'] == 'us':
         form_entry['utm_language'] = 'en'
@@ -208,6 +210,7 @@ def register_new_lead(form_entry=None):
         'last_name': form_entry['last_name'],
         'phone': form_entry['phone']
     }
+
     contact = set_optional(contact, 'utm_url', form_entry)
     contact = set_optional(contact, 'utm_location', form_entry, 'location')
     contact = set_optional(contact, 'course', form_entry)

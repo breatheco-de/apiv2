@@ -216,6 +216,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'utm_url': None,
             'won_at': None,
             'zip_code': None,
+            'storage_status_text': '',
         }
 
         self.assertEqual(json, expected)
@@ -266,6 +267,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'utm_url': None,
             'won_at': None,
             'zip_code': None,
+            'storage_status_text': '',
         }
         self.assertEqual(self.all_form_entry_dict(), [form_entry])
 
@@ -609,6 +611,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'won_at': None,
             'zip_code': None,
             'utm_url': None,
+            'storage_status_text': '',
             **data,
         }
         self.assertEqual(self.all_form_entry_dict(), [form_entry])
@@ -784,6 +787,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'won_at': None,
             'zip_code': None,
             'utm_url': None,
+            'storage_status_text': '',
             **data,
         }
         self.assertEqual(self.all_form_entry_dict(), [form_entry])
