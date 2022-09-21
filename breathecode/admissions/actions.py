@@ -3,9 +3,28 @@ from django.db.models.query_utils import Q
 from .models import Cohort, SyllabusScheduleTimeSlot, SyllabusVersion
 from breathecode.services.google_cloud import Storage
 from .signals import syllabus_asset_slug_updated
+from math import radians, cos, sin, asin, sqrt
 
 BUCKET_NAME = 'admissions-breathecode'
 logger = logging.getLogger(__name__)
+
+
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance in kilometers between two points
+    on the earth (specified in decimal degrees)
+    """
+
+    # convert decimal degrees to radians
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c = 2 * asin(sqrt(a))
+    r = 6371  # Radius of earth in kilometers. Use 3956 for miles. Determines return value units.
+    return c * r
 
 
 def get_bucket_object(file_name):
