@@ -57,7 +57,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     if isinstance(issue, dict) == False:
         result = re.search(r'github.com\/([\w\-_]+)\/([\w\-_]+)\/.+', issue.url)
         issue = {
-            'id': issue.number,
+            'id': issue.github_number,
             'title': issue.title,
             'url': issue.url,
             'repository_url': f'https://github.com/{result.group(1)}/{result.group(2)}',
