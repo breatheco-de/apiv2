@@ -113,7 +113,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
         _issue.repository_url = f'https://github.com/{result.group(1)}/{result.group(2)}'
 
         # To include it on the next invoice
-        _issue.invoice = ProjectInvoice.get_or_create(_issue.repository_url, academy_slug)
+        _issue.invoice = ProjectInvoice.get_or_create(_issue.repository_url, academy_slug, status='DUE')
 
     if freelancer is None:
         if 'assignees' in issue and len(issue['assignees']) > 0:
@@ -193,7 +193,7 @@ def generate_project_invoice(project):
     Issue.objects.filter(invoice__project__id=project.id).exclude(status='DONE').update(invoice=None)
 
     # get next pending invoice
-    invoice = ProjectInvoice.get_or_create(project.repository, project.academy.slug)
+    invoice = ProjectInvoice.get_or_create(project.repository, project.academy.slug, status='DUE')
 
     # fetch for issues to be invoiced
     done_issues = Issue.objects.filter(
