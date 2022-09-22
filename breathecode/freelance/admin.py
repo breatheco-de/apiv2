@@ -91,7 +91,7 @@ class IssueAdmin(admin.ModelAdmin):
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id',
                     'github_url')
     list_filter = ['status', 'bill__status']
-    actions = ['resync_single_issue'] + change_field(['TODO', 'DONE', 'IGNORED', 'DRAFT', 'DOING'], name='status')
+    actions = [resync_single_issue] + change_field(['TODO', 'DONE', 'IGNORED', 'DRAFT', 'DOING'], name='status')
 
     def github_url(self, obj):
         return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>",
