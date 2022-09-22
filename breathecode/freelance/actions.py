@@ -58,9 +58,9 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
         issue = {
             'id': issue.number,
             'title': issue.title,
-            'url': issue.url,
+            'url': issue.html_url,
             'body': issue.body,
-            'html_url': issue.url,
+            'html_url': issue.html_url,
             'assignees': [({
                 'id': a.id
             }) for a in issue.assignees],
