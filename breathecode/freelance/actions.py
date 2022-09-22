@@ -197,7 +197,7 @@ def generate_project_invoice(project):
 
     # fetch for issues to be invoiced
     done_issues = Issue.objects.filter(
-        academy__slug=project.academy.slug, url__contains=project.repository,
+        academy__slug=project.academy.slug, url__icontains=project.repository,
         status='DONE').filter(Q(invoice__isnull=True)
                               | Q(invoice__status='DUE'))
 
