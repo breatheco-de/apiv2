@@ -103,7 +103,7 @@ class ProjectInvoice(models.Model):
             project = AcademyFreelanceProject.objects.filter(repository=repository,
                                                              academy__slug=academy_slug).first()
             if project is None:
-                raise ValueError(f'No project found for academy {academy_slug} and repo: {repository}')
+                return None
 
             invoice = ProjectInvoice(project=project)
             invoice.save()
