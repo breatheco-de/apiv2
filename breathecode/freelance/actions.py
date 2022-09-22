@@ -55,14 +55,14 @@ def update_status_based_on_github_action(github_action, issue):
 def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_action=None, academy_slug=None):
 
     if isinstance(issue, dict) == False:
-        result = re.search(r'github.com\/([\w\-_]+)\/([\w\-_]+)\/.+', issue.html_url)
+        result = re.search(r'github.com\/([\w\-_]+)\/([\w\-_]+)\/.+', issue.url)
         issue = {
             'id': issue.number,
             'title': issue.title,
             'url': issue.url,
             'repository_url': f'https://github.com/{result.group(1)}/{result.group(2)}',
             'body': issue.body,
-            'html_url': issue.html_url,
+            'html_url': issue.url,
             'assignees': [({
                 'id': a.id
             }) for a in issue.assignees],
