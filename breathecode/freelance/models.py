@@ -95,14 +95,16 @@ class ProjectInvoice(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     @staticmethod
-    def get_or_create(repository, academy_slug):
-
-        invoice = ProjectInvoice.objects.filter(project__repository=repository,
+    def get_or_create(repository, academy_slug, status):
+        print(f"get_or_create ProjectInvoice for repo {repository} and academy slug {academy_slug}")
+        invoice = ProjectInvoice.objects.filter(status=status, project__repository=repository,
                                                 project__academy__slug=academy_slug).first()
         if invoice is None:
+            print("Invoice not found")
             project = AcademyFreelanceProject.objects.filter(repository=repository,
                                                              academy__slug=academy_slug).first()
             if project is None:
+                print("Project not found")
                 return None
 
             invoice = ProjectInvoice(project=project)
