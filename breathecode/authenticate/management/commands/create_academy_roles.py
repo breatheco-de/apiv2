@@ -319,6 +319,14 @@ CAPABILITIES = [
         'slug': 'crud_category',
         'description': 'Update and delete categories from the content registry'
     },
+    {
+        'slug': 'read_project_invoice',
+        'description': 'Read the financial status of a project and invoices'
+    },
+    {
+        'slug': 'read_freelance_projects',
+        'description': 'Read project details without financials'
+    },
 ]
 
 ROLES = [
@@ -536,8 +544,10 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Accountant',
         'caps':
-        extend(roles, ['staff']) +
-        ['read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill']
+        extend(roles, ['staff']) + [
+            'read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill',
+            'read_project_invoice'
+        ]
     })
     roles.append({
         'slug': 'homework_reviewer',
@@ -581,6 +591,8 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_freelancer_bill',
             'get_gitpod_user',
             'update_gitpod_user',
+            'read_project_invoice',
+            'read_freelance_projects',
         ]
     })
     roles.append({
