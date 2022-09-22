@@ -55,12 +55,10 @@ def update_status_based_on_github_action(github_action, issue):
 def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_action=None, academy_slug=None):
 
     if isinstance(issue, dict) == False:
-        result = re.search(r'github.com\/([\w\-_]+)\/([\w\-_]+)\/.+', issue.url)
         issue = {
             'id': issue.github_number,
             'title': issue.title,
             'url': issue.url,
-            'repository_url': f'https://github.com/{result.group(1)}/{result.group(2)}',
             'body': issue.body,
             'html_url': issue.url,
             'assignees': [({
@@ -109,10 +107,13 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
         _issue.body = issue['body'][:500]
 
     _issue.url = issue['html_url']
-    _issue.repository_url = issue['repository_url']
+    
+    result = re.search(r'github.com\/([\w\-_]+)\/([\w\-_]+)\/.+', issue.url)
+    if result is not None:
+        _issue.repository_url = f'https://github.com/{result.group(1)}/{result.group(2)}'
 
-    # To include it on the next invoice
-    _issue.invoice = ProjectInvoice.get_or_create(issue['repository_url'], academy_slug)
+        # To include it on the next invoice
+        _issue.invoice = ProjectInvoice.get_or_create(_issue.repository_url, academy_slug)
 
     if freelancer is None:
         if 'assignees' in issue and len(issue['assignees']) > 0:
