@@ -56,7 +56,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
 
     if isinstance(issue, dict) == False:
         issue = {
-            'id': issue.github_number,
+            'id': issue.number,
             'title': issue.title,
             'url': issue.url,
             'body': issue.body,
