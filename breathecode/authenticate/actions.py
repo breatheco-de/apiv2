@@ -165,7 +165,6 @@ def set_gitpod_user_expiration(gitpoduser_id):
                     conflict.academy = gitpod_user.academy
                     conflict.delete_status = gitpod_user.delete_status
                     conflict.save()
-                return conflict
 
     gitpod_user.save()
     return gitpod_user
