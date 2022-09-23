@@ -107,7 +107,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
         _issue.body = issue['body'][:500]
 
     _issue.url = issue['html_url']
-    
+
     result = re.search(r'github\.com\/([\w\-_]+)\/([\w\-_]+)\/.+', _issue.url)
     if result is not None:
         _issue.repository_url = f'https://github.com/{result.group(1)}/{result.group(2)}'
