@@ -148,7 +148,7 @@ def set_gitpod_user_expiration(gitpoduser_id):
             gitpod_user.delete_status = f'User will be deleted 14 days after cohort {cu.cohort.name} finishes on {cu.cohort.ending_date}'
         else:
             # if no active academy was found, at least we can retreive the latest one to asociate the user to an academy
-            last_cohort = gitpod_user.user.cohortuser_set.all().order_by('-cohort__ending_date').first()
+            last_cohort = gitpod_user.user.cohortuser_set.filter(cohort__never_ends=False).order_by('-cohort__ending_date').first()
             if last_cohort is not None:
                 gitpod_user.academy = last_cohort.cohort.academy
                 gitpod_user.target_cohort = last_cohort.cohort
