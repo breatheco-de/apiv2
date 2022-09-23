@@ -200,8 +200,11 @@ def update_gitpod_users(html):
 
             logger.debug('Found active user ' + user['github'])
 
+            if user['github'] == "username" or user['github'] == "":
+                continue
+                
             if user['github'] in all_usernames:
-                raise ValidationException(f"Error: user {user['github']} seems to be duplicated on the incoming list from Gitpod", slug="duplicated-user")
+                raise ValidationException(f"Error: user '{user['github']}' seems to be duplicated on the incoming list from Gitpod", slug="duplicated-user")
 
             all_usernames.append(user['github'])
             all_active_users.append(user)
