@@ -267,7 +267,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         cohorts = request.GET.get('cohorts', None)
         if cohorts is not None:
-            items = items.filter(cohort__slug__in=cohorts.lower().split(','))
+            items = items.filter(cohort__slug__in=cohorts.split(','))
 
         users = request.GET.get('users', None)
         if users is not None:
