@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from .models import DeviceId, Token, Role, ProfileAcademy, GitpodUser, CredentialsGithub
 from breathecode.notify.actions import send_email_message
-from breathecode.utils.views import render_message
+from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy
 from random import randint
 
@@ -201,8 +201,7 @@ def update_gitpod_users(html):
             logger.debug('Found active user ' + user['github'])
 
             if user['github'] in all_usernames:
-                render_message(
-                    f"Error: user {user['github']} seems to be duplicated on the incoming list from Gitpod")
+                raise ValidationException(f"Error: user {user['github']} seems to be duplicated on the incoming list from Gitpod", slug="duplicated-user")
 
             all_usernames.append(user['github'])
             all_active_users.append(user)
