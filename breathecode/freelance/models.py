@@ -97,7 +97,8 @@ class ProjectInvoice(models.Model):
     @staticmethod
     def get_or_create(repository, academy_slug, status):
 
-        invoice = ProjectInvoice.objects.filter(status=status, project__repository__iexact=repository,
+        invoice = ProjectInvoice.objects.filter(status=status,
+                                                project__repository__iexact=repository,
                                                 project__academy__slug=academy_slug).first()
         if invoice is None:
             project = AcademyFreelanceProject.objects.filter(repository__iexact=repository,
