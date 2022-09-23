@@ -121,6 +121,10 @@ def set_gitpod_user_expiration(gitpoduser_id):
     gitpod_user = GitpodUser.objects.filter(id=gitpoduser_id).first()
     if gitpod_user is None:
         raise Exception(f'Invalid gitpod user id: {gitpoduser_id}')
+    
+    # reset status, i don't want to override this value if already set in this function
+    gitpod_user.delete_status = ""
+    gitpod_user.target_cohort = None
 
     logger.debug(f"Gitpod user: {gitpod_user.id}")
     # If no user is connected, find the user on breathecode by searching the github credentials
@@ -137,7 +141,6 @@ def set_gitpod_user_expiration(gitpoduser_id):
                                                         'PREWORK', 'STARTED', 'FINAL_PROJECT'
                                                     ]).order_by('-cohort__ending_date').first()
         if cu is not None:
-            logger.debug(f"Found GitpodUser:{gitpod_user.id} with cohort {cu.cohort.name}")
             gitpod_user.expires_at = cu.cohort.ending_date + datetime.timedelta(
                 days=14) if cu.cohort.ending_date is not None else None
             gitpod_user.academy = cu.cohort.academy
@@ -151,8 +154,7 @@ def set_gitpod_user_expiration(gitpoduser_id):
                 gitpod_user.target_cohort = last_cohort.cohort
                 gitpod_user.delete_status = f'It will be deleted soon because no active cohort was found, the last one it had active was ' + last_cohort.cohort.name
 
-    if gitpod_user.user is None or gitpod_user.expires_at is None:
-        logger.debug(f"User will be deleted because no active cohort could be associated to it, please set a cohort if you want to avoid deletion")
+    if (gitpod_user.user is None or gitpod_user.expires_at is None) and gitpod_user.delete_status == "":
         gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=3)
         gitpod_user.delete_status = 'User will be deleted because no active cohort could be associated to it, please set a cohort if you want to avoid deletion'
 
@@ -168,7 +170,6 @@ def set_gitpod_user_expiration(gitpoduser_id):
                     conflict.academy = gitpod_user.academy
                     conflict.delete_status = gitpod_user.delete_status
                     conflict.save()
-    logger.debug(f"Saving gitpod user")
     gitpod_user.save()
     return gitpod_user
 
