@@ -10,9 +10,12 @@ from rest_framework import status
 from ..mixins import AdmissionsTestCase
 
 
-def get_serializer(cohort, syllabus, syllabus_version):
+def get_serializer(cohort, syllabus, syllabus_version, data={}):
+    print(11111111111111111, type(syllabus_version), syllabus_version)
+    print(11111111111111111, type(syllabus), syllabus)
     return {
         'id': cohort.id,
+        'distance': None,
         'slug': cohort.slug,
         'name': cohort.name,
         'never_ends': cohort.never_ends,
@@ -22,8 +25,8 @@ def get_serializer(cohort, syllabus, syllabus_version):
         'language': cohort.language.lower(),
         'remote_available': cohort.remote_available,
         'syllabus_version': {
-            'status': syllabus_version.status,
             'name': syllabus.name,
+            'status': syllabus_version.status,
             'slug': syllabus.slug,
             'syllabus': syllabus_version.syllabus.id,
             'version': cohort.syllabus_version.version,
@@ -48,6 +51,7 @@ def get_serializer(cohort, syllabus, syllabus_version):
             'logo_url': cohort.academy.logo_url,
         },
         'schedule': None,
+        **data,
     }
 
 
@@ -330,13 +334,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      syllabus_version=True)
 
-        url = reverse_lazy('admissions:cohort_all') + '?stage=asdasdasd'
+        url = reverse_lazy('admissions:cohort_all') + '?coordinates=a'
         response = self.client.get(url)
         json = response.json()
-        expected = []
+        expected = {'detail': 'coordinates-with-auth', 'status_code': 400}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
             **self.model_to_dict(model, 'cohort')
         }])
@@ -372,17 +376,322 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
-                {
-                    **self.bc.format.to_dict(model.cohort[0]),
-                    'stage': current,
-                },
-                {
-                    **self.bc.format.to_dict(model.cohort[1]),
-                    'stage': current,
-                },
-                {
-                    **self.bc.format.to_dict(model.cohort[2]),
-                    'stage': bad_status,
-                },
-            ])
+            self.assertEqual(
+                self.bc.database.list_of('admissions.Cohort'),
+                self.bc.format.to_dict(model.cohort),
+            )
+
+    def test_with_data__distance_is_none(self):
+        """Test /cohort/all without auth"""
+        cases = [
+            ('', None, None),
+            ('', 1, None),
+            ('', None, 1),
+            ('', 1, 1),
+            ('1,1', None, None),
+            ('1,1', 1, None),
+            ('1,1', None, 1),
+        ]
+        model = self.generate_models(cohort=True, syllabus_version=True)
+
+        for query, latitude, longitude in cases:
+            model.academy.latitude = latitude
+            model.academy.longitude = longitude
+            model.academy.save()
+
+            url = reverse_lazy('admissions:cohort_all') + '?coordinates=' + query
+            response = self.client.get(url)
+            json = response.json()
+            expected = [
+                get_serializer(model.cohort, model.syllabus, model.syllabus_version, data={'distance': None})
+            ]
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+                **self.model_to_dict(model, 'cohort')
+            }])
+
+    def test_with_data__bad_coordinates(self):
+        """Test /cohort/all without auth"""
+        cases = [
+            ('1', None, None),
+            ('1,', None, None),
+            ('1,a', None, None),
+            ('a,1', None, None),
+        ]
+        model = self.generate_models(cohort=True, syllabus_version=True)
+
+        for query, latitude, longitude in cases:
+            model.academy.latitude = latitude
+            model.academy.longitude = longitude
+            model.academy.save()
+
+            url = reverse_lazy('admissions:cohort_all') + '?coordinates=' + query
+            response = self.client.get(url)
+            json = response.json()
+            expected = {'detail': 'bad-coordinates', 'status_code': 400}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+                **self.model_to_dict(model, 'cohort')
+            }])
+
+    def test_with_data__bad_coordinates__invalid_values(self):
+        """Test /cohort/all without auth"""
+        cases = [
+            ('91,180', None, None, 'bad-latitude'),
+            ('-91,-180', None, None, 'bad-latitude'),
+            ('91,-180', None, None, 'bad-latitude'),
+            ('-91,180', None, None, 'bad-latitude'),
+            ('90,181', None, None, 'bad-longitude'),
+            ('-90,-181', None, None, 'bad-longitude'),
+            ('90,-181', None, None, 'bad-longitude'),
+            ('-90,181', None, None, 'bad-longitude'),
+        ]
+        model = self.generate_models(cohort=True, syllabus_version=True)
+
+        for query, latitude, longitude, error in cases:
+            model.academy.latitude = latitude
+            model.academy.longitude = longitude
+            model.academy.save()
+
+            url = reverse_lazy('admissions:cohort_all') + '?coordinates=' + query
+            response = self.client.get(url)
+            json = response.json()
+            expected = {'detail': error, 'status_code': 400}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+                **self.model_to_dict(model, 'cohort')
+            }])
+
+    def test_with_data__good_coordinates__check_same_distance_with_different_symbols(self):
+        """Test /cohort/all without auth"""
+        cases = [
+            ('90,180', 80, 180),
+            ('-90,-180', -80, -180),
+            ('90,-180', 80, -180),
+            ('-90,180', -80, 180),
+            ('90,180', 80, 180),
+            ('-90,-180', -80, -180),
+            ('90,-180', 80, -180),
+            ('-90,180', -80, 180),
+        ]
+        model = self.generate_models(cohort=True, syllabus_version=True)
+
+        for query, latitude, longitude in cases:
+            model.academy.latitude = latitude
+            model.academy.longitude = longitude
+            model.academy.save()
+
+            url = reverse_lazy('admissions:cohort_all') + '?coordinates=' + query
+            response = self.client.get(url)
+            json = response.json()
+            expected = [
+                get_serializer(model.cohort,
+                               model.syllabus,
+                               model.syllabus_version,
+                               data={'distance': 1111.9492664455875})
+            ]
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+                **self.model_to_dict(model, 'cohort')
+            }])
+
+    def test_with_data__good_coordinates__generating_correct_distance(self):
+        """Test /cohort/all without auth"""
+        cases = [
+            ('76,90', 76, 130, 1055.5073456754758),
+            ('-54,-133', -60, -99, 2136.8610368766904),
+            ('33,-1', 90, -33, 6338.110818739848),
+            ('-56,167', 43, -165, 11318.400937786448),
+        ]
+        model = self.generate_models(cohort=True, syllabus_version=True)
+
+        for query, latitude, longitude, distance in cases:
+            model.academy.latitude = latitude
+            model.academy.longitude = longitude
+            model.academy.save()
+
+            url = reverse_lazy('admissions:cohort_all') + '?coordinates=' + query
+            response = self.client.get(url)
+            json = response.json()
+            expected = [
+                get_serializer(model.cohort,
+                               model.syllabus,
+                               model.syllabus_version,
+                               data={'distance': distance})
+            ]
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+                **self.model_to_dict(model, 'cohort')
+            }])
+
+    def test_with_data__good_coordinates__sorting_the_distances(self):
+        """Test /cohort/all without auth"""
+        distance1 = 5081.175052677738
+        distance2 = 11318.400937786448
+        distance3 = 14915.309490907744
+        distance4 = 16234.459290105573
+        academies = [
+            {
+                'latitude': -60,
+                'longitude': -99,
+            },
+            {
+                'latitude': 76,
+                'longitude': 130,
+            },
+            {
+                'latitude': 43,
+                'longitude': -165,
+            },
+            {
+                'latitude': 90,
+                'longitude': -33,
+            },
+        ]
+        cohorts = [{'academy_id': n} for n in range(1, 5)]
+        model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
+
+        url = reverse_lazy('admissions:cohort_all') + '?coordinates=-56,167'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [
+            get_serializer(model.cohort[0],
+                           model.syllabus,
+                           model.syllabus_version,
+                           data={'distance': distance1}),
+            get_serializer(model.cohort[2],
+                           model.syllabus,
+                           model.syllabus_version,
+                           data={'distance': distance2}),
+            get_serializer(model.cohort[1],
+                           model.syllabus,
+                           model.syllabus_version,
+                           data={'distance': distance3}),
+            get_serializer(model.cohort[3],
+                           model.syllabus,
+                           model.syllabus_version,
+                           data={'distance': distance4}),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.format.to_dict(model.cohort))
+
+    """
+    🔽🔽🔽 saas in querystring
+    """
+
+    def test_with_data__empty_and_random_saas_in_querystring(self):
+        cases = ['', self.bc.fake.slug()]
+        academies = [
+            {
+                'available_as_saas': True,
+            },
+            {
+                'available_as_saas': False,
+            },
+            {
+                'available_as_saas': True,
+            },
+            {
+                'available_as_saas': False,
+            },
+        ]
+        cohorts = [{'academy_id': n} for n in range(1, 5)]
+        model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
+
+        for query in cases:
+            url = reverse_lazy('admissions:cohort_all') + f'?saas={query}'
+            response = self.client.get(url)
+            json = response.json()
+            expected = sorted([
+                get_serializer(
+                    model.cohort[0], model.syllabus, model.syllabus_version, data={'distance': None}),
+                get_serializer(
+                    model.cohort[1], model.syllabus, model.syllabus_version, data={'distance': None}),
+                get_serializer(
+                    model.cohort[2], model.syllabus, model.syllabus_version, data={'distance': None}),
+                get_serializer(
+                    model.cohort[3], model.syllabus, model.syllabus_version, data={'distance': None}),
+            ],
+                              key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
+                              reverse=True)
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                             self.bc.format.to_dict(model.cohort))
+
+    def test_with_data__saas_is_false(self):
+        academies = [
+            {
+                'available_as_saas': True,
+            },
+            {
+                'available_as_saas': False,
+            },
+            {
+                'available_as_saas': True,
+            },
+            {
+                'available_as_saas': False,
+            },
+        ]
+        cohorts = [{'academy_id': n} for n in range(1, 5)]
+        model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
+
+        url = reverse_lazy('admissions:cohort_all') + f'?saas=false'
+        response = self.client.get(url)
+        json = response.json()
+        expected = sorted([
+            get_serializer(model.cohort[1], model.syllabus, model.syllabus_version, data={'distance': None}),
+            get_serializer(model.cohort[3], model.syllabus, model.syllabus_version, data={'distance': None}),
+        ],
+                          key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
+                          reverse=True)
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.format.to_dict(model.cohort))
+
+    def test_with_data__saas_is_true(self):
+        academies = [
+            {
+                'available_as_saas': True,
+            },
+            {
+                'available_as_saas': False,
+            },
+            {
+                'available_as_saas': True,
+            },
+            {
+                'available_as_saas': False,
+            },
+        ]
+        cohorts = [{'academy_id': n} for n in range(1, 5)]
+        model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
+
+        url = reverse_lazy('admissions:cohort_all') + f'?saas=true'
+        response = self.client.get(url)
+        json = response.json()
+        expected = sorted([
+            get_serializer(model.cohort[0], model.syllabus, model.syllabus_version, data={'distance': None}),
+            get_serializer(model.cohort[2], model.syllabus, model.syllabus_version, data={'distance': None}),
+        ],
+                          key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
+                          reverse=True)
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.format.to_dict(model.cohort))

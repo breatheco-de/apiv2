@@ -114,8 +114,8 @@ def generate_spanish_translation(modeladmin, request, queryset):
             continue
 
         new_asset = old.all_translations.filter(
-            Q(lang='es') | Q(slug=old.slug + '-es')
-            | Q(slug=old.slug + '.es')).first()
+            Q(lang__iexact='es') | Q(slug__iexact=old.slug + '-es')
+            | Q(slug__iexact=old.slug + '.es')).first()
         if new_asset is not None:
             messages.error(request, f'Translation to {old.slug} already exists with {new_asset.slug}')
             if '.es' in new_asset.slug:

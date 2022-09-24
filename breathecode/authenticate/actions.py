@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from .models import DeviceId, Token, Role, ProfileAcademy, GitpodUser, CredentialsGithub
 from breathecode.notify.actions import send_email_message
+from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy
 from random import randint
 
@@ -121,6 +122,11 @@ def set_gitpod_user_expiration(gitpoduser_id):
     if gitpod_user is None:
         raise Exception(f'Invalid gitpod user id: {gitpoduser_id}')
 
+    # reset status, i don't want to override this value if already set in this function
+    gitpod_user.delete_status = ''
+    gitpod_user.target_cohort = None
+
+    logger.debug(f'Gitpod user: {gitpod_user.id}')
     # If no user is connected, find the user on breathecode by searching the github credentials
     if gitpod_user.user is None:
         github_user = CredentialsGithub.objects.filter(username=gitpod_user.github_username).first()
@@ -129,10 +135,11 @@ def set_gitpod_user_expiration(gitpoduser_id):
 
     if gitpod_user.user is not None:
         # find last cohort
-        cu = gitpod_user.user.cohortuser_set.filter(educational_status__in=['ACTIVE'],
-                                                    cohort__stage__in=[
-                                                        'PREWORK', 'STARTED', 'FINAL_PROJECT'
-                                                    ]).order_by('-cohort__ending_date').first()
+        cu = gitpod_user.user.cohortuser_set.filter(
+            educational_status__in=['ACTIVE'],
+            cohort__never_ends=False,
+            cohort__stage__in=['PREWORK', 'STARTED',
+                               'FINAL_PROJECT']).order_by('-cohort__ending_date').first()
         if cu is not None:
             gitpod_user.expires_at = cu.cohort.ending_date + datetime.timedelta(
                 days=14) if cu.cohort.ending_date is not None else None
@@ -141,13 +148,14 @@ def set_gitpod_user_expiration(gitpoduser_id):
             gitpod_user.delete_status = f'User will be deleted 14 days after cohort {cu.cohort.name} finishes on {cu.cohort.ending_date}'
         else:
             # if no active academy was found, at least we can retreive the latest one to asociate the user to an academy
-            last_cohort = gitpod_user.user.cohortuser_set.all().order_by('-cohort__ending_date').first()
+            last_cohort = gitpod_user.user.cohortuser_set.filter(
+                cohort__never_ends=False).order_by('-cohort__ending_date').first()
             if last_cohort is not None:
                 gitpod_user.academy = last_cohort.cohort.academy
                 gitpod_user.target_cohort = last_cohort.cohort
                 gitpod_user.delete_status = f'It will be deleted soon because no active cohort was found, the last one it had active was ' + last_cohort.cohort.name
 
-    if gitpod_user.user is None or gitpod_user.expires_at is None:
+    if (gitpod_user.user is None or gitpod_user.expires_at is None) and gitpod_user.delete_status == '':
         gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=3)
         gitpod_user.delete_status = 'User will be deleted because no active cohort could be associated to it, please set a cohort if you want to avoid deletion'
 
@@ -163,8 +171,6 @@ def set_gitpod_user_expiration(gitpoduser_id):
                     conflict.academy = gitpod_user.academy
                     conflict.delete_status = gitpod_user.delete_status
                     conflict.save()
-                return conflict
-
     gitpod_user.save()
     return gitpod_user
 
@@ -199,9 +205,13 @@ def update_gitpod_users(html):
 
             logger.debug('Found active user ' + user['github'])
 
+            if user['github'] == 'username' or user['github'] == '':
+                continue
+
             if user['github'] in all_usernames:
-                render_message(
-                    f"Error: user {user['github']} seems to be duplicated on the incoming list from Gitpod")
+                raise ValidationException(
+                    f"Error: user '{user['github']}' seems to be duplicated on the incoming list from Gitpod",
+                    slug='duplicated-user')
 
             all_usernames.append(user['github'])
             all_active_users.append(user)

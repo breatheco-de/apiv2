@@ -91,6 +91,9 @@ class Academy(models.Model):
 
     active_campaign_slug = models.SlugField(max_length=100, unique=False, null=True, default=None, blank=True)
 
+    available_as_saas = models.BooleanField(
+        default=False, help_text='Academies available as SAAS will be sold thru 4Geeks.com')
+
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
 
     timezone = models.CharField(max_length=50, null=True, default=None, blank=True)

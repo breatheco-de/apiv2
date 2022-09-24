@@ -7,7 +7,7 @@ from breathecode.utils import ValidationException, localize_query, SerpyExtensio
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from .actions import test_syllabus
+from .actions import test_syllabus, haversine
 from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
                      Syllabus, SyllabusVersion, COHORT_STAGE)
 
@@ -331,6 +331,13 @@ class PublicCohortSerializer(serpy.Serializer):
     schedule = GetSmallSyllabusScheduleSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
+    distance = serpy.MethodField()
+
+    def get_distance(self, obj):
+        if not obj.latitude or not obj.longitude or not obj.academy.latitude or not obj.academy.longitude:
+            return None
+
+        return haversine(obj.longitude, obj.latitude, obj.academy.longitude, obj.academy.latitude)
 
 
 class GetSmallCohortSerializer(serpy.Serializer):
@@ -814,8 +821,23 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             raise ValidationException('Cannot be marked as `GRADUATED` if its financial '
                                       'status is `LATE`')
 
-        has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
-                                        task_type='PROJECT').exclude(revision_status='IGNORED').count()
+        tasks_pending = Task.objects.filter(user_id=user_id,
+                                            task_status='PENDING',
+                                            task_type='PROJECT',
+                                            cohort__id=cohort_id).exclude(revision_status='IGNORED')
+
+        mandatory_slugs = []
+        for task in tasks_pending:
+            if 'days' in task.cohort.syllabus_version.__dict__['json']:
+                for day in task.cohort.syllabus_version.__dict__['json']['days']:
+                    for assignment in day['assignments']:
+                        if 'mandatory' not in assignment or ('mandatory' in assignment
+                                                             and assignment['mandatory'] == True):
+                            mandatory_slugs.append(assignment['slug'])
+
+        has_tasks = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(
+            revision_status__in=['APPROVED', 'IGNORED']).count()
+
         if is_graduated and has_tasks:
             raise ValidationException(
                 'User has tasks with status pending the educational status cannot be GRADUATED')

@@ -1,13 +1,12 @@
+from django.forms import FloatField
 from breathecode.admissions.caches import CohortCache
 import logging
 import pytz
-from django.db.models import Q
 from breathecode.utils import APIViewExtensions
 from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import HeaderLimitOffsetPagination
 from rest_framework.views import APIView
-from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 from .utils import CohortLog
@@ -22,6 +21,7 @@ from .serializers import (
     GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer)
 from .models import (ACTIVE, Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule,
                      Cohort, STUDENT, DELETED, Syllabus, SyllabusVersion)
+from django.db.models import Value, FloatField, Q
 
 from .actions import update_asset_on_json, find_asset_on_json, test_syllabus
 from breathecode.authenticate.models import ProfileAcademy
@@ -91,6 +91,8 @@ def get_cohorts(request, id=None):
 
     items = Cohort.objects.filter(private=False)
 
+    items = items.annotate(longitude=Value(None, FloatField()), latitude=Value(None, FloatField()))
+
     if isinstance(request.user, AnonymousUser) == False:
         # filter only to the local academy
         items = localize_query(items, request)
@@ -114,6 +116,38 @@ def get_cohorts(request, id=None):
     else:
         items = items.exclude(stage='DELETED')
 
+    if coordinates := request.GET.get('coordinates', ''):
+        if request.user.id:
+            raise ValidationException('coordinates params must be use without auth',
+                                      slug='coordinates-with-auth')
+        try:
+            latitude, longitude = coordinates.split(',')
+            latitude = float(latitude)
+            longitude = float(longitude)
+        except:
+            raise ValidationException('Bad coordinates, the format is latitude,longitude',
+                                      slug='bad-coordinates')
+
+        if latitude > 90 or latitude < -90:
+            raise ValidationException('Bad latitude', slug='bad-latitude')
+
+        if longitude > 180 or longitude < -180:
+            raise ValidationException('Bad longitude', slug='bad-longitude')
+
+        items = items.annotate(longitude=Value(longitude, FloatField()),
+                               latitude=Value(latitude, FloatField()))
+
+    saas = request.GET.get('saas', '').lower()
+    if saas == 'true':
+        items = items.filter(academy__available_as_saas=True)
+
+    elif saas == 'false':
+        items = items.filter(academy__available_as_saas=False)
+
+    syllabus_slug = request.GET.get('syllabus_slug', '')
+    if syllabus_slug:
+        items = items.filter(syllabus_version__syllabus__slug=syllabus_slug)
+
     sort = request.GET.get('sort', None)
     if sort is None or sort == '':
         sort = '-kickoff_date'
@@ -121,8 +155,9 @@ def get_cohorts(request, id=None):
     items = items.order_by(sort)
 
     serializer = PublicCohortSerializer(items, many=True)
+    data = sorted(serializer.data, key=lambda x: x['distance']) if coordinates else serializer.data
 
-    return Response(serializer.data)
+    return Response(data)
 
 
 class AcademyReportView(APIView):
@@ -244,7 +279,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         cohorts = request.GET.get('cohorts', None)
         if cohorts is not None:
-            items = items.filter(cohort__slug__in=cohorts.lower().split(','))
+            items = items.filter(cohort__slug__in=cohorts.split(','))
 
         users = request.GET.get('users', None)
         if users is not None:

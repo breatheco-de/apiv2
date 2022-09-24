@@ -22,10 +22,33 @@ class UserSerializer(serpy.Serializer):
     email = serpy.Field()
 
 
+class SmallProjectSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    title = serpy.Field()
+    repository = serpy.Field()
+
+
 class SmallFreelancerSerializer(serpy.Serializer):
     id = serpy.Field()
     user = UserSerializer()
     price_per_hour = serpy.Field()
+
+
+class TinyFreelancerMemberSerializer(serpy.Serializer):
+    id = serpy.Field()
+    freelancer = SmallFreelancerSerializer()
+    total_cost_hourly_price = serpy.Field()
+    total_client_hourly_price = serpy.Field()
+
+
+class SmallFreelancerMemberSerializer(serpy.Serializer):
+    id = serpy.Field()
+    freelancer = SmallFreelancerSerializer()
+    project = SmallProjectSerializer()
+    total_cost_hourly_price = serpy.Field()
+    total_client_hourly_price = serpy.Field()
 
 
 class SmallIssueSerializer(serpy.Serializer):
@@ -47,6 +70,38 @@ class SmallIssueSerializer(serpy.Serializer):
     def get_included_in_bill(self, obj):
         return (obj.status_message is None or obj.status_message == '') and (obj.node_id is not None
                                                                              and obj.node_id != '')
+
+
+class BigProjectSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    title = serpy.Field()
+    repository = serpy.Field()
+    members = serpy.MethodField()
+
+    def get_members(self, obj):
+        return TinyFreelancerMemberSerializer(obj.freelanceprojectmember_set.all(), many=True).data
+
+
+class BigInvoiceSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    status = serpy.Field()
+    total_duration_in_minutes = serpy.Field()
+    total_duration_in_hours = serpy.Field()
+    total_price = serpy.Field()
+    paid_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    project = SmallProjectSerializer()
+    reviewer = UserSerializer(required=False)
+    issues = serpy.MethodField()
+
+    def get_issues(self, obj):
+        _issues = obj.issue_set.order_by('created_at').all()
+        return SmallIssueSerializer(_issues, many=True).data
 
 
 class BigBillSerializer(serpy.Serializer):
