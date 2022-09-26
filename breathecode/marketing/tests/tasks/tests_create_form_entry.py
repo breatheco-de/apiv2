@@ -126,29 +126,77 @@ class CreateFormEntryTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     def test_create_form_entry_with_dict_without_regex_first_name(self):
         """Test create_form_entry task without data"""
-        cases = [('Brandon1', 'Smith2', 'test12.net'), ('Brandon@', 'Smith@', 'test12.net')]
+        cases = [('Brandon' + self.bc.random.string(number=True, size=1),
+                  'Smith' + self.bc.random.string(number=True, size=1), 'test12.net'),
+                 ('Brandon' + self.bc.random.string(symbol=True, size=1),
+                  'Smith' + self.bc.random.string(symbol=True, size=1), 'test12@.net'),
+                 ('Brandon' + self.bc.random.string(symbol=True, size=1),
+                  'Smith' + self.bc.random.string(symbol=True, size=1), 'test12.net@'),
+                 ('Brandon' + self.bc.random.string(symbol=True, size=1),
+                  'Smith' + self.bc.random.string(symbol=True, size=1), '@test12.net')]
         model = self.bc.database.create(csv_upload=1)
-        logging.Logger.info.call_args_list = []
-        data = {
-            'first_name': 'Brandon1@',
-            'last_name': 'Smith1@',
-            'email': 'test12.net',
-            'location': 'Madrid',
-            'academy': 1
-        }
-        create_form_entry(data, 1)
 
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The academy needs to have a valid academy id'),
-            call('first name has incorrect characters'),
-            call('last name has incorrect characters'),
-            call('email has incorrect format'),
-            call('No location or academy in form entry'),
-            call('Missing field in received item'),
-            call(data)
-        ])
+        for first_name, last_name, email in cases:
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+            data = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'location': 'Madrid',
+                'academy': 1
+            }
+            create_form_entry(data, 1)
+
+            self.assertEqual(self.count_form_entry(), 0)
+            self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
+            self.assertEqual(logging.Logger.error.call_args_list, [
+                call('The academy needs to have a valid academy id'),
+                call('first name has incorrect characters'),
+                call('last name has incorrect characters'),
+                call('email has incorrect format'),
+                call('No location or academy in form entry'),
+                call('Missing field in received item'),
+                call(data)
+            ])
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    def test_create_form_entry_with_dict_without_regex_first_name(self):
+        """Test create_form_entry task without data"""
+        cases = [('Brandon' + self.bc.random.string(number=True, size=1),
+                  'Smith' + self.bc.random.string(number=True, size=1), 'test12.net'),
+                 ('Brandon' + self.bc.random.string(symbol=True, size=1),
+                  'Smith' + self.bc.random.string(symbol=True, size=1), 'test12@.net'),
+                 ('Brandon' + self.bc.random.string(symbol=True, size=1),
+                  'Smith' + self.bc.random.string(symbol=True, size=1), 'test12.net@'),
+                 ('Brandon' + self.bc.random.string(symbol=True, size=1),
+                  'Smith' + self.bc.random.string(symbol=True, size=1), '@test12.net')]
+        model = self.bc.database.create(csv_upload=1)
+
+        for first_name, last_name, email in cases:
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+            data = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'location': 'Madrid',
+                'academy': self.bc.fake.slug()
+            }
+            create_form_entry(data, 1)
+
+            self.assertEqual(self.count_form_entry(), 0)
+            self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
+            self.assertEqual(logging.Logger.error.call_args_list, [
+                call('The academy needs to have a valid academy id'),
+                call('first name has incorrect characters'),
+                call('last name has incorrect characters'),
+                call('email has incorrect format'),
+                call('No location or academy in form entry'),
+                call('Missing field in received item'),
+                call(data)
+            ])
 
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

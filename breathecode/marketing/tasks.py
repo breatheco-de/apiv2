@@ -412,10 +412,10 @@ def create_form_entry(self, item, csv_upload_id):
     if 'location' in item:
         form_entry.location = item['location']
     if 'academy' in item:
-        if Academy.objects.filter(id=item['academy']).first():
+        if Academy.objects.filter(slug=item['academy']).first():
             form_entry.academy = item['academy']
         else:
-            message = 'The academy needs to have a valid academy id'
+            message = f'No academy exists with this academy slug: {item["academy"]}'
             error_message += f'{message}, '
             logger.error(message)
 
@@ -456,10 +456,12 @@ def create_form_entry(self, item, csv_upload_id):
         error_message += f'{message}, '
         logger.error(message)
 
-    if form_entry.academy and not re.findall(r'/^[a-z0-9]+(?:[a-z0-9-]+)+[a-z0-9]+$/', form_entry.academy):
-        message = 'academy has incorrect format'
-        error_message += f'{message}, '
-        logger.error(message)
+    # Not needed because of Academy slug query problem
+
+    # if form_entry.academy and not re.findall(r'/^[a-z0-9]+(?:[a-z0-9-]+)+[a-z0-9]+$/', form_entry.academy):
+    #     message = 'academy has incorrect format'
+    #     error_message += f'{message}, '
+    #     logger.error(message)
 
     if error_message.endswith(', '):
         error_message = error_message[0:-2]
