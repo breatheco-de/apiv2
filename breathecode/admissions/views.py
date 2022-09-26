@@ -18,7 +18,8 @@ from .serializers import (
     CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
     UserDJangoRestSerializer, UserMeSerializer, GetSyllabusScheduleSerializer, GetSyllabusVersionSerializer,
     SyllabusVersionSerializer, GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer,
-    GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer)
+    GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer,
+    GetTeacherAcademySmallSerializer)
 from .models import (ACTIVE, Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule,
                      Cohort, STUDENT, DELETED, Syllabus, SyllabusVersion)
 from django.db.models import Value, FloatField, Q
@@ -50,6 +51,46 @@ def get_timezones(request, id=None):
 def get_all_academies(request, id=None):
     items = Academy.objects.all()
     serializer = AcademySerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@capable_of('read_member')
+def get_all_academy_teachers(request, academy_id):
+    items = ProfileAcademy.objects.filter(academy__id=academy_id,
+                                          role__slug__in=['teacher', 'assistant'
+                                                          ]).exclude(user__email__contains='@token.com')
+
+    roles = request.GET.get('roles', None)
+    if roles is not None:
+        items = items.filter(role__slug__in=roles.split(','))
+
+    status = request.GET.get('status', None)
+    if status is not None:
+        items = items.filter(status__iexact=status)
+
+    cohort_stage = request.GET.get('cohort_stage', None)
+    no_sort = []
+    if cohort_stage is not None:
+        no_sort.append('cohort_stage')
+        items = items.filter(user__cohortuser__cohort__stage__iexact=cohort_stage).distinct('user')
+
+    like = request.GET.get('like', None)
+    if like is not None:
+        items = query_like_by_full_name(like=like, items=items)
+
+    sort = request.GET.get('sort', None)
+    if (sort is None or sort == '') and len(no_sort) == 0:
+        sort = '-first_name'
+
+    if len(no_sort) > 0 and sort:
+        raise ValidationException('No sorting allowed when following filters are applied: ' +
+                                  ','.join(no_sort),
+                                  slug='no-sorting-allowed')
+    elif sort is not None:
+        items = items.order_by(sort)
+
+    serializer = GetTeacherAcademySmallSerializer(items, many=True)
     return Response(serializer.data)
 
 
