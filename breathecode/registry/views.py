@@ -136,7 +136,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('language')
             if param == 'en':
                 param = 'us'
-            items = items.filter(Q(lang=param) | Q(lang='') | Q(lang__isnull=True))
+            items = items.filter(Q(lang__iexact=param) | Q(lang='') | Q(lang__isnull=True))
 
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')
@@ -815,7 +815,7 @@ class AcademyCategoryView(APIView, GenerateLookupsMixin):
 
         lang = request.GET.get('lang', None)
         if lang is not None:
-            items = items.filter(lang=lang.upper())
+            items = items.filter(lang__iexact=lang)
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
