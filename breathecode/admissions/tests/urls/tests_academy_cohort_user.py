@@ -3,10 +3,80 @@ Test /cohort/user
 """
 import random
 import re
+from unittest.mock import MagicMock, patch
+from django.utils import timezone
 from random import choice
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins import AdmissionsTestCase
+
+UTC_NOW = timezone.now()
+
+
+def post_serializer(self, cohort, user, profile_academy=None, data={}):
+    return {
+        'cohort': {
+            'ending_date': cohort.ending_date,
+            'id': cohort.id,
+            'kickoff_date': self.bc.datetime.to_iso_string(cohort.kickoff_date),
+            'name': cohort.name,
+            'slug': cohort.slug,
+            'stage': cohort.stage,
+        },
+        'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        'educational_status': None,
+        'finantial_status': None,
+        'id': 1,
+        'profile_academy': {
+            'email': profile_academy.email,
+            'first_name': profile_academy.first_name,
+            'id': profile_academy.id,
+            'last_name': profile_academy.last_name,
+            'phone': profile_academy.phone,
+        } if profile_academy else None,
+        'role': 'STUDENT',
+        'user': {
+            'email': user.email,
+            'first_name': user.first_name,
+            'id': user.id,
+            'last_name': user.last_name,
+        },
+        'watching': False,
+        **data,
+    }
+
+
+def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={}):
+    return {
+        'cohort': {
+            'ending_date': cohort.ending_date,
+            'id': cohort.id,
+            'kickoff_date': self.bc.datetime.to_iso_string(cohort.kickoff_date),
+            'name': cohort.name,
+            'slug': cohort.slug,
+            'stage': cohort.stage,
+        },
+        'created_at': self.bc.datetime.to_iso_string(cohort_user.created_at),
+        'educational_status': cohort_user.educational_status,
+        'finantial_status': cohort_user.finantial_status,
+        'id': cohort_user.id,
+        'profile_academy': {
+            'email': profile_academy.email,
+            'first_name': profile_academy.first_name,
+            'id': profile_academy.id,
+            'last_name': profile_academy.last_name,
+            'phone': profile_academy.phone,
+        } if profile_academy else None,
+        'role': cohort_user.role,
+        'user': {
+            'email': user.email,
+            'first_name': user.first_name,
+            'id': user.id,
+            'last_name': user.last_name,
+        },
+        'watching': cohort_user.watching,
+        **data,
+    }
 
 
 class CohortUserTestSuite(AdmissionsTestCase):
@@ -671,10 +741,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='crud_cohort',
                                      role='potato')
         data = {}
-        response = self.client.put(url, data)
-        json = response.json()
+        response = self.client.put(url, data, format='json')
 
-        self.assertEqual(json, {'status_code': 400, 'detail': 'Missing cohort_id or user_id'})
+        json = response.json()
+        expected = {'status_code': 400, 'detail': 'Missing cohort_id, user_id and id'}
+
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_user_dict(), [])
 
@@ -699,7 +771,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_cohort_user_dict(), [])
 
-    def test__put__in_bulk__without_data(self):
+    def test__put__in_bulk__without_data__without_id(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -708,6 +780,23 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='crud_cohort',
                                      role='potato')
         data = [{}]
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'Missing cohort_id, user_id and id', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_user_dict(), [])
+
+    def test__put__in_bulk__without_data__with_bad_id(self):
+        """Test /cohort/user without auth"""
+        self.headers(academy=1)
+        url = reverse_lazy('admissions:academy_cohort_user')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
+        data = [{'id': 1}]
         response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {'detail': 'Cannot determine CohortUser in index 0', 'status_code': 400}
@@ -728,13 +817,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
         data = [{'id': model['cohort_user'].id}]
         response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = [{
-            'id': 1,
-            'role': 'STUDENT',
-            'educational_status': None,
-            'finantial_status': None,
-            'watching': False,
-        }]
+        expected = [
+            put_serializer(self,
+                           model.cohort_user,
+                           model.cohort,
+                           model.user,
+                           model.profile_academy,
+                           data={
+                               'role': 'STUDENT',
+                           })
+        ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -778,19 +870,18 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }]
         response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = [{
-            'id': 1,
-            'role': 'STUDENT',
-            'educational_status': None,
-            'finantial_status': 'LATE',
-            'watching': False,
-        }, {
-            'id': 2,
-            'role': 'STUDENT',
-            'educational_status': 'GRADUATED',
-            'finantial_status': None,
-            'watching': False,
-        }]
+
+        expected = [
+            put_serializer(self,
+                           m.cohort_user,
+                           m.cohort,
+                           m.user,
+                           m.profile_academy,
+                           data={
+                               'educational_status': None if m.cohort.id == 1 else 'GRADUATED',
+                               'finantial_status': 'LATE' if m.cohort.id == 1 else None,
+                           }) for m in model
+        ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -834,6 +925,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_cohort_user_dict(), [])
 
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__post__in_bulk__1_item(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -850,42 +942,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }]
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = [{
-            'id': 1,
-            'role': 'STUDENT',
-            'user': {
-                'id': model['user'].id,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'email': model['user'].email,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': False,
-                'remote_available': True,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
-                'current_day': model['cohort'].current_day,
-                'online_meeting_url': model['cohort'].online_meeting_url,
-                'timezone': model['cohort'].timezone,
-                'academy': {
-                    'id': model['cohort'].academy.id,
-                    'name': model['cohort'].academy.name,
-                    'slug': model['cohort'].academy.slug,
-                    'country': model['cohort'].academy.country.code,
-                    'city': model['cohort'].academy.city.id,
-                    'street_address': model['cohort'].academy.street_address,
-                },
-                'schedule': None,
-                'syllabus_version': None,
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'language': model['cohort'].language,
-                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
-            },
-        }]
+        expected = [
+            post_serializer(self,
+                            model.cohort,
+                            model.user,
+                            model.profile_academy,
+                            data={
+                                'id': 1,
+                                'role': 'STUDENT',
+                            }),
+        ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -899,6 +965,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'watching': False,
         }])
 
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__post_in_bulk__2_items(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -917,42 +984,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
         } for model in models]
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = [{
-            'id': model['user'].id - 1,
-            'role': 'STUDENT',
-            'user': {
-                'id': model['user'].id,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'email': model['user'].email,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': False,
-                'remote_available': True,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
-                'current_day': model['cohort'].current_day,
-                'online_meeting_url': model['cohort'].online_meeting_url,
-                'timezone': model['cohort'].timezone,
-                'academy': {
-                    'id': model['cohort'].academy.id,
-                    'name': model['cohort'].academy.name,
-                    'slug': model['cohort'].academy.slug,
-                    'country': model['cohort'].academy.country.code,
-                    'city': model['cohort'].academy.city.id,
-                    'street_address': model['cohort'].academy.street_address,
-                },
-                'schedule': None,
-                'syllabus_version': None,
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'language': model['cohort'].language,
-                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
-            },
-        } for model in models]
+        expected = [
+            post_serializer(self,
+                            model.cohort,
+                            model.user,
+                            None,
+                            data={
+                                'id': model.user.id - 1,
+                                'role': 'STUDENT',
+                            }) for model in models
+        ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -978,6 +1019,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Post in bulk, statuses in lowercase
     """
 
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__post__in_bulk__1_item__statuses_in_lowercase(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -991,8 +1033,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_cohort_user')
         role = random.choice(['TEACHER', 'ASSISTANT', 'REVIEWER', 'STUDENT']).lower()
         finantial_status = random.choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']).lower()
-        educational_status = random.choice(['ACTIVE', 'POSTPONED', 'GRADUATED', 'SUSPENDED',
-                                            'DROPPED']).lower()
+        # don't put GRADUATED here
+        educational_status = random.choice(['ACTIVE', 'POSTPONED', 'SUSPENDED', 'DROPPED']).lower()
         data = [{
             'role': role,
             'finantial_status': finantial_status,
@@ -1002,42 +1044,22 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }]
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = [{
-            'id': 1,
-            'role': role.upper(),
-            'user': {
-                'id': model['user'].id,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'email': model['user'].email,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': False,
-                'remote_available': True,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
-                'current_day': model['cohort'].current_day,
-                'online_meeting_url': model['cohort'].online_meeting_url,
-                'timezone': model['cohort'].timezone,
-                'academy': {
-                    'id': model['cohort'].academy.id,
-                    'name': model['cohort'].academy.name,
-                    'slug': model['cohort'].academy.slug,
-                    'country': model['cohort'].academy.country.code,
-                    'city': model['cohort'].academy.city.id,
-                    'street_address': model['cohort'].academy.street_address,
-                },
-                'schedule': None,
-                'syllabus_version': None,
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'language': model['cohort'].language,
-                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
-            },
-        }]
+
+        del data[0]['user']
+        del data[0]['cohort']
+
+        expected = [
+            post_serializer(self,
+                            model.cohort,
+                            model.user,
+                            model.profile_academy,
+                            data={
+                                **data[0],
+                                'role': role.upper(),
+                                'finantial_status': finantial_status.upper(),
+                                'educational_status': educational_status.upper(),
+                            }),
+        ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

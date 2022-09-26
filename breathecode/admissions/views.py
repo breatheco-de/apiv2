@@ -290,52 +290,121 @@ class CohortUserView(APIView, GenerateLookupsMixin):
         return Response(serializer.data)
 
     def post(self, request, cohort_id=None, user_id=None):
+
+        def validate_data(data):
+            if user_id:
+                data['user'] = user_id
+
+            if cohort_id:
+                data['cohort'] = cohort_id
+
+            if 'user' not in data or 'cohort' not in data:
+                raise ValidationException('Missing cohort_id or user_id', code=400)
+
+            if not isinstance(data['user'], int) or not User.objects.filter(id=int(data['user'])).exists():
+                raise ValidationException('invalid user_id', code=400)
+
+            if (not isinstance(data['cohort'], int)
+                    or not Cohort.objects.filter(id=int(data['cohort'])).exists()):
+                raise ValidationException('invalid cohort_id', code=400)
+
+            return data
+
         many = isinstance(request.data, list)
         context = {
             'request': request,
-            'cohort_id': cohort_id,
-            'user_id': user_id,
-            'many': many,
         }
 
-        serializer = CohortUserSerializer(data=request.data, context=context, many=many)
+        data = [validate_data(data) for data in request.data] if many else validate_data(request.data)
+
+        serializer = CohortUserSerializer(data=data, context=context, many=many)
         if serializer.is_valid():
-            serializer.save()
+            instance = serializer.save()
+            serializer = GetCohortUserSerializer(instance, many=many)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, cohort_id=None, user_id=None):
+
+        def validate_data(data, many):
+            validate_data.__dict__['index'] += 1
+            instance = None
+
+            if user_id:
+                data['user'] = user_id
+
+            if cohort_id:
+                data['cohort'] = cohort_id
+
+            if 'user' not in data and 'cohort' not in data and 'id' not in data:
+                raise ValidationException('Missing cohort_id, user_id and id', code=400)
+
+            id = data.get('id')
+
+            if isinstance(id, int) and (instance := CohortUser.objects.filter(id=id).first()):
+                data['id'] = instance.id
+                data['cohort'] = instance.cohort.id
+                data['user'] = instance.user.id
+                return data, instance
+
+            user = data.get('user')
+            cohort = data.get('cohort')
+
+            if not id:
+                try:
+                    user = int(user)
+                    data['user'] = user
+                except:
+                    raise ValidationException('invalid user_id', code=400)
+
+                try:
+                    cohort = int(cohort)
+                    data['cohort'] = cohort
+                except:
+                    raise ValidationException('invalid cohort_id', code=400)
+
+            if instance := CohortUser.objects.filter(cohort__id=cohort, user__id=user).first():
+                data['id'] = instance.id
+                data['cohort'] = instance.cohort.id
+                data['user'] = instance.user.id
+                return data, instance
+
+            message = f'Cannot determine CohortUser'
+
+            if many:
+                message += f" in index {validate_data.__dict__['index']}"
+
+            # many
+            raise ValidationException(message)
+
+        validate_data.__dict__['index'] = -1
+
         many = isinstance(request.data, list)
         context = {
             'request': request,
-            'cohort_id': cohort_id,
-            'user_id': user_id,
-            'many': many,
         }
 
-        if not many:
-            current = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+        if many:
+            data = []
+            # instance = []
+            instance = CohortUser.objects.none()
+
+            for c in request.data:
+                p1, p2 = validate_data(c, many)
+
+                data.append(p1)
+                # instance.append(p2)
+                instance |= CohortUser.objects.filter(id=p2.id)
 
         else:
-            current = []
-            index = -1
-            for x in request.data:
-                index = index + 1
+            data, instance = validate_data(request.data, many)
 
-                if 'id' in x:
-                    current.append(CohortUser.objects.filter(id=x['id']).first())
-
-                elif 'user' in x and 'cohort' in x:
-                    current.append(
-                        CohortUser.objects.filter(user__id=x['user'], cohort__id=x['cohort']).first())
-
-                else:
-                    raise ValidationException('Cannot determine CohortUser in '
-                                              f'index {index}')
-
-        serializer = CohortUserPUTSerializer(current, data=request.data, context=context, many=many)
+        serializer = CohortUserPUTSerializer(instance, data=data, context=context, many=many)
         if serializer.is_valid():
-            serializer.save()
+            instance = serializer.save()
+            serializer = GetCohortUserSerializer(instance, many=many)
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -446,52 +515,122 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
 
     @capable_of('crud_cohort')
     def post(self, request, cohort_id=None, academy_id=None, user_id=None):
+
+        def validate_data(data):
+            if user_id:
+                data['user'] = user_id
+
+            if cohort_id:
+                data['cohort'] = cohort_id
+
+            if 'user' not in data or 'cohort' not in data:
+                raise ValidationException('Missing cohort_id or user_id', code=400)
+
+            if not isinstance(data['user'], int) or not User.objects.filter(id=int(data['user'])).exists():
+                raise ValidationException('invalid user_id', code=400)
+
+            if (not isinstance(data['cohort'], int)
+                    or not Cohort.objects.filter(id=int(data['cohort'])).exists()):
+                raise ValidationException('invalid cohort_id', code=400)
+
+            return data
+
         many = isinstance(request.data, list)
         context = {
             'request': request,
-            'cohort_id': cohort_id,
-            'user_id': user_id,
-            'many': many,
         }
 
-        serializer = CohortUserSerializer(data=request.data, context=context, many=many)
+        data = [validate_data(data) for data in request.data] if many else validate_data(request.data)
+
+        serializer = CohortUserSerializer(data=data, context=context, many=many)
         if serializer.is_valid():
-            serializer.save()
+            instance = serializer.save()
+            serializer = GetCohortUserSerializer(instance, many=many)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_cohort')
     def put(self, request, cohort_id=None, user_id=None, academy_id=None):
+
+        def validate_data(data, many):
+            validate_data.__dict__['index'] += 1
+            instance = None
+
+            if user_id:
+                data['user'] = user_id
+
+            if cohort_id:
+                data['cohort'] = cohort_id
+
+            if 'user' not in data and 'cohort' not in data and 'id' not in data:
+                raise ValidationException('Missing cohort_id, user_id and id', code=400)
+
+            id = data.get('id')
+
+            if isinstance(id, int) and (instance := CohortUser.objects.filter(id=id).first()):
+                data['id'] = instance.id
+                data['cohort'] = instance.cohort.id
+                data['user'] = instance.user.id
+                return data, instance
+
+            user = data.get('user')
+            cohort = data.get('cohort')
+
+            if not id:
+                try:
+                    user = int(user)
+                    data['user'] = user
+                except:
+                    raise ValidationException('invalid user_id', code=400)
+
+                try:
+                    cohort = int(cohort)
+                    data['cohort'] = cohort
+                except:
+                    raise ValidationException('invalid cohort_id', code=400)
+
+            if instance := CohortUser.objects.filter(cohort__id=cohort, user__id=user).first():
+                data['id'] = instance.id
+                data['cohort'] = instance.cohort.id
+                data['user'] = instance.user.id
+                return data, instance
+
+            message = f'Cannot determine CohortUser'
+
+            if many:
+                message += f" in index {validate_data.__dict__['index']}"
+
+            # many
+            raise ValidationException(message)
+
+        validate_data.__dict__['index'] = -1
+
         many = isinstance(request.data, list)
         context = {
             'request': request,
-            'cohort_id': cohort_id,
-            'user_id': user_id,
-            'many': many,
         }
 
-        if not many:
-            current = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+        if many:
+            data = []
+            # instance = []
+            instance = CohortUser.objects.none()
+
+            for c in request.data:
+                p1, p2 = validate_data(c, many)
+
+                data.append(p1)
+                # instance.append(p2)
+                instance |= CohortUser.objects.filter(id=p2.id)
+
         else:
-            current = []
-            index = -1
-            for x in request.data:
-                index = index + 1
+            data, instance = validate_data(request.data, many)
 
-                if 'id' in x:
-                    current.append(CohortUser.objects.filter(id=x['id']).first())
-
-                elif 'user' in x and 'cohort' in x:
-                    current.append(
-                        CohortUser.objects.filter(user__id=x['user'], cohort__id=x['cohort']).first())
-
-                else:
-                    raise ValidationException('Cannot determine CohortUser in '
-                                              f'index {index}')
-
-        serializer = CohortUserPUTSerializer(current, data=request.data, context=context, many=many)
+        serializer = CohortUserPUTSerializer(instance, data=data, context=context, many=many)
         if serializer.is_valid():
-            serializer.save()
+            instance = serializer.save()
+            serializer = GetCohortUserSerializer(instance, many=many)
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
