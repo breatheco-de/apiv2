@@ -107,6 +107,7 @@ def generate_certificate(user, cohort=None, layout=None):
                                             cohort__id=cohort.id,
                                             task_type='PROJECT',
                                             revision_status='PENDING')
+
         mandatory_slugs = []
         for task in tasks_pending:
             if 'days' in task.cohort.syllabus_version.__dict__['json']:
@@ -116,8 +117,9 @@ def generate_certificate(user, cohort=None, layout=None):
                                                              and assignment['mandatory'] == True):
                             mandatory_slugs.append(assignment['slug'])
 
-        tasks_count_pending = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(
-            revision_status__in=['APPROVED', 'IGNORED']).count()
+        tasks_count_pending = Task.objects.filter(
+            user=user,
+            associated_slug__in=mandatory_slugs).exclude(revision_status__in=['APPROVED', 'IGNORED']).count()
 
         if tasks_count_pending:
             raise ValidationException(f'The student has {tasks_count_pending} '
