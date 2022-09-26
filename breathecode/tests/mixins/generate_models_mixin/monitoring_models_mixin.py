@@ -10,6 +10,7 @@ class MonitoringModelsMixin(ModelsMixin):
     def generate_monitoring_models(self,
                                    application=False,
                                    academy=False,
+                                   csv_upload=False,
                                    slack_channel=False,
                                    endpoint=False,
                                    monitor_script=False,
@@ -55,6 +56,16 @@ class MonitoringModelsMixin(ModelsMixin):
             models['monitor_script'] = create_models(monitor_script, 'monitoring.MonitorScript', **{
                 **kargs,
                 **monitor_script_kwargs
+            })
+
+        if not 'csv_upload' in models and is_valid(csv_upload):
+            kargs = {}
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['csv_upload'] = create_models(csv_upload, 'monitoring.CSVUpload', **{
+                **kargs,
             })
 
         return models

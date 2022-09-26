@@ -345,6 +345,13 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def create_form_entry(self, item, csv_upload_id):
 
+    logger.info('Create form entry started')
+
+    csv_upload = CSVUpload.objects.filter(id=csv_upload_id).first()
+    if not csv_upload:
+        logger.error('No CSVUpload found with this id')
+        return ''
+
     # has_error = False
 
     # if 'first_name' not in item:
@@ -370,6 +377,8 @@ def create_form_entry(self, item, csv_upload_id):
 
     form_entry = FormEntry()
 
+    error_message = ''
+
     if 'first_name' in item:
         form_entry.first_name = item['first_name']
     if 'last_name' in item:
@@ -379,11 +388,12 @@ def create_form_entry(self, item, csv_upload_id):
     if 'location' in item:
         form_entry.location = item['location']
     if 'academy' in item:
-        form_entry.academy = item['academy']
-
-    csv_upload = CSVUpload()
-
-    error_message = ''
+        if Academy.objects.filter(id=item['academy']).first():
+            form_entry.academy = item['academy']
+        else:
+            message = 'The academy needs to have a valid academy id'
+            error_message += f'{message}, '
+            logger.error(message)
 
     if not form_entry.first_name:
         message = 'No first name in form entry'
@@ -422,8 +432,6 @@ def create_form_entry(self, item, csv_upload_id):
         error_message += f'{message}, '
         logger.error(message)
 
-    # if form_entry.location and not re.findall(r'/^[a-z0-9]+(?:[a-z0-9-]+)+[a-z0-9]+$/', form_entry.location):
-
     if form_entry.academy and not re.findall(r'/^[a-z0-9]+(?:[a-z0-9-]+)+[a-z0-9]+$/', form_entry.academy):
         message = 'academy has incorrect format'
         error_message += f'{message}, '
@@ -437,9 +445,12 @@ def create_form_entry(self, item, csv_upload_id):
         csv_upload.log = csv_upload.log or ''
         csv_upload.log += error_message
         logger.error('Missing field in received item')
-        logger.error(f'{item}')
+        logger.error(item)
+
+    csv_upload.id = csv_upload_id
 
     csv_upload.save()
 
     if not error_message:
+        logger.info('create_form_entry successfully created')
         form_entry.save()

@@ -3,6 +3,7 @@ Test /answer/:id
 """
 from breathecode.marketing.tasks import create_form_entry
 import re, string, os
+import logging
 from datetime import datetime
 from unittest.mock import patch, MagicMock, call
 from django.urls.base import reverse_lazy
@@ -78,20 +79,75 @@ def generate_form_entry_kwargs():
 
 
 class CreateFormEntryTestSuite(MarketingTestCase):
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_create_form_entry_with_dict_empty(self):
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    def test_create_form_entry_with_dict_empty_without_csv_upload_id(self):
         """Test create_form_entry task without data"""
-        try:
-            create_form_entry({}, 1)
-            assert False
-        except Exception as e:
-            print(e)
-            message = str(e)
-            self.assertEqual(message, 'You need to specify the form entry data')
+
+        create_form_entry({}, 1)
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('No CSVUpload found with this id')])
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    def test_create_form_entry_with_dict_empty_with_csv_upload_id(self):
+        """Test create_form_entry task without data"""
+
+        model = self.bc.database.create(csv_upload=1)
+        logging.Logger.info.call_args_list = []
+        create_form_entry({}, 1)
+
+        self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
+        print('first: ', str(logging.Logger.error.call_args_list))
+        print(
+            'second: ',
+            str([
+                call('No first name in form entry'),
+                call('No last name in form entry'),
+                call('No email in form entry'),
+                call('No location or academy in form entry'),
+                call('Missing field in received item'),
+                call({})
+            ]))
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('No first name in form entry'),
+            call('No last name in form entry'),
+            call('No email in form entry'),
+            call('No location or academy in form entry'),
+            call('Missing field in received item'),
+            call({})
+        ])
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    def test_create_form_entry_with_dict_without_regex_first_name(self):
+        """Test create_form_entry task without data"""
+
+        model = self.bc.database.create(csv_upload=1)
+        logging.Logger.info.call_args_list = []
+        data = {
+            'first_name': 'Brandon1@',
+            'last_name': 'Smith1@',
+            'email': 'test12.net',
+            'location': 'Madrid',
+            'academy': 1
+        }
+        create_form_entry(data, 1)
+
+        self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('The academy needs to have a valid academy id'),
+            call('first name has incorrect characters'),
+            call('last name has incorrect characters'),
+            call('email has incorrect format'),
+            call('No location or academy in form entry'),
+            call('Missing field in received item'),
+            call(data)
+        ])
 
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
