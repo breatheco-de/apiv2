@@ -81,7 +81,8 @@ def resync_single_issue(modeladmin, request, queryset):
             messages.success(message='Success!', request=request)
         except ValueError as err:
             messages.error(request, err)
-            
+
+
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
     search_fields = [
@@ -91,7 +92,8 @@ class IssueAdmin(admin.ModelAdmin):
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id',
                     'github_url')
     list_filter = ['status', 'bill__status']
-    actions = [resync_single_issue] + change_field(['TODO', 'DONE', 'IGNORED', 'DRAFT', 'DOING'], name='status')
+    actions = [resync_single_issue] + change_field(['TODO', 'DONE', 'IGNORED', 'DRAFT', 'DOING'],
+                                                   name='status')
 
     def github_url(self, obj):
         return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>",

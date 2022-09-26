@@ -211,9 +211,9 @@ class MemberView(APIView, GenerateLookupsMixin):
         if not 'student' in include:
             items = items.exclude(role__slug='student')
 
-        roles = request.GET.get('roles', None)
-        if roles is not None:
-            items = items.filter(role__in=roles.split(','))
+        roles = request.GET.get('roles', '')
+        if roles != '':
+            items = items.filter(role__in=roles.lower().split(','))
 
         status = request.GET.get('status', None)
         if status is not None:
