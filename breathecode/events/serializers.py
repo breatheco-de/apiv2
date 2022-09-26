@@ -142,6 +142,7 @@ class EventCheckinSerializer(serpy.Serializer):
 
 
 class EventSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Event
         exclude = ()
@@ -202,12 +203,14 @@ class EventSerializer(serializers.ModelSerializer):
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Organization
         exclude = ()
 
 
 class EventbriteWebhookSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = EventbriteWebhook
         exclude = ()

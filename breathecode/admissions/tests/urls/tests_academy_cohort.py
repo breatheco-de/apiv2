@@ -22,6 +22,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_academy_cohort__post__without_authorization(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -432,7 +433,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
-            'language': cohort.language,
+            'language': cohort.language.lower(),
             'created_at': self.datetime_to_iso(cohort.created_at),
             'updated_at': self.datetime_to_iso(cohort.updated_at),
         }
@@ -555,7 +556,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
-            'language': cohort.language,
+            'language': cohort.language.lower(),
             'created_at': self.datetime_to_iso(cohort.created_at),
             'updated_at': self.datetime_to_iso(cohort.updated_at),
         }
@@ -645,7 +646,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
-            'language': cohort.language,
+            'language': cohort.language.lower(),
             'created_at': self.datetime_to_iso(cohort.created_at),
             'updated_at': self.datetime_to_iso(cohort.updated_at),
         }

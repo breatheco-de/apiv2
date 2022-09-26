@@ -16,6 +16,7 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
+
     def test_academy_id_syllabus_id_version_without_auth(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
@@ -116,6 +117,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'id': model['syllabus'].academy_owner.id,
                 'name': model['syllabus'].academy_owner.name,
                 'slug': model['syllabus'].academy_owner.slug,
+                'white_labeled': model['syllabus'].academy_owner.white_labeled,
+                'icon_url': model['syllabus'].academy_owner.icon_url,
             },
             'version': model['syllabus_version'].version,
             'duration_in_days': model.syllabus.duration_in_days,
@@ -222,6 +225,9 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_syllabus_version_dict(), [{
             'id': 1,
+            'integrity_check_at': None,
+            'integrity_report': None,
+            'integrity_status': 'PENDING',
             'change_log_details': None,
             'status': 'PUBLISHED',
             'json': {},
@@ -264,6 +270,9 @@ class CertificateTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'syllabus_version')
         }, {
             'id': 2,
+            'integrity_check_at': None,
+            'integrity_report': None,
+            'integrity_status': 'PENDING',
             'change_log_details': None,
             'status': 'PUBLISHED',
             'json': {},

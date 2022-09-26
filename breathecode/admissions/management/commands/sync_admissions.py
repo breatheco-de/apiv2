@@ -1,4 +1,5 @@
-import os, requests, sys, pytz
+import os, requests, pytz
+from random import randint
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Academy, SyllabusSchedule, Cohort, User, CohortUser, Syllabus
@@ -213,8 +214,9 @@ class Command(BaseCommand):
                 try:
                     profile = user.profile
                 except Profile.DoesNotExist:
+                    avatar_number = randint(1, 21)
                     profile = Profile(user=user)
-                    profile.avatar_url = API_URL + '/static/img/avatar.png'
+                    profile.avatar_url = API_URL + f'/static/img/avatar-{avatar_number}.png'
                     profile.bio = _student['bio']
                     profile.phone = _student['phone'] if _student['phone'] is not None else ''
                     profile.github_username = _student['github']
@@ -282,7 +284,7 @@ class Command(BaseCommand):
                                            DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC')),
             current_day=_cohort['current_day'],
             stage=stages[_cohort['stage']],
-            language=_cohort['language'],
+            language=_cohort['language'].lower(),
             academy=academy,
             syllabus=syllabus,
         )
@@ -310,7 +312,7 @@ class Command(BaseCommand):
                                                     DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
         cohort.current_day = data['current_day']
         cohort.stage = stages[data['stage']]
-        cohort.language = data['language']
+        cohort.language = data['language'].lower()
         if 'kickoff_date' in data and data['ending_date'] is not None:
             cohort.ending_date = datetime.strptime(data['ending_date'],
                                                    DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))

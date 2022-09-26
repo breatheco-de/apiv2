@@ -18,7 +18,8 @@ def get_urls_from_html(html_content):
 
 
 def test_url(url, allow_relative=False, allow_hash=True):
-    print('Testing url: ', url, url[0:2])
+    if url is None or url == '':
+        raise Exception(f'Empty url')
 
     if not allow_hash and '#' == url[0:1]:
         raise Exception(f'Not allowed hash url: ' + url)
@@ -36,6 +37,7 @@ def test_url(url, allow_relative=False, allow_hash=True):
 
 
 class AssetException(Exception):
+
     def __init__(self, message='', severity='ERROR'):
         all_severities = ['ERROR', 'WARNING']
         if severity in all_severities:
@@ -78,9 +80,10 @@ class AssetValidator():
     def urls(self):
 
         readme = self.asset.get_readme(parse=True)
-        urls = get_urls_from_html(readme['html'])
-        for url in urls:
-            test_url(url, allow_relative=False)
+        if 'html' in readme:
+            urls = get_urls_from_html(readme['html'])
+            for url in urls:
+                test_url(url, allow_relative=False)
 
     def lang(self):
 

@@ -1,6 +1,7 @@
 from typing import Any
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.priorities.mutator_order import MutatorOrder
+from breathecode.utils import GenerateLookupsMixin
 from django.db.models import QuerySet
 
 __all__ = ['SortExtension']
@@ -8,7 +9,7 @@ __all__ = ['SortExtension']
 REQUIREMENTS = ['cache']
 
 
-class SortExtension(ExtensionBase):
+class SortExtension(ExtensionBase, GenerateLookupsMixin):
 
     _sort: str
 
@@ -16,7 +17,12 @@ class SortExtension(ExtensionBase):
         self._sort = sort
 
     def _apply_queryset_mutation(self, queryset: QuerySet[Any]):
-        queryset = queryset.order_by(self._request.GET.get('sort') or self._sort)
+        lookups = self.generate_lookups(self._request, many_fields=['sort'])
+        sort_in = lookups['sort__in'] if 'sort__in' in lookups else ''
+        if len(sort_in) != 0:
+            queryset = queryset.order_by(*sort_in or self._sort)
+        else:
+            queryset = queryset.order_by(self._request.GET.get('sort') or self._sort)
         return queryset
 
     def _can_modify_queryset(self) -> bool:

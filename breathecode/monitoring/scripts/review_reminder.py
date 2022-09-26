@@ -26,6 +26,8 @@ reviews = Review.objects.filter(status='PENDING',
 
 call_to_action = f'Click here to <a href="{ADMIN_URL}/growth/reviews?location={academy.slug}">see a more detailed list</a>'
 
+help_info = f'🆘 Need help? Learn more about <a href="https://4geeksacademy.notion.site/Student-Reviews-762eb87ae8d84c26b305d7f5c677776f">how reviews work at 4Geeks</a>'
+
 # exclude cohorts that never end
 reviews = reviews.exclude(cohort__never_ends=True).exclude(cohort__stage__in=['DELETED', 'INACTIVE'])
 total_reviews = reviews.count()
@@ -34,14 +36,16 @@ if total_reviews == 0:
 
 else:
     review_names = ('\n').join([
-        '- ' + (r.author.first_name + ' ' + r.author.last_name + ' (' +
-                str(r.nps_previous_rating if not None else '0') + '/10) for ' + r.cohort.name + ' in ' +
-                r.platform.name) for r in reviews
+        '- Ask ' +
+        (r.author.first_name + ' ' + r.author.last_name + ' (' +
+         str(r.nps_previous_rating if not None else '0') + '/10) from ' + r.cohort.name +
+         ' to review us at ' + '<a href="' + r.platform.review_signup + '">' + r.platform.name + '</a>')
+        for r in reviews
     ])
 
     raise ScriptNotification(
         f'There are {str(total_reviews)} reviews to be requested because the students gave us 8 or more on the NPS survey: '
-        f'\n {review_names} \n\n {call_to_action}',
+        f'\n {review_names} \n\n {call_to_action} \n\n {help_info}',
         status='CRITICAL',
         title=f'There are {str(total_reviews)} reviews pending to be requested at {academy.name}',
         slug='cohort-have-pending-reviews')

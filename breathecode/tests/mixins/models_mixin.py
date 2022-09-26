@@ -7,6 +7,7 @@ __all__ = ['ModelsMixin']
 
 class ModelsMixin():
     """Mixins for models"""
+
     def remove_dinamics_fields(self, dict, fields=['_state', 'created_at', 'updated_at', '_password']):
         """Remove dinamics fields from django models as dict"""
         if not dict:

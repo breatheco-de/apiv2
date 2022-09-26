@@ -9,6 +9,7 @@ from ...actions import update_asset_on_json
 
 
 class GetOrCreateSessionTestSuite(AdmissionsTestCase):
+
     def test_create_session_mentor_first_no_previous_nothing(self):
         """
         When the mentor gets into the room before the mentee

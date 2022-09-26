@@ -4,6 +4,7 @@ from django.utils import timezone
 
 
 class AcademyEventbriteWebhookTestSuite(EventTestCase):
+
     def test_all_eventbrite_webhooks_no_auth(self):
         self.headers(academy=1)
 

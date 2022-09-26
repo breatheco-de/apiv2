@@ -1,7 +1,10 @@
+import re
 from django.shortcuts import render
 from django.utils import timezone
+from django.db.models import Avg
 from django.http import HttpResponse
 from breathecode.admissions.models import CohortUser, Academy
+from .caches import AnswerCache
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .models import Answer, Survey, ReviewPlatform, Review
 from .tasks import generate_user_cohort_survey_answers
@@ -19,6 +22,8 @@ from breathecode.utils import capable_of, ValidationException, HeaderLimitOffset
 from PIL import Image
 from django.db.models import Q
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+from django.db.models import QuerySet
+from .utils import strings
 
 
 @api_view(['GET'])
@@ -123,6 +128,7 @@ class AnswerMeView(APIView):
     """
     Student answers a survey (normally several answers are required for each survey)
     """
+
     def put(self, request, answer_id=None):
         if answer_id is None:
             raise ValidationException('Missing answer_id', slug='missing-answer-id')
@@ -159,6 +165,7 @@ class AnswerMeView(APIView):
 
 
 class AcademyAnswerView(APIView):
+
     @capable_of('read_nps_answers')
     def get(self, request, academy_id=None, answer_id=None):
         if answer_id is None:
@@ -176,6 +183,7 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('crud_survey')
     def post(self, request, academy_id=None):
 
@@ -240,7 +248,10 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             param = self.request.GET.get('lang')
             lookup['lang'] = param
 
-        items = items.filter(**lookup).order_by('status', '-created_at')
+        sort = self.request.GET.get('sort')
+        if sort is None:
+            sort = '-created_at'
+        items = items.filter(**lookup).order_by(sort)
 
         page = self.paginate_queryset(items, request)
         serializer = SurveySmallSerializer(page, many=True)
@@ -319,6 +330,7 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_review')
     def get(self, request, format=None, academy_id=None):
 

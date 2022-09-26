@@ -78,6 +78,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__get__without_auth(self):
         url = reverse_lazy('mentorship:academy_service')
         response = self.client.get(url)
@@ -384,3 +385,141 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                 'academy_id': 1,
             }),
         ])
+
+    """
+    🔽🔽🔽 DELETE
+    """
+
+    def test_delete__service__without_lookups(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     role=1,
+                                     capability='crud_event',
+                                     profile_academy=1,
+                                     mentorship_service=(2))
+
+        url = reverse_lazy('mentorship:academy_service')
+
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {'detail': 'without-lookups-and-service-id', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipService'),
+                         self.bc.format.to_dict(model.mentorship_service))
+
+    def test_service__delete__can_delete(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     role=1,
+                                     capability='crud_event',
+                                     profile_academy=1,
+                                     mentorship_service=(2))
+
+        url = reverse_lazy(
+            'mentorship:academy_service') + f'?id={",".join([str(x.id) for x in model.mentorship_service])}'
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipService'), [])
+
+    def test_service__delete__all_errors_and_success_cases(self):
+
+        can_delete_services = [{
+            'slug': self.bc.fake.slug(),
+            'academy_id': 1,
+        }]
+        services_from_other_academy = [{
+            'academy_id': 2,
+            'slug': self.bc.fake.slug(),
+        }, {
+            'academy_id': 2,
+            'slug': self.bc.fake.slug(),
+        }]
+        services_with_mentor = [{
+            'academy_id': 1,
+            'slug': self.bc.fake.slug(),
+        }]
+        services_with_session = [{
+            'academy_id': 1,
+            'slug': self.bc.fake.slug(),
+        }]
+        services = can_delete_services + services_from_other_academy + services_with_mentor + services_with_session
+        model = self.generate_models(user=1,
+                                     role=1,
+                                     academy=2,
+                                     capability='crud_event',
+                                     profile_academy=1,
+                                     mentorship_service=services,
+                                     mentor_profile={
+                                         'slug': 1,
+                                         'services': '4'
+                                     },
+                                     mentorship_session={
+                                         'slug': 1,
+                                         'service_id': 5
+                                     })
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy(
+            'mentorship:academy_service') + f'?id={",".join([str(x.id) for x in model.mentorship_service])}'
+
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'success': [{
+                'status_code':
+                204,
+                'resources': [{
+                    'pk': model.mentorship_service[0].id,
+                    'display_field': 'slug',
+                    'display_value': model.mentorship_service[0].slug,
+                }],
+            }],
+            'failure': [{
+                'detail':
+                'not-found',
+                'status_code':
+                400,
+                'resources': [{
+                    'pk': model.mentorship_service[1].id,
+                    'display_field': 'slug',
+                    'display_value': model.mentorship_service[1].slug,
+                }, {
+                    'pk': model.mentorship_service[2].id,
+                    'display_field': 'slug',
+                    'display_value': model.mentorship_service[2].slug,
+                }],
+            }, {
+                'detail':
+                'service-with-mentor',
+                'status_code':
+                400,
+                'resources': [{
+                    'pk': model.mentorship_service[3].id,
+                    'display_field': 'slug',
+                    'display_value': model.mentorship_service[3].slug,
+                }],
+            }, {
+                'detail':
+                'service-with-session',
+                'status_code':
+                400,
+                'resources': [{
+                    'pk': model.mentorship_service[4].id,
+                    'display_field': 'slug',
+                    'display_value': model.mentorship_service[4].slug,
+                }],
+            }]
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 207)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipService'),
+                         self.bc.format.to_dict(model.mentorship_service[1:]))

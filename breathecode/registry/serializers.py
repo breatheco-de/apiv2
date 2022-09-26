@@ -1,6 +1,7 @@
-from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology
+from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
@@ -14,6 +15,21 @@ class ProfileSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     github_username = serpy.Field()
+
+
+class KeywordSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+
+
+class KeywordClusterSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
 
 
 class UserSerializer(serpy.Serializer):
@@ -41,6 +57,27 @@ class AssetCategorySmallSerializer(serpy.Serializer):
 class KeywordClusterSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
+
+
+class AssetKeywordSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    cluster = KeywordClusterSmallSerializer(required=False)
+
+
+class AssetKeywordBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    cluster = KeywordClusterSmallSerializer(required=False)
+
+    published_assets = serpy.MethodField()
+
+    def get_published_assets(self, obj):
+        return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
 
 
 class AcademyCommentSerializer(serpy.Serializer):
@@ -100,8 +137,17 @@ class AcademyAssetSerializer(AssetSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
+    requirements = serpy.Field()
+
+    last_seo_scan_at = serpy.Field()
+    seo_json_status = serpy.Field()
+    optimization_rating = serpy.Field()
+
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
+
+    def get_seo_keywords(self, obj):
+        return list(map(lambda t: AssetKeywordSerializer(t).data, obj.seo_keywords.all()))
 
 
 class AssetMidSerializer(AssetSerializer):
@@ -126,8 +172,7 @@ class AssetBigSerializer(AssetMidSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
-    created_at = serpy.Field()
-    updated_at = serpy.Field()
+    academy = AcademySmallSerializer(required=False)
 
 
 class ParentAssetTechnologySerializer(serpy.Serializer):
@@ -156,6 +201,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
 
 
 class AssetCategorySerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
@@ -170,7 +216,8 @@ class _Keyword(serpy.Serializer):
         return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
 
 
-class KeywordClusterSerializer(serpy.Serializer):
+class KeywordClusterBigSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     academy = AcademySmallSerializer()
@@ -187,35 +234,117 @@ class KeywordClusterSerializer(serpy.Serializer):
         return Asset.objects.filter(seo_keywords__cluster__id=obj.id).count()
 
 
-class AssetKeywordSerializer(serpy.Serializer):
-    slug = serpy.Field()
-    title = serpy.Field()
-    lang = serpy.Field()
-    academy = AcademySmallSerializer()
-    cluster = KeywordClusterSmallSerializer()
-
-
 class TechSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetTechnology
 
 
 class PostAssetSerializer(serializers.ModelSerializer):
-    technologies = TechSerializer(many=True, required=False)
+    technologies = serializers.ListField(required=False)
 
     class Meta:
         model = Asset
-        exclude = ()
+        exclude = ('academy', )
 
     def validate(self, data):
 
         validated_data = super().validate(data)
+
+        academy_id = self.context['academy']
+        validated_data['academy'] = Academy.objects.filter(id=academy_id).first()
 
         alias = AssetAlias.objects.filter(slug=validated_data['slug']).first()
         if alias is not None:
             raise ValidationException('Asset alias already exists with this slug')
 
         return validated_data
+
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super(PostAssetSerializer, self).create({
+            **validated_data,
+            'academy': academy,
+        })
+
+
+class PostKeywordClusterSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = KeywordCluster
+        exclude = ('academy', )
+
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super(PostKeywordClusterSerializer, self).create({
+            **validated_data,
+            'academy': academy,
+        })
+
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
+class PostKeywordSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AssetKeyword
+        exclude = ('academy', )
+
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super(PostKeywordSerializer, self).create({
+            **validated_data,
+            'academy': academy,
+        })
+
+
+class PUTKeywordSerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=False)
+    title = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
+
+    class Meta:
+        model = AssetKeyword
+        exclude = ('academy', )
+
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
+class PUTCategorySerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=False)
+    title = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
+
+    class Meta:
+        model = AssetCategory
+        exclude = ('academy', )
+
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
+class POSTCategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AssetCategory
+        exclude = ('academy', )
+
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super().create({
+            **validated_data,
+            'academy': academy,
+        })
 
 
 class TechnologyPUTSerializer(serializers.ModelSerializer):
@@ -259,12 +388,14 @@ class TechnologyPUTSerializer(serializers.ModelSerializer):
 
 
 class PostAssetCommentSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetComment
         exclude = ()
 
 
 class PutAssetCommentSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AssetComment
         exclude = ('text', 'asset', 'author')
@@ -284,14 +415,13 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
 
 class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
+    technologies = serializers.ListField(required=False)
+    slug = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
-
-    # url = serializers.CharField(required=False)
-    # url = serializers.CharField(required=False)
 
     class Meta:
         model = Asset
-        exclude = ('technologies', )
+        exclude = ('academy', )
 
     def validate(self, data):
 
@@ -318,7 +448,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                                           status.HTTP_400_BAD_REQUEST)
 
         if 'status' in data and data['status'] == 'PUBLISHED':
-            if self.instance.test_status != 'Ok':
+            if self.instance.test_status != 'OK':
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
 

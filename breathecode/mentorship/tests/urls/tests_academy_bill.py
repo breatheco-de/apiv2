@@ -23,25 +23,38 @@ def format_datetime(self, date):
     return self.bc.datetime.to_iso_string(date)
 
 
-def get_serializer(self, mentorship_bill, mentor_profile, mentorship_service, user, data={}):
+def get_serializer(self, mentorship_bill, mentor_profile, mentorship_services, user, academy, data={}):
     return {
         'created_at': format_datetime(self, mentorship_bill.created_at),
         'ended_at': format_datetime(self, mentorship_bill.ended_at),
         'id': mentorship_bill.id,
         'mentor': {
-            'booking_url': mentor_profile.booking_url,
-            'id': mentor_profile.id,
-            'service': {
+            'booking_url':
+            mentor_profile.booking_url,
+            'id':
+            mentor_profile.id,
+            'services': [{
+                'academy': {
+                    'icon_url': academy.icon_url,
+                    'id': academy.id,
+                    'logo_url': academy.logo_url,
+                    'name': academy.name,
+                    'slug': academy.slug,
+                },
                 'allow_mentee_to_extend':
                 mentorship_service.allow_mentee_to_extend,
                 'allow_mentors_to_extend':
                 mentorship_service.allow_mentors_to_extend,
+                'created_at':
+                self.bc.datetime.to_iso_string(mentorship_service.created_at),
                 'duration':
                 self.bc.datetime.from_timedelta(mentorship_service.duration),
                 'id':
                 mentorship_service.id,
                 'language':
                 mentorship_service.language,
+                'logo_url':
+                mentorship_service.logo_url,
                 'max_duration':
                 self.bc.datetime.from_timedelta(mentorship_service.max_duration),
                 'missed_meeting_duration':
@@ -52,9 +65,13 @@ def get_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
                 mentorship_service.slug,
                 'status':
                 mentorship_service.status,
-            },
-            'slug': mentor_profile.slug,
-            'status': mentor_profile.status,
+                'updated_at':
+                self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+            } for mentorship_service in mentorship_services],
+            'slug':
+            mentor_profile.slug,
+            'status':
+            mentor_profile.status,
             'user': {
                 'email': user.email,
                 'first_name': user.first_name,
@@ -107,25 +124,38 @@ def post_serializer(data={}):
     }
 
 
-def put_serializer(self, mentorship_bill, mentor_profile, mentorship_service, user, academy, data={}):
+def put_serializer(self, mentorship_bill, mentor_profile, mentorship_services, user, academy, data={}):
     return {
         'created_at': format_datetime(self, mentorship_bill.created_at),
         'ended_at': format_datetime(self, mentorship_bill.ended_at),
         'id': mentorship_bill.id,
         'mentor': {
-            'booking_url': mentor_profile.booking_url,
-            'id': mentor_profile.id,
-            'service': {
+            'booking_url':
+            mentor_profile.booking_url,
+            'id':
+            mentor_profile.id,
+            'services': [{
+                'academy': {
+                    'icon_url': academy.icon_url,
+                    'id': academy.id,
+                    'logo_url': academy.logo_url,
+                    'name': academy.name,
+                    'slug': academy.slug,
+                },
                 'allow_mentee_to_extend':
                 mentorship_service.allow_mentee_to_extend,
                 'allow_mentors_to_extend':
                 mentorship_service.allow_mentors_to_extend,
+                'created_at':
+                self.bc.datetime.to_iso_string(mentorship_service.created_at),
                 'duration':
                 self.bc.datetime.from_timedelta(mentorship_service.duration),
                 'id':
                 mentorship_service.id,
                 'language':
                 mentorship_service.language,
+                'logo_url':
+                mentorship_service.logo_url,
                 'max_duration':
                 self.bc.datetime.from_timedelta(mentorship_service.max_duration),
                 'missed_meeting_duration':
@@ -136,9 +166,13 @@ def put_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
                 mentorship_service.slug,
                 'status':
                 mentorship_service.status,
-            },
-            'slug': mentor_profile.slug,
-            'status': mentor_profile.status,
+                'updated_at':
+                self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+            } for mentorship_service in mentorship_services],
+            'slug':
+            mentor_profile.slug,
+            'status':
+            mentor_profile.status,
             'user': {
                 'email': user.email,
                 'first_name': user.first_name,
@@ -205,6 +239,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__get__without_auth(self):
         url = reverse_lazy('mentorship:academy_bill')
         response = self.client.get(url)
@@ -300,9 +335,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         expected = [
             get_serializer(self,
                            model.mentorship_bill,
-                           model.mentor_profile,
-                           model.mentorship_service,
+                           model.mentor_profile, [model.mentorship_service],
                            model.user,
+                           model.academy,
                            data={}),
         ]
 
@@ -337,9 +372,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         expected = [
             get_serializer(self,
                            mentorship_bill,
-                           model.mentor_profile,
-                           model.mentorship_service,
+                           model.mentor_profile, [model.mentorship_service],
                            model.user,
+                           model.academy,
                            data={}) for mentorship_bill in mentorship_bill_list
         ]
 
@@ -424,15 +459,15 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             expected = [
                 get_serializer(self,
                                mentorship_bill_list[0],
-                               model.mentor_profile,
-                               model.mentorship_service,
+                               model.mentor_profile, [model.mentorship_service],
                                model.user,
+                               model.academy,
                                data={'status': second_status}),
                 get_serializer(self,
                                mentorship_bill_list[1],
-                               model.mentor_profile,
-                               model.mentorship_service,
+                               model.mentor_profile, [model.mentorship_service],
                                model.user,
+                               model.academy,
                                data={'status': first_status}),
             ]
 
@@ -501,9 +536,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         expected = [
             get_serializer(self,
                            model.mentorship_bill,
-                           model.mentor_profile,
-                           model.mentorship_service,
+                           model.mentor_profile, [model.mentorship_service],
                            model.user,
+                           model.academy,
                            data={}),
         ]
 
@@ -568,9 +603,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         expected = [
             get_serializer(self,
                            model.mentorship_bill,
-                           model.mentor_profile,
-                           model.mentorship_service,
+                           model.mentor_profile, [model.mentorship_service],
                            model.user,
+                           model.academy,
                            data={}),
         ]
 
@@ -637,14 +672,16 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             get_serializer(self,
                            model.mentorship_bill[2],
                            model.mentor_profile[2],
-                           model.mentorship_service[2],
+                           model.mentorship_service,
                            model.user[2],
+                           model.academy,
                            data={}),
             get_serializer(self,
                            model.mentorship_bill[0],
                            model.mentor_profile[0],
-                           model.mentorship_service[0],
+                           model.mentorship_service,
                            model.user[0],
+                           model.academy,
                            data={}),
         ]
 
@@ -843,7 +880,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             put_serializer(self,
                            model.mentorship_bill[index],
                            model.mentor_profile[index],
-                           model.mentorship_service[index],
+                           model.mentorship_service,
                            model.user,
                            model.academy,
                            data={}) for index in range(0, 2)
@@ -851,6 +888,38 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'),
+                         self.bc.format.to_dict(model.mentorship_bill))
+
+    """
+    🔽🔽🔽 PUT with two MentorshipSession, MentorProfile and MentorshipService, edit status of dirty bill
+    """
+
+    def test__put__with_two_mentor_profile__edit_status_of_dirty_bill(self):
+        mentorship_sessions = [{'mentor_id': n, 'bill_id': n} for n in range(1, 3)]
+        mentor_profiles = [{'service_id': n} for n in range(1, 3)]
+        mentorship_bills = [{'mentor_id': n, 'status': 'RECALCULATE'} for n in range(1, 3)]
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_bill',
+                                        mentorship_session=mentorship_sessions,
+                                        mentor_profile=mentor_profiles,
+                                        mentorship_service=2,
+                                        mentorship_bill=mentorship_bills,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_bill')
+        data = [{'id': 1, 'status': 'PAID'}]
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'trying-edit-status-to-dirty-bill', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'),
                          self.bc.format.to_dict(model.mentorship_bill))
 
@@ -901,7 +970,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             put_serializer(self,
                            model.mentorship_bill[index],
                            model.mentor_profile[index],
-                           model.mentorship_service[index],
+                           model.mentorship_service,
                            model.user,
                            model.academy,
                            data=current_data) for index, current_data in elements

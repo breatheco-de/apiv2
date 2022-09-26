@@ -7,6 +7,7 @@ from .utils import is_valid, create_models, just_one
 
 
 class FreelanceModelsMixin(ModelsMixin):
+
     def generate_freelance_models(self,
                                   freelancer=False,
                                   user=False,

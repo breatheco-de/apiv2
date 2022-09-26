@@ -4,6 +4,7 @@ from breathecode.career.services.regex import _cases_location
 
 
 class GetonboardScraper(BaseScraper):
+
     @classmethod
     def get_location_from_string(cls, text: str):
         if text is None:

@@ -1,7 +1,7 @@
 # from breathecode.media.schemas import MediaSchema
 from breathecode.media.schemas import FileSchema, MediaSchema
 import os, hashlib, requests, logging
-from breathecode.services.google_cloud.function import Function
+from breathecode.services.google_cloud import FunctionV1
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category, MediaResolution
 from breathecode.utils import GenerateLookupsMixin, num_to_roman
@@ -29,6 +29,10 @@ MIME_ALLOW = [
 
 def media_gallery_bucket():
     return os.getenv('MEDIA_GALLERY_BUCKET')
+
+
+def google_project_id():
+    return os.getenv('GOOGLE_PROJECT_ID', '')
 
 
 class MediaView(ViewSet, GenerateLookupsMixin):
@@ -486,7 +490,7 @@ class MaskingUrlView(APIView):
         if media_id:
             lookups['id'] = media_id
         elif media_slug:
-            lookups['slug'] = media_slug.split('.')[0]  #ignore extesion
+            lookups['slug'] = media_slug.split('.')[0]  #ignore extension
 
         width = request.GET.get('width')
         height = request.GET.get('height')
@@ -514,14 +518,16 @@ class MaskingUrlView(APIView):
                                                     | Q(height=height), hash=media.hash).first()
 
         if (width or height) and not resolution:
-            func = Function(region='us-central1', project_id='breathecode-197918', name='resize-image')
+            func = FunctionV1(region='us-central1', project_id=google_project_id(), name='resize-image')
 
-            res = func.call({
+            func_request = func.call({
                 'width': width,
                 'height': height,
                 'filename': media.hash,
                 'bucket': media_gallery_bucket(),
             })
+
+            res = func_request.json()
 
             if not res['status_code'] == 200 or not res['message'] == 'Ok':
                 if 'message' in res:
@@ -576,6 +582,7 @@ class ResolutionView(ViewSet):
     delete:
         Delete a Resolution by id.
     """
+
     @capable_of('read_media_resolution')
     def get_id(self, request, resolution_id: int, academy_id=None):
         resolutions = MediaResolution.objects.filter(id=resolution_id).first()

@@ -3,10 +3,10 @@ from ...mixins.new_auth_test_case import AuthTestCase
 from breathecode.authenticate.management.commands.set_permissions import Command
 from django.contrib.auth.models import Group
 
-LATEST_CONTENT_TYPE_ID = 116
-LATEST_PERMISSION_ID = 464
-JOB_CONTENT_TYPE_ID = 114
-CAN_DELETE_JOB_PERMISSION_ID = 455
+LATEST_CONTENT_TYPE_ID = 121
+LATEST_PERMISSION_ID = 484
+JOB_CONTENT_TYPE_ID = 119
+CAN_DELETE_JOB_PERMISSION_ID = 475
 PERMISSIONS = [
     {
         'name': 'Can delete job',
@@ -54,6 +54,7 @@ class TokenTestSuite(AuthTestCase):
     """
     🔽🔽🔽 format of PERMISSIONS
     """
+
     def test__format__permissions(self):
         from breathecode.authenticate.management.commands.set_permissions import PERMISSIONS
 

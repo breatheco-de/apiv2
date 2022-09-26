@@ -19,6 +19,7 @@ now = timezone.now()
 
 
 def apply_get_env(configuration={}):
+
     def get_env(key, value=None):
         return configuration.get(key, value)
 
@@ -27,10 +28,11 @@ def apply_get_env(configuration={}):
 
 class SendCohortSurvey(FeedbackTestCase):
     """Test /academy/survey"""
+
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
-    def test_send_cohort_survey_when_survey_is_none(self):
+    def test_when_survey_is_none(self):
 
         model = self.generate_models(cohort=1)
 
@@ -44,7 +46,7 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
-    def test_send_cohort_survey_when_user_is_none(self):
+    def test_when_user_is_none(self):
 
         model = self.generate_models(cohort=1, survey=1)
 
@@ -58,7 +60,7 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
-    def test_send_cohort_survey_when_survey_has_expired(self):
+    def test_when_survey_has_expired(self):
 
         created = timezone.now() - timedelta(hours=48, minutes=1)
         duration = timedelta(hours=48)
@@ -98,29 +100,63 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    def test_send_cohort_survey_when_an_email_is_sent(self):
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    def test_when_student_not_found(self):
 
         model = self.generate_models(cohort=1, user=1, survey=1, cohort_user={'role': 'STUDENT'})
 
         send_cohort_survey(survey_id=1, user_id=1)
 
         self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
-        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('This student does not belong to this cohort')])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
-        self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list,
-                         [call(model.user, model.survey, status='SENT')])
+        self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list, [])
         token = self.bc.database.get('authenticate.Token', 1, dict=False)
-        self.assertEqual(actions.send_email_message.call_args_list, [
-            call(
-                'nps_survey', model.user.email, {
-                    'SUBJECT': 'We need your feedback',
-                    'MESSAGE':
-                    'Please take 5 minutes to give us feedback about your experience at the academy so far.',
-                    'TRACKER_URL': 'https://hello.com/v1/feedback/survey/1/tracker.png',
-                    'BUTTON': 'Answer the question',
-                    'LINK': f'https://nps.breatheco.de/survey/1?token={token.key}'
-                })
-        ])
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': 'https://hello.com'})))
+    @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('logging.Logger.debug', MagicMock())
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    def test_when_an_email_is_sent(self):
+        statuses = ['ACTIVE', 'GRADUATED']
+
+        for n in range(0, 2):
+            c = statuses[n]
+            cohort_users = [{'educational_status': c}, {'role': 'STUDENT', 'educational_status': c}]
+
+            model = self.generate_models(cohort=1, user=1, survey=1, cohort_user=cohort_users)
+
+            send_cohort_survey(survey_id=model.survey.id, user_id=model.user.id)
+
+            self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
+            self.assertEqual(logging.Logger.error.call_args_list, [])
+            self.assertEqual(self.bc.database.list_of('feedback.Survey'),
+                             [self.bc.format.to_dict(model.survey)])
+            self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list,
+                             [call(model.user, model.survey, status='SENT')])
+            token = self.bc.database.get('authenticate.Token', model.survey.id, dict=False)
+            self.assertEqual(actions.send_email_message.call_args_list, [
+                call(
+                    'nps_survey', model.user.email, {
+                        'SUBJECT': 'We need your feedback',
+                        'MESSAGE':
+                        'Please take 5 minutes to give us feedback about your experience at the academy so far.',
+                        'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
+                        'BUTTON': 'Answer the question',
+                        'LINK': f'https://nps.breatheco.de/survey/{model.survey.id}?token={token.key}'
+                    })
+            ])
+
+            logging.Logger.debug.call_args_list = []
+            logging.Logger.error.call_args_list = []
+            tasks.generate_user_cohort_survey_answers.call_args_list = []
+            actions.send_email_message.call_args_list = []
+            self.bc.database.delete('feedback.Survey')
 
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': 'https://hello.com'})))
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
@@ -128,49 +164,65 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.notify.actions.send_slack', MagicMock())
-    def test_send_cohort_survey_when_an_email_is_sent_with_slack_team_and_user(self):
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    def test_when_an_email_is_sent_with_slack_team_and_user(self):
+        statuses = ['ACTIVE', 'GRADUATED']
 
-        model = self.generate_models(cohort=1,
-                                     slack_user=1,
-                                     slack_team=1,
-                                     user=1,
-                                     survey=1,
-                                     cohort_user={'role': 'STUDENT'})
+        for n in range(0, 2):
+            c = statuses[n]
+            cohort_user = {'role': 'STUDENT', 'educational_status': c}
 
-        send_cohort_survey(survey_id=1, user_id=1)
+            model = self.generate_models(cohort=1,
+                                         slack_user=1,
+                                         slack_team=1,
+                                         user=1,
+                                         survey=1,
+                                         cohort_user=cohort_user)
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
-        self.assertEqual(logging.Logger.error.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
-        self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list,
-                         [call(model.user, model.survey, status='SENT')])
+            send_cohort_survey(survey_id=model.survey.id, user_id=model.user.id)
 
-        token = self.bc.database.get('authenticate.Token', 1, dict=False)
+            self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
+            self.assertEqual(logging.Logger.error.call_args_list, [])
+            self.assertEqual(self.bc.database.list_of('feedback.Survey'),
+                             [self.bc.format.to_dict(model.survey)])
+            self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list,
+                             [call(model.user, model.survey, status='SENT')])
 
-        self.assertEqual(
-            str(actions.send_slack.call_args_list),
-            str([
+            token = self.bc.database.get('authenticate.Token', model.survey.id, dict=False)
+
+            self.assertEqual(
+                str(actions.send_slack.call_args_list),
+                str([
+                    call(
+                        'nps_survey',
+                        model.slack_user,
+                        model.slack_team,
+                        data={
+                            'SUBJECT': 'We need your feedback',
+                            'MESSAGE':
+                            'Please take 5 minutes to give us feedback about your experience at the academy so far.',
+                            'TRACKER_URL':
+                            f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
+                            'BUTTON': 'Answer the question',
+                            'LINK': f'https://nps.breatheco.de/survey/{model.survey.id}?token={token.key}'
+                        })
+                ]))
+            self.assertEqual(actions.send_email_message.call_args_list, [
                 call(
-                    'nps_survey',
-                    model.slack_user,
-                    model.slack_team,
-                    data={
+                    'nps_survey', model.user.email, {
                         'SUBJECT': 'We need your feedback',
                         'MESSAGE':
                         'Please take 5 minutes to give us feedback about your experience at the academy so far.',
-                        'TRACKER_URL': 'https://hello.com/v1/feedback/survey/1/tracker.png',
+                        'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                         'BUTTON': 'Answer the question',
-                        'LINK': f'https://nps.breatheco.de/survey/1?token={token.key}'
+                        'LINK': f'https://nps.breatheco.de/survey/{model.survey.id}?token={token.key}'
                     })
-            ]))
-        self.assertEqual(actions.send_email_message.call_args_list, [
-            call(
-                'nps_survey', model.user.email, {
-                    'SUBJECT': 'We need your feedback',
-                    'MESSAGE':
-                    'Please take 5 minutes to give us feedback about your experience at the academy so far.',
-                    'TRACKER_URL': 'https://hello.com/v1/feedback/survey/1/tracker.png',
-                    'BUTTON': 'Answer the question',
-                    'LINK': f'https://nps.breatheco.de/survey/1?token={token.key}'
-                })
-        ])
+            ])
+
+            logging.Logger.debug.call_args_list = []
+            logging.Logger.error.call_args_list = []
+            tasks.generate_user_cohort_survey_answers.call_args_list = []
+            actions.send_email_message.call_args_list = []
+            actions.send_slack.call_args_list = []
+            self.bc.database.delete('feedback.Survey')

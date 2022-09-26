@@ -19,6 +19,7 @@ class CertificateTestSuite(CertificateTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -222,7 +223,8 @@ class CertificateTestSuite(CertificateTestCase):
             'layout': {
                 'name': model['layout_design'].name,
                 'slug': model['layout_design'].slug,
-                'background_url': model['layout_design'].background_url
+                'background_url': model['layout_design'].background_url,
+                'foot_note': model['layout_design'].foot_note
             },
             'preview_url': model['user_specialty'].preview_url,
             'signed_by_role': 'Director',
@@ -412,6 +414,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'name': models[0].layout_design.name,
                 'background_url': models[0].layout_design.background_url,
                 'slug': models[0].layout_design.slug,
+                'foot_note': models[0].layout_design.foot_note
             },
             'preview_url': models[0].user_specialty.preview_url,
             'signed_by_role': 'Director',
@@ -468,7 +471,8 @@ class CertificateTestSuite(CertificateTestCase):
             'layout': {
                 'name': models[1].layout_design.name,
                 'slug': models[1].layout_design.slug,
-                'background_url': models[1].layout_design.background_url
+                'background_url': models[1].layout_design.background_url,
+                'foot_note': models[1].layout_design.foot_note
             },
             'preview_url': models[1].user_specialty.preview_url,
             'signed_by_role': 'Director',

@@ -91,6 +91,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
     """
     🔽🔽🔽 GET check the param is being passed
     """
+
     @patch('breathecode.authenticate.views.MemberView.get', MagicMock(side_effect=view_method_mock))
     def test_academy_member__get__with_auth___mock_view(self):
         profile_academies = [{'academy_id': id} for id in range(1, 4)]
@@ -167,6 +168,7 @@ class MemberGetTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_academy_member_without_auth(self):
         """Test /academy/member without auth"""
         url = reverse_lazy('authenticate:academy_member')
@@ -1202,13 +1204,18 @@ class MemberGetTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
         role = 'konan'
         self.bc.request.set_headers(academy=1)
-        self.bc.database.create(authenticate=True, role=role, capability='read_member', profile_academy=True)
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='read_member',
+                                        profile_academy=True)
         url = reverse_lazy('authenticate:academy_member')
         url = f'{url}?roles='
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [])
+        self.assertEqual(json, [
+            format_profile_academy(self, model.profile_academy, model.role, model.academy),
+        ])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
@@ -1393,6 +1400,7 @@ class MemberGetTestSuite(AuthTestCase):
 
 class MemberPostTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_member__post__no_data(self):
         """Test /academy/:id/member"""
@@ -1991,6 +1999,7 @@ class MemberDeleteTestSuite(AuthTestCase):
     """
     🔽🔽🔽 DELETE in bulk
     """
+
     def test_academy_member_delete_without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.bc.request.set_headers(academy=1)

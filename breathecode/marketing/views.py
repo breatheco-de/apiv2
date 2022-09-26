@@ -17,7 +17,8 @@ from slugify import slugify
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination, num_to_roman)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination, validate_captcha,
+                               num_to_roman)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
@@ -41,6 +42,7 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
 import pandas as pd
+from breathecode.services.google_cloud import Recaptcha
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = 'text/csv'
@@ -94,6 +96,10 @@ def create_lead(request):
     if 'referral_code' in data and 'referral_key' not in data:
         data['referral_key'] = data['referral_code']
 
+    if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
+        print('Ignoring lead because its coming from development team')
+        return Response(data, status=status.HTTP_201_CREATED)
+
     serializer = PostFormEntrySerializer(data=data)
     if serializer.is_valid():
         serializer.save()
@@ -101,7 +107,7 @@ def create_lead(request):
         persist_single_lead.delay(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    print(serializer.errors)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -368,6 +374,7 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_tag')
     def get(self, request, format=None, academy_id=None):
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
@@ -407,6 +414,7 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
 
@@ -420,6 +428,7 @@ class UTMView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
 
@@ -442,6 +451,7 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_won_lead')
     def get(self, request, format=None, academy_id=None):
 
@@ -491,6 +501,7 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
 
 
 class AcademyProcessView(APIView, GenerateLookupsMixin):
+
     @capable_of('crud_lead')
     def put(self, request, academy_id=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
@@ -594,6 +605,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_shortlink')
     def get(self, request, slug=None, academy_id=None):
 

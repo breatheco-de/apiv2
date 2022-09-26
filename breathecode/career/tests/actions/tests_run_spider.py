@@ -23,6 +23,7 @@ platform1 = {'name': 'indeed'}
 
 
 class ActionRunSpiderTestCase(CareerTestCase):
+
     def test_run_spider__without_spider(self):
         try:
             run_spider(None)
@@ -57,7 +58,7 @@ class ActionRunSpiderTestCase(CareerTestCase):
                      auth=(model.zyte_project.zyte_api_key, ''))
             ])
         except Exception as e:
-            self.assertEquals(str(e), ('bad-request'))
+            self.assertEqual(str(e), ('bad-request'))
             self.assertEqual(Logger.error.call_args_list, [
                 call(
                     'The spider ended error. Type error [\'Invalid pk "indeed5" - object does not exist.\'] to getonboard'

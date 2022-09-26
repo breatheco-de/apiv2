@@ -9,6 +9,8 @@ from breathecode.services.daily.client import DailyClient
 from breathecode.utils.datetime_interger import duration_to_str
 from django.db.models import QuerySet
 from .models import MentorshipSession, MentorshipBill
+from breathecode.utils.validation_exception import ValidationException
+from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,7 @@ def close_older_sessions():
     })
 
 
-def get_pending_sessions_or_create(token, mentor, mentee=None):
+def get_pending_sessions_or_create(token, mentor, service, mentee=None):
     close_older_sessions()
 
     # starting to pick pending sessions
@@ -34,6 +36,7 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
     if mentee is not None:
         unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                   mentee__id=mentee.id,
+                                                                  service__id=service.id,
                                                                   status__in=['PENDING', 'STARTED'])
         if unfinished_with_mentee.count() > 0:
             pending_sessions += unfinished_with_mentee.values_list('pk', flat=True)
@@ -41,6 +44,7 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
     # if its a mentor, I will force him to close pending sessions
     if mentor.user.id == token.user.id:
         unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
+                                                               service__id=service.id,
                                                                status__in=['PENDING', 'STARTED'
                                                                            ]).exclude(id__in=pending_sessions)
         # if it has unishined meetings with already started
@@ -51,6 +55,7 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
     elif mentee is not None and mentee.id == token.user.id:
         unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                mentee__isnull=True,
+                                                               service__id=service.id,
                                                                status__in=['PENDING'
                                                                            ]).order_by('-mentor_joined_at')
 
@@ -77,15 +82,16 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
 
     # default duration can be overridden by service
     duration = timedelta(seconds=3600)
-    if mentor.service.duration is not None:
-        duration = mentor.service.duration
+    if service.duration is not None:
+        duration = service.duration
 
     session = MentorshipSession(mentor=mentor,
                                 mentee=mentee,
                                 is_online=True,
+                                service=service,
                                 ends_at=timezone.now() + duration)
     daily = DailyClient()
-    room = daily.create_room(exp_in_seconds=mentor.service.duration.seconds)
+    room = daily.create_room(exp_in_seconds=service.duration.seconds)
     session.online_meeting_url = room['url']
     session.name = room['name']
     session.mentee = mentee
@@ -120,7 +126,7 @@ def extend_session(session: MentorshipSession, duration_in_minutes=None, exp_in_
 def render_session(request, session, token):
     from .serializers import GETSessionReportSerializer
     data = {
-        'subject': session.mentor.service.name,
+        'subject': session.service.name,
         'room_url': session.online_meeting_url,
         'session': GETSessionReportSerializer(session, many=False).data,
         'userName': (token.user.first_name + ' ' + token.user.last_name).strip(),
@@ -148,12 +154,13 @@ def close_mentoring_session(session: MentorshipSession, data: dict):
 
 
 def get_accounted_time(_session):
+
     def get_duration(session):
         response = {'accounted_duration': 0, 'status_message': ''}
         if session.started_at is None and session.mentor_joined_at is not None:
             response['status_message'] = 'Mentor joined but mentee never did, '
-            if session.mentor.service.missed_meeting_duration.seconds > 0:
-                response['accounted_duration'] = session.mentor.service.missed_meeting_duration
+            if session.service.missed_meeting_duration.seconds > 0:
+                response['accounted_duration'] = session.service.missed_meeting_duration
                 response['status_message'] += (f'{duration_to_str(response["accounted_duration"])} will be '
                                                'accounted for the bill.')
             else:
@@ -189,7 +196,7 @@ def get_accounted_time(_session):
                         f'left the meeting {duration_to_str(response["accounted_duration"])}.')
                     return response
                 else:
-                    response['accounted_duration'] = session.mentor.service.duration
+                    response['accounted_duration'] = session.service.duration
                     response['status_message'] = (
                         'The session never ended, accounting for the standard duration '
                         f'{duration_to_str(response["accounted_duration"])}.')
@@ -209,7 +216,7 @@ def get_accounted_time(_session):
                         f'the mentee left the meeting {duration_to_str(response["accounted_duration"])}.')
                     return response
                 else:
-                    response['accounted_duration'] = session.mentor.service.duration
+                    response['accounted_duration'] = session.service.duration
                     response['status_message'] = (
                         'This session lasted more than a day, no one ever left, was probably never closed, '
                         f'accounting for standard duration {duration_to_str(response["accounted_duration"])}'
@@ -217,15 +224,15 @@ def get_accounted_time(_session):
                     return response
 
             response['accounted_duration'] = session.ended_at - session.started_at
-            if response['accounted_duration'] > session.mentor.service.max_duration:
-                if session.mentor.service.max_duration.seconds == 0:
-                    response['accounted_duration'] = session.mentor.service.duration
+            if response['accounted_duration'] > session.service.max_duration:
+                if session.service.max_duration.seconds == 0:
+                    response['accounted_duration'] = session.service.duration
                     response['status_message'] = (
                         'No extra time is allowed for session, accounting for standard duration '
                         f'of {duration_to_str(response["accounted_duration"])}.')
                     return response
                 else:
-                    response['accounted_duration'] = session.mentor.service.max_duration
+                    response['accounted_duration'] = session.service.max_duration
                     response['status_message'] = (
                         'The duration of the session is bigger than the maximum allowed, accounting '
                         f'for max duration of {duration_to_str(response["accounted_duration"])}.')
@@ -240,8 +247,8 @@ def get_accounted_time(_session):
             return response
 
     _duration = get_duration(_session)
-    if _duration['accounted_duration'] > _session.mentor.service.max_duration:
-        _duration['accounted_duration'] = _session.mentor.service.max_duration
+    if _duration['accounted_duration'] > _session.service.max_duration:
+        _duration['accounted_duration'] = _session.service.max_duration
         _duration['status_message'] += (' The session accounted duration was limited to the maximum allowed '
                                         f'{duration_to_str(_duration["accounted_duration"])}.')
     return _duration
@@ -263,83 +270,84 @@ def last_month_date(current_date):
 
 
 def generate_mentor_bills(mentor, reset=False):
-
-    generated_bills = []
-    start_at = None
-    end_at = None
+    bills = []
 
     def get_unpaid_sessions():
         return MentorshipSession.objects.filter(
-            Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.service.academy),
+            Q(bill__isnull=True)
+            | Q(bill__status='DUE', bill__academy=mentor.academy, bill__paid_at__isnull=True)
+            | Q(bill__status='RECALCULATE', bill__academy=mentor.academy, bill__paid_at__isnull=True),
+            service__isnull=False,
             allow_billing=True,
             mentor__id=mentor.id,
             status__in=['COMPLETED', 'FAILED'],
             started_at__isnull=False,
         ).order_by('started_at')
 
-    previous_bill = MentorshipBill.objects.filter(mentor__id=mentor.id,
-                                                  academy__id=mentor.service.academy.id,
-                                                  status='DUE').order_by('-started_at').first()
+    without_service = MentorshipSession.objects.filter(mentor=mentor, service__isnull=True).count()
+    if without_service:
+        raise ValidationException(
+            f'This mentor has {without_service} sessions without an associated service that need to be fixed',
+            slug='session_without_service')
 
-    if (previous_bill is not None and previous_bill.started_at and previous_bill.ended_at
-            and previous_bill.ended_at > timezone.now()):
-        return generated_bills
+    recalculate_bills = MentorshipBill.objects.filter(Q(status='DUE') | Q(status='RECALCULATE'),
+                                                      mentor__id=mentor.id,
+                                                      academy__id=mentor.academy.id)
 
-    monthly_unpaid_sessions = None
-    while end_at is None or end_at < timezone.now():
+    unpaid_sessions = get_unpaid_sessions()
+    if not unpaid_sessions:
+        if recalculate_bills:
+            for bill in recalculate_bills:
+                bill.status = 'DUE'
+                bill.save()
+        return []
 
-        unpaid_sessions = get_unpaid_sessions()
-        #print("Sessions: " + "".join([str(s.started_at) for s in unpaid_sessions]))
-        if unpaid_sessions.count() == 0:
-            return generated_bills
+    pending_months = sorted({(x.year, x.month) for x in unpaid_sessions.values_list('started_at', flat=True)})
+    for year, month in pending_months:
+        sessions_of_month = unpaid_sessions.filter(started_at__month=month, started_at__year=year)
 
-        if previous_bill is None or not previous_bill.started_at or not previous_bill.ended_at:
-            start_at = unpaid_sessions.first().started_at
-            end_at = last_month_date(start_at)
+        start_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC)
+        end_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC) + relativedelta(
+            months=1) - datetime.timedelta(microseconds=1)
+
+        open_bill = None
+        if recalculate_bills:
+            open_bill = recalculate_bills.filter(started_at__month=month, started_at__year=year).first()
+
+        if open_bill is None:
+            open_bill = MentorshipBill(mentor=mentor,
+                                       academy=mentor.academy,
+                                       started_at=start_at,
+                                       ended_at=end_at)
+            open_bill.save()
         else:
-            start_at = previous_bill.ended_at + datetime.timedelta(seconds=1)
-            end_at = last_month_date(start_at)
-            # raise Exception(f"Starting from {start_at} to {end_at}")
+            open_bill.status = 'DUE'
 
-        open_bill = MentorshipBill(mentor=mentor,
-                                   academy=mentor.service.academy,
-                                   started_at=start_at,
-                                   ended_at=end_at)
-        open_bill.save()
+        open_bill = generate_mentor_bill(mentor, open_bill, sessions_of_month, reset)
 
-        monthly_unpaid_sessions = unpaid_sessions.filter(started_at__gte=start_at, started_at__lte=end_at)
-        print(
-            f'There are {len(monthly_unpaid_sessions)} unpaid sessions starting from {start_at} to {end_at}')
+        bills.append(open_bill)
 
-        generate_mentor_bill(mentor, open_bill, monthly_unpaid_sessions, reset)
-
-        generated_bills.append(open_bill)
-        print(f'Added bill with total ammount {open_bill.total_duration_in_hours}')
-
-        # the recently created bill is not the previous because we moving on to the next cycle
-        previous_bill = open_bill
-        print(f'Billing until {end_at} vs {timezone.now()}')
-
-    return generated_bills
+    return bills
 
 
 def generate_mentor_bill(mentor, bill, sessions, reset=False):
     total = {'minutes': 0, 'overtime_minutes': 0}
 
     for session in sessions:
-        if session.bill is None:
-            session.bill = bill
+        session.bill = bill
 
-            _result = get_accounted_time(session)
-            session.suggested_accounted_duration = _result['accounted_duration']
-            session.status_message = _result['status_message']
-            # if is null and reset=true all the sessions durations will be rest to the suggested one
-            if session.accounted_duration is None or reset == True:
-                session.accounted_duration = _result['accounted_duration']
+        _result = get_accounted_time(session)
+
+        session.suggested_accounted_duration = _result['accounted_duration']
+        session.status_message = _result['status_message']
+
+        # if is null and reset=true all the sessions durations will be rest to the suggested one
+        if session.accounted_duration is None or reset == True:
+            session.accounted_duration = _result['accounted_duration']
 
         extra_minutes = 0
-        if session.accounted_duration > session.mentor.service.duration:
-            extra_minutes = (session.accounted_duration - session.mentor.service.duration).seconds / 60
+        if session.accounted_duration > session.service.duration:
+            extra_minutes = (session.accounted_duration - session.service.duration).seconds / 60
 
         total['minutes'] = total['minutes'] + (session.accounted_duration.seconds / 60)
         total['overtime_minutes'] = total['overtime_minutes'] + extra_minutes

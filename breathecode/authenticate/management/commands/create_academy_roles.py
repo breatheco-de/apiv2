@@ -45,7 +45,7 @@ CAPABILITIES = [
     },
     {
         'slug': 'read_assignment',
-        'description': 'Read assigment information'
+        'description': 'Read assignment information'
     },
     {
         'slug':
@@ -194,12 +194,12 @@ CAPABILITIES = [
         'description': 'Create, update or delete a user activities'
     },
     {
-        'slug': 'read_assigment',
-        'description': 'List all the assigments'
+        'slug': 'read_assignment',
+        'description': 'List all the assignments'
     },
     {
-        'slug': 'crud_assigment',
-        'description': 'Create, update or delete a assigment'
+        'slug': 'crud_assignment',
+        'description': 'Create, update or delete a assignment'
     },
     {
         'slug':
@@ -287,6 +287,46 @@ CAPABILITIES = [
         'slug': 'crud_technology',
         'description': 'Update, create and delete asset technologies'
     },
+    {
+        'slug': 'read_keyword',
+        'description': 'Read SEO keywords'
+    },
+    {
+        'slug': 'crud_keyword',
+        'description': 'Update, create and delete SEO keywords'
+    },
+    {
+        'slug': 'read_keywordcluster',
+        'description': 'Update, create and delete asset technologies'
+    },
+    {
+        'slug': 'crud_keywordcluster',
+        'description': 'Update, create and delete asset technologies'
+    },
+    {
+        'slug': 'read_cohort_log',
+        'description': 'Read the cohort logo that contains attendance and other info logged each day'
+    },
+    {
+        'slug': 'crud_cohort_log',
+        'description': 'Update and delete things like the cohort attendance, teacher comments, etc'
+    },
+    {
+        'slug': 'read_category',
+        'description': 'Read categories from the content registry'
+    },
+    {
+        'slug': 'crud_category',
+        'description': 'Update and delete categories from the content registry'
+    },
+    {
+        'slug': 'read_project_invoice',
+        'description': 'Read the financial status of a project and invoices'
+    },
+    {
+        'slug': 'read_freelance_projects',
+        'description': 'Read project details without financials'
+    },
 ]
 
 ROLES = [
@@ -317,6 +357,7 @@ ROLES = [
             'read_shortlink',
             'read_nps_answers',
             'read_won_lead',
+            'read_cohort_log',
             'read_mentorship_service',
             'read_mentorship_mentor',
         ],
@@ -352,15 +393,13 @@ ROLES = [
         ],
     },
     {
-        'slug': 'content_writer',
-        'name': 'Content Writer (Base)',
+        'slug':
+        'content_writer',
+        'name':
+        'Content Writer (Base)',
         'caps': [
-            'read_member',
-            'read_media',
-            'read_my_academy',
-            'read_asset',
-            'crud_asset',
-            'crud_technology',
+            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
+            'read_asset', 'crud_asset', 'read_category', 'crud_category'
         ],
     },
     {
@@ -378,6 +417,7 @@ ROLES = [
             'crud_activity',
             'read_mentorship_service',
             'read_mentorship_mentor',
+            'read_cohort_log',
         ],
     },
 ]
@@ -417,7 +457,7 @@ class RoleType(TypedDict):
 def extend_roles(roles: list[RoleType]) -> None:
     """
     These are additional roles that extend from the base roles above,
-    you can exend from more than one role but also add additional capabilitis at the end.
+    you can extend from more than one role but also add additional capabilities at the end.
     """
     roles.append({
         'slug':
@@ -426,14 +466,9 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Teacher Assistant',
         'caps':
         extend(roles, ['staff']) + [
-            'read_assigment',
-            'crud_assignment',
-            'read_cohort_activity',
-            'read_nps_answers',
-            'classroom_activity',
-            'read_event',
-            'task_delivery_details',
-            'crud_cohort',
+            'read_assignment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers',
+            'classroom_activity', 'read_event', 'task_delivery_details', 'crud_cohort', 'read_cohort_log',
+            'crud_cohort_log'
         ]
     })
     roles.append({
@@ -473,7 +508,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Syllabus Coordinator',
         'caps':
-        extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset', 'read_asset']
+        extend(roles, ['staff', 'content_writer']) +
+        ['crud_syllabus', 'crud_media', 'crud_technology', 'read_freelancer_bill', 'crud_freelancer_bill']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
@@ -488,7 +524,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset'
+            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset', 'read_keywordcluster', 'read_keyword'
         ]
     })
     roles.append({
@@ -499,7 +535,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff', 'community_manager']) + [
             'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
-            'crud_tag'
+            'crud_tag', 'crud_keyword', 'crud_keywordcluster'
         ]
     })
     roles.append({
@@ -508,8 +544,10 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Accountant',
         'caps':
-        extend(roles, ['staff']) +
-        ['read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill']
+        extend(roles, ['staff']) + [
+            'read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill',
+            'read_project_invoice'
+        ]
     })
     roles.append({
         'slug': 'homework_reviewer',
@@ -550,8 +588,11 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_session',
             'crud_mentorship_bill',
             'read_mentorship_bill',
+            'crud_freelancer_bill',
             'get_gitpod_user',
             'update_gitpod_user',
+            'read_project_invoice',
+            'read_freelance_projects',
         ]
     })
     roles.append({

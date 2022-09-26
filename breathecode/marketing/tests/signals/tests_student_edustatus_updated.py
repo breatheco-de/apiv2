@@ -7,6 +7,7 @@ class LeadTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 CohortUser without educational_status ACTIVE
     """
+
     @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
     @patch('logging.Logger.warn', MagicMock())
     def test_cohort_saved__create__without_educational_status_active(self):

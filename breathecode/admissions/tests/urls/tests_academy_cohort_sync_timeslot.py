@@ -11,6 +11,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_academy_cohort_sync_timeslot__without_auth(self):
         """Test /certificate without auth"""
         url = reverse_lazy('admissions:academy_cohort_sync_timeslot')

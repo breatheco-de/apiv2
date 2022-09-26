@@ -30,9 +30,9 @@ ACTIVITIES = {
     'lesson_opened': 'When a lessons is opened on the platform',
     'office_attendance': 'When the office raspberry pi detects the student',
     'nps_survey_answered': 'When a nps survey is answered by the student',
-    'exercise_success': 'When student successfuly tests exercise',
-    'registration': 'When student successfuly joins breathecode',
-    'educational_status_change': 'Student cohort changes like: starts, drop, pospone, etc',
+    'exercise_success': 'When student successfully tests exercise',
+    'registration': 'When student successfully joins breathecode',
+    'educational_status_change': 'Student cohort changes like: starts, drop, postpone, etc',
     'educational_note':
     'Notes that can be added by teachers, TA\'s or anyone involved in the student education',
     'career_note': 'Notes related to the student career',
@@ -159,6 +159,7 @@ class ActivityViewMixin(APIView):
 
 
 class ActivityTypeView(APIView):
+
     def get_activity_object(self, slug):
         return {'slug': slug, 'description': ACTIVITIES[slug]}
 
@@ -177,6 +178,7 @@ class ActivityTypeView(APIView):
 
 
 class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
+
     @capable_of('read_activity')
     def get(self, request, cohort_id=None, academy_id=None):
         self.queryargs = []
@@ -199,6 +201,7 @@ class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
 
 
 class ActivityMeView(APIView):
+
     @capable_of('read_activity')
     def get(self, request, academy_id=None):
         from breathecode.services.google_cloud import Datastore
@@ -264,6 +267,7 @@ class ActivityMeView(APIView):
 
 
 class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
+
     @capable_of('classroom_activity')
     def post(self, request, cohort_id=None, academy_id=None):
 
@@ -414,6 +418,7 @@ def add_student_activity(user, data, academy_id):
 
 
 class StudentActivityView(APIView, HeaderLimitOffsetPagination):
+
     @capable_of('read_activity')
     def get(self, request, student_id=None, academy_id=None):
         from breathecode.services.google_cloud import Datastore
@@ -467,7 +472,7 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
 
         public_iter = datastore.fetch(
             **kwargs
-        )  # TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
+        )  # TODO: remove this in the future because the academy_id was not present before and students didn't have it
 
         # query_iter = academy_iter + public_iter
         public_iter.sort(key=lambda x: x['created_at'], reverse=True)

@@ -1,11 +1,17 @@
+from datetime import datetime
 from django.shortcuts import render
 from rest_framework.response import Response
-from .serializers import BillSerializer, SmallIssueSerializer, BigBillSerializer
+from .serializers import (BillSerializer, SmallIssueSerializer, BigBillSerializer,
+                          SmallFreelancerMemberSerializer, SmallProjectSerializer, BigProjectSerializer,
+                          BigInvoiceSerializer)
 from rest_framework.permissions import AllowAny
 from rest_framework import status
+from django.utils import timezone
+from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from .actions import sync_user_issues, generate_freelancer_bill, add_webhook
-from .models import Bill, Freelancer, Issue, RepositoryIssueWebhook, BILL_STATUS
+from .models import (Bill, Freelancer, Issue, RepositoryIssueWebhook, BILL_STATUS, AcademyFreelanceProject,
+                     FreelanceProjectMember, ProjectInvoice)
 from .tasks import async_repository_issue_github
 from rest_framework.views import APIView
 from breathecode.utils.views import private_view
@@ -82,6 +88,7 @@ class BillView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, format=None):
 
         items = Bill.objects.all()
@@ -112,10 +119,117 @@ class BillView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AcademyProjectView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_freelance_projects')
+    def get(self, request, academy_id):
+
+        items = AcademyFreelanceProject.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        if 'like' in self.request.GET:
+            like = self.request.GET.get('like')
+            lookup['title__icontains'] = like
+
+        if 'repository' in self.request.GET:
+            repository = self.request.GET.get('repository')
+            lookup['repository__icontains'] = repository
+
+        items = items.filter(**lookup).order_by('-title')
+
+        serializer = BigProjectSerializer(items, many=True)
+        return Response(serializer.data)
+
+
+class AcademyProjectMemberView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_freelance_projects')
+    def get(self, request, academy_id):
+
+        items = FreelanceProjectMember.objects.filter(project__academy__id=academy_id)
+        lookup = {}
+
+        def find_user_by_name(query_name, qs):
+            for term in query_name.split():
+                qs = qs.filter(Q(first_name__icontains=term) | Q(last_name__icontains=term))
+            return qs
+
+        if 'like' in self.request.GET:
+            like = self.request.GET.get('like')
+            if '@' in like:
+                items = items.filter(Q(freelancer__user__email__icontains=like))
+            else:
+                for term in like.split():
+                    items = items.filter(
+                        Q(freelancer__user__first_name__icontains=term)
+                        | Q(freelancer__user__last_name__icontains=term))
+
+        if 'project' in self.request.GET:
+            project = self.request.GET.get('project')
+            lookup['project__id'] = project
+
+        items = items.filter(**lookup).order_by('-freelancer__user__first_name')
+
+        serializer = SmallFreelancerMemberSerializer(items, many=True)
+        return Response(serializer.data)
+
+
+class AcademyProjectInvoiceView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_project_invoice')
+    def get(self, request, invoice_id=None, academy_id=None):
+
+        if invoice_id is not None:
+            item = ProjectInvoice.objects.filter(project__academy__id=academy_id, id=invoice_id).first()
+            if item is None:
+                raise ValidationException('Project Invoice user not found', 404)
+            serializer = BigInvoiceSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = ProjectInvoice.objects.filter(project__academy__id=academy_id)
+        lookup = {}
+
+        if 'like' in self.request.GET:
+            like = self.request.GET.get('like')
+            lookup['project__title__icontains'] = like
+
+        if 'project' in self.request.GET:
+            project = self.request.GET.get('project')
+            lookup['project__id'] = project
+
+        if 'status' in self.request.GET:
+            status = self.request.GET.get('status')
+            lookup['status__iexact'] = status
+
+        if 'after' in self.request.GET:
+            after = self.request.GET.get('after')
+            after = datetime.strptime(after, '%Y-%m-%d').date()
+            items = items.filter(created_at__gte=after)
+        if 'before' in self.request.GET:
+            before = self.request.GET.get('before')
+            before = datetime.strptime(before, '%Y-%m-%d').date()
+            items = items.filter(created_at__lte=before)
+
+        items = items.filter(**lookup).order_by('-created_at')
+
+        serializer = BillSerializer(items, many=True)
+        return Response(serializer.data)
+
+
 class SingleBillView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, id):
         item = Bill.objects.filter(id=id).first()
         if item is None:

@@ -1,11 +1,12 @@
 import logging
 import json
 from django.contrib import admin, messages
-from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin, AcademyAdmin
+from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
+from breathecode.feedback.tasks import recalculate_survey_scores
 from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey, Review, ReviewPlatform
-from .actions import send_question, send_survey_group, create_user_graduation_reviews
+from .actions import send_survey_group, create_user_graduation_reviews
+from . import actions
 from django.utils.html import format_html
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
@@ -22,7 +23,7 @@ def send_bulk_survey(modeladmin, request, queryset):
 
     for u in user:
         try:
-            send_question(u)
+            actions.send_question(u)
         except Exception as e:
             error = str(e)
 
@@ -57,7 +58,7 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
 
     for cu in cus:
         try:
-            send_question(cu.user, cu.cohort)
+            actions.send_question(cu.user, cu.cohort)
         except Exception as e:
             error = str(e)
 
@@ -243,14 +244,23 @@ def fill_sent_at_with_created_at(modeladmin, request, queryset):
         s.save()
 
 
+def calculate_survey_scores(modeladmin, request, queryset):
+
+    for id in Survey.objects.all().values_list('id', flat=True):
+        recalculate_survey_scores.delay(id)
+
+
+calculate_survey_scores.short_description = 'Recalculate all Survey scores and response rate'
+
+
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
     list_display = ('cohort', 'status', 'duration', 'created_at', 'sent_at', 'survey_url')
     search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
     list_filter = [SentFilter, 'status', 'cohort__academy__slug']
     raw_id_fields = ['cohort']
-    actions = [send_big_cohort_bulk_survey, fill_sent_at_with_created_at] + change_field(
-        ['PENDING', 'SENT', 'PARTIAL', 'FATAL'], name='status')
+    actions = [send_big_cohort_bulk_survey, fill_sent_at_with_created_at, calculate_survey_scores
+               ] + change_field(['PENDING', 'SENT', 'PARTIAL', 'FATAL'], name='status')
 
     def survey_url(self, obj):
         url = 'https://nps.breatheco.de/survey/' + str(obj.id)

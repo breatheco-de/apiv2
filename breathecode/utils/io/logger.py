@@ -14,7 +14,8 @@ def getLogger(name: Optional[str] = None):
     if not name or isinstance(name, str) and name == root.name:
         return root
     base = BaseLogger.manager.getLogger(name)
-    return Logger(base)
+    logger = Logger(base)
+    return logger
 
 
 # Keep the original docstring

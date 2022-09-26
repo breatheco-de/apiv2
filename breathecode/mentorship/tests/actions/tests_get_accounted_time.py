@@ -20,6 +20,7 @@ NOW = timezone.now()
 
 
 def apply_get_env(envs={}):
+
     def get_env(key, default=None):
         return envs.get(key, default)
 
@@ -36,6 +37,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     """
     🔽🔽🔽 without MentorshipSession without started_at and mentor_joined_at
     """
+
     def test__without_started_at__without_mentor_joined_at(self):
         mentorship_session = {
             'started_at': None,

@@ -79,6 +79,7 @@ def generate_form_entry_kwargs():
 
 
 class CreateFormEntryTestSuite(MarketingTestCase):
+
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_create_form_entry_with_dict_empty_without_csv_upload_id(self):
@@ -125,7 +126,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     def test_create_form_entry_with_dict_without_regex_first_name(self):
         """Test create_form_entry task without data"""
-
+        cases = [('Brandon1', 'Smith2', 'test12.net'), ('Brandon@', 'Smith@', 'test12.net')]
         model = self.bc.database.create(csv_upload=1)
         logging.Logger.info.call_args_list = []
         data = {

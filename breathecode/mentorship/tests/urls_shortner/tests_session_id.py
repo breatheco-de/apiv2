@@ -312,6 +312,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__get__without_auth(self):
         url = reverse_lazy('mentorship_shortner:session_id', kwargs={'session_id': 1})
         response = self.client.get(url)
@@ -371,7 +372,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_form(self, model.mentorship_session, model.token, fix_logo=True)
+        expected = render_form(self, model.mentorship_session, model.token, fix_logo=False)
 
         # dump error in external files
         if content != expected:
@@ -411,7 +412,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_form(self, model.mentorship_session, model.token, fix_logo=True)
+        expected = render_form(self, model.mentorship_session, model.token, fix_logo=False)
 
         # dump error in external files
         if content != expected:

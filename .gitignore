@@ -4,6 +4,7 @@
 
 ### Django ###
 *.log
+core.[0-9]*
 *.pot
 *.pyc
 .temp
@@ -14,6 +15,7 @@ db.sqlite3-journal
 media
 !/breathecode/media
 /backup/
+core.[0-9]*
 
 # If your build process includes running collectstatic, then you probably don't need or want to include staticfiles/
 # in your Git repository. Update and uncomment the following line accordingly.
@@ -165,3 +167,8 @@ dump.rdb
 # Test of render html
 /content.html
 /expected.html
+
+/core.*
+# pdm
+.pdm.toml
+/experiments.py

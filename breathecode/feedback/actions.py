@@ -1,3 +1,4 @@
+import re
 from breathecode.notify.actions import send_email_message, send_slack
 import logging, json
 from django.utils import timezone
@@ -7,7 +8,8 @@ from breathecode.authenticate.models import Token
 from .models import Answer, Survey, Review, ReviewPlatform
 from .utils import strings
 from breathecode.admissions.models import CohortUser
-from .tasks import send_cohort_survey, build_question
+from django.db.models import QuerySet
+from . import tasks
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ def send_survey_group(survey=None, cohort=None):
         raise ValidationException('Missing survey or cohort', slug='missing-survey-or-cohort')
 
     if survey is None:
-        survey = Survey(cohort=cohort, lang=cohort.language)
+        survey = Survey(cohort=cohort, lang=cohort.language.lower())
 
     result = {'success': [], 'error': []}
     try:
@@ -41,7 +43,7 @@ def send_survey_group(survey=None, cohort=None):
 
         for uc in ucs:
             if uc.educational_status in ['ACTIVE', 'GRADUATED']:
-                send_cohort_survey.delay(uc.user.id, survey.id)
+                tasks.send_cohort_survey.delay(uc.user.id, survey.id)
 
                 logger.debug(f'Survey scheduled to send for {uc.user.email}')
                 result['success'].append(f'Survey scheduled to send for {uc.user.email}')
@@ -74,22 +76,21 @@ def send_survey_group(survey=None, cohort=None):
 
 def send_question(user, cohort=None):
     answer = Answer(user=user)
-    if cohort is not None:
-        answer.cohort = cohort
-    else:
-        cohorts = CohortUser.objects.filter(user__id=user.id).order_by('-cohort__kickoff_date')
-        _count = cohorts.count()
-        if _count == 1:
-            _cohort = cohorts.first().cohort
-            answer.cohort = _cohort
 
-    if answer.cohort is None:
+    # just can send the question if the user is active in the cohort
+    cu_kwargs = {'user': user, 'educational_status__in': ['ACTIVE', 'GRADUATED']}
+    if cohort:
+        cu_kwargs['cohort'] = cohort
+
+    cu = CohortUser.objects.filter(**cu_kwargs).order_by('-cohort__kickoff_date').first()
+    if not cu:
         raise ValidationException(
             'Impossible to determine the student cohort, maybe it has more than one, or cero.',
             slug='without-cohort-or-cannot-determine-cohort')
-    else:
-        answer.lang = answer.cohort.language
-        answer.save()
+
+    answer.cohort = cu.cohort
+    answer.lang = answer.cohort.language.lower()
+    answer.save()
 
     has_slackuser = hasattr(user, 'slackuser')
 
@@ -109,7 +110,7 @@ def send_question(user, cohort=None):
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
                                                          status='SENT').count()
 
-    question = build_question(answer)
+    question = tasks.build_question(answer)
 
     if question_was_sent_previously:
         answer = Answer.objects.filter(cohort=answer.cohort, user=user, status='SENT').first()
@@ -119,7 +120,7 @@ def send_question(user, cohort=None):
         answer.title = question['title']
         answer.lowest = question['lowest']
         answer.highest = question['highest']
-        answer.lang = answer.cohort.language
+        answer.lang = answer.cohort.language.lower()
         answer.save()
 
     token, created = Token.get_or_create(user, token_type='temporal', hours_length=48)
@@ -134,7 +135,7 @@ def send_question(user, cohort=None):
         'LOWEST': answer.lowest,
         'SUBJECT': question['title'],
         'ANSWER_ID': answer.id,
-        'BUTTON': strings[answer.cohort.language]['button_label'],
+        'BUTTON': strings[answer.cohort.language.lower()]['button_label'],
         'LINK': f'https://nps.breatheco.de/{answer.id}?token={token.key}',
     }
 
@@ -205,3 +206,57 @@ def create_user_graduation_reviews(user, cohort):
 
     logger.debug(f'No reviews requested for student {user.id} because average NPS score is {average}')
     return False
+
+
+def calculate_survey_response_rate(survey_id: int) -> float:
+    total_responses = Answer.objects.filter(survey__id=survey_id).count()
+    answered_responses = Answer.objects.filter(survey__id=survey_id, status='ANSWERED').count()
+    response_rate = (answered_responses / total_responses) * 100
+
+    return response_rate
+
+
+def calculate_survey_scores(survey_id: int) -> dict:
+
+    def get_average(answers: QuerySet[Answer]) -> float:
+        result = answers.aggregate(Avg('score'))
+        return result['score__avg']
+
+    survey = Survey.objects.filter(id=survey_id).first()
+    if not survey:
+        raise ValidationException('Survey not found', code=404, slug='not-found')
+
+    answers = Answer.objects.filter(survey=survey, status='ANSWERED')
+    total = get_average(answers)
+
+    academy_pattern = strings[survey.lang]['academy']['title'].split('{}')
+    cohort_pattern = strings[survey.lang]['cohort']['title'].split('{}')
+    mentor_pattern = strings[survey.lang]['mentor']['title'].split('{}')
+
+    academy = get_average(
+        answers.filter(title__startswith=academy_pattern[0], title__endswith=academy_pattern[1]))
+
+    cohort = get_average(
+        answers.filter(title__startswith=cohort_pattern[0], title__endswith=cohort_pattern[1]))
+
+    all_mentors = {
+        x.title
+        for x in answers.filter(title__startswith=mentor_pattern[0], title__endswith=mentor_pattern[1])
+    }
+
+    full_mentor_pattern = (mentor_pattern[0].replace('?', '\\?') + r'([\w ]+)' +
+                           mentor_pattern[1].replace('?', '\\?'))
+
+    mentors = []
+    for mentor in all_mentors:
+        name = re.findall(full_mentor_pattern, mentor)[0]
+        score = get_average(answers.filter(title=mentor))
+
+        mentors.append({'name': name, 'score': score})
+
+    return {
+        'total': total,
+        'academy': academy,
+        'cohort': cohort,
+        'mentors': sorted(mentors, key=lambda x: x['name']),
+    }

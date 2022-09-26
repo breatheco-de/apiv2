@@ -60,6 +60,7 @@ sync_ac_automations.short_description = '♼ Sync AC Automations'
 
 
 class CustomForm(forms.ModelForm):
+
     class Meta:
         model = ActiveCampaignAcademy
         fields = '__all__'
@@ -85,23 +86,28 @@ class AcademyAliasAdmin(admin.ModelAdmin):
     list_display = ('slug', 'active_campaign_slug', 'academy')
 
 
-def send_to_ac(modeladmin, request, queryset):
+def send_to_active_campaign(modeladmin, request, queryset):
     entries = queryset.all()
-    total = 0
+    total = {'error': 0, 'persisted': 0}
+    entry = None
     try:
         for entry in entries:
-            register_new_lead(entry.toFormData())
-            total += 1
+            entry = register_new_lead(entry.toFormData())
+            if entry.storage_status == 'PERSISTED':
+                total['persisted'] += 1
+            else:
+                total['error'] += 1
 
-        messages.add_message(request, messages.SUCCESS, f'{total} entries were successfully added')
     except Exception as e:
-        messages.add_message(
-            request, messages.ERROR,
-            f'{total} entries were successfully added but an error was found on entry {entry.id}: \n ' +
-            str(e))
+        total['error'] += 1
+        entry.storage_status = 'ERROR'
+        entry.storage_status_text = str(e)
+        entry.save()
 
-
-send_to_ac.short_description = '⨁ Add lead to automations in AC'
+    messages.add_message(
+        request, messages.SUCCESS,
+        f"Persisted leads: {total['persisted']}. Not persisted: {total['error']}. You can check each lead storage_status_text for details."
+    )
 
 
 def fetch_more_facebook_info(modeladmin, request, queryset):
@@ -145,13 +151,38 @@ class PPCFilter(SimpleListFilter):
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
-    list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course',
-                    'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
+    list_display = ('id', '_storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location',
+                    'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = [
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app',
         'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'country'
     ]
-    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
+    actions = [send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
+
+    def _storage_status(self, obj):
+        colors = {
+            'PUBLISHED': 'bg-success',
+            'OK': 'bg-success',
+            'ERROR': 'bg-error',
+            'WARNING': 'bg-warning',
+            'DUPLICATED': '',
+            None: 'bg-warning',
+            'DRAFT': 'bg-error',
+            'PENDING_TRANSLATION': 'bg-error',
+            'PENDING': 'bg-warning',
+            'WARNING': 'bg-warning',
+            'UNASSIGNED': 'bg-error',
+            'UNLISTED': 'bg-warning',
+        }
+
+        def from_status(s):
+            if s in colors:
+                return colors[s]
+            return ''
+
+        return format_html(
+            f"<p class='{from_status(obj.storage_status)}'>{obj.storage_status}</p><small>{obj.storage_status_text}</small>"
+        )
 
 
 def add_dispute(modeladmin, request, queryset):
@@ -208,6 +239,7 @@ def prepend_tech_on_name(modeladmin, request, queryset):
 
 
 class CustomTagModelForm(forms.ModelForm):
+
     class Meta:
         model = Tag
         fields = '__all__'
@@ -360,6 +392,7 @@ reset_app_id.short_description = 'Reset app id'
 
 
 class LeadAppCustomForm(forms.ModelForm):
+
     class Meta:
         model = LeadGenerationApp
         fields = '__all__'
@@ -368,8 +401,9 @@ class LeadAppCustomForm(forms.ModelForm):
         super(LeadAppCustomForm, self).__init__(*args, **kwargs)
 
         try:
-            self.fields['default_automations'].queryset = Automation.objects.filter(
-                ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
+            if 'default_automations' in self.fields:
+                self.fields['default_automations'].queryset = Automation.objects.filter(
+                    ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
             self.fields['default_tags'].queryset = Tag.objects.filter(
                 ac_academy__academy__id=self.instance.academy.id)  # or something else
         except:

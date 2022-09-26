@@ -1,6 +1,7 @@
-import logging, os
+import logging, os, requests, json
 from celery import shared_task, Task
-from .models import SlackTeam
+from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import timezone
 from .actions import sync_slack_team_channel, sync_slack_team_users, send_email_message
 from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
@@ -66,3 +67,43 @@ def async_slack_action(post_data):
     except Exception as e:
         logger.exception('Error processing slack action')
         return False
+
+
+@shared_task
+def async_deliver_hook(target, payload, hook_id=None, **kwargs):
+    logger.debug('Starting async_deliver_hook')
+    from .utils.hook_manager import HookManager
+    """
+    target:     the url to receive the payload.
+    payload:    a python primitive data structure
+    instance:   a possibly null "trigger" instance
+    hook:       the defining Hook object (useful for removing)
+    """
+    response = requests.post(url=target,
+                             data=json.dumps(payload, cls=DjangoJSONEncoder),
+                             headers={'Content-Type': 'application/json'})
+
+    if hook_id:
+        HookModel = HookManager.get_hook_model()
+        hook = HookModel.objects.get(id=hook_id)
+        if response.status_code == 410:
+            hook.delete()
+
+        else:
+            data = hook.sample_data
+            if not isinstance(data, list):
+                data = []
+
+            if 'data' in payload and isinstance(payload['data'], dict):
+                data.append(payload['data'])
+            elif isinstance(payload, dict):
+                data.append(payload)
+
+            if len(data) > 10:
+                data = data[1:10]
+
+            hook.last_response_code = response.status_code
+            hook.last_call_at = timezone.now()
+            hook.sample_data = data
+            hook.total_calls = hook.total_calls + 1
+            hook.save()

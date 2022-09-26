@@ -1,6 +1,7 @@
 import json
 from django.contrib import admin, messages
-from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook
+from .models import (Freelancer, Issue, Bill, RepositoryIssueWebhook, AcademyFreelanceProject,
+                     FreelanceProjectMember, ProjectInvoice)
 from django.utils.html import format_html
 from . import actions
 from breathecode.utils.admin import change_field
@@ -12,7 +13,8 @@ def sync_issues(modeladmin, request, queryset):
     freelancers = queryset.all()
     for freelancer in freelancers:
         try:
-            actions.sync_user_issues(freelancer)
+            count = actions.sync_user_issues(freelancer)
+            messages.success(message=f'{count} issues successfully synched!', request=request)
         except ValueError as err:
             messages.error(request, err)
 
@@ -20,16 +22,14 @@ def sync_issues(modeladmin, request, queryset):
 sync_issues.short_description = 'Sync open issues'
 
 
-def generate_bill(modeladmin, request, queryset):
+def generate_freelancer_bill(modeladmin, request, queryset):
     freelancers = queryset.all()
     for freelancer in freelancers:
         try:
             actions.generate_freelancer_bill(freelancer)
+            messages.success(message='Success!', request=request)
         except ValueError as err:
             messages.error(request, err)
-
-
-generate_bill.short_description = 'Generate bill'
 
 
 def mark_as(queryset, status, request):
@@ -55,7 +55,7 @@ def mark_as(queryset, status, request):
 class FreelancerAdmin(admin.ModelAdmin):
     list_display = ['user_id', 'full_name', 'email', 'github', 'price_per_hour']
     raw_id_fields = ['user', 'github_user']
-    actions = [sync_issues, generate_bill]
+    actions = [sync_issues, generate_freelancer_bill]
 
     def full_name(self, obj):
         return obj.user.first_name + ' ' + obj.user.last_name
@@ -73,6 +73,16 @@ class FreelancerAdmin(admin.ModelAdmin):
         return format_html(f"<span class='badge bg-success'>Connected to Github</span>")
 
 
+def resync_single_issue(modeladmin, request, queryset):
+    issues = queryset.all()
+    for i in issues:
+        try:
+            actions.sync_single_issue(i)
+            messages.success(message='Success!', request=request)
+        except ValueError as err:
+            messages.error(request, err)
+
+
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
     search_fields = [
@@ -82,7 +92,8 @@ class IssueAdmin(admin.ModelAdmin):
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id',
                     'github_url')
     list_filter = ['status', 'bill__status']
-    actions = change_field(['TODO', 'DONE', 'IGNORED', 'DRAFT', 'DOING'], name='status')
+    actions = [resync_single_issue] + change_field(['TODO', 'DONE', 'IGNORED', 'DRAFT', 'DOING'],
+                                                   name='status')
 
     def github_url(self, obj):
         return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>",
@@ -133,3 +144,37 @@ class RepositoryIssueWebhookAdmin(admin.ModelAdmin):
             'PENDING': 'bg-warning',
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
+
+def generate_project_invoice(modeladmin, request, queryset):
+    projects = queryset.all()
+    for p in projects:
+        try:
+            actions.generate_project_invoice(p)
+        except ValueError as err:
+            raise err
+            messages.error(request, err)
+
+
+@admin.register(AcademyFreelanceProject)
+class AcademyFreelanceProjectAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title', 'academy', 'total_client_hourly_price')
+    list_filter = ['academy']
+    actions = [generate_project_invoice]
+
+
+@admin.register(FreelanceProjectMember)
+class FreelanceProjectMemberAdmin(admin.ModelAdmin):
+    list_display = ('freelancer', 'project', 'total_cost_hourly_price', 'total_client_hourly_price')
+    list_filter = ['project']
+    search_fields = [
+        'project__title', 'freelancer__user__email', 'freelancer__user__first_name',
+        'freelancer__user__last_name'
+    ]
+
+
+@admin.register(ProjectInvoice)
+class ProjectInvoiceAdmin(admin.ModelAdmin):
+    list_display = ('id', 'project', 'status', 'total_duration_in_hours', 'total_price', 'paid_at')
+    list_filter = ['status']
+    actions = change_field(['PAID', 'APPROVED', 'IGNORED', 'DUE'], name='status')

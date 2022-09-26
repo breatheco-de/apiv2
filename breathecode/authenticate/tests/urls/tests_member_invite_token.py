@@ -115,7 +115,7 @@ def render_page_post_successfully():
     request = None
 
     return loader.render_to_string('message.html', {
-        'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in',
+        'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in',
     }, request)
 
 
@@ -127,6 +127,7 @@ def render_to_string_mock(*args, **kwargs):
 
 
 class GetHasherMock:
+
     def __init__(self, *args, **kwargs):
         ...
 
@@ -142,6 +143,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 GET without UserInvite
     """
+
     def test_member_invite_token__without_user_invite(self):
         url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': 'invalid'})
         response = self.client.get(url)
@@ -365,8 +367,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp1',
-            'password2': '^3^3uUppppp2',
+            'password': '^3^3uUppppp1',
+            'repeat_password': '^3^3uUppppp2',
         }
         response = self.client.post(url, data)
 
@@ -406,8 +408,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -462,8 +464,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
             'callback': '/1337'
         }
         response = self.client.post(url, data, format='multipart')
@@ -520,8 +522,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -580,8 +582,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -634,8 +636,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -685,8 +687,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -740,8 +742,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -792,8 +794,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 

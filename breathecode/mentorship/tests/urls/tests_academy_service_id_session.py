@@ -17,7 +17,7 @@ UTC_NOW = timezone.now()
 
 def get_tooltip(obj):
 
-    message = f'This mentorship should last no longer than {int(obj.mentor.service.duration.seconds/60)} min. <br />'
+    message = f'This mentorship should last no longer than {int(obj.service.duration.seconds/60)} min. <br />'
     if obj.started_at is None:
         message += 'The mentee never joined the session. <br />'
     else:
@@ -101,7 +101,7 @@ def get_mente_joined(obj):
     if obj.started_at is None:
         return 'Session did not start because mentee never joined'
     else:
-        return None
+        return True
 
 
 def get_rating(obj):
@@ -129,7 +129,7 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
         get_extra_time(mentorship_session),
         'id':
         mentorship_session.id,
-        'mente_joined':
+        'mentee_joined':
         get_mente_joined(mentorship_session),
         'mentee': {
             'email': user.email,
@@ -140,13 +140,23 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
         'mentee_left_at':
         mentorship_session.mentee_left_at,
         'mentor': {
-            'booking_url': mentor_profile.booking_url,
-            'created_at': self.bc.datetime.to_iso_string(mentor_profile.created_at),
-            'email': mentor_profile.email,
-            'id': mentor_profile.id,
-            'online_meeting_url': mentor_profile.online_meeting_url,
-            'price_per_hour': mentor_profile.price_per_hour,
-            'service': {
+            'booking_url':
+            mentor_profile.booking_url,
+            'created_at':
+            self.bc.datetime.to_iso_string(mentor_profile.created_at),
+            'email':
+            mentor_profile.email,
+            'id':
+            mentor_profile.id,
+            'one_line_bio':
+            mentor_profile.one_line_bio,
+            'online_meeting_url':
+            mentor_profile.online_meeting_url,
+            'price_per_hour':
+            mentor_profile.price_per_hour,
+            'rating':
+            mentor_profile.rating,
+            'services': [{
                 'academy': {
                     'icon_url': mentorship_service.academy.icon_url,
                     'id': mentorship_service.academy.id,
@@ -180,11 +190,15 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
                 mentorship_service.status,
                 'updated_at':
                 self.bc.datetime.to_iso_string(mentorship_service.updated_at),
-            },
-            'slug': mentor_profile.slug,
-            'status': mentor_profile.status,
-            'timezone': mentor_profile.timezone,
-            'updated_at': self.bc.datetime.to_iso_string(mentor_profile.updated_at),
+            }],
+            'slug':
+            mentor_profile.slug,
+            'status':
+            mentor_profile.status,
+            'timezone':
+            mentor_profile.timezone,
+            'updated_at':
+            self.bc.datetime.to_iso_string(mentor_profile.updated_at),
             'user': {
                 'email': user.email,
                 'first_name': user.first_name,
@@ -242,6 +256,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__get__without_auth(self):
         url = reverse_lazy('mentorship:academy_service_id_session', kwargs={'service_id': 1})
         response = self.client.get(url)

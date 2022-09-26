@@ -20,6 +20,7 @@ class CertificateTestSuite(CertificateTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -363,7 +364,8 @@ class CertificateTestSuite(CertificateTestCase):
             'layout': {
                 'name': model['layout_design'].name,
                 'background_url': model['layout_design'].background_url,
-                'slug': model['layout_design'].slug
+                'slug': model['layout_design'].slug,
+                'foot_note': model['layout_design'].foot_note
             },
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
@@ -510,7 +512,8 @@ class CertificateTestSuite(CertificateTestCase):
             'layout': {
                 'name': model['layout_design'].name,
                 'background_url': model['layout_design'].background_url,
-                'slug': model['layout_design'].slug
+                'slug': model['layout_design'].slug,
+                'foot_note': model['layout_design'].foot_note
             },
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
@@ -647,7 +650,8 @@ class CertificateTestSuite(CertificateTestCase):
             'layout': {
                 'name': model['layout_design'].name,
                 'background_url': model['layout_design'].background_url,
-                'slug': model['layout_design'].slug
+                'slug': model['layout_design'].slug,
+                'foot_note': model['layout_design'].foot_note
             },
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
@@ -805,7 +809,8 @@ class CertificateTestSuite(CertificateTestCase):
             'layout': {
                 'name': model['layout_design'].name,
                 'background_url': model['layout_design'].background_url,
-                'slug': model['layout_design'].slug
+                'slug': model['layout_design'].slug,
+                'foot_note': model['layout_design'].foot_note
             },
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,

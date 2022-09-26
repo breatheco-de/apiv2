@@ -17,6 +17,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -108,15 +109,15 @@ class MediaTestSuite(MediaTestCase):
                 'slug': 'nps_survey_answered',
             },
             {
-                'description': 'When student successfuly tests exercise',
+                'description': 'When student successfully tests exercise',
                 'slug': 'exercise_success',
             },
             {
-                'description': 'When student successfuly joins breathecode',
+                'description': 'When student successfully joins breathecode',
                 'slug': 'registration'
             },
             {
-                'description': 'Student cohort changes like: starts, drop, pospone, etc',
+                'description': 'Student cohort changes like: starts, drop, postpone, etc',
                 'slug': 'educational_status_change'
             },
             {

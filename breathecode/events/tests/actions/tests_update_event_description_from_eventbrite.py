@@ -27,6 +27,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without Event
     """
+
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))

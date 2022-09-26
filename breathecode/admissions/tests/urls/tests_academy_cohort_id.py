@@ -20,6 +20,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_cohort_id__without_auth(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -657,6 +658,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'name': data['name'],
                              'never_ends': False,
                              'private': False,
+                             'history_log': None,
                              'slug': data['slug'],
                              'stage': model['cohort'].stage,
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
@@ -812,6 +814,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'name': data['name'],
                              'never_ends': False,
                              'private': False,
+                             'history_log': None,
                              'slug': data['slug'],
                              'stage': model['cohort'].stage,
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
@@ -973,6 +976,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'language': data['language'],
                              'name': data['name'],
                              'never_ends': False,
+                             'history_log': None,
                              'private': False,
                              'slug': data['slug'],
                              'stage': model['cohort'].stage,
@@ -1110,6 +1114,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'name': data['name'],
                              'never_ends': False,
                              'private': False,
+                             'history_log': None,
                              'slug': data['slug'],
                              'stage': model['cohort'].stage,
                              'syllabus_version_id': model['cohort'].syllabus_version.id,

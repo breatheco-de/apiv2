@@ -8,6 +8,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 With zero EventbriteWebhook
     """
+
     @patch('breathecode.events.tasks.async_eventbrite_webhook.delay', MagicMock())
     def test__with_zero_eventbrite_webwooks(self):
         command = Command()

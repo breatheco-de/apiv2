@@ -1,10 +1,11 @@
-import os
+import os, logging
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from .signals import student_edu_status_updated
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
+logger = logging.getLogger(__name__)
 
 
 def get_user_label(self):
@@ -20,6 +21,7 @@ __all__ = [
 
 
 class UserAdmissions(User):
+
     class Meta:
         proxy = True
 
@@ -85,8 +87,12 @@ class Academy(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     zip_code = models.IntegerField(blank=True, null=True)
+    white_labeled = models.BooleanField(default=False)
 
     active_campaign_slug = models.SlugField(max_length=100, unique=False, null=True, default=None)
+
+    available_as_saas = models.BooleanField(
+        default=False, help_text='Academies available as SAAS will be sold thru 4Geeks.com')
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
 
@@ -160,6 +166,17 @@ VERSION_STATUS = (
     (DRAFT, 'Draft'),
 )
 
+ERROR = 'ERROR'
+OK = 'OK'
+PENDING = 'PENDING'
+WARNING = 'WARNING'
+INTEGRITY_STATUS = (
+    (ERROR, 'Error'),
+    (PENDING, 'Pending'),
+    (WARNING, 'Warning'),
+    (OK, 'Ok'),
+)
+
 
 class SyllabusVersion(models.Model):
     json = models.JSONField()
@@ -168,6 +185,10 @@ class SyllabusVersion(models.Model):
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
+
+    integrity_status = models.CharField(max_length=15, choices=INTEGRITY_STATUS, default=PENDING)
+    integrity_check_at = models.DateTimeField(null=True, blank=True, default=None)
+    integrity_report = models.JSONField(null=True, blank=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -228,7 +249,7 @@ class Cohort(models.Model):
     kickoff_date = models.DateTimeField()
     ending_date = models.DateTimeField(blank=True, null=True)
     current_day = models.IntegerField(
-        help_text='Each day the teacher takes attendancy and increases the day in one')
+        help_text='Each day the teacher takes attendancy and increases the day in one', default=1)
     current_module = models.IntegerField(
         null=True,
         default=None,
@@ -247,6 +268,12 @@ class Cohort(models.Model):
     timezone = models.CharField(max_length=50, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    history_log = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text='The cohort history will save attendancy and information about progress on each class')
 
     syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.SET_NULL, default=None, null=True)
     schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.SET_NULL, default=None, null=True)
@@ -303,6 +330,7 @@ EDU_STATUS = (
 
 
 class CohortUser(models.Model):
+
     def __init__(self, *args, **kwargs):
         super(CohortUser, self).__init__(*args, **kwargs)
         self.__old_edu_status = self.educational_status

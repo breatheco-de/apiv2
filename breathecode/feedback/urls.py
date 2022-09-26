@@ -1,5 +1,4 @@
-from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
 from .views import (AnswerMeView, GetAnswerView, track_survey_open, get_survey_questions, SurveyView,
                     AcademyAnswerView, ReviewView, get_review_platform)
 

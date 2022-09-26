@@ -62,6 +62,7 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_academy_lead__without_auth(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:academy_lead')

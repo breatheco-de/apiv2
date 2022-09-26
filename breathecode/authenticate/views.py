@@ -1,33 +1,33 @@
+import hashlib
 import os, requests, base64, logging
 import re
 import urllib.parse
 import breathecode.notify.actions as notify_actions
 from datetime import timezone, timedelta
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import update_session_auth_hash
 from rest_framework.response import Response
 from django.db.models import Q
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
-from django.urls import resolve
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status, serializers
-from django.contrib.auth.models import User, Group, AnonymousUser
+from django.contrib.auth.models import User, AnonymousUser
 from django.contrib import messages
 from rest_framework.authtoken.views import ObtainAuthToken
-from urllib.parse import urlencode, parse_qs, urlparse, parse_qsl
+from urllib.parse import urlencode, parse_qs
 from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 from django.utils import timezone
-from datetime import datetime
 from django.db.models.functions import Now
+from rest_framework.parsers import FileUploadParser, MultiPartParser
 
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
+from breathecode.services.google_cloud import FunctionV1, FunctionV2
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils import response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -50,7 +50,6 @@ from .models import (
 from .actions import reset_password, resend_invite, generate_academy_token, update_gitpod_users, set_gitpod_user_expiration
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.notify.actions import send_email_message
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from breathecode.utils.views import private_view, render_message, set_query_parameter
@@ -89,6 +88,20 @@ PATTERNS = {
     'CONTAINS_SYMBOLS': r'[^a-zA-Z]',
 }
 
+PROFILE_MIME_ALLOWED = ['image/png']
+
+
+def get_profile_bucket():
+    return os.getenv('PROFILE_BUCKET', '')
+
+
+def get_shape_of_image_url():
+    return os.getenv('GCLOUD_SHAPE_OF_IMAGE', '')
+
+
+def get_google_project_id():
+    return os.getenv('GOOGLE_PROJECT_ID', '')
+
 
 class TemporalTokenView(ObtainAuthToken):
     schema = AutoSchema()
@@ -96,7 +109,14 @@ class TemporalTokenView(ObtainAuthToken):
 
     def post(self, request):
 
-        token, created = Token.get_or_create(user=request.user, token_type='temporal')
+        token_type = request.data.get('token_type', 'temporal')
+
+        allowed_token_types = ['temporal', 'one_time']
+        if token_type not in allowed_token_types:
+            raise ValidationException(f'The token type must be one of {", ".join(allowed_token_types)}',
+                                      slug='token-type-invalid-or-not-allowed')
+
+        token, created = Token.get_or_create(user=request.user, token_type=token_type)
         return Response({
             'token': token.key,
             'token_type': token.token_type,
@@ -191,9 +211,9 @@ class MemberView(APIView, GenerateLookupsMixin):
         if not 'student' in include:
             items = items.exclude(role__slug='student')
 
-        roles = request.GET.get('roles', None)
-        if roles is not None:
-            items = items.filter(role__in=roles.split(','))
+        roles = request.GET.get('roles', '')
+        if roles != '':
+            items = items.filter(role__in=roles.lower().split(','))
 
         status = request.GET.get('status', None)
         if status is not None:
@@ -287,6 +307,7 @@ class MemberView(APIView, GenerateLookupsMixin):
 
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     def get(self, request):
         invites = UserInvite.objects.filter(email=request.user.email)
 
@@ -335,6 +356,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 
 class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
     @capable_of('read_invite')
     def get(self, request, academy_id=None, profileacademy_id=None, invite_id=None):
 
@@ -467,7 +489,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
 
 class StudentView(APIView, GenerateLookupsMixin):
-    extensions = APIViewExtensions(paginate=True)
+    extensions = APIViewExtensions(paginate=True, sort='-created_at')
 
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id_or_email=None):
@@ -497,6 +519,11 @@ class StudentView(APIView, GenerateLookupsMixin):
         status = request.GET.get('status', None)
         if status is not None:
             items = items.filter(status__iexact=status)
+
+        cohort = request.GET.get('cohort', None)
+        if cohort is not None:
+            lookups = self.generate_lookups(request, many_fields=['cohort'])
+            items = items.filter(user__cohortuser__cohort__slug__in=lookups['cohort__in'])
 
         items = handler.queryset(items)
         serializer = GetProfileAcademySmallSerializer(items, many=True)
@@ -641,6 +668,7 @@ def get_token_info(request, token):
 
 
 class UserMeView(APIView):
+
     def get(self, request, format=None):
         # TODO: This should be not accessible because this endpoint require auth
         try:
@@ -677,15 +705,21 @@ def get_users(request):
 
     query = User.objects.all()
 
+    def find_user_by_name(query_name, qs):
+        for term in query_name.split():
+            qs = qs.filter(Q(first_name__icontains=term) | Q(last_name__icontains=term))
+        return qs
+
     name = request.GET.get('name', None)
     if name is not None:
-        query = query.filter(Q(first_name__icontains=name) | Q(last_name__icontains=name))
+        query = find_user_by_name(name, query)
 
     like = request.GET.get('like', None)
     if like is not None:
-        query = query.filter(
-            Q(first_name__icontains=like) | Q(last_name__icontains=like)
-            | Q(email__icontains=like))
+        if '@' in like:
+            query = query.filter(Q(email__icontains=like))
+        else:
+            query = find_user_by_name(like, query)
 
     query = query.exclude(email__contains='@token.com')
     query = query.order_by('-date_joined')
@@ -1238,6 +1272,7 @@ def change_password(request, token):
 
 
 class TokenTemporalView(APIView):
+
     @capable_of('generate_temporal_token')
     def post(self, request, profile_academy_id=None, academy_id=None):
         profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id).first()
@@ -1363,6 +1398,7 @@ def pick_password(request, token):
 
 
 class PasswordResetView(APIView):
+
     @capable_of('send_reset_password')
     def post(self, request, profileacademy_id=None, academy_id=None):
 
@@ -1379,6 +1415,7 @@ class PasswordResetView(APIView):
 
 
 class ProfileInviteMeView(APIView):
+
     def get(self, request):
         invites = UserInvite.objects.filter(email=request.user.email)
         profile_academies = ProfileAcademy.objects.filter(user=request.user, status='INVITED')
@@ -1460,6 +1497,8 @@ def render_user_invite(request, token):
         })
 
 
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
 def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
     _dict['token'] = token
@@ -1493,8 +1532,8 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'POST':
         form = InviteForm(_dict)
-        password1 = request.POST.get('password1', None)
-        password2 = request.POST.get('password2', None)
+        password1 = request.POST.get('password', None)
+        password2 = request.POST.get('repeat_password', None)
 
         invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
         if invite is None:
@@ -1583,7 +1622,7 @@ def render_invite(request, token, member_id=None):
                 return HttpResponseRedirect(redirect_to=uri)
         else:
             return render(request, 'message.html',
-                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
+                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in'})
 
 
 @private_view()
@@ -1841,6 +1880,7 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
 
 
 class ProfileMeView(APIView, GenerateLookupsMixin):
+
     @has_permission('get_my_profile')
     def get(self, request):
         item = Profile.objects.filter(user=request.user).first()
@@ -1890,7 +1930,95 @@ class ProfileMeView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ProfileMePictureView(APIView):
+    """
+    put:
+        Upload a file to Google Cloud.
+    """
+    parser_classes = [MultiPartParser, FileUploadParser]
+
+    @has_permission('update_my_profile')
+    def put(self, request):
+        from ..services.google_cloud import Storage
+
+        profile = Profile.objects.filter(user=request.user).first()
+        if not profile:
+            profile = Profile(user=request.user)
+            profile.save()
+
+        files = request.data.getlist('file')
+        file = request.data.get('file')
+
+        if not file:
+            raise ValidationException('Missing file in request', slug='missing-file')
+
+        if not len(files):
+            raise ValidationException('empty files in request')
+
+        if len(files) > 1:
+            raise ValidationException('Just can upload one file at a time')
+
+        # files validation below
+        if file.content_type not in PROFILE_MIME_ALLOWED:
+            raise ValidationException(
+                f'You can upload only files on the following formats: {",".join(PROFILE_MIME_ALLOWED)}',
+                slug='bad-file-format')
+
+        file_bytes = file.read()
+        hash = hashlib.sha256(file_bytes).hexdigest()
+
+        storage = Storage()
+        cloud_file = storage.file(get_profile_bucket(), hash)
+        cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
+
+        if cloud_file_thumbnail.exists():
+            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+
+        else:
+            cloud_file.upload(file, content_type=file.content_type)
+            func = FunctionV2(get_shape_of_image_url())
+
+            res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
+            json = res.json()
+
+            if json['shape'] != 'Square':
+                cloud_file.delete()
+                raise ValidationException(f'just can upload square images', slug='not-square-image')
+
+            func = FunctionV1(region='us-central1', project_id=get_google_project_id(), name='resize-image')
+
+            res = func.call({
+                'width': 100,
+                'filename': hash,
+                'bucket': get_profile_bucket(),
+            })
+
+            cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
+            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+
+            cloud_file.delete()
+
+        previous_avatar_url = profile.avatar_url or ''
+        profile.avatar_url = cloud_file_thumbnail_url
+        profile.save()
+
+        if previous_avatar_url != profile.avatar_url:
+            result = re.search(r'/(.{64})-100x100$', previous_avatar_url)
+
+            if result:
+                previous_hash = result[1]
+
+                # remove the file when the last user remove their copy of the same image
+                if not Profile.objects.filter(avatar_url__contains=previous_hash).exists():
+                    cloud_file = storage.file(get_profile_bucket(), f'{hash}-100x100')
+                    cloud_file.delete()
+
+        serializer = GetProfileSerializer(profile, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class GithubMeView(APIView):
+
     def delete(self, request):
         instance = CredentialsGithub.objects.filter(user=request.user).first()
         if not instance:

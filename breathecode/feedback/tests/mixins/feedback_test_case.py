@@ -15,6 +15,7 @@ from ...models import Answer
 class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                        HeadersMixin, DatetimeMixin, BreathecodeMixin):
     """FeedbackTestCase with auth methods"""
+
     def tearDown(self):
         self.clear_cache()
 
@@ -88,7 +89,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
         self.assertToken(token)
         self.assertTrue(link in html)
 
-    def check_slack_contain_a_correct_token(self, lang, dicts, mock, model):
+    def check_slack_contain_a_correct_token(self, lang, dicts, mock, model, answer_id=1):
         token = self.get_token_key()
         slack_token = model['slack_team'].owner.credentialsslack.token
         slack_id = model['slack_user'].slack_id
@@ -126,7 +127,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
                                  'text': answer,
                                  'emoji': True
                              },
-                             'url': f'https://nps.breatheco.de/1?token={token}'
+                             'url': f'https://nps.breatheco.de/{answer_id}?token={token}'
                          }]
                      }],
                      'parse':

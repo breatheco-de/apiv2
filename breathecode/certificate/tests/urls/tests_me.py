@@ -54,6 +54,7 @@ class CertificateTestSuite(CertificateTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_without_auth(self):
         url = reverse_lazy('certificate:me')

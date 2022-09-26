@@ -12,6 +12,7 @@ from breathecode.services.slack.client import Slack
 
 class NotifyTestSuite(NotifyTestCase):
     """Test /answer"""
+
     @patch('breathecode.services.slack.client.Slack.__init__', MagicMock(return_value=None))
     @patch('breathecode.services.slack.client.Slack.execute_command', MagicMock(return_value='potato'))
     def test_slack_command___return_correct_value(self):

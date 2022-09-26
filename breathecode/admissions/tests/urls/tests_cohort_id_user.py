@@ -19,6 +19,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Without cohord id in url
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -599,12 +600,22 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user__post__with_unsuccess_task(self):
         """Test /cohort/:id/user without auth"""
-        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT', 'associated_slug': 'testing-slug'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
-                                     task=task)
+                                     task=task,
+                                     syllabus_version={
+                                         'id': 1,
+                                         'json': {
+                                             'days': [{
+                                                 'assignments': [{
+                                                     'slug': 'testing-slug',
+                                                 }]
+                                             }]
+                                         }
+                                     })
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'user': model['user'].id,

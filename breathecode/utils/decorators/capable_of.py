@@ -10,7 +10,9 @@ __all__ = ['capable_of']
 
 
 def capable_of(capability=None):
+
     def decorator(function):
+
         def wrapper(*args, **kwargs):
             if isinstance(capability, str) == False:
                 raise ProgramingError('Capability must be a string')
@@ -20,6 +22,10 @@ def capable_of(capability=None):
                     request = args[1]
 
                 elif hasattr(args[0], 'user') and hasattr(args[0].user, 'has_perm'):
+                    request = args[0]
+
+                # websocket support
+                elif hasattr(args[0], 'ws_request'):
                     request = args[0]
 
                 else:
@@ -44,8 +50,8 @@ def get_academy_from_capability(kwargs, request, capability):
 
     academy_id = None
 
-    if 'academy_id' not in kwargs and ('Academy' not in request.headers
-                                       or 'academy' not in request.headers) and 'academy' not in request.GET:
+    if ('academy_id' not in kwargs and 'Academy' not in request.headers and 'academy' not in request.headers
+            and 'academy' not in request.GET):
         raise PermissionDenied(
             "Missing academy_id parameter expected for the endpoint url or 'Academy' header")
 

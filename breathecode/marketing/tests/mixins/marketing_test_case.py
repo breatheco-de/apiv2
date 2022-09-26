@@ -15,10 +15,13 @@ from breathecode.feedback.actions import strings
 class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                         DatetimeMixin, BreathecodeMixin):
     """MarketingTestCase with auth methods"""
+
     def tearDown(self):
         self.clear_cache()
 
     def setUp(self):
+        self.maxDiff = None
+
         self.generate_queries()
         self.set_test_instance(self)
 
@@ -86,7 +89,12 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin
         self.assertToken(token)
         self.assertTrue(link in html)
 
-    def check_old_breathecode_calls(self, mock, model):
+    def check_old_breathecode_calls(self, mock, model, course=None):
+        extras = {}
+
+        if course:
+            extras['field[2,0]'] = 'asdasd'
+
         self.assertEqual(mock.call_args_list, [
             call('POST',
                  'https://old.hardcoded.breathecode.url/admin/api.php',
@@ -97,7 +105,8 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin
                      'first_name': 'Konan',
                      'last_name': 'Amegakure',
                      'phone': '123123123',
-                     'field[18,0]': model['academy'].slug
+                     'field[18,0]': model['academy'].slug,
+                     **extras,
                  }),
             call('POST',
                  'https://old.hardcoded.breathecode.url/api/3/contactAutomations',

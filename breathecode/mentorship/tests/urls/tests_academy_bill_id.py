@@ -25,7 +25,7 @@ def format_datetime(self, date):
 
 def get_tooltip(obj):
 
-    message = f'This mentorship should last no longer than {int(obj.mentor.service.duration.seconds/60)} min. <br />'
+    message = f'This mentorship should last no longer than {int(obj.service.duration.seconds/60)} min. <br />'
     if obj.started_at is None:
         message += 'The mentee never joined the session. <br />'
     else:
@@ -109,7 +109,7 @@ def get_mente_joined(obj):
     if obj.started_at is None:
         return 'Session did not start because mentee never joined'
     else:
-        return None
+        return True
 
 
 def get_rating(obj):
@@ -134,7 +134,7 @@ def get_sessions(self, obj):
         'ended_at': session.ended_at,
         'extra_time': get_extra_time(session),
         'id': session.id,
-        'mente_joined': get_mente_joined(session),
+        'mentee_joined': get_mente_joined(session),
         'mentee': {
             'email': session.mentee.email,
             'first_name': session.mentee.first_name,
@@ -143,51 +143,65 @@ def get_sessions(self, obj):
         },
         'mentee_left_at': session.mentee_left_at,
         'mentor': {
-            'booking_url': session.mentor.booking_url,
-            'created_at': format_datetime(self, session.mentor.created_at),
-            'email': session.mentor.email,
-            'id': session.mentor.id,
-            'online_meeting_url': session.mentor.online_meeting_url,
-            'price_per_hour': session.mentor.price_per_hour,
-            'service': {
+            'booking_url':
+            session.mentor.booking_url,
+            'created_at':
+            format_datetime(self, session.mentor.created_at),
+            'email':
+            session.mentor.email,
+            'id':
+            session.mentor.id,
+            'one_line_bio':
+            session.mentor.one_line_bio,
+            'online_meeting_url':
+            session.mentor.online_meeting_url,
+            'price_per_hour':
+            session.mentor.price_per_hour,
+            'rating':
+            session.mentor.rating,
+            'services': [{
                 'academy': {
-                    'icon_url': session.mentor.service.academy.icon_url,
-                    'id': session.mentor.service.academy.id,
-                    'logo_url': session.mentor.service.academy.logo_url,
-                    'name': session.mentor.service.academy.name,
-                    'slug': session.mentor.service.academy.slug,
+                    'icon_url': session.service.academy.icon_url,
+                    'id': session.service.academy.id,
+                    'logo_url': session.service.academy.logo_url,
+                    'name': session.service.academy.name,
+                    'slug': session.service.academy.slug,
                 },
                 'allow_mentee_to_extend':
-                session.mentor.service.allow_mentee_to_extend,
+                session.service.allow_mentee_to_extend,
                 'allow_mentors_to_extend':
-                session.mentor.service.allow_mentors_to_extend,
+                session.service.allow_mentors_to_extend,
                 'created_at':
-                format_datetime(self, session.mentor.service.created_at),
+                format_datetime(self, session.service.created_at),
                 'duration':
-                self.bc.datetime.from_timedelta(session.mentor.service.duration),
+                self.bc.datetime.from_timedelta(session.service.duration),
                 'id':
-                session.mentor.service.id,
+                session.service.id,
                 'language':
-                session.mentor.service.language,
+                session.service.language,
                 'logo_url':
-                session.mentor.service.logo_url,
+                session.service.logo_url,
                 'max_duration':
-                self.bc.datetime.from_timedelta(session.mentor.service.max_duration),
+                self.bc.datetime.from_timedelta(session.service.max_duration),
                 'missed_meeting_duration':
-                self.bc.datetime.from_timedelta(session.mentor.service.missed_meeting_duration),
+                self.bc.datetime.from_timedelta(session.service.missed_meeting_duration),
                 'name':
-                session.mentor.service.name,
+                session.service.name,
                 'slug':
-                session.mentor.service.slug,
+                session.service.slug,
                 'status':
-                session.mentor.service.status,
+                session.service.status,
                 'updated_at':
-                self.bc.datetime.to_iso_string(session.mentor.service.updated_at),
-            },
-            'slug': session.mentor.slug,
-            'status': session.mentor.status,
-            'timezone': session.mentor.timezone,
-            'updated_at': format_datetime(self, session.mentor.updated_at),
+                self.bc.datetime.to_iso_string(session.service.updated_at),
+            }],
+            'slug':
+            session.mentor.slug,
+            'status':
+            session.mentor.status,
+            'timezone':
+            session.mentor.timezone,
+            'updated_at':
+            format_datetime(self, session.mentor.updated_at),
             'user': {
                 'email': session.mentor.user.email,
                 'first_name': session.mentor.user.first_name,
@@ -233,13 +247,23 @@ def get_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
         'ended_at': format_datetime(self, mentorship_bill.ended_at),
         'id': mentorship_bill.id,
         'mentor': {
-            'booking_url': mentor_profile.booking_url,
-            'created_at': format_datetime(self, mentor_profile.created_at),
-            'id': mentor_profile.id,
-            'email': mentor_profile.email,
-            'online_meeting_url': mentor_profile.online_meeting_url,
-            'price_per_hour': mentor_profile.price_per_hour,
-            'service': {
+            'booking_url':
+            mentor_profile.booking_url,
+            'created_at':
+            format_datetime(self, mentor_profile.created_at),
+            'id':
+            mentor_profile.id,
+            'one_line_bio':
+            mentor_profile.one_line_bio,
+            'email':
+            mentor_profile.email,
+            'online_meeting_url':
+            mentor_profile.online_meeting_url,
+            'price_per_hour':
+            mentor_profile.price_per_hour,
+            'rating':
+            mentor_profile.rating,
+            'services': [{
                 'academy': {
                     'icon_url': academy.icon_url,
                     'id': academy.id,
@@ -273,11 +297,15 @@ def get_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
                 mentorship_service.status,
                 'updated_at':
                 format_datetime(self, mentorship_service.updated_at),
-            },
-            'slug': mentor_profile.slug,
-            'timezone': mentor_profile.timezone,
-            'status': mentor_profile.status,
-            'updated_at': format_datetime(self, mentor_profile.updated_at),
+            }],
+            'slug':
+            mentor_profile.slug,
+            'timezone':
+            mentor_profile.timezone,
+            'status':
+            mentor_profile.status,
+            'updated_at':
+            format_datetime(self, mentor_profile.updated_at),
             'user': {
                 'email': user.email,
                 'first_name': user.first_name,
@@ -308,19 +336,32 @@ def put_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
         'ended_at': format_datetime(self, mentorship_bill.ended_at),
         'id': mentorship_bill.id,
         'mentor': {
-            'booking_url': mentor_profile.booking_url,
-            'id': mentor_profile.id,
-            'service': {
+            'booking_url':
+            mentor_profile.booking_url,
+            'id':
+            mentor_profile.id,
+            'services': [{
+                'academy': {
+                    'icon_url': academy.icon_url,
+                    'id': academy.id,
+                    'logo_url': academy.logo_url,
+                    'name': academy.name,
+                    'slug': academy.slug,
+                },
                 'allow_mentee_to_extend':
                 mentorship_service.allow_mentee_to_extend,
                 'allow_mentors_to_extend':
                 mentorship_service.allow_mentors_to_extend,
+                'created_at':
+                self.bc.datetime.to_iso_string(mentorship_service.created_at),
                 'duration':
                 self.bc.datetime.from_timedelta(mentorship_service.duration),
                 'id':
                 mentorship_service.id,
                 'language':
                 mentorship_service.language,
+                'logo_url':
+                mentorship_service.logo_url,
                 'max_duration':
                 self.bc.datetime.from_timedelta(mentorship_service.max_duration),
                 'missed_meeting_duration':
@@ -331,9 +372,13 @@ def put_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
                 mentorship_service.slug,
                 'status':
                 mentorship_service.status,
-            },
-            'slug': mentor_profile.slug,
-            'status': mentor_profile.status,
+                'updated_at':
+                self.bc.datetime.to_iso_string(mentorship_service.updated_at),
+            }],
+            'slug':
+            mentor_profile.slug,
+            'status':
+            mentor_profile.status,
             'user': {
                 'email': user.email,
                 'first_name': user.first_name,
@@ -400,6 +445,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test__get__without_auth(self):
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.get(url)
@@ -604,6 +650,37 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
+            self.bc.format.to_dict(model.mentorship_bill),
+        ])
+
+    """
+    🔽🔽🔽 PUT with one MentorshipSession, MentorProfile and MentorshipService, edit status of dirty bill
+    """
+
+    def test__put__with_one_mentor_profile__edit_status_of_dirty_bill(self):
+        mentorship_bill = {'status': 'RECALCULATE'}
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_bill',
+                                        mentorship_session=1,
+                                        mentor_profile=1,
+                                        mentorship_service=1,
+                                        mentorship_bill=mentorship_bill,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
+        data = {'status': 'PAID'}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'trying-edit-status-to-dirty-bill', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
             self.bc.format.to_dict(model.mentorship_bill),
         ])

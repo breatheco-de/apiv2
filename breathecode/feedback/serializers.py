@@ -96,7 +96,7 @@ class SurveySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     lang = serpy.Field()
     cohort = GetCohortSerializer()
-    avg_score = serpy.Field()
+    scores = serpy.Field()
     response_rate = serpy.Field()
     status = serpy.Field()
     status_json = serpy.Field()
@@ -150,6 +150,7 @@ class ReviewSmallSerializer(serpy.Serializer):
 
 
 class AnswerPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Answer
         exclude = ('token', )
@@ -193,7 +194,7 @@ class SurveySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json', 'response_rate')
+        exclude = ('scores', 'status_json', 'response_rate')
 
     def validate(self, data):
 
@@ -228,7 +229,7 @@ class SurveySerializer(serializers.ModelSerializer):
         cohort = validated_data['cohort']
 
         if 'lang' not in validated_data:
-            validated_data['lang'] = cohort.language
+            validated_data['lang'] = cohort.language.lower()
 
         result = super().create(validated_data)
 
@@ -244,7 +245,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json', 'status', 'response_rate')
+        exclude = ('scores', 'status_json', 'status', 'response_rate')
 
     def validate(self, data):
 
@@ -277,6 +278,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
 
 class ReviewPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Review
         exclude = ('created_at', 'updated_at', 'author', 'platform', 'nps_previous_rating')

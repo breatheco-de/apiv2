@@ -4,7 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [scripts]
-start="python manage.py runserver 0.0.0.0:8001"
+start="python manage.py runserver 0.0.0.0:8000"
 format="pre-commit run --all-files"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"
@@ -43,11 +43,11 @@ mkdocs = "*"
 mkdocs-material = "*"
 mkdocstrings = "*"
 pytest-xdist = "*"
+mkdocstrings-python = "*"
 
 [packages]
-django = "~=3.2.13"
-djangorestframework = "~=3.11.1"
-setuptools="~=62.0.0"
+django = "~=3.2.15"
+djangorestframework = "~=3.13.1"
 serpy = "*"
 gunicorn = "*"
 requests = "*"
@@ -81,10 +81,17 @@ psycopg2-binary = "*"
 django-sql-explorer = {extras = ["xls"], version = "*"}
 google-cloud-ndb = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
+channels = "*"
+channels-redis = "*"
 timeago = "*"
 markdown = "*"
 python-frontmatter = "*"
 beautifulsoup4 = "*"
 lxml = "*"
-nbconvert = "~=6.4.5"
 pandas = "*"
+daphne = "*"
+twisted = {extras = ["http2", "tls"], version = "*"}
+nbconvert = "~=6.5.0"
+certifi = "*"
+numpy = "*"
+google-cloud-recaptcha-enterprise = "*"

@@ -14,6 +14,7 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
     """
     🔽🔽🔽 With zero UserInvite
     """
+
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_with_zero_user_invite(self):

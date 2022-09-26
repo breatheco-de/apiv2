@@ -92,7 +92,7 @@ class InviteForm(forms.Form):
             'class': 'form-control',
         }),
     )
-    password1 = forms.CharField(
+    password = forms.CharField(
         min_length=8,
         widget=forms.PasswordInput(attrs={
             'type': 'password',
@@ -100,11 +100,11 @@ class InviteForm(forms.Form):
             'class': 'form-control',
         }),
     )
-    password2 = forms.CharField(min_length=8,
-                                widget=forms.PasswordInput(attrs={
-                                    'type': 'password',
-                                    'class': 'form-control',
-                                }))
+    repeat_password = forms.CharField(min_length=8,
+                                      widget=forms.PasswordInput(attrs={
+                                          'type': 'password',
+                                          'class': 'form-control',
+                                      }))
 
     def __init__(self, params, *args, **kwargs):
         super(forms.Form, self).__init__(params, *args, **kwargs)
@@ -121,6 +121,7 @@ class InviteForm(forms.Form):
 
 
 class PasswordChangeCustomForm(PasswordChangeForm):
+
     def __init__(self, user, *args, **kwargs):
         super(PasswordChangeCustomForm, self).__init__(user, *args, **kwargs)
         for field in self.fields:

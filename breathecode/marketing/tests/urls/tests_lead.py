@@ -6,7 +6,7 @@ from datetime import timedelta
 import re, string
 from random import choice, choices, randint
 from mixer.main import Mixer
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import PropertyMock, patch, MagicMock, call
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from faker import Faker
@@ -23,6 +23,69 @@ fake = Faker()
 
 def random_string():
     return ''.join(choices(string.ascii_letters, k=10))
+
+
+def get_serializer():
+    return {
+        'id': 1,
+        'fb_leadgen_id': None,
+        'fb_page_id': None,
+        'fb_form_id': None,
+        'fb_adgroup_id': None,
+        'fb_ad_id': None,
+        'first_name': '',
+        'last_name': '',
+        'email': None,
+        'phone': None,
+        'course': None,
+        'client_comments': None,
+        'current_download': None,
+        'location': None,
+        'language': 'en',
+        'utm_url': None,
+        'utm_medium': None,
+        'utm_campaign': None,
+        'utm_content': None,
+        'utm_source': None,
+        'referral_key': None,
+        'gclid': None,
+        'tags': '',
+        'automations': '',
+        'street_address': None,
+        'country': None,
+        'city': None,
+        'latitude': None,
+        'longitude': None,
+        'state': None,
+        'zip_code': None,
+        'browser_lang': None,
+        'storage_status': 'PENDING',
+        'storage_status_text': '',
+        'lead_type': None,
+        'deal_status': None,
+        'sentiment': None,
+        'ac_contact_id': None,
+        'ac_deal_id': None,
+        'ac_expected_cohort': None,
+        'won_at': None,
+        'contact': None,
+        'academy': None,
+        'user': None,
+        'lead_generation_app': None,
+        'tag_objects': [],
+        'automation_objects': []
+    }
+
+
+class FakeRecaptcha:
+
+    class RiskAnalysis:
+
+        def __init__(self, *args, **kwargs):
+            self.score = 0.9
+
+    def __init__(self, *args, **kwargs):
+        self.risk_analysis = self.RiskAnalysis()
 
 
 def generate_form_entry_kwargs():
@@ -68,9 +131,15 @@ def generate_form_entry_kwargs():
 
 class LeadTestSuite(MarketingTestCase):
     """Test /academy/lead"""
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__without_data(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
@@ -83,55 +152,7 @@ class LeadTestSuite(MarketingTestCase):
         del json['created_at']
         del json['updated_at']
 
-        self.assertEqual(
-            json, {
-                'id': 1,
-                'fb_leadgen_id': None,
-                'fb_page_id': None,
-                'fb_form_id': None,
-                'fb_adgroup_id': None,
-                'fb_ad_id': None,
-                'first_name': '',
-                'last_name': '',
-                'email': None,
-                'phone': None,
-                'course': None,
-                'client_comments': None,
-                'current_download': None,
-                'location': None,
-                'language': 'en',
-                'utm_url': None,
-                'utm_medium': None,
-                'utm_campaign': None,
-                'utm_content': None,
-                'utm_source': None,
-                'referral_key': None,
-                'gclid': None,
-                'tags': '',
-                'automations': '',
-                'street_address': None,
-                'country': None,
-                'city': None,
-                'latitude': None,
-                'longitude': None,
-                'state': None,
-                'zip_code': None,
-                'browser_lang': None,
-                'storage_status': 'PENDING',
-                'lead_type': None,
-                'deal_status': None,
-                'sentiment': None,
-                'ac_contact_id': None,
-                'ac_deal_id': None,
-                'ac_expected_cohort': None,
-                'won_at': None,
-                'contact': None,
-                'academy': None,
-                'user': None,
-                'lead_generation_app': None,
-                'tag_objects': [],
-                'automation_objects': []
-            })
+        self.assertEqual(json, get_serializer())
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(self.all_form_entry_dict(), [{
@@ -169,6 +190,7 @@ class LeadTestSuite(MarketingTestCase):
             'zip_code': None,
             'browser_lang': None,
             'storage_status': 'PENDING',
+            'storage_status_text': 'Missing location information',
             'lead_type': None,
             'deal_status': None,
             'sentiment': None,
@@ -183,6 +205,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__bad_data(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
@@ -201,6 +228,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__data(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
@@ -264,6 +296,7 @@ class LeadTestSuite(MarketingTestCase):
                 'user': None,
                 'lead_generation_app': None,
                 'tag_objects': [],
+                'storage_status_text': '',
                 'automation_objects': []
             })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -311,11 +344,17 @@ class LeadTestSuite(MarketingTestCase):
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
             'lead_generation_app_id': None,
+            'storage_status_text': f"No academy found with slug {data['location']}",
             'won_at': json['won_at']
         }])
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__data_active_campaign_slug(self):
         """Test /cohort/:id/user without auth"""
         self.generate_models(academy=True, academy_kwargs={'active_campaign_slug': 'midgard'})
@@ -369,6 +408,7 @@ class LeadTestSuite(MarketingTestCase):
                 'zip_code': data['zip_code'],
                 'browser_lang': data['browser_lang'],
                 'storage_status': data['storage_status'],
+                'storage_status_text': '',
                 'lead_type': data['lead_type'],
                 'deal_status': data['deal_status'],
                 'sentiment': data['sentiment'],
@@ -428,11 +468,17 @@ class LeadTestSuite(MarketingTestCase):
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
             'lead_generation_app_id': None,
+            'storage_status_text': 'No academy found with slug midgard',
             'won_at': json['won_at']
         }])
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__data_alias_active_campaign_slug(self):
         """Test /cohort/:id/user without auth"""
         self.generate_models(academy=True,
@@ -488,6 +534,7 @@ class LeadTestSuite(MarketingTestCase):
                 'zip_code': data['zip_code'],
                 'browser_lang': data['browser_lang'],
                 'storage_status': data['storage_status'],
+                'storage_status_text': '',
                 'lead_type': data['lead_type'],
                 'deal_status': data['deal_status'],
                 'sentiment': data['sentiment'],
@@ -518,6 +565,7 @@ class LeadTestSuite(MarketingTestCase):
             'course': json['course'],
             'client_comments': json['client_comments'],
             'current_download': json['current_download'],
+            'storage_status_text': 'No academy found with slug midgard',
             'location': json['location'],
             'language': json['language'],
             'utm_url': json['utm_url'],
@@ -552,6 +600,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__with__data_active_campaign_slug_priority(self):
         """Test /cohort/:id/user without auth"""
         model1 = self.generate_models(academy=True, academy_kwargs={'active_campaign_slug': 'midgard'})
@@ -609,6 +662,7 @@ class LeadTestSuite(MarketingTestCase):
                 'zip_code': data['zip_code'],
                 'browser_lang': data['browser_lang'],
                 'storage_status': data['storage_status'],
+                'storage_status_text': '',
                 'lead_type': data['lead_type'],
                 'deal_status': data['deal_status'],
                 'sentiment': data['sentiment'],
@@ -663,6 +717,7 @@ class LeadTestSuite(MarketingTestCase):
             'deal_status': json['deal_status'],
             'sentiment': json['sentiment'],
             'academy_id': 2,
+            'storage_status_text': 'No academy found with slug midgard',
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
@@ -673,6 +728,11 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_lead__create_lead(self):
         """Test /lead with create lead happening"""
 
@@ -731,6 +791,7 @@ class LeadTestSuite(MarketingTestCase):
                 'zip_code': data['zip_code'],
                 'browser_lang': data['browser_lang'],
                 'storage_status': data['storage_status'],
+                'storage_status_text': '',
                 'lead_type': data['lead_type'],
                 'deal_status': data['deal_status'],
                 'sentiment': data['sentiment'],
@@ -790,5 +851,6 @@ class LeadTestSuite(MarketingTestCase):
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
             'lead_generation_app_id': None,
+            'storage_status_text': 'No academy found with slug midgard',
             'won_at': json['won_at']
         }])
