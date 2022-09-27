@@ -865,7 +865,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'watching': False,
         }])
 
-    # that's methods name is irrelevant because it's depcrecated
+    # that's methods name is irrelevant because it's deprecated
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

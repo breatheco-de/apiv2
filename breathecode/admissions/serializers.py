@@ -687,10 +687,15 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
                                          cohort__schedule=cohort.schedule).count()
 
     def validate(self, data: OrderedDict):
+        self.context['index'] += 1
         request = self.context['request']
         is_post_method = not self.instance
 
-        id = data.get('id')
+        if isinstance(self.initial_data, list):
+            id = self.initial_data[self.context['index']].get('id')
+        else:
+            id = self.initial_data.get('id')
+
         user = data.get('user')
         cohort = data.get('cohort')
 
@@ -785,7 +790,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             raise ValidationException(
                 'User has tasks with status pending the educational status cannot be GRADUATED')
 
-        return {**data, 'cohort': cohort, 'user': user}
+        return {**data, 'cohort': cohort, 'user': user, 'id': id}
 
 
 class CohortUserListSerializer(serializers.ListSerializer):
@@ -802,15 +807,26 @@ class CohortUserListSerializer(serializers.ListSerializer):
 
         return items
 
-    def update(self, instances, validated_data):
+    def update(self, instance, validated_data):
+        # Maps for id->instance and id->data item.
+        model_mapping = {model.id: model for model in instance}
+        data_mapping = {item['id']: item for item in validated_data}
 
-        instance_hash = {index: instance for index, instance in enumerate(instances)}
+        # Perform creations and updates.
+        ret = []
+        for model_id, data in data_mapping.items():
+            book = model_mapping.get(model_id, None)
+            if book is None:
+                ret.append(self.child.create(data))
+            else:
+                ret.append(self.child.update(book, data))
 
-        result = [
-            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
-        ]
+        # Perform deletions.
+        for model_id, model in model_mapping.items():
+            if model_id not in data_mapping:
+                model.delete()
 
-        return result
+        return ret
 
 
 class CohortUserSerializer(CohortUserSerializerMixin):

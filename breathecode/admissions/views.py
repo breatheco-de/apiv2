@@ -312,6 +312,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
         many = isinstance(request.data, list)
         context = {
             'request': request,
+            'index': -1,
         }
 
         data = [validate_data(data) for data in request.data] if many else validate_data(request.data)
@@ -382,6 +383,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
         many = isinstance(request.data, list)
         context = {
             'request': request,
+            'index': -1,
         }
 
         if many:
@@ -537,6 +539,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
         many = isinstance(request.data, list)
         context = {
             'request': request,
+            'index': -1,
         }
 
         data = [validate_data(data) for data in request.data] if many else validate_data(request.data)
@@ -608,6 +611,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
         many = isinstance(request.data, list)
         context = {
             'request': request,
+            'index': -1,
         }
 
         if many:
