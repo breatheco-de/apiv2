@@ -290,13 +290,17 @@ def generate_mentor_bills(mentor, reset=False):
             f'This mentor has {without_service} sessions without an associated service that need to be fixed',
             slug='session_without_service')
 
-    unpaid_sessions = get_unpaid_sessions()
-    if not unpaid_sessions:
-        return []
-
     recalculate_bills = MentorshipBill.objects.filter(Q(status='DUE') | Q(status='RECALCULATE'),
                                                       mentor__id=mentor.id,
                                                       academy__id=mentor.academy.id)
+
+    unpaid_sessions = get_unpaid_sessions()
+    if not unpaid_sessions:
+        if recalculate_bills:
+            for bill in recalculate_bills:
+                bill.status = 'DUE'
+                bill.save()
+        return []
 
     pending_months = sorted({(x.year, x.month) for x in unpaid_sessions.values_list('started_at', flat=True)})
     for year, month in pending_months:
