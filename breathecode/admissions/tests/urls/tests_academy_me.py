@@ -38,7 +38,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_me')
-        response = self.client.put(url, {})
+        response = self.client.put(url, {}, format='json')
         json = response.json()
 
         self.assertEqual(
@@ -54,7 +54,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_me')
         self.generate_models(authenticate=True)
         data = {}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
 
         self.assertEqual(
@@ -86,7 +86,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         data = {}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
             'name': ['This field is required.'],
@@ -127,7 +127,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': self.bc.fake.slug(),
             'street_address': self.bc.fake.address(),
         }
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {'detail': 'Academy slug cannot be updated', 'status_code': 400}
 
@@ -170,7 +170,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'country': country.code,
             'city': city.id,
         }
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = put_serializer(model.academy, country, city, data=data)
 
@@ -247,7 +247,56 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         to_send = data.copy()
         to_send |= incorrect_values
 
-        response = self.client.put(url, to_send)
+        response = self.client.put(url, to_send, format='json')
+        json = response.json()
+        expected = put_serializer(model.academy, country, city, data=data)
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        fields = ['country', 'city']
+        for field in fields:
+            data[f'{field}_id'] = data.pop(field)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Academy'), [{
+            **self.bc.format.to_dict(model.academy),
+            **data,
+        }])
+        self.assertEqual(cohort_saved.send.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with Academy, passing all the fields
+    """
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    def test__put__with_academy__passing_all_the_status(self):
+        """Test /cohort/:id without auth"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        url = reverse_lazy('admissions:academy_me')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     country=3,
+                                     city=3,
+                                     capability='crud_my_academy',
+                                     role='potato',
+                                     skip_cohort=True,
+                                     syllabus=True)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        country = random.choice(model.country)
+        city = random.choice(model.city)
+        data = {
+            'name': self.bc.fake.name(),
+            'slug': model.academy.slug,
+            'street_address': self.bc.fake.address(),
+            'country': country.code,
+            'city': city.id,
+        }
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = put_serializer(model.academy, country, city, data=data)
 

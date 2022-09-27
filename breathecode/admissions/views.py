@@ -212,7 +212,6 @@ class AcademyView(APIView):
 
     @capable_of('read_my_academy')
     def get(self, request, format=None, academy_id=None):
-        #FIXME: this endpoint can't work
         item = Academy.objects.get(id=academy_id)
         serializer = GetBigAcademySerializer(item)
         return Response(serializer.data)

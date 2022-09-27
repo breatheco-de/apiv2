@@ -254,7 +254,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_syllabus_schedule_time_slot_dict(), [])
 
-    def test__post(self):
+    def test__post__passing_all_status__in_lowercase(self):
         self.headers(academy=1)
         academy_kwargs = {'timezone': 'America/Caracas'}
         model = self.generate_models(authenticate=True,
@@ -268,18 +268,21 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         starting_at = self.datetime_now()
         ending_at = self.datetime_now()
+
+        recurrency_type = random.choice(['DAILY', 'WEEKLY', 'MONTHLY'])
         data = {
             'ending_at': self.datetime_to_iso(ending_at),
             'starting_at': self.datetime_to_iso(starting_at),
+            'recurrency_type': recurrency_type.lower(),
         }
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
             'schedule': 1,
             'id': 1,
-            'recurrency_type': 'WEEKLY',
             'recurrent': True,
             'timezone': model.academy.timezone,
+            'recurrency_type': recurrency_type,
         }
 
         self.assertEqual(json, expected)
@@ -290,9 +293,55 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'schedule_id': 1,
                 'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
                 'id': 1,
-                'recurrency_type': 'WEEKLY',
                 'recurrent': True,
                 'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
                 'timezone': model.academy.timezone,
+                'recurrency_type': recurrency_type,
+            }],
+        )
+
+    def test__post__passing_all_status__in_uppercase(self):
+        self.headers(academy=1)
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_certificate',
+                                     role='potato',
+                                     syllabus=True,
+                                     syllabus_schedule=True,
+                                     academy_kwargs=academy_kwargs)
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
+
+        starting_at = self.datetime_now()
+        ending_at = self.datetime_now()
+
+        recurrency_type = random.choice(['DAILY', 'WEEKLY', 'MONTHLY'])
+        data = {
+            'ending_at': self.datetime_to_iso(ending_at),
+            'starting_at': self.datetime_to_iso(starting_at),
+            'recurrency_type': recurrency_type,
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {
+            'schedule': 1,
+            'id': 1,
+            'recurrent': True,
+            'timezone': model.academy.timezone,
+            'recurrency_type': recurrency_type,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            self.all_syllabus_schedule_time_slot_dict(),
+            [{
+                'schedule_id': 1,
+                'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
+                'id': 1,
+                'recurrent': True,
+                'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
+                'timezone': model.academy.timezone,
+                'recurrency_type': recurrency_type,
             }],
         )

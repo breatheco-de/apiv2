@@ -514,6 +514,8 @@ class SyllabusPOSTSerializer(serializers.ModelSerializer):
 
 
 class CohortSerializerMixin(serializers.ModelSerializer):
+    status_fields = ['stage']
+
     syllabus = serializers.CharField(required=False)
     syllabus_version = serializers.CharField(required=False)
 
@@ -841,6 +843,8 @@ class SyllabusScheduleSerializer(serializers.ModelSerializer):
 
 
 class SyllabusSchedulePUTSerializer(serializers.ModelSerializer):
+    status_fields = ['schedule_type']
+
     id = serializers.IntegerField(required=False)
     name = serializers.CharField(required=False)
     schedule_type = serializers.CharField(required=False)

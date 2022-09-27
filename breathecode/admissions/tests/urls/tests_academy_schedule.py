@@ -382,7 +382,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato')
         url = reverse_lazy('admissions:academy_schedule')
         data = {'syllabus': 1}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
             'detail': 'syllabus-not-found',
@@ -403,7 +403,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato')
         url = reverse_lazy('admissions:academy_schedule')
         data = {'syllabus': 1}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {'detail': 'missing-academy-in-request', 'status_code': 400}
 
@@ -421,7 +421,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato')
         url = reverse_lazy('admissions:academy_schedule')
         data = {'syllabus': 1, 'academy': 2}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {'detail': 'academy-not-found', 'status_code': 404}
 
@@ -439,7 +439,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato')
         url = reverse_lazy('admissions:academy_schedule')
         data = {'syllabus': 1, 'academy': 1}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
             'name': ['This field is required.'],
@@ -465,7 +465,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'name': 'They killed kenny',
             'description': 'Oh my god!',
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -490,4 +490,96 @@ class CertificateTestSuite(AdmissionsTestCase):
             'schedule_type': 'PART-TIME',
             'syllabus_id': 1,
             'academy_id': 1,
+        }])
+
+    def test__post__passing_all_status__in_lowercase(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     syllabus=True,
+                                     capability='crud_certificate',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_schedule')
+        schedule_type = random.choice(['PART-TIME', 'FULL-TIME'])
+        data = {
+            'academy': 1,
+            'syllabus': 1,
+            'name': 'They killed kenny',
+            'description': 'Oh my god!',
+            'schedule_type': schedule_type.lower(),
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+
+        self.assertDatetime(json['created_at'])
+        del json['created_at']
+
+        self.assertDatetime(json['updated_at'])
+        del json['updated_at']
+
+        expected = {
+            'id': 1,
+            'schedule_type': 'PART-TIME',
+            'syllabus': 1,
+            **data,
+            'schedule_type': schedule_type,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
+            'id': 1,
+            'name': 'They killed kenny',
+            'description': 'Oh my god!',
+            'schedule_type': 'PART-TIME',
+            'syllabus_id': 1,
+            'academy_id': 1,
+            'schedule_type': schedule_type,
+        }])
+
+    def test__post__passing_all_status__in_uppercase(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     syllabus=True,
+                                     capability='crud_certificate',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_schedule')
+        schedule_type = random.choice(['PART-TIME', 'FULL-TIME'])
+        data = {
+            'academy': 1,
+            'syllabus': 1,
+            'name': 'They killed kenny',
+            'description': 'Oh my god!',
+            'schedule_type': schedule_type,
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+
+        self.assertDatetime(json['created_at'])
+        del json['created_at']
+
+        self.assertDatetime(json['updated_at'])
+        del json['updated_at']
+
+        expected = {
+            'id': 1,
+            'schedule_type': 'PART-TIME',
+            'syllabus': 1,
+            **data,
+            'schedule_type': schedule_type,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
+            'id': 1,
+            'name': 'They killed kenny',
+            'description': 'Oh my god!',
+            'schedule_type': 'PART-TIME',
+            'syllabus_id': 1,
+            'academy_id': 1,
+            'schedule_type': schedule_type,
         }])
