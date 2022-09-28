@@ -27,6 +27,7 @@ from .serializers import (
     ShortLinkSerializer,
     PUTTagSerializer,
     UTMSmallSerializer,
+    LeadgenAppSmallSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import sync_tags, sync_automations
@@ -414,6 +415,20 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         tags = Automation.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = AutomationSmallSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyAppView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_lead_gen_app')
+    def get(self, request, academy_id=None):
+
+        apps = LeadGenerationApp.objects.filter(academy__id=academy_id)
+
+        serializer = LeadgenAppSmallSerializer(apps, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

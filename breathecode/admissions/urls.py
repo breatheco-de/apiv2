@@ -5,7 +5,7 @@ from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserVi
                     get_all_academies, get_cohorts, AcademyCohortTimeSlotView, handle_test_syllabus,
                     AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
                     get_public_syllabus, SyllabusAssetView, PublicCohortUserView, AcademyCohortHistoryView,
-                    get_all_academy_teachers)
+                    AcademyTeacherView)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -48,7 +48,7 @@ urlpatterns = [
     path('academy/schedule/<int:certificate_id>/timeslot/<int:timeslot_id>',
          AcademySyllabusScheduleTimeSlotView.as_view(),
          name='academy_schedule_id_timeslot_id'),
-    path('academy/teacher', get_all_academy_teachers, name='academy_teacher'),
+    path('academy/teacher', AcademyTeacherView.as_view(), name='academy_teacher'),
     path('academy/', get_all_academies, name='academy'),
     path('academy/me', AcademyView.as_view(), name='academy_me'),
     path('academy/cohort', AcademyCohortView.as_view(), name='academy_cohort'),
