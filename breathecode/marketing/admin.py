@@ -414,7 +414,7 @@ class LeadAppCustomForm(forms.ModelForm):
 @admin.register(LeadGenerationApp)
 class LeadGenerationAppAdmin(admin.ModelAdmin):
     form = LeadAppCustomForm
-    list_display = ('slug', 'name', 'academy', 'status', 'last_call_at')
+    list_display = ('slug', 'name', 'academy', 'status', 'last_call_at', 'app_id')
     readonly_fields = ('app_id', )
     actions = (reset_app_id, )
 

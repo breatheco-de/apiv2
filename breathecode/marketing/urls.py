@@ -12,6 +12,7 @@ urlpatterns = [
     path('lead', create_lead, name='lead'),
     path('app', AcademyAppView.as_view(), name='app'),
     path('app/<slug:app_slug>/lead', create_lead_from_app, name='app_slug_lead'),
+    path('app/lead', create_lead_from_app, name='app_lead'),
     path('lead/all', get_leads, name='lead_all'),  # TODO: HERE
     path('academy/lead', AcademyLeadView.as_view(), name='academy_lead'),
     path('academy/lead/process', AcademyProcessView.as_view(), name='academy_process_lead'),
