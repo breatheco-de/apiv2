@@ -18,7 +18,8 @@ from .serializers import (
     CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
     UserDJangoRestSerializer, UserMeSerializer, GetSyllabusScheduleSerializer, GetSyllabusVersionSerializer,
     SyllabusVersionSerializer, GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer,
-    GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer)
+    GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer,
+    GetTeacherAcademySmallSerializer)
 from .models import (ACTIVE, Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule,
                      Cohort, STUDENT, DELETED, Syllabus, SyllabusVersion)
 from django.db.models import Value, FloatField, Q
@@ -33,7 +34,7 @@ from breathecode.utils import (localize_query, capable_of, ValidationException, 
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
 from breathecode.utils import DatetimeInteger
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.admissions.caches import CohortUserCache
+from breathecode.admissions.caches import CohortUserCache, TeacherCache
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,59 @@ def get_all_academies(request, id=None):
 
     serializer = AcademySerializer(items, many=True)
     return Response(serializer.data)
+
+
+class AcademyTeacherView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(cache=TeacherCache, paginate=True)
+
+    @capable_of('read_member')
+    def get(self, request, academy_id):
+
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = ProfileAcademy.objects.filter(academy__id=academy_id,
+                                              role__slug__in=['teacher', 'assistant'
+                                                              ]).exclude(user__email__contains='@token.com')
+
+        roles = request.GET.get('roles', None)
+        if roles is not None:
+            items = items.filter(role__slug__in=roles.split(','))
+
+        _status = request.GET.get('status', None)
+        if _status is not None:
+            items = items.filter(status__iexact=_status)
+
+        cohort_stage = request.GET.get('cohort_stage', None)
+        no_sort = []
+        if cohort_stage is not None:
+            no_sort.append('cohort_stage')
+            items = items.filter(user__cohortuser__cohort__stage__iexact=cohort_stage).distinct('user')
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like=like, items=items)
+
+        sort = request.GET.get('sort', None)
+        if (sort is None or sort == '') and len(no_sort) == 0:
+            sort = '-first_name'
+
+        if len(no_sort) > 0 and sort:
+            raise ValidationException('No sorting allowed when following filters are applied: ' +
+                                      ','.join(no_sort),
+                                      slug='no-sorting-allowed')
+        elif sort is not None:
+            items = items.order_by(sort)
+
+        items = handler.queryset(items)
+        serializer = GetTeacherAcademySmallSerializer(items, many=True)
+        return handler.response(serializer.data)
 
 
 @api_view(['POST'])

@@ -327,6 +327,10 @@ CAPABILITIES = [
         'slug': 'read_freelance_projects',
         'description': 'Read project details without financials'
     },
+    {
+        'slug': 'read_lead_gen_app',
+        'description': 'Read lead generation apps'
+    },
 ]
 
 ROLES = [
@@ -358,6 +362,7 @@ ROLES = [
             'read_nps_answers',
             'read_won_lead',
             'read_cohort_log',
+            'read_lead_gen_app',
             'read_mentorship_service',
             'read_mentorship_mentor',
         ],
@@ -390,6 +395,7 @@ ROLES = [
             'read_shortlink',
             'read_mentorship_service',
             'read_mentorship_mentor',
+            'read_lead_gen_app',
         ],
     },
     {
@@ -514,7 +520,7 @@ def extend_roles(roles: list[RoleType]) -> None:
     roles.append({
         'slug': 'culture_and_recruitment',
         'name': 'Culture and Recruitment',
-        'caps': extend(roles, ['staff']) + ['crud_member']
+        'caps': extend(roles, ['staff']) + ['crud_member', 'crud_media']
     })
     roles.append({
         'slug':

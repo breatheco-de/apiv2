@@ -27,6 +27,7 @@ from .serializers import (
     ShortLinkSerializer,
     PUTTagSerializer,
     UTMSmallSerializer,
+    LeadgenAppSmallSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import sync_tags, sync_automations
@@ -107,9 +108,18 @@ def create_lead(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead_from_app(request, app_slug=None):
+
     app_id = request.GET.get('app_id', None)
-    if app_slug is None or app_id is None:
+    if app_id is None:
         raise ValidationException(f'Invalid app slug and/or id', code=400, slug='without-app-slug-or-app-id')
+
+    if app_slug is None:
+        # try get the slug from the encoded app_id
+        decoded_id = parse.unquote(app_id)
+        if ':' not in decoded_id:
+            raise ValidationException(f'Missing app slug', code=400, slug='without-app-slug-or-app-id')
+        else:
+            app_slug, app_id = decoded_id.split(':')
 
     app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
     if app is None:
@@ -414,6 +424,20 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         tags = Automation.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = AutomationSmallSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyAppView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_lead_gen_app')
+    def get(self, request, academy_id=None):
+
+        apps = LeadGenerationApp.objects.filter(academy__id=academy_id)
+
+        serializer = LeadgenAppSmallSerializer(apps, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
