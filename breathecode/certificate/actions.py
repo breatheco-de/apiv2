@@ -116,8 +116,9 @@ def generate_certificate(user, cohort=None, layout=None):
                                                              and assignment['mandatory'] == True):
                             mandatory_slugs.append(assignment['slug'])
 
-        tasks_count_pending = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(
-            revision_status__in=['APPROVED', 'IGNORED']).count()
+        tasks_count_pending = Task.objects.filter(
+            user=user,
+            associated_slug__in=mandatory_slugs).exclude(revision_status__in=['APPROVED', 'IGNORED']).count()
 
         if tasks_count_pending:
             raise ValidationException(f'The student has {tasks_count_pending} '
