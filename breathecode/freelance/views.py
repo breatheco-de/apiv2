@@ -125,7 +125,14 @@ class AcademyProjectView(APIView):
     """
 
     @capable_of('read_freelance_projects')
-    def get(self, request, academy_id):
+    def get(self, request, academy_id, project_id=None):
+
+        if project_id is not None:
+            item = AcademyFreelanceProject.objects.filter(id=project_id, academy__id=academy_id).first()
+            if item is None:
+                raise ValidationException('Project not found on this academy', 404)
+            serializer = BigProjectSerializer(item, many=False)
+            return Response(serializer.data)
 
         items = AcademyFreelanceProject.objects.filter(academy__id=academy_id)
         lookup = {}
@@ -223,6 +230,21 @@ class AcademyProjectInvoiceView(APIView):
 
         serializer = BillSerializer(items, many=True)
         return Response(serializer.data)
+
+
+class SingleInvoiceView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, id):
+        item = ProjectInvoice.objects.filter(id=id).first()
+        if item is None:
+            raise serializers.ValidationError('Invoice not found', code=404)
+        else:
+            serializer = BigInvoiceSerializer(item, many=False)
+            return Response(serializer.data)
 
 
 class SingleBillView(APIView):
