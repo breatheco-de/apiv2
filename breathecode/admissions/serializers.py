@@ -377,11 +377,11 @@ class GetTeacherAcademySmallSerializer(serpy.Serializer):
         if obj.user is None:
             return []
 
-        return GetSmallCohortSerializer(
-            Cohort.objects.filter(cohortuser__user__id=obj.user.id,
-                                  cohortuser__role__in=['TEACHER',
-                                                        'ASSISTANT']).order_by('-ending_date').all(),
-            many=True).data
+        return GetSmallCohortSerializer(Cohort.objects.filter(
+            cohortuser__user__id=obj.user.id,
+            cohortuser__role__in=['TEACHER', 'ASSISTANT'
+                                  ]).exclude(stage__iexact='DELETED').order_by('-ending_date').all(),
+                                        many=True).data
 
 
 class GetMeCohortSerializer(serpy.Serializer):
