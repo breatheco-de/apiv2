@@ -104,6 +104,9 @@ class AcademyTeacherView(APIView, GenerateLookupsMixin):
             raise ValidationException('No sorting allowed when following filters are applied: ' +
                                       ','.join(no_sort),
                                       slug='no-sorting-allowed')
+        elif sort == 'latest_cohorts':
+            items = items.annotate(
+                latest_cohorts=Max('user__cohortuser__cohort__ending_date')).order_by('latest_cohorts')
         elif sort is not None:
             items = items.order_by(sort)
 
