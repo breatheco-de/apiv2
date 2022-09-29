@@ -374,9 +374,7 @@ class GetTeacherAcademySmallSerializer(serpy.Serializer):
     cohorts = serpy.MethodField()
 
     def get_cohorts(self, obj):
-        return GetSmallCohortSerializer(Cohort.objects.filter(cohortuser__user__id=obj.user.id).exclude(
-            cohortuser__role__iexact='STUDENT').order_by('-ending_date').all(),
-                                        many=True).data
+        return GetSmallCohortSerializer(Cohort.objects.filter(cohortuser__user__id=obj.user.id,cohortuser__role__in=['TEACHER', 'ASSISTANT']).order_by('-ending_date').all(),many=True).data
 
 
 class GetMeCohortSerializer(serpy.Serializer):
