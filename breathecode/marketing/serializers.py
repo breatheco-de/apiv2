@@ -118,6 +118,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
     utm_source = serpy.Field()
     tags = serpy.Field()
     storage_status = serpy.Field()
+    storage_status_text = serpy.Field()
     country = serpy.Field()
     ac_expected_cohort = serpy.Field()
     lead_type = serpy.Field()
