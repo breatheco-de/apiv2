@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import HeaderLimitOffsetPagination
 from rest_framework.views import APIView
+from django.db.models import Max
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 from .utils import CohortLog
