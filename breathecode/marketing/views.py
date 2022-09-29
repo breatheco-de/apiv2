@@ -448,7 +448,7 @@ class AcademyAliasView(APIView, GenerateLookupsMixin):
     """
 
     @capable_of('read_my_academy')
-    def get(self, request, academy_id=None):
+    def get(self, request, academy_id):
 
         alias = AcademyAlias.objects.filter(academy__id=academy_id)
 

@@ -11,6 +11,13 @@ __all__ = [
     'ActiveCampaignWebhook'
 ]
 
+
+class AcademyProxy(Academy):
+
+    class Meta:
+        proxy = True
+
+
 INCOMPLETED = 'INCOMPLETED'
 COMPLETED = 'COMPLETED'
 SYNC_STATUS = (
@@ -64,6 +71,15 @@ class AcademyAlias(models.Model):
     slug = models.SlugField(primary_key=True)
     active_campaign_slug = models.SlugField()
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+
+        current = Academy.objects.filter(slug=self.slug).first()
+        if current and current.id != self.academy.id:
+            raise Exception(
+                f'This alias slug {self.slug} cannot be saved because belongs to another real academy.slug')
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
 ACTIVE = '1'
