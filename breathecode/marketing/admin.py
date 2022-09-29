@@ -84,6 +84,7 @@ class ACAcademyAdmin(admin.ModelAdmin, AdminExportCsvMixin):
 class AcademyAliasAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'active_campaign_slug', 'academy__slug', 'academy__title']
     list_display = ('slug', 'active_campaign_slug', 'academy')
+    list_filter = ['academy__slug']
 
 
 def generate_original_alias(modeladmin, request, queryset):
@@ -93,7 +94,11 @@ def generate_original_alias(modeladmin, request, queryset):
         if slug is None:
             slug = a.slug
 
-        AcademyAlias.objects.create(slug=a.slug, active_campaign_slug=slug, academy=a)
+        if AcademyAlias.objects.filter(slug=a.slug).first() is None:
+            AcademyAlias.objects.create(slug=a.slug, active_campaign_slug=slug, academy=a)
+            messages.add_message(request, messages.INFO, f'Alias {a.slug} successfully created')
+        else:
+            messages.add_message(request, messages.ERROR, f'Alias {a.slug} already exists')
 
 
 @admin.register(AcademyProxy)
