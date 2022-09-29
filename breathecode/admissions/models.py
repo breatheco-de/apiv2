@@ -2,7 +2,7 @@ import os, logging
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
-from .signals import student_edu_status_updated
+from .signals import student_edu_status_updated, academy_saved
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
 logger = logging.getLogger(__name__)
@@ -53,6 +53,11 @@ ACADEMY_STATUS = (
 
 
 class Academy(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(Academy, self).__init__(*args, **kwargs)
+        self.__old_slug = self.slug
+
     slug = models.SlugField(max_length=100, unique=True)
     name = models.CharField(max_length=150)
     logo_url = models.CharField(max_length=255)
@@ -118,16 +123,23 @@ class Academy(models.Model):
             self.status = self.status.upper()
 
     def save(self, *args, **kwargs):
+        from .signals import academy_saved
         from .actions import get_bucket_object
 
         self.full_clean()
+        created = not self.id
 
         if os.getenv('ENV', '') == 'production':
             obj = get_bucket_object(f'location-{self.slug}')
             if obj is not None:
                 self.logo_url = obj.public_url
 
+        if not created and self.__old_slug != self.slug:
+            raise Exception('Academy slug cannot be updated')
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
+        academy_saved.send(instance=self, sender=self.__class__, created=created)
 
 
 PARTIME = 'PART-TIME'

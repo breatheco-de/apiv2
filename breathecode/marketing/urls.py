@@ -4,7 +4,7 @@ from .views import (create_lead, sync_tags_with_active_campaign, sync_automation
                     receive_facebook_lead, get_leads, get_leads_report, AcademyLeadView, AcademyWonLeadView,
                     AcademyTagView, AcademyAutomationView, activecampaign_webhook, googleads_enrollments,
                     googleads_csv, get_downloadable, ShortLinkView, create_lead_from_app, UTMView,
-                    AcademyProcessView, AcademyAppView)
+                    AcademyProcessView, AcademyAppView, AcademyAliasView)
 from rest_framework.authtoken import views
 
 app_name = 'marketing'
@@ -18,6 +18,7 @@ urlpatterns = [
     path('academy/lead/process', AcademyProcessView.as_view(), name='academy_process_lead'),
     path('academy/lead/won', AcademyWonLeadView.as_view(), name='academy_won_lead'),
     path('academy/app', AcademyAppView.as_view(), name='app'),
+    path('academy/alias', AcademyAliasView.as_view(), name='alias'),
     path('academy/<int:academy_id>/tag/sync', sync_tags_with_active_campaign, name='academy_id_tag_sync'),
     path('academy/<int:academt_id>/automation/sync',
          sync_automations_with_active_campaign,

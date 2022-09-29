@@ -28,11 +28,12 @@ from .serializers import (
     PUTTagSerializer,
     UTMSmallSerializer,
     LeadgenAppSmallSerializer,
+    AcademyAliasSmallSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField, AcademyAlias
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
@@ -438,6 +439,20 @@ class AcademyAppView(APIView, GenerateLookupsMixin):
         apps = LeadGenerationApp.objects.filter(academy__id=academy_id)
 
         serializer = LeadgenAppSmallSerializer(apps, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyAliasView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_my_academy')
+    def get(self, request, academy_id):
+
+        alias = AcademyAlias.objects.filter(academy__id=academy_id)
+
+        serializer = AcademyAliasSmallSerializer(alias, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
