@@ -28,6 +28,7 @@ class SmallProjectSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
     repository = serpy.Field()
+    total_client_hourly_price = serpy.Field()
 
 
 class SmallFreelancerSerializer(serpy.Serializer):

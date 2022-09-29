@@ -187,6 +187,46 @@ class AcademyProjectMemberView(APIView):
         return Response(serializer.data)
 
 
+class AcademyInvoiceMemberView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, invoice_id):
+
+        invoice = ProjectInvoice.objects.filter(id=invoice_id).first()
+        if invoice is None:
+            raise ValidationException(f'No invoice with id {invoice_id}', slug='invoice-not-found')
+
+        items = FreelanceProjectMember.objects.filter(project__id=invoice.project.id)
+        lookup = {}
+
+        def find_user_by_name(query_name, qs):
+            for term in query_name.split():
+                qs = qs.filter(Q(first_name__icontains=term) | Q(last_name__icontains=term))
+            return qs
+
+        if 'like' in self.request.GET:
+            like = self.request.GET.get('like')
+            if '@' in like:
+                items = items.filter(Q(freelancer__user__email__icontains=like))
+            else:
+                for term in like.split():
+                    items = items.filter(
+                        Q(freelancer__user__first_name__icontains=term)
+                        | Q(freelancer__user__last_name__icontains=term))
+
+        if 'project' in self.request.GET:
+            project = self.request.GET.get('project')
+            lookup['project__id'] = project
+
+        items = items.filter(**lookup).order_by('-freelancer__user__first_name')
+
+        serializer = SmallFreelancerMemberSerializer(items, many=True)
+        return Response(serializer.data)
+
+
 class AcademyProjectInvoiceView(APIView):
     """
     List all snippets, or create a new snippet.
@@ -241,7 +281,7 @@ class SingleInvoiceView(APIView):
     def get(self, request, id):
         item = ProjectInvoice.objects.filter(id=id).first()
         if item is None:
-            raise serializers.ValidationError('Invoice not found', code=404)
+            raise ValidationException('Invoice not found', slug='invoice-not-found', code=404)
         else:
             serializer = BigInvoiceSerializer(item, many=False)
             return Response(serializer.data)
