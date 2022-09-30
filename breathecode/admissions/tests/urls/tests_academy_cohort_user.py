@@ -8,6 +8,8 @@ from django.utils import timezone
 from random import choice
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.admissions.models import STARTED
 from ..mixins import AdmissionsTestCase
 
 UTC_NOW = timezone.now()
@@ -930,7 +932,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
@@ -970,7 +972,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         base = self.generate_models(authenticate=True,
-                                    cohort=True,
+                                    cohort={'stage': 'STARTED'},
                                     profile_academy=True,
                                     capability='crud_cohort',
                                     role='potato')
@@ -1025,7 +1027,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
@@ -1160,11 +1162,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.assertEqual(self.all_cohort_user_dict(), [])
 
     def test_academy_cohort_user__post__1_item(self):
-        #incomplete test
-        prohibited_stages = ['INNACTIVE', 'DELETED', 'ENDED']
-        for stage in prohibited_stages:
 
-            self.headers(academy=1)
+        prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
+        for stage in prohibited_stages:
 
             model = self.generate_models(authenticate=True,
                                          cohort={'stage': stage},
@@ -1173,58 +1173,50 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                          capability='crud_cohort',
                                          role='potato')
 
+            self.headers(academy=model.academy.id)
+
+            url = reverse_lazy('admissions:academy_cohort_user')
+            data = {
+                'user': model['user'].id,
+                'cohort': model['cohort'].id,
+            }
+
+            response = self.client.post(url, data, format='json')
+            json = response.json()
+            expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(self.all_cohort_user_dict(), [])
+
+    def test_academy_cohort_user__post__2_item(self):
+        #incomplete test
+        prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
+        for stage in prohibited_stages:
+
+            model = self.generate_models(authenticate=True,
+                                         cohort=(2, {
+                                             'stage': stage
+                                         }),
+                                         user=True,
+                                         profile_academy=True,
+                                         capability='crud_cohort',
+                                         role='potato')
+
+            self.headers(academy=model.academy.id)
+
             url = reverse_lazy('admissions:academy_cohort_user')
             data = [{
                 'user': model['user'].id,
-                'cohort': model['cohort'].id,
+                'cohort': model['cohort'][0].id,
+            }, {
+                'user': model['user'].id,
+                'cohort': model['cohort'][1].id,
             }]
             response = self.client.post(url, data, format='json')
             json = response.json()
-            expected = [{
-                'id': 1,
-                'role': 'STUDENT',
-                'user': {
-                    'id': model['user'].id,
-                    'first_name': model['user'].first_name,
-                    'last_name': model['user'].last_name,
-                    'email': model['user'].email,
-                },
-                'cohort': {
-                    'id': model['cohort'].id,
-                    'slug': model['cohort'].slug,
-                    'name': model['cohort'].name,
-                    'never_ends': False,
-                    'remote_available': True,
-                    'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
-                    'current_day': model['cohort'].current_day,
-                    'online_meeting_url': model['cohort'].online_meeting_url,
-                    'timezone': model['cohort'].timezone,
-                    'academy': {
-                        'id': model['cohort'].academy.id,
-                        'name': model['cohort'].academy.name,
-                        'slug': model['cohort'].academy.slug,
-                        'country': model['cohort'].academy.country.code,
-                        'city': model['cohort'].academy.city.id,
-                        'street_address': model['cohort'].academy.street_address,
-                    },
-                    'schedule': None,
-                    'syllabus_version': None,
-                    'ending_date': model['cohort'].ending_date,
-                    'stage': model['cohort'].stage,
-                    'language': model['cohort'].language,
-                    'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-                    'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
-                },
-            }]
+            expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
 
             self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            self.assertEqual(self.all_cohort_user_dict(), [{
-                'cohort_id': 1,
-                'educational_status': None,
-                'finantial_status': None,
-                'id': 1,
-                'role': 'STUDENT',
-                'user_id': 1,
-                'watching': False,
-            }])
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(self.all_cohort_user_dict(), [])

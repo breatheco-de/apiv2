@@ -868,9 +868,9 @@ class CohortUserSerializer(CohortUserSerializerMixin):
 
     def validate(self, data):
 
-        prohibited_stages = ['INNACTIVE', 'DELETED', 'ENDED']
+        prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
 
-        if 'cohort' in data and data['cohort'].stage not in prohibited_stages:
+        if 'cohort' in data and data['cohort'].stage in prohibited_stages:
 
             stage = data['cohort'].stage
 
