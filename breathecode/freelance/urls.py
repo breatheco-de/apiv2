@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import (BillView, sync_user_issues, SingleBillView, get_latest_bill, get_issues, render_html_bill,
                     render_html_all_bills, issue_webhook, AcademyProjectView, AcademyProjectMemberView,
-                    AcademyProjectInvoiceView, SingleInvoiceView, AcademyInvoiceMemberView)
+                    AcademyProjectInvoiceView, SingleInvoiceView, AcademyInvoiceMemberView, AcademyBillView)
 from rest_framework.authtoken import views
 
 app_name = 'freelance'
@@ -15,6 +15,8 @@ urlpatterns = [
     path('issues', get_issues),
     path('sync/user', sync_user_issues),
     path('sync/user/<int:user_id>/bill', get_latest_bill),
+    path('academy/bill', AcademyBillView.as_view()),
+    path('academy/bill/<int:bill_id>', AcademyBillView.as_view()),
     path('academy/project', AcademyProjectView.as_view()),
     path('academy/project/<int:project_id>', AcademyProjectView.as_view()),
     path('academy/project/member', AcademyProjectMemberView.as_view()),

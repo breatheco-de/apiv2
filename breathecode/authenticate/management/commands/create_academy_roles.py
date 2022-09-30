@@ -369,6 +369,7 @@ ROLES = [
             'read_lead_gen_app',
             'read_mentorship_service',
             'read_mentorship_mentor',
+            'read_freelancer_bill',
         ],
     },
     {

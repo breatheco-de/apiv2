@@ -119,6 +119,60 @@ class BillView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AcademyBillView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_freelancer_bill')
+    def get(self, request, academy_id, bill_id=None):
+
+        if bill_id is not None:
+            item = Bill.objects.filter(id=id).first()
+            if item is None:
+                raise serializers.ValidationError('Bill not found', code=404)
+            else:
+                serializer = BillSerializer(item, many=False)
+                return Response(serializer.data)
+
+        items = Bill.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        freelancer = self.request.GET.get('freelancer', None)
+        if freelancer is not None:
+            lookup['freelancer__id'] = freelancer.id
+
+        status = self.request.GET.get('status', '')
+        if status != '':
+            lookup['status__in'] = status.lower().split(',')
+
+        user_id = self.request.GET.get('user', None)
+        if user_id is not None:
+            lookup['freelancer__user__id'] = user_id
+
+        reviewer = self.request.GET.get('reviewer', None)
+        if reviewer is not None:
+            lookup['reviewer__id'] = reviewer.id
+
+        sort = self.request.GET.get('sort', '-created_at')
+        items = items.filter(**lookup).order_by(sort)
+
+        serializer = BillSerializer(items, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_freelancer_bill')
+    def put(self, request, bill_id=None, academy_id=None):
+        item = Bill.objects.filter(id=bill_id, academy__id=academy_id).first()
+        if item is None:
+            raise ValidationException('Bill not found for this academy', code=404)
+
+        serializer = BillSerializer(item, data=request.data, many=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class AcademyProjectView(APIView):
     """
     List all snippets, or create a new snippet.
