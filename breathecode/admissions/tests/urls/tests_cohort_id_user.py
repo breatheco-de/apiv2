@@ -1,8 +1,10 @@
 """
 Test /cohort/:id/user
 """
+import random
 import re
-from unittest.mock import patch
+from django.utils import timezone
+from unittest.mock import MagicMock, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.tests.mocks import (
@@ -12,6 +14,116 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import AdmissionsTestCase
+
+UTC_NOW = timezone.now()
+
+
+def post_serializer(self, cohort, user, profile_academy=None, data={}):
+    return {
+        'cohort': {
+            'ending_date': cohort.ending_date,
+            'id': cohort.id,
+            'kickoff_date': self.bc.datetime.to_iso_string(cohort.kickoff_date),
+            'name': cohort.name,
+            'slug': cohort.slug,
+            'stage': cohort.stage,
+        },
+        'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        'educational_status': None,
+        'finantial_status': None,
+        'id': 1,
+        'profile_academy': {
+            'email': profile_academy.email,
+            'first_name': profile_academy.first_name,
+            'id': profile_academy.id,
+            'last_name': profile_academy.last_name,
+            'phone': profile_academy.phone,
+        } if profile_academy else None,
+        'role': 'STUDENT',
+        'user': {
+            'email': user.email,
+            'first_name': user.first_name,
+            'id': user.id,
+            'last_name': user.last_name,
+        },
+        'watching': False,
+        **data,
+    }
+
+
+def cohort_user_field(data={}):
+    return {
+        'cohort_id': 0,
+        'educational_status': None,
+        'finantial_status': None,
+        'id': 0,
+        'role': 'STUDENT',
+        'user_id': 0,
+        'watching': False,
+        **data,
+    }
+
+
+def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, update=False, additional_data={}):
+    """Test /cohort/:id/user without auth"""
+    self.headers(academy=1)
+
+    model_kwargs = {
+        'authenticate': True,
+        'cohort': True,
+        'user': True,
+        'profile_academy': True,
+        'role': role,
+        'capability': 'crud_cohort',
+    }
+
+    if update:
+        model_kwargs['cohort_user'] = True
+
+    model = self.generate_models(**model_kwargs)
+
+    url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': 1})
+    data = {'user': model['user'].id, 'role': 'TEACHER'}
+
+    request_func = self.client.put if update else self.client.post
+    response = request_func(url, data, format='json')
+
+    json = response.json()
+    expected = post_serializer(self,
+                               model.cohort,
+                               model.user,
+                               model.profile_academy,
+                               data={
+                                   'role': 'TEACHER',
+                                   **additional_data,
+                               })
+
+    expected['educational_status'] = None
+    expected['finantial_status'] = None
+
+    self.assertEqual(json, expected)
+
+    if update:
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    else:
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    if update:
+        self.assertEqual(self.all_cohort_user_dict(),
+                         [{
+                             **self.model_to_dict(model, 'cohort_user'),
+                             'role': 'TEACHER',
+                         }])
+    else:
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 1,
+            'role': 'TEACHER',
+            'user_id': 1,
+            'watching': False,
+        }])
 
 
 class CohortIdUserIdTestSuite(AdmissionsTestCase):
@@ -28,7 +140,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': 999})
         model = self.generate_models(authenticate=True)
         data = {}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {'detail': 'Missing cohort_id or user_id', 'status_code': 400}
 
@@ -47,7 +159,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True, cohort=True)
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {'user': 999}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {'detail': 'invalid user_id', 'status_code': 400}
 
@@ -70,7 +182,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                      cohort_user=True)
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {'detail': 'Missing cohort_id or user_id', 'status_code': 400}
 
@@ -91,7 +203,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {
             'user': model['user'].id,
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {'detail': 'Specified cohort not be found', 'status_code': 400}
 
@@ -110,19 +222,19 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                      user=True,
                                      profile_academy=True,
                                      cohort_kwargs=cohort_kwargs)
-        models_dict = self.all_cohort_user_dict()
+        models_dict = self.bc.database.list_of('admissions.CohortUser')
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'user': model['user'].id,
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {'detail': 'cohort-with-stage-deleted', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     """
     🔽🔽🔽 Post
@@ -131,52 +243,18 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post(self):
         """Test /cohort/:id/user without auth"""
         model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
-        models_dict = self.all_cohort_user_dict()
+        models_dict = self.bc.database.list_of('admissions.CohortUser')
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'user': model['user'].id,
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {
-            'id': 1,
-            'role': 'STUDENT',
-            'user': {
-                'id': model['user'].id,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'email': model['user'].email,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': False,
-                'remote_available': True,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
-                'current_day': model['cohort'].current_day,
-                'online_meeting_url': model['cohort'].online_meeting_url,
-                'timezone': model['cohort'].timezone,
-                'academy': {
-                    'id': model['cohort'].academy.id,
-                    'name': model['cohort'].academy.name,
-                    'slug': model['cohort'].academy.slug,
-                    'country': model['cohort'].academy.country.code,
-                    'city': model['cohort'].academy.city.id,
-                    'street_address': model['cohort'].academy.street_address,
-                },
-                'schedule': None,
-                'syllabus_version': None,
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'language': model['cohort'].language,
-                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
-            },
-        }
+        expected = post_serializer(self, model.cohort, model.user, model.profile_academy, data={})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -189,7 +267,56 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         del cohort_user_two['user']
         models_dict.append(self.remove_dinamics_fields(cohort_user_two))
 
-        self.assertEqual(self.all_cohort_user_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), models_dict)
+
+    """
+    🔽🔽🔽 Post
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_cohort_id_user__post__status_in_upper_and_lower(self):
+        """Test /cohort/:id/user without auth"""
+        model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model.cohort.id})
+
+        roles = ['TEACHER', 'ASSISTANT', 'STUDENT', 'REVIEWER']
+        finantial_status = ['FULLY_PAID', 'UP_TO_DATE', 'LATE']
+        educational_status = ['ACTIVE', 'POSTPONED', 'SUSPENDED', 'DROPPED']  # do not put GRADUATED here
+        data = {
+            'user': model['user'].id,
+            'role': random.choice(roles + [x.lower() for x in roles]),
+            'finantial_status': random.choice(finantial_status + [x.lower() for x in finantial_status]),
+            'educational_status': random.choice(educational_status + [x.lower() for x in educational_status]),
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = post_serializer(self,
+                                   model.cohort,
+                                   model.user,
+                                   model.profile_academy,
+                                   data={
+                                       'role': data['role'].upper(),
+                                       'finantial_status': data['finantial_status'].upper(),
+                                       'educational_status': data['educational_status'].upper(),
+                                   })
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            cohort_user_field({
+                'id': 1,
+                'cohort_id': 1,
+                'user_id': 1,
+                'role': data['role'].upper(),
+                'finantial_status': data['finantial_status'].upper(),
+                'educational_status': data['educational_status'].upper(),
+            }),
+        ])
 
     """
     🔽🔽🔽 Post in bulk mode
@@ -213,7 +340,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -229,11 +356,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__in_bulk__with_one_item(self):
         """Test /cohort/:id/user without auth"""
         model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
@@ -243,46 +371,15 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }]
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = [{
-            'id': 1,
-            'role': 'STUDENT',
-            'user': {
-                'id': model['user'].id,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'email': model['user'].email,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': False,
-                'remote_available': True,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
-                'current_day': model['cohort'].current_day,
-                'online_meeting_url': model['cohort'].online_meeting_url,
-                'timezone': model['cohort'].timezone,
-                'academy': {
-                    'id': model['cohort'].academy.id,
-                    'name': model['cohort'].academy.name,
-                    'slug': model['cohort'].academy.slug,
-                    'country': model['cohort'].academy.country.code,
-                    'city': model['cohort'].academy.city.id,
-                    'street_address': model['cohort'].academy.street_address,
-                },
-                'schedule': None,
-                'syllabus_version': None,
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'language': model['cohort'].language,
-                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
-            },
-        }]
+        expected = [
+            post_serializer(self, model.cohort, model.user, model.profile_academy, data={
+                'role': 'STUDENT',
+            })
+        ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
             'educational_status': None,
             'finantial_status': None,
@@ -295,6 +392,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__in_bulk__with_two_items(self):
         """Test /cohort/:id/user without auth"""
         base = self.generate_models(authenticate=True, cohort=True, profile_academy=True)
@@ -307,47 +405,21 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         } for model in models]
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = [{
-            'id': model['user'].id - 1,
-            'role': 'STUDENT',
-            'user': {
-                'id': model['user'].id,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'email': model['user'].email,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': False,
-                'remote_available': True,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
-                'current_day': model['cohort'].current_day,
-                'online_meeting_url': model['cohort'].online_meeting_url,
-                'timezone': model['cohort'].timezone,
-                'academy': {
-                    'id': model['cohort'].academy.id,
-                    'name': model['cohort'].academy.name,
-                    'slug': model['cohort'].academy.slug,
-                    'country': model['cohort'].academy.country.code,
-                    'city': model['cohort'].academy.city.id,
-                    'street_address': model['cohort'].academy.street_address,
-                },
-                'schedule': None,
-                'syllabus_version': None,
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'language': model['cohort'].language,
-                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
-            },
-        } for model in models]
+        expected = [
+            post_serializer(self,
+                            model.cohort,
+                            model.user,
+                            None,
+                            data={
+                                'id': model.user.id - 1,
+                                'role': 'STUDENT',
+                            }) for model in models
+        ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
             'educational_status': None,
             'finantial_status': None,
@@ -394,7 +466,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {
             'user': models[0]['user'].id,
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
             'status_code':
@@ -426,7 +498,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'user': model['user'].id,
         }
         # self.client.post(url, data)
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {'detail': 'That user already exists in this cohort', 'status_code': 400}
 
@@ -447,10 +519,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                      user=True,
                                      profile_academy=True,
                                      role='student')
-        models_dict = self.all_cohort_user_dict()
+        models_dict = self.bc.database.list_of('admissions.CohortUser')
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {'user': model['user'].id, 'role': 'TEACHER'}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
             'detail': 'The user must be staff member to this academy before it can be a teacher',
@@ -459,105 +531,119 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_staff(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('staff')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'staff')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_teacher(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('teacher')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'teacher')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_syllabus_coordinator(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('syllabus_coordinator')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'syllabus_coordinator')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_homework_reviewer(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('homework_reviewer')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'homework_reviewer')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_growth_manager(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('growth_manager')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'growth_manager')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_culture_and_recruitment(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('culture_and_recruitment')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'culture_and_recruitment')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_country_manager(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('country_manager')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'country_manager')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_community_manager(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('community_manager')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'community_manager')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_career_support(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('career_support')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'career_support')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_assistant(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('assistant')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'assistant')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_admissions_developer(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('admissions_developer')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'admissions_developer')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_admin(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('admin')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'admin')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_academy_token(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_token')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'academy_token')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__one_teacher__with_role_academy_coordinator(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_coordinator')
+        check_cohort_user_that_not_have_role_student_can_be_teacher(self, 'academy_coordinator')
 
     """
     🔽🔽🔽 Post just one main teacher for cohort
@@ -577,10 +663,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         models = models + [self.generate_models(user=True, models=base, profile_academy=True)]
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': models[0]['cohort'].id})
         data = {'user': models[0]['user'].id, 'role': 'TEACHER'}
-        self.client.post(url, data)
+        self.client.post(url, data, format='json')
 
         data = {'user': models[1]['user'].id, 'role': 'TEACHER'}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         expected = {
@@ -600,18 +686,28 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user__post__with_unsuccess_task(self):
         """Test /cohort/:id/user without auth"""
-        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT', 'associated_slug': 'testing-slug'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
-                                     task=task)
+                                     task=task,
+                                     syllabus_version={
+                                         'id': 1,
+                                         'json': {
+                                             'days': [{
+                                                 'assignments': [{
+                                                     'slug': 'testing-slug',
+                                                 }]
+                                             }]
+                                         }
+                                     })
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'user': model['user'].id,
             'educational_status': 'GRADUATED',
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
             'status_code': 400,
@@ -637,7 +733,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'educational_status': 'GRADUATED',
             'finantial_status': 'LATE',
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
             'status_code': 400,

@@ -892,6 +892,38 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                          self.bc.format.to_dict(model.mentorship_bill))
 
     """
+    🔽🔽🔽 PUT with two MentorshipSession, MentorProfile and MentorshipService, edit status of dirty bill
+    """
+
+    def test__put__with_two_mentor_profile__edit_status_of_dirty_bill(self):
+        mentorship_sessions = [{'mentor_id': n, 'bill_id': n} for n in range(1, 3)]
+        mentor_profiles = [{'service_id': n} for n in range(1, 3)]
+        mentorship_bills = [{'mentor_id': n, 'status': 'RECALCULATE'} for n in range(1, 3)]
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_bill',
+                                        mentorship_session=mentorship_sessions,
+                                        mentor_profile=mentor_profiles,
+                                        mentorship_service=2,
+                                        mentorship_bill=mentorship_bills,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_bill')
+        data = [{'id': 1, 'status': 'PAID'}]
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'trying-edit-status-to-dirty-bill', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'),
+                         self.bc.format.to_dict(model.mentorship_bill))
+
+    """
     🔽🔽🔽 PUT with two MentorshipSession, MentorProfile and MentorshipService, passing all valid fields
     """
 

@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination, validate_captcha)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
@@ -27,15 +27,18 @@ from .serializers import (
     ShortLinkSerializer,
     PUTTagSerializer,
     UTMSmallSerializer,
+    LeadgenAppSmallSerializer,
+    AcademyAliasSmallSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField, AcademyAlias
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
+from breathecode.services.google_cloud import Recaptcha
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +109,18 @@ def create_lead(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead_from_app(request, app_slug=None):
+
     app_id = request.GET.get('app_id', None)
-    if app_slug is None or app_id is None:
+    if app_id is None:
         raise ValidationException(f'Invalid app slug and/or id', code=400, slug='without-app-slug-or-app-id')
+
+    if app_slug is None:
+        # try get the slug from the encoded app_id
+        decoded_id = parse.unquote(app_id)
+        if ':' not in decoded_id:
+            raise ValidationException(f'Missing app slug', code=400, slug='without-app-slug-or-app-id')
+        else:
+            app_slug, app_id = decoded_id.split(':')
 
     app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
     if app is None:
@@ -413,6 +425,34 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         tags = Automation.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = AutomationSmallSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyAppView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_lead_gen_app')
+    def get(self, request, academy_id=None):
+
+        apps = LeadGenerationApp.objects.filter(academy__id=academy_id)
+
+        serializer = LeadgenAppSmallSerializer(apps, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyAliasView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_my_academy')
+    def get(self, request, academy_id):
+
+        alias = AcademyAlias.objects.filter(academy__id=academy_id)
+
+        serializer = AcademyAliasSmallSerializer(alias, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

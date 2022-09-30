@@ -1,12 +1,16 @@
+from collections import OrderedDict
 import logging
+from typing_extensions import Required
+from django.http import QueryDict
 import serpy
+from traitlets import Instance
 from breathecode.admissions.actions import ImportCohortTimeSlots
 from django.db.models import Q
 from breathecode.assignments.models import Task
-from breathecode.utils import ValidationException, localize_query, SerpyExtensions
-from rest_framework import serializers
+from breathecode.utils import ValidationException, localize_query, SerpyExtensions, serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from .actions import test_syllabus, haversine
 from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
                      Syllabus, SyllabusVersion, COHORT_STAGE)
 
@@ -91,6 +95,7 @@ class ProfileAcademySmallSerializer(serpy.Serializer):
 class UserPublicSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
     profile = PublicProfileSerializer(required=False)
@@ -330,6 +335,13 @@ class PublicCohortSerializer(serpy.Serializer):
     schedule = GetSmallSyllabusScheduleSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
+    distance = serpy.MethodField()
+
+    def get_distance(self, obj):
+        if not obj.latitude or not obj.longitude or not obj.academy.latitude or not obj.academy.longitude:
+            return None
+
+        return haversine(obj.longitude, obj.latitude, obj.academy.longitude, obj.academy.latitude)
 
 
 class GetSmallCohortSerializer(serpy.Serializer):
@@ -341,6 +353,35 @@ class GetSmallCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     stage = serpy.Field()
+
+
+class GetTeacherAcademySmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    email = serpy.Field()
+    user = UserPublicSerializer(required=False)
+    status = serpy.Field()
+    created_at = serpy.Field()
+
+    role = serpy.MethodField()
+
+    def get_role(self, obj):
+        return obj.role.slug
+
+    cohorts = serpy.MethodField()
+
+    def get_cohorts(self, obj):
+        if obj.user is None:
+            return []
+
+        return GetSmallCohortSerializer(Cohort.objects.filter(
+            cohortuser__user__id=obj.user.id,
+            cohortuser__role__in=['TEACHER', 'ASSISTANT'
+                                  ]).exclude(stage__iexact='DELETED').order_by('-ending_date').all(),
+                                        many=True).data
 
 
 class GetMeCohortSerializer(serpy.Serializer):
@@ -475,6 +516,7 @@ class GetSyllabusSerializer(serpy.Serializer):
 
 #        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
+    status_fields = ['status']
     country = CountrySerializer(required=True)
     city = CitySerializer(required=True)
 
@@ -502,6 +544,8 @@ class SyllabusPOSTSerializer(serializers.ModelSerializer):
 
 
 class CohortSerializerMixin(serializers.ModelSerializer):
+    status_fields = ['stage']
+
     syllabus = serializers.CharField(required=False)
     syllabus_version = serializers.CharField(required=False)
 
@@ -574,6 +618,13 @@ class CohortSerializerMixin(serializers.ModelSerializer):
         if not never_ends and not ending_date:
             raise ValidationException('A cohort most have ending date or it should be marked as ever_ends',
                                       slug='cohort-without-ending-date-and-never-ends')
+
+        if 'language' in data:
+            language = data['language']
+            if type(language) == str:
+                data['language'] = language.lower()
+            else:
+                raise ValidationException(f'Language property should be a string not a {type(language)}')
 
         # if cohort is being activated the online_meeting_url should not be null
         if self.instance is not None and (self.instance.online_meeting_url is None
@@ -654,11 +705,10 @@ class UserDJangoRestSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'first_name', 'last_name', 'email']
-        # fields = ['id', 'user']
 
 
 class CohortUserSerializerMixin(serializers.ModelSerializer):
-    index = -1
+    status_fields = ['role', 'finantial_status', 'educational_status']
 
     def count_certificates_by_cohort(self, cohort, user_id):
         return CohortUser.objects.filter(Q(educational_status='ACTIVE') | Q(educational_status__isnull=True),
@@ -666,55 +716,40 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
                                          role='STUDENT',
                                          cohort__schedule=cohort.schedule).count()
 
-    def validate_just_one(self):
-        pass
-
-    def validate(self, data):
-        self.index = self.index + 1
-
+    def validate(self, data: OrderedDict):
+        self.context['index'] += 1
         request = self.context['request']
-        is_many = isinstance(request.data, list)
-        cohort_id = self.context['cohort_id']
-        user_id = self.context['user_id']
-        body = request.data if is_many else [request.data]
-        request_item = body[self.index]
-        is_post_method = request.method == 'POST'
+        is_post_method = not self.instance
 
-        id = None
-        if is_many and 'id' in request_item:
-            id = request_item['id']
+        if isinstance(self.initial_data, list):
+            id = self.initial_data[self.context['index']].get('id')
+        else:
+            id = self.initial_data.get('id')
 
-        if is_many and 'user' in request_item:
-            user_id = request_item['user']
+        user = data.get('user')
+        cohort = data.get('cohort')
 
-        if is_many and 'cohort' in request_item:
-            cohort_id = request_item['cohort']
+        if isinstance(self.instance, CohortUser):
+            instance = self.instance
 
-        if id and (not user_id or not cohort_id):
-            ids = CohortUser.objects.filter(id=id).values_list('user_id', 'cohort_id').first()
+        elif self.instance:
+            instance = self.instance.filter(id=id).first()
 
-            if not ids:
-                raise ValidationException('Invalid id', code=400)
-            user_id = ids[0]
-            cohort_id = ids[1]
+        else:
+            instance = None
 
-        if user_id is None:
-            user_id = request_item.get('user')
+        if instance and not user:
+            user = instance.user
 
-        if not is_many and (cohort_id is None or user_id is None):
-            raise ValidationException('Missing cohort_id or user_id', code=400)
+        if instance and not cohort:
+            cohort = instance.cohort
 
-        if User.objects.filter(id=user_id).count() == 0:
-            raise ValidationException('invalid user_id', code=400)
-
-        cohort = Cohort.objects.filter(id=cohort_id)
-        if not cohort:
-            raise ValidationException('invalid cohort_id', code=400)
+        cohorts = Cohort.objects.filter(id=cohort.id) if cohort else Cohort.objects.none()
 
         # only from this academy
-        cohort = localize_query(cohort, request).first()
+        cohorts = localize_query(cohorts, request).first()
 
-        if cohort is None:
+        if not cohorts:
             logger.debug(f'Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
@@ -723,72 +758,79 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
                                       slug='cohort-with-stage-deleted',
                                       code=400)
 
-        count_cohort_users = CohortUser.objects.filter(user_id=user_id, cohort_id=cohort_id).count()
+        count_cohort_users = CohortUser.objects.filter(user_id=user.id, cohort_id=cohort.id).count()
 
         if is_post_method and count_cohort_users:
             raise ValidationException('That user already exists in this cohort')
 
-        if ('role' in request_item and request_item['role'] != 'STUDENT'
-                and not ProfileAcademy.objects.filter(
-                    user_id=user_id, academy__id=cohort.academy.id).exclude(role__slug='student').exists()):
+        if ('role' in data and data['role'] != 'STUDENT' and not ProfileAcademy.objects.filter(
+                user_id=user.id, academy__id=cohort.academy.id).exclude(role__slug='student').exists()):
             raise ValidationException(
                 'The user must be staff member to this academy before it can be a teacher')
 
-        if (is_post_method and cohort.schedule and self.count_certificates_by_cohort(cohort, user_id) > 0):
+        if (is_post_method and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0):
             raise ValidationException(
                 'This student is already in another cohort for the same certificate, please mark him/her hi '
                 'educational status on this prior cohort different than ACTIVE before cotinuing')
 
-        role = request_item.get('role')
-        if role == 'TEACHER' and CohortUser.objects.filter(
-                role=role, cohort_id=cohort_id).exclude(user__id__in=[user_id]).count():
+        role = data.get('role')
+
+        exclude_params = {'id': instance.id} if instance else {}
+        if role == 'TEACHER' and (CohortUser.objects.filter(
+                role=role, cohort_id=cohort.id).exclude(**exclude_params).count()):
             raise ValidationException('There can only be one main instructor in a cohort')
 
-        cohort_user = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+        cohort_user = CohortUser.objects.filter(user__id=user.id, cohort__id=cohort.id).first()
 
+        # move it in the view
         if not is_post_method and not cohort_user:
             raise ValidationException('Cannot find CohortUser')
 
-        if not id and cohort_user:
-            id = cohort_user.id
-
-        watching = request_item.get('watching') == True
+        watching = data.get('watching') == True
         if watching and cohort_user.educational_status != 'ACTIVE':
             raise ValidationException('The student is not active in this cohort', slug='student-not-active')
 
-        is_graduated = request_item.get('educational_status') == 'GRADUATED'
-        is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else
-                   request_item.get('finantial_status') == 'LATE')
+        is_graduated = ((data.get('educational_status')
+                         or (instance and instance.educational_status or '')) == 'GRADUATED')
+
+        is_late = ((data.get('finantial_status') or (instance and instance.finantial_status or '')) == 'LATE')
+
         if is_graduated and is_late:
             raise ValidationException('Cannot be marked as `GRADUATED` if its financial '
                                       'status is `LATE`')
 
-        has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
-                                        task_type='PROJECT').exclude(revision_status='IGNORED').count()
+        tasks_pending = Task.objects.filter(user_id=user.id,
+                                            task_status='PENDING',
+                                            task_type='PROJECT',
+                                            cohort__id=cohort.id).exclude(revision_status='IGNORED')
+
+        mandatory_slugs = []
+        for task in tasks_pending:
+            if 'days' in task.cohort.syllabus_version.__dict__['json']:
+                for day in task.cohort.syllabus_version.__dict__['json']['days']:
+                    for assignment in day['assignments']:
+                        if 'mandatory' not in assignment or ('mandatory' in assignment
+                                                             and assignment['mandatory'] == True):
+                            mandatory_slugs.append(assignment['slug'])
+
+        has_tasks = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(
+            revision_status__in=['APPROVED', 'IGNORED']).count()
+
         if is_graduated and has_tasks:
             raise ValidationException(
                 'User has tasks with status pending the educational status cannot be GRADUATED')
 
-        data = {}
-
-        for key in request_item:
-            data[key] = request_item.get(key)
-
-        data['cohort'] = cohort_id
-
-        user = User.objects.filter(id=user_id).first()
-        return {**data, 'id': id, 'cohort': cohort, 'user': user}
+        return {**data, 'cohort': cohort, 'user': user, 'id': id}
 
 
 class CohortUserListSerializer(serializers.ListSerializer):
 
     def create(self, validated_data):
 
-        
         books = [CohortUser(**item) for item in validated_data]
-    
+
         items = CohortUser.objects.bulk_create(books)
-    
+
         for key in range(0, len(items)):
             item = items[key]
             items[key].id = CohortUser.objects.filter(cohort__id=item.cohort_id,
@@ -820,13 +862,14 @@ class CohortUserListSerializer(serializers.ListSerializer):
 
 
 class CohortUserSerializer(CohortUserSerializerMixin):
-    cohort = CohortSerializer(many=False, read_only=True)
-    user = UserDJangoRestSerializer(many=False, read_only=True)
+    cohort = serializers.PrimaryKeyRelatedField(required=False, queryset=Cohort.objects.filter())
+    user = serializers.PrimaryKeyRelatedField(required=False, queryset=User.objects.filter())
+    role = serializers.CharField(required=False)
 
     def validate(self, data):
-      
+
         prohibited_stages = ['INNACTIVE', 'DELETED', 'ENDED']
-        
+
         if 'cohort' in data and data['cohort'].stage not in prohibited_stages:
 
             stage = data['cohort'].stage
@@ -838,11 +881,12 @@ class CohortUserSerializer(CohortUserSerializerMixin):
 
     class Meta:
         model = CohortUser
-        fields = ['id', 'user', 'cohort', 'role']
+        fields = ['id', 'user', 'cohort', 'role', 'educational_status', 'finantial_status']
         list_serializer_class = CohortUserListSerializer
 
 
 class CohortTimeSlotSerializer(serializers.ModelSerializer):
+    status_fields = ['recurrency_type']
     starting_at = serializers.IntegerField(write_only=True)
     ending_at = serializers.IntegerField(write_only=True)
 
@@ -852,6 +896,7 @@ class CohortTimeSlotSerializer(serializers.ModelSerializer):
 
 
 class SyllabusScheduleSerializer(serializers.ModelSerializer):
+    status_fields = ['schedule_type']
 
     class Meta:
         model = SyllabusSchedule
@@ -859,6 +904,8 @@ class SyllabusScheduleSerializer(serializers.ModelSerializer):
 
 
 class SyllabusSchedulePUTSerializer(serializers.ModelSerializer):
+    status_fields = ['schedule_type']
+
     id = serializers.IntegerField(required=False)
     name = serializers.CharField(required=False)
     schedule_type = serializers.CharField(required=False)
@@ -871,6 +918,7 @@ class SyllabusSchedulePUTSerializer(serializers.ModelSerializer):
 
 
 class SyllabusScheduleTimeSlotSerializer(serializers.ModelSerializer):
+    status_fields = ['recurrency_type']
     starting_at = serializers.IntegerField(write_only=True)
     ending_at = serializers.IntegerField(write_only=True)
 
@@ -896,10 +944,12 @@ class CohortUserPOSTSerializer(serpy.Serializer):
 
 
 class CohortUserPUTSerializer(CohortUserSerializerMixin):
+    cohort = serializers.PrimaryKeyRelatedField(required=False, queryset=Cohort.objects.filter())
+    user = serializers.PrimaryKeyRelatedField(required=False, queryset=User.objects.filter())
 
     class Meta:
         model = CohortUser
-        fields = ['id', 'role', 'educational_status', 'finantial_status', 'watching']
+        fields = ['id', 'user', 'cohort', 'role', 'educational_status', 'finantial_status', 'watching']
         list_serializer_class = CohortUserListSerializer
 
 
@@ -947,11 +997,12 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
 
 class SyllabusVersionPutSerializer(serializers.ModelSerializer):
-    json = serializers.JSONField()
+    json = serializers.JSONField(required=False)
+    status = serializers.CharField(required=False)
 
     class Meta:
         model = SyllabusVersion
-        fields = ['json', 'version', 'syllabus']
+        fields = ['json', 'version', 'syllabus', 'status']
         exclude = ()
         extra_kwargs = {
             'syllabus': {
@@ -961,6 +1012,23 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
                 'read_only': True
             },
         }
+
+    def validate(self, data):
+
+        _data = super().validate(data)
+        if 'json' in data:
+            try:
+                _log = test_syllabus(data['json'])
+                if _log.http_status() == 200:
+                    raise ValidationException(
+                        'There are some errors in your syllabus, please validate before submitting',
+                        slug='syllabus-with-errors')
+            except:
+                raise ValidationException(
+                    'There are some errors in your syllabus, please validate before submitting',
+                    slug='syllabus-with-errors')
+
+        return _data
 
 
 class AcademyReportSerializer(serpy.Serializer):

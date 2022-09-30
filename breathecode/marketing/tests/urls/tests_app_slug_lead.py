@@ -21,12 +21,28 @@ from ..mixins import MarketingTestCase
 fake = Faker()
 
 
+class FakeRecaptcha:
+
+    class RiskAnalysis:
+
+        def __init__(self, *args, **kwargs):
+            self.score = 0.9
+
+    def __init__(self, *args, **kwargs):
+        self.risk_analysis = self.RiskAnalysis()
+
+
 class AppSlugLeadTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Post without app slug or app_id
     """
 
     @patch('breathecode.marketing.tasks.persist_single_lead', MagicMock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_app_slug_lead__post__without_app_slug_or_app_id(self):
         from breathecode.marketing.tasks import persist_single_lead
 
@@ -47,6 +63,11 @@ class AppSlugLeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.persist_single_lead', MagicMock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_app_slug_lead__post__without_app_id(self):
         from breathecode.marketing.tasks import persist_single_lead
         model = self.generate_models(lead_generation_app=True)
@@ -70,6 +91,11 @@ class AppSlugLeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.persist_single_lead', MagicMock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_app_slug_lead__post__without_required_fields(self):
         from breathecode.marketing.tasks import persist_single_lead
         model = self.generate_models(lead_generation_app=True)
@@ -109,6 +135,11 @@ class AppSlugLeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.persist_single_lead', MagicMock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_app_slug_lead__post(self):
         from breathecode.marketing.tasks import persist_single_lead
 
@@ -185,6 +216,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'utm_url': None,
             'won_at': None,
             'zip_code': None,
+            'storage_status_text': '',
         }
 
         self.assertEqual(json, expected)
@@ -235,6 +267,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'utm_url': None,
             'won_at': None,
             'zip_code': None,
+            'storage_status_text': '',
         }
         self.assertEqual(self.all_form_entry_dict(), [form_entry])
 
@@ -275,6 +308,11 @@ class AppSlugLeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.persist_single_lead', MagicMock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_app_slug_lead__post__with_utm_url(self):
         from breathecode.marketing.tasks import persist_single_lead
 
@@ -339,6 +377,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'sentiment': None,
             'state': None,
             'storage_status': 'PENDING',
+            'storage_status_text': '',
             'street_address': None,
             'tag_objects': [],
             'tags': '',
@@ -389,6 +428,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'sentiment': None,
             'state': None,
             'storage_status': 'PENDING',
+            'storage_status_text': '',
             'street_address': None,
             'tags': '',
             'user_id': None,
@@ -440,6 +480,11 @@ class AppSlugLeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.persist_single_lead', MagicMock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_app_slug_lead__post__with_automations(self):
         from breathecode.marketing.tasks import persist_single_lead
 
@@ -504,6 +549,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'sentiment': None,
             'state': None,
             'storage_status': 'PENDING',
+            'storage_status_text': '',
             'street_address': None,
             'tag_objects': [],
             'tags': '',
@@ -565,6 +611,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'won_at': None,
             'zip_code': None,
             'utm_url': None,
+            'storage_status_text': '',
             **data,
         }
         self.assertEqual(self.all_form_entry_dict(), [form_entry])
@@ -609,6 +656,11 @@ class AppSlugLeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.persist_single_lead', MagicMock())
+    @patch.multiple(
+        'breathecode.services.google_cloud.Recaptcha',
+        __init__=MagicMock(return_value=None),
+        create_assessment=MagicMock(return_value=FakeRecaptcha()),
+    )
     def test_app_slug_lead__post__with_tags(self):
         from breathecode.marketing.tasks import persist_single_lead
 
@@ -673,6 +725,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'sentiment': None,
             'state': None,
             'storage_status': 'PENDING',
+            'storage_status_text': '',
             'street_address': None,
             'tag_objects': [],
             'tags': '',
@@ -734,6 +787,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'won_at': None,
             'zip_code': None,
             'utm_url': None,
+            'storage_status_text': '',
             **data,
         }
         self.assertEqual(self.all_form_entry_dict(), [form_entry])

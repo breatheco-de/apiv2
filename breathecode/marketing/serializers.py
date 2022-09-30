@@ -17,6 +17,18 @@ class AcademySmallSerializer(serpy.Serializer):
     name = serpy.Field()
 
 
+class LeadgenAppSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    app_id = serpy.Field()
+
+
+class AcademyAliasSmallSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    active_campaign_slug = serpy.Field()
+
+
 class ShortlinkSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -106,6 +118,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
     utm_source = serpy.Field()
     tags = serpy.Field()
     storage_status = serpy.Field()
+    storage_status_text = serpy.Field()
     country = serpy.Field()
     ac_expected_cohort = serpy.Field()
     lead_type = serpy.Field()

@@ -360,6 +360,8 @@ HOOK_EVENTS = {
     'form_entry.changed': 'marketing.FormEntry.updated+',
     'profile_academy.added': 'authenticate.ProfileAcademy.created+',
     'profile_academy.changed': 'authenticate.ProfileAcademy.updated+',
+    'cohort_user.added': 'admissions.CohortUser.created+',
+    'cohort_user.changed': 'admissions.CohortUser.updated+',
     # and custom events, no extra meta data needed
     # 'book.read':         'bookstore.Book.read',
 }

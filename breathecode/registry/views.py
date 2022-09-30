@@ -10,11 +10,11 @@ from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment)
 
-from .actions import AssetThumbnailGenerator, test_syllabus, test_asset, pull_from_github, test_asset
+from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
-from .caches import AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache
+from .caches import AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache, CategoryCache
 
 from rest_framework.permissions import AllowAny
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
@@ -23,7 +23,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           PostAssetCommentSerializer, PutAssetCommentSerializer, AssetBigTechnologySerializer,
                           TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
                           PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
-                          AssetKeywordBigSerializer)
+                          AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -136,7 +136,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('language')
             if param == 'en':
                 param = 'us'
-            items = items.filter(Q(lang=param) | Q(lang='') | Q(lang__isnull=True))
+            items = items.filter(Q(lang__iexact=param) | Q(lang='') | Q(lang__isnull=True))
 
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')
@@ -215,7 +215,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
 @api_view(['GET'])
 def get_categories(request):
-    items = AssetCategory.objects.all()
+    items = AssetCategory.objects.filer(visibility='PUBLIC')
     serializer = AssetCategorySerializer(items, many=True)
     return Response(serializer.data)
 
@@ -234,13 +234,6 @@ def get_translations(request):
     langs = set(langs)
 
     return Response([{'slug': l, 'title': l} for l in langs])
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def handle_test_syllabus(request):
-    report = test_syllabus(request.data)
-    return Response({'status': 'ok'})
 
 
 @api_view(['POST'])
@@ -493,7 +486,6 @@ class AcademyAssetActionView(APIView):
                 report.start()
 
         except Exception as e:
-            raise e
             pass
 
         asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
@@ -639,8 +631,33 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if asset is None:
             raise ValidationException('This asset does not exist for this academy', 404)
 
+        data = {
+            **request.data,
+        }
+
+        if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
+                data['technologies'][0], str):
+            technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
+                'pk', flat=True)
+            delta = len(data['technologies']) - len(technology_ids)
+            if delta != 0:
+                raise ValidationException(
+                    f'{delta} of the assigned technologies for this lesson are not found')
+
+            data['technologies'] = technology_ids
+
+        if 'seo_keywords' in data and len(data['seo_keywords']) > 0:
+            if isinstance(data['seo_keywords'][0], str):
+                data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list(
+                    'pk', flat=True)
+
+        if 'all_translations' in data and len(data['all_translations']) > 0 and isinstance(
+                data['all_translations'][0], str):
+            data['all_translations'] = Asset.objects.filter(slug__in=data['all_translations']).values_list(
+                'pk', flat=True)
+
         serializer = AssetPUTSerializer(asset,
-                                        data=request.data,
+                                        data=data,
                                         context={
                                             'request': request,
                                             'academy_id': academy_id
@@ -662,6 +679,22 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             if isinstance(data['seo_keywords'][0], str):
                 data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list(
                     'pk', flat=True)
+
+        if 'all_translations' in data and len(data['all_translations']) > 0 and isinstance(
+                data['all_translations'][0], str):
+            data['all_translations'] = Asset.objects.filter(slug__in=data['all_translations']).values_list(
+                'pk', flat=True)
+
+        if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
+                data['technologies'][0], str):
+            technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
+                'pk', flat=True)
+            delta = len(data['technologies']) - len(technology_ids)
+            if delta != 0:
+                raise ValidationException(
+                    f'{delta} of the assigned technologies for this lesson are not found')
+
+            data['technologies'] = technology_ids
 
         serializer = PostAssetSerializer(data=data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
@@ -759,6 +792,90 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
+class AcademyCategoryView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(cache=CategoryCache, sort='-created_at', paginate=True)
+
+    @capable_of('read_category')
+    def get(self, request, category_slug=None, academy_id=None):
+
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = AssetCategory.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        like = request.GET.get('like', None)
+        if like is not None and like != 'undefined' and like != '':
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        lang = request.GET.get('lang', None)
+        if lang is not None:
+            items = items.filter(lang__iexact=lang)
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = AssetCategorySerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of('crud_category')
+    def post(self, request, academy_id=None):
+
+        data = {**request.data}
+        if 'lang' in data:
+            data['lang'] = data['lang'].upper()
+
+        serializer = POSTCategorySerializer(data=data, context={'request': request, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_category')
+    def put(self, request, category_slug, academy_id=None):
+
+        cat = None
+        if category_slug.isnumeric():
+            cat = AssetCategory.objects.filter(id=category_slug, academy__id=academy_id).first()
+        else:
+            cat = AssetCategory.objects.filter(slug=category_slug, academy__id=academy_id).first()
+
+        if cat is None:
+            raise ValidationException('This category does not exist for this academy', 404)
+
+        data = {**request.data}
+        if 'lang' in data:
+            data['lang'] = data['lang'].upper()
+
+        serializer = PUTCategorySerializer(cat,
+                                           data=data,
+                                           context={
+                                               'request': request,
+                                               'academy': academy_id
+                                           })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_category')
+    def delete(self, request, academy_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id'])
+        if lookups:
+            items = AssetCategory.objects.filter(**lookups, academy__id=academy_id)
+
+            for item in items:
+                item.delete()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+        else:
+            raise ValidationException('Category ids were not provided', 404, slug='missing_ids')
+
+
 class AcademyKeywordView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -826,18 +943,17 @@ class AcademyKeywordView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # @capable_of('crud_keyword')
-    # def delete(self, request, comment_id=None, academy_id=None):
+    @capable_of('crud_keyword')
+    def delete(self, request, academy_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id'])
+        if lookups:
+            items = AssetKeyword.objects.filter(**lookups, academy__id=academy_id)
 
-    #     if comment_id is None:
-    #         raise ValidationException('Missing comment ID on the URL', 404)
-
-    #     comment = AssetComment.objects.filter(id=comment_id, asset__academy__id=academy_id).first()
-    #     if comment is None:
-    #         raise ValidationException('This comment does not exist', 404)
-
-    #     comment.delete()
-    #     return Response(None, status=status.HTTP_204_NO_CONTENT)
+            for item in items:
+                item.delete()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+        else:
+            raise ValidationException('Asset ids were not provided', 404, slug='missing_ids')
 
 
 class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
@@ -911,15 +1027,14 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # @capable_of('crud_keyword')
-    # def delete(self, request, comment_id=None, academy_id=None):
+    @capable_of('crud_keywordcluster')
+    def delete(self, request, academy_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id'])
+        if lookups:
+            items = KeywordCluster.objects.filter(**lookups, academy__id=academy_id)
 
-    #     if comment_id is None:
-    #         raise ValidationException('Missing comment ID on the URL', 404)
-
-    #     comment = AssetComment.objects.filter(id=comment_id, asset__academy__id=academy_id).first()
-    #     if comment is None:
-    #         raise ValidationException('This comment does not exist', 404)
-
-    #     comment.delete()
-    #     return Response(None, status=status.HTTP_204_NO_CONTENT)
+            for item in items:
+                item.delete()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+        else:
+            raise ValidationException('Cluster ids were not provided', 404, slug='missing_ids')

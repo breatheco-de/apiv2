@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+from urllib.parse import parse_qsl
 from channels.generic.websocket import JsonWebsocketConsumer, AsyncJsonWebsocketConsumer
 
 from breathecode.utils.exceptions import ProgramingError
@@ -21,7 +22,8 @@ class SyncWsHasPermission:
     def sync_wrapper(self: JsonWebsocketConsumer, instance: WsHasPermission):
 
         try:
-            request = FakeRequest(header_parser(self.scope['headers']))
+            querystring = dict(parse_qsl(self.scope['query_string'].decode('utf-8')))
+            request = FakeRequest(querystring)
             decorator = SyncWsHasPermission.sync_decorator(self, instance, request)
             request.set_user(self.scope['user'])
             decorator(request)
@@ -55,7 +57,8 @@ class AsyncWsHasPermission:
     async def async_wrapper(self: AsyncJsonWebsocketConsumer, instance: WsHasPermission):
 
         try:
-            request = FakeRequest(header_parser(self.scope['headers']))
+            querystring = dict(parse_qsl(self.scope['query_string'].decode('utf-8')))
+            request = FakeRequest(querystring)
             request.set_user(self.scope['user'])
 
             event = threading.Event()

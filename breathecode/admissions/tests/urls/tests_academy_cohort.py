@@ -1,6 +1,7 @@
 """
 Test /academy/cohort
 """
+import random
 import re
 from unittest.mock import MagicMock, call, patch
 from django.utils import timezone
@@ -13,6 +14,62 @@ from rest_framework import status
 
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import AdmissionsTestCase
+
+UTC_NOW = timezone.now()
+
+
+def post_serializer(self, academy, syllabus, syllabus_version, data={}):
+    return {
+        'id': 0,
+        'slug': '',
+        'name': '',
+        'never_ends': True,
+        'remote_available': True,
+        'kickoff_date': self.datetime_to_iso(UTC_NOW),
+        'current_day': 0,
+        'schedule': 0,
+        'online_meeting_url': None,
+        'timezone': '',
+        'academy': {
+            'id': academy.id,
+            'slug': academy.slug,
+            'name': academy.name,
+            'street_address': academy.street_address,
+            'country': academy.country.code,
+            'city': academy.city.id,
+        },
+        'syllabus_version': syllabus.slug + '.v' + str(syllabus_version.version),
+        'ending_date': None,
+        'stage': 'INACTIVE',
+        'language': 'en',
+        'created_at': self.datetime_to_iso(UTC_NOW),
+        'updated_at': self.datetime_to_iso(UTC_NOW),
+        **data,
+    }
+
+
+def cohort_field(data={}):
+    return {
+        'academy_id': 1,
+        'current_day': 0,
+        'current_module': None,
+        'ending_date': None,
+        'history_log': None,
+        'id': 1,
+        'kickoff_date': ...,
+        'language': 'en',
+        'name': 'They killed kenny',
+        'never_ends': True,
+        'online_meeting_url': None,
+        'private': False,
+        'remote_available': True,
+        'schedule_id': 1,
+        'slug': 'they-killed-kenny',
+        'stage': 'FINAL_PROJECT',
+        'syllabus_version_id': 1,
+        'timezone': 'America/Caracas',
+        **data,
+    }
 
 
 class AcademyCohortTestSuite(AdmissionsTestCase):
@@ -161,41 +218,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
-
-    # @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    # def test_academy_cohort__post__without_schedule(self):
-    #     """Test /academy/cohort without auth"""
-    #     from breathecode.admissions.signals import cohort_saved
-    #
-    #     self.headers(academy=1)
-    #     model = self.bc.database.create(authenticate=True,
-    #                                  user=True,
-    #                                  profile_academy=True,
-    #                                  capability='crud_cohort',
-    #                                  role='potato',
-    #                                  syllabus_schedule=True,
-    #                                  syllabus=True,
-    #                                  syllabus_version=True,
-    #                                  skip_cohort=True,
-    #                                  syllabus_schedule_time_slot=True)
-    #     url = reverse_lazy('admissions:academy_cohort')
-    #     data = {
-    #         'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
-    #         'slug': 'they-killed-kenny',
-    #         'name': 'They killed kenny',
-    #         'kickoff_date': datetime.today().isoformat(),
-    #     }
-    #     response = self.client.post(url, data)
-    #     json = response.json()
-    #     expected = {
-    #         'detail': 'specialty-mode-field',
-    #         'status_code': 400,
-    #     }
-
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-    #     self.assertEqual(self.all_cohort_dict(), [])
-    #     self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     def test_academy_cohort__post__without_ending_date_or_never_ends(self):
@@ -433,7 +455,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
-            'language': cohort.language,
+            'language': cohort.language.lower(),
             'created_at': self.datetime_to_iso(cohort.created_at),
             'updated_at': self.datetime_to_iso(cohort.updated_at),
         }
@@ -556,7 +578,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
-            'language': cohort.language,
+            'language': cohort.language.lower(),
             'created_at': self.datetime_to_iso(cohort.created_at),
             'updated_at': self.datetime_to_iso(cohort.updated_at),
         }
@@ -646,7 +668,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
-            'language': cohort.language,
+            'language': cohort.language.lower(),
             'created_at': self.datetime_to_iso(cohort.created_at),
             'updated_at': self.datetime_to_iso(cohort.updated_at),
         }
@@ -674,6 +696,160 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                          }])
         self.assertEqual(cohort_saved.send.call_args_list,
                          [call(instance=cohort, sender=cohort.__class__, created=True)])
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_academy_cohort__post__passing_all_statuses__uppercase(self):
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs,
+                                        academy_kwargs=academy_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        url = reverse_lazy('admissions:academy_cohort')
+
+        stage = random.choice(['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED', 'DELETED'])
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'stage': stage,
+            'kickoff_date': UTC_NOW.isoformat(),
+            'never_ends': True,
+            'remote_available': True,
+            'schedule': 1,
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = post_serializer(self,
+                                   model.academy,
+                                   model.syllabus,
+                                   model.syllabus_version,
+                                   data={
+                                       'id': 1,
+                                       'timezone': 'America/Caracas',
+                                       'stage': stage,
+                                       'slug': 'they-killed-kenny',
+                                       'name': 'They killed kenny',
+                                       'schedule': 1,
+                                   })
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
+            cohort_field({
+                'stage': stage,
+                'kickoff_date': UTC_NOW,
+            }),
+        ])
+        self.assertEqual(self.all_cohort_time_slot_dict(),
+                         [{
+                             'id': 1,
+                             'cohort_id': 1,
+                             'starting_at': model.syllabus_schedule_time_slot.starting_at,
+                             'ending_at': model.syllabus_schedule_time_slot.ending_at,
+                             'recurrent': model.syllabus_schedule_time_slot.recurrent,
+                             'recurrency_type': model.syllabus_schedule_time_slot.recurrency_type,
+                             'timezone': model.academy.timezone,
+                         }])
+
+        cohort = self.get_cohort(1)
+
+        self.assertEqual(cohort_saved.send.call_args_list, [
+            call(instance=cohort, sender=cohort.__class__, created=True),
+        ])
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_academy_cohort__post__passing_all_statuses__lowercase(self):
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs,
+                                        academy_kwargs=academy_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        url = reverse_lazy('admissions:academy_cohort')
+
+        stage = random.choice(['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED', 'DELETED'])
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'stage': stage.lower(),
+            'kickoff_date': UTC_NOW.isoformat(),
+            'never_ends': True,
+            'remote_available': True,
+            'schedule': 1,
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = post_serializer(self,
+                                   model.academy,
+                                   model.syllabus,
+                                   model.syllabus_version,
+                                   data={
+                                       'id': 1,
+                                       'timezone': 'America/Caracas',
+                                       'stage': stage,
+                                       'slug': 'they-killed-kenny',
+                                       'name': 'They killed kenny',
+                                       'schedule': 1,
+                                   })
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
+            cohort_field({
+                'stage': stage,
+                'kickoff_date': UTC_NOW,
+            }),
+        ])
+        self.assertEqual(self.all_cohort_time_slot_dict(),
+                         [{
+                             'id': 1,
+                             'cohort_id': 1,
+                             'starting_at': model.syllabus_schedule_time_slot.starting_at,
+                             'ending_at': model.syllabus_schedule_time_slot.ending_at,
+                             'recurrent': model.syllabus_schedule_time_slot.recurrent,
+                             'recurrency_type': model.syllabus_schedule_time_slot.recurrency_type,
+                             'timezone': model.academy.timezone,
+                         }])
+
+        cohort = self.get_cohort(1)
+
+        self.assertEqual(cohort_saved.send.call_args_list, [
+            call(instance=cohort, sender=cohort.__class__, created=True),
+        ])
 
     # """
 

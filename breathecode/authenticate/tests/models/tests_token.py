@@ -520,13 +520,13 @@ class TokenTestSuite(AuthTestCase):
 
     def test_validate_and_destroy__bad_arguments(self):
         with self.assertRaises(TokenNotFound) as _:
-            Token.validate_and_destroy(None, None)
+            Token.validate_and_destroy(None)
 
         self.assertEqual(self.all_token_dict(), [])
 
     def test_validate_and_destroy__bad_user(self):
         with self.assertRaises(TokenNotFound) as _:
-            Token.validate_and_destroy(None, 'they-killed-kenny')
+            Token.validate_and_destroy('they-killed-kenny')
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -534,7 +534,7 @@ class TokenTestSuite(AuthTestCase):
         model = self.generate_models(user=True)
 
         with self.assertRaises(TokenNotFound) as _:
-            Token.validate_and_destroy(model.user, None)
+            Token.validate_and_destroy(None)
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -547,7 +547,7 @@ class TokenTestSuite(AuthTestCase):
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
         with self.assertRaises(TokenNotFound) as _:
-            Token.validate_and_destroy(model.user, model.token.key)
+            Token.validate_and_destroy(model.token.key)
 
         self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
 
@@ -556,7 +556,7 @@ class TokenTestSuite(AuthTestCase):
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
         with self.assertRaises(TokenNotFound) as _:
-            Token.validate_and_destroy(model.user, model.token.key)
+            Token.validate_and_destroy(model.token.key)
 
         self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
 
@@ -565,7 +565,7 @@ class TokenTestSuite(AuthTestCase):
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
         with self.assertRaises(TokenNotFound) as _:
-            Token.validate_and_destroy(model.user, model.token.key)
+            Token.validate_and_destroy(model.token.key)
 
         self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
 
@@ -576,9 +576,9 @@ class TokenTestSuite(AuthTestCase):
     def test_validate_and_destroy__type_one_time(self):
         token_kwargs = {'token_type': 'one_time'}
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
-        result = Token.validate_and_destroy(model.user, model.token.key)
+        result = Token.validate_and_destroy(model.token.key)
 
-        self.assertEqual(result, None)
+        self.assertEqual(result, model.user)
         self.assertEqual(self.all_token_dict(), [])
 
     """

@@ -13,4 +13,5 @@ urlpatterns = [
     path('hook/subscribe/<int:hook_id>', HooksView.as_view()),
     path('hook/sample', get_sample_data),
     path('hook/<int:hook_id>/sample', get_sample_data),
+    path('slack/command', slack_command, name='slack_command'),
 ]
