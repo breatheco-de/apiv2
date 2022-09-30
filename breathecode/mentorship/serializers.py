@@ -16,6 +16,11 @@ class GetAcademySmallSerializer(serpy.Serializer):
     icon_url = serpy.Field()
 
 
+class TinyBillSerializer(GETBillSmallSerializer):
+    status = serpy.Field()
+    id = serpy.Field()
+
+
 class AnswerSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
@@ -111,6 +116,8 @@ class GETSessionSmallSerializer(serpy.Serializer):
     allow_billing = serpy.Field()
     accounted_duration = serpy.Field()
     summary = serpy.Field()
+
+    bill = TinyBillSerializer(required=False)
 
 
 class GETServiceSmallSerializer(serpy.Serializer):
