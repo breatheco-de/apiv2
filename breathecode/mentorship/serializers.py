@@ -16,7 +16,7 @@ class GetAcademySmallSerializer(serpy.Serializer):
     icon_url = serpy.Field()
 
 
-class TinyBillSerializer(GETBillSmallSerializer):
+class TinyBillSerializer(serpy.Serializer):
     status = serpy.Field()
     id = serpy.Field()
 
