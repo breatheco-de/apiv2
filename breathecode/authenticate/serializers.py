@@ -14,6 +14,7 @@ from breathecode.admissions.models import Academy, Cohort
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from django.db.models import Q
+from django.contrib.auth.models import Permission
 
 logger = logging.getLogger(__name__)
 
@@ -311,7 +312,10 @@ class GetProfileAcademyTinySerializer(serpy.Serializer):
     status = serpy.Field()
 
 
-# Create your models here.
+# this not include the content type
+class GetPermissionSmallSerializer(serpy.Serializer):
+    name = serpy.Field()
+    codename = serpy.Field()
 
 
 class UserSerializer(serpy.Serializer):
@@ -324,6 +328,15 @@ class UserSerializer(serpy.Serializer):
     github = serpy.MethodField()
     roles = serpy.MethodField()
     profile = serpy.MethodField()
+    permissions = serpy.MethodField()
+
+    def get_permissions(self, obj):
+        permissions = Permission.objects.none()
+
+        for group in obj.groups.all():
+            permissions |= group.permissions.all()
+
+        return GetPermissionSmallSerializer(permissions.distinct(), many=True).data
 
     def get_profile(self, obj):
         if not hasattr(obj, 'profile'):

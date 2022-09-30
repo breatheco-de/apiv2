@@ -6,8 +6,17 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
 
+last_permission_id = 488
 
-def get_serializer(self, user, credentials_github=None, profile_academies=[], profile=None):
+
+def get_permission_serializer(permission):
+    return {
+        'codename': permission.codename,
+        'name': permission.name,
+    }
+
+
+def get_serializer(self, user, credentials_github=None, profile_academies=[], profile=None, permissions=[]):
     return {
         'id':
         user.id,
@@ -17,6 +26,7 @@ def get_serializer(self, user, credentials_github=None, profile_academies=[], pr
         user.first_name,
         'last_name':
         user.last_name,
+        'permissions': [get_permission_serializer(x) for x in permissions],
         'github': {
             'avatar_url': credentials_github.avatar_url,
             'name': credentials_github.name,
@@ -120,5 +130,78 @@ class AuthenticateTestSuite(AuthTestCase):
 
         json = response.json()
         expected = get_serializer(self, model.user, profile=model.profile)
+
+        self.assertEqual(json, expected)
+
+    """
+    🔽🔽🔽 Get with Profile and Permission
+    """
+
+    def test_user_me__with_profile__with_permission(self):
+        """Test /user/me"""
+        model = self.generate_models(authenticate=True, profile=True, permission=1)
+
+        url = reverse_lazy('authenticate:user_me')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = get_serializer(self, model.user, profile=model.profile, permissions=[])
+
+        self.assertEqual(json, expected)
+
+    """
+    🔽🔽🔽 Get with Profile and Permission
+    """
+
+    def test_user_me__with_profile__one_group_with_one_permission(self):
+        """Test /user/me"""
+        model = self.generate_models(authenticate=True, profile=True, permission=1, group=1)
+
+        url = reverse_lazy('authenticate:user_me')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = get_serializer(self, model.user, profile=model.profile, permissions=[model.permission])
+
+        self.assertEqual(json, expected)
+
+    """
+    🔽🔽🔽 Get with Profile and three Group with one Permission
+    """
+
+    def test_user_me__with_profile__three_groups_with_one_permission(self):
+        """Test /user/me"""
+        model = self.generate_models(authenticate=True, profile=True, permission=1, group=3)
+
+        url = reverse_lazy('authenticate:user_me')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = get_serializer(self, model.user, profile=model.profile, permissions=[model.permission])
+
+        self.assertEqual(json, expected)
+
+    """
+    🔽🔽🔽 Get with Profile and two Group with four Permission
+    """
+
+    def test_user_me__with_profile__two_groups_with_four_permissions(self):
+        """Test /user/me"""
+
+        groups = [
+            {
+                'permissions': [last_permission_id + 1, last_permission_id + 2],
+            },
+            {
+                'permissions': [last_permission_id + 3, last_permission_id + 4],
+            },
+        ]
+        model = self.generate_models(authenticate=True, profile=True, permission=4, group=groups)
+
+        url = reverse_lazy('authenticate:user_me')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = get_serializer(self, model.user, profile=model.profile, permissions=model.permission)
 
         self.assertEqual(json, expected)
