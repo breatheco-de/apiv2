@@ -55,12 +55,10 @@ def update_status_based_on_github_action(github_action, issue):
 def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_action=None, academy_slug=None):
 
     if isinstance(issue, dict) == False:
-        result = re.search(r'github.com\/([\w\-_]+)\/([\w\-_]+)\/.+', issue.html_url)
         issue = {
             'id': issue.number,
             'title': issue.title,
-            'url': issue.url,
-            'repository_url': f'https://github.com/{result.group(1)}/{result.group(2)}',
+            'url': issue.html_url,
             'body': issue.body,
             'html_url': issue.html_url,
             'assignees': [({
@@ -109,10 +107,13 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
         _issue.body = issue['body'][:500]
 
     _issue.url = issue['html_url']
-    _issue.repository_url = issue['repository_url']
 
-    # To include it on the next invoice
-    _issue.invoice = ProjectInvoice.get_or_create(issue['repository_url'], academy_slug)
+    result = re.search(r'github\.com\/([\w\-_]+)\/([\w\-_]+)\/.+', _issue.url)
+    if result is not None:
+        _issue.repository_url = f'https://github.com/{result.group(1)}/{result.group(2)}'
+
+        # To include it on the next invoice
+        _issue.invoice = ProjectInvoice.get_or_create(_issue.repository_url, academy_slug, status='DUE')
 
     if freelancer is None:
         if 'assignees' in issue and len(issue['assignees']) > 0:
@@ -192,11 +193,11 @@ def generate_project_invoice(project):
     Issue.objects.filter(invoice__project__id=project.id).exclude(status='DONE').update(invoice=None)
 
     # get next pending invoice
-    invoice = ProjectInvoice.get_or_create(project.repository, project.academy.slug)
+    invoice = ProjectInvoice.get_or_create(project.repository, project.academy.slug, status='DUE')
 
     # fetch for issues to be invoiced
     done_issues = Issue.objects.filter(
-        academy__slug=project.academy.slug, url__contains=project.repository,
+        academy__slug=project.academy.slug, url__icontains=project.repository,
         status='DONE').filter(Q(invoice__isnull=True)
                               | Q(invoice__status='DUE'))
 

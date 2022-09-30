@@ -211,9 +211,9 @@ class MemberView(APIView, GenerateLookupsMixin):
         if not 'student' in include:
             items = items.exclude(role__slug='student')
 
-        roles = request.GET.get('roles', None)
-        if roles is not None:
-            items = items.filter(role__in=roles.split(','))
+        roles = request.GET.get('roles', '')
+        if roles != '':
+            items = items.filter(role__in=roles.lower().split(','))
 
         status = request.GET.get('status', None)
         if status is not None:
@@ -1598,8 +1598,8 @@ def render_invite(request, token, member_id=None):
             profile.save()
 
         if invite.cohort is not None:
-            role = 'student'
-            if invite.role is not None and invite.role.slug != 'student':
+            role = 'STUDENT'
+            if invite.role is not None and invite.role.slug != 'STUDENT':
                 role = invite.role.slug.upper()
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()

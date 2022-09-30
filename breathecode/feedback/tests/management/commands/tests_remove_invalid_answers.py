@@ -82,5 +82,6 @@ class TokenTestSuite(FeedbackTestCase):
             self.bc.format.to_dict(answer_db[17]),
         ])
 
-        self.assertEqual(sys.stdout.write.call_args_list, [call('Successfully deleted invalid answers\n')])
+        self.assertEqual(str(sys.stdout.write.call_args_list),
+                         str([call('Successfully deleted invalid answers\n')]))
         self.assertEqual(sys.stderr.write.call_args_list, [])

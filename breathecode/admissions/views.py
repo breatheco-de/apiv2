@@ -18,7 +18,8 @@ from .serializers import (
     CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
     UserDJangoRestSerializer, UserMeSerializer, GetSyllabusScheduleSerializer, GetSyllabusVersionSerializer,
     SyllabusVersionSerializer, GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer,
-    GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer)
+    GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer,
+    GetTeacherAcademySmallSerializer)
 from .models import (ACTIVE, Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule,
                      Cohort, STUDENT, DELETED, Syllabus, SyllabusVersion)
 from django.db.models import Value, FloatField, Q
@@ -33,7 +34,7 @@ from breathecode.utils import (localize_query, capable_of, ValidationException, 
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
 from breathecode.utils import DatetimeInteger
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.admissions.caches import CohortUserCache
+from breathecode.admissions.caches import CohortUserCache, TeacherCache
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +50,66 @@ def get_timezones(request, id=None):
 @permission_classes([AllowAny])
 def get_all_academies(request, id=None):
     items = Academy.objects.all()
+
+    status = request.GET.get('status')
+    if status:
+        items = items.filter(status__in=status.upper().split(','))
+
     serializer = AcademySerializer(items, many=True)
     return Response(serializer.data)
+
+
+class AcademyTeacherView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(cache=TeacherCache, paginate=True)
+
+    @capable_of('read_member')
+    def get(self, request, academy_id):
+
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        items = ProfileAcademy.objects.filter(academy__id=academy_id,
+                                              role__slug__in=['teacher', 'assistant'
+                                                              ]).exclude(user__email__contains='@token.com')
+
+        roles = request.GET.get('roles', None)
+        if roles is not None:
+            items = items.filter(role__slug__in=roles.split(','))
+
+        _status = request.GET.get('status', None)
+        if _status is not None:
+            items = items.filter(status__iexact=_status)
+
+        cohort_stage = request.GET.get('cohort_stage', None)
+        no_sort = []
+        if cohort_stage is not None:
+            no_sort.append('cohort_stage')
+            items = items.filter(user__cohortuser__cohort__stage__iexact=cohort_stage).distinct('user')
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like=like, items=items)
+
+        sort = request.GET.get('sort', None)
+        if (sort is None or sort == '') and len(no_sort) == 0:
+            sort = '-first_name'
+
+        if len(no_sort) > 0 and sort:
+            raise ValidationException('No sorting allowed when following filters are applied: ' +
+                                      ','.join(no_sort),
+                                      slug='no-sorting-allowed')
+        elif sort is not None:
+            items = items.order_by(sort)
+
+        items = handler.queryset(items)
+        serializer = GetTeacherAcademySmallSerializer(items, many=True)
+        return handler.response(serializer.data)
 
 
 @api_view(['POST'])
@@ -104,6 +163,12 @@ def get_cohorts(request, id=None):
     location = request.GET.get('location', None)
     if location is not None:
         items = items.filter(academy__slug__in=location.split(','))
+
+    stage = request.GET.get('stage')
+    if stage:
+        items = items.filter(stage__in=stage.upper().split(','))
+    else:
+        items = items.exclude(stage='DELETED')
 
     if coordinates := request.GET.get('coordinates', ''):
         if request.user.id:
@@ -278,52 +343,123 @@ class CohortUserView(APIView, GenerateLookupsMixin):
         return Response(serializer.data)
 
     def post(self, request, cohort_id=None, user_id=None):
+
+        def validate_data(data):
+            if user_id:
+                data['user'] = user_id
+
+            if cohort_id:
+                data['cohort'] = cohort_id
+
+            if 'user' not in data or 'cohort' not in data:
+                raise ValidationException('Missing cohort_id or user_id', code=400)
+
+            if not isinstance(data['user'], int) or not User.objects.filter(id=int(data['user'])).exists():
+                raise ValidationException('invalid user_id', code=400)
+
+            if (not isinstance(data['cohort'], int)
+                    or not Cohort.objects.filter(id=int(data['cohort'])).exists()):
+                raise ValidationException('invalid cohort_id', code=400)
+
+            return data
+
         many = isinstance(request.data, list)
         context = {
             'request': request,
-            'cohort_id': cohort_id,
-            'user_id': user_id,
-            'many': many,
+            'index': -1,
         }
 
-        serializer = CohortUserSerializer(data=request.data, context=context, many=many)
+        data = [validate_data(data) for data in request.data] if many else validate_data(request.data)
+
+        serializer = CohortUserSerializer(data=data, context=context, many=many)
         if serializer.is_valid():
-            serializer.save()
+            instance = serializer.save()
+            serializer = GetCohortUserSerializer(instance, many=many)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, cohort_id=None, user_id=None):
+
+        def validate_data(data, many):
+            validate_data.__dict__['index'] += 1
+            instance = None
+
+            if user_id:
+                data['user'] = user_id
+
+            if cohort_id:
+                data['cohort'] = cohort_id
+
+            if 'user' not in data and 'cohort' not in data and 'id' not in data:
+                raise ValidationException('Missing cohort_id, user_id and id', code=400)
+
+            id = data.get('id')
+
+            if isinstance(id, int) and (instance := CohortUser.objects.filter(id=id).first()):
+                data['id'] = instance.id
+                data['cohort'] = instance.cohort.id
+                data['user'] = instance.user.id
+                return data, instance
+
+            user = data.get('user')
+            cohort = data.get('cohort')
+
+            if not id:
+                try:
+                    user = int(user)
+                    data['user'] = user
+                except:
+                    raise ValidationException('invalid user_id', code=400)
+
+                try:
+                    cohort = int(cohort)
+                    data['cohort'] = cohort
+                except:
+                    raise ValidationException('invalid cohort_id', code=400)
+
+            if instance := CohortUser.objects.filter(cohort__id=cohort, user__id=user).first():
+                data['id'] = instance.id
+                data['cohort'] = instance.cohort.id
+                data['user'] = instance.user.id
+                return data, instance
+
+            message = f'Cannot determine CohortUser'
+
+            if many:
+                message += f" in index {validate_data.__dict__['index']}"
+
+            # many
+            raise ValidationException(message)
+
+        validate_data.__dict__['index'] = -1
+
         many = isinstance(request.data, list)
         context = {
             'request': request,
-            'cohort_id': cohort_id,
-            'user_id': user_id,
-            'many': many,
+            'index': -1,
         }
 
-        if not many:
-            current = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+        if many:
+            data = []
+            # instance = []
+            instance = CohortUser.objects.none()
+
+            for c in request.data:
+                p1, p2 = validate_data(c, many)
+
+                data.append(p1)
+                # instance.append(p2)
+                instance |= CohortUser.objects.filter(id=p2.id)
 
         else:
-            current = []
-            index = -1
-            for x in request.data:
-                index = index + 1
+            data, instance = validate_data(request.data, many)
 
-                if 'id' in x:
-                    current.append(CohortUser.objects.filter(id=x['id']).first())
-
-                elif 'user' in x and 'cohort' in x:
-                    current.append(
-                        CohortUser.objects.filter(user__id=x['user'], cohort__id=x['cohort']).first())
-
-                else:
-                    raise ValidationException('Cannot determine CohortUser in '
-                                              f'index {index}')
-
-        serializer = CohortUserPUTSerializer(current, data=request.data, context=context, many=many)
+        serializer = CohortUserPUTSerializer(instance, data=data, context=context, many=many)
         if serializer.is_valid():
-            serializer.save()
+            instance = serializer.save()
+            serializer = GetCohortUserSerializer(instance, many=many)
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -380,15 +516,15 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
         try:
             roles = request.GET.get('roles', None)
             if roles is not None:
-                items = items.filter(role__in=roles.split(','))
+                items = items.filter(role__in=roles.upper().split(','))
 
             finantial_status = request.GET.get('finantial_status', None)
             if finantial_status is not None:
-                items = items.filter(finantial_status__in=finantial_status.split(','))
+                items = items.filter(finantial_status__in=finantial_status.upper().split(','))
 
             educational_status = request.GET.get('educational_status', None)
             if educational_status is not None:
-                items = items.filter(educational_status__in=educational_status.split(','))
+                items = items.filter(educational_status__in=educational_status.upper().split(','))
 
             cohorts = request.GET.get('cohorts', None)
             if cohorts is not None:
@@ -434,52 +570,124 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
 
     @capable_of('crud_cohort')
     def post(self, request, cohort_id=None, academy_id=None, user_id=None):
+
+        def validate_data(data):
+            if user_id:
+                data['user'] = user_id
+
+            if cohort_id:
+                data['cohort'] = cohort_id
+
+            if 'user' not in data or 'cohort' not in data:
+                raise ValidationException('Missing cohort_id or user_id', code=400)
+
+            if not isinstance(data['user'], int) or not User.objects.filter(id=int(data['user'])).exists():
+                raise ValidationException('invalid user_id', code=400)
+
+            if (not isinstance(data['cohort'], int)
+                    or not Cohort.objects.filter(id=int(data['cohort'])).exists()):
+                raise ValidationException('invalid cohort_id', code=400)
+
+            return data
+
         many = isinstance(request.data, list)
         context = {
             'request': request,
-            'cohort_id': cohort_id,
-            'user_id': user_id,
-            'many': many,
+            'index': -1,
         }
 
-        serializer = CohortUserSerializer(data=request.data, context=context, many=many)
+        data = [validate_data(data) for data in request.data] if many else validate_data(request.data)
+
+        serializer = CohortUserSerializer(data=data, context=context, many=many)
         if serializer.is_valid():
-            serializer.save()
+            instance = serializer.save()
+            serializer = GetCohortUserSerializer(instance, many=many)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_cohort')
     def put(self, request, cohort_id=None, user_id=None, academy_id=None):
+
+        def validate_data(data, many):
+            validate_data.__dict__['index'] += 1
+            instance = None
+
+            if user_id:
+                data['user'] = user_id
+
+            if cohort_id:
+                data['cohort'] = cohort_id
+
+            if 'user' not in data and 'cohort' not in data and 'id' not in data:
+                raise ValidationException('Missing cohort_id, user_id and id', code=400)
+
+            id = data.get('id')
+
+            if isinstance(id, int) and (instance := CohortUser.objects.filter(id=id).first()):
+                data['id'] = instance.id
+                data['cohort'] = instance.cohort.id
+                data['user'] = instance.user.id
+                return data, instance
+
+            user = data.get('user')
+            cohort = data.get('cohort')
+
+            if not id:
+                try:
+                    user = int(user)
+                    data['user'] = user
+                except:
+                    raise ValidationException('invalid user_id', code=400)
+
+                try:
+                    cohort = int(cohort)
+                    data['cohort'] = cohort
+                except:
+                    raise ValidationException('invalid cohort_id', code=400)
+
+            if instance := CohortUser.objects.filter(cohort__id=cohort, user__id=user).first():
+                data['id'] = instance.id
+                data['cohort'] = instance.cohort.id
+                data['user'] = instance.user.id
+                return data, instance
+
+            message = f'Cannot determine CohortUser'
+
+            if many:
+                message += f" in index {validate_data.__dict__['index']}"
+
+            # many
+            raise ValidationException(message)
+
+        validate_data.__dict__['index'] = -1
+
         many = isinstance(request.data, list)
         context = {
             'request': request,
-            'cohort_id': cohort_id,
-            'user_id': user_id,
-            'many': many,
+            'index': -1,
         }
 
-        if not many:
-            current = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+        if many:
+            data = []
+            # instance = []
+            instance = CohortUser.objects.none()
+
+            for c in request.data:
+                p1, p2 = validate_data(c, many)
+
+                data.append(p1)
+                # instance.append(p2)
+                instance |= CohortUser.objects.filter(id=p2.id)
+
         else:
-            current = []
-            index = -1
-            for x in request.data:
-                index = index + 1
+            data, instance = validate_data(request.data, many)
 
-                if 'id' in x:
-                    current.append(CohortUser.objects.filter(id=x['id']).first())
-
-                elif 'user' in x and 'cohort' in x:
-                    current.append(
-                        CohortUser.objects.filter(user__id=x['user'], cohort__id=x['cohort']).first())
-
-                else:
-                    raise ValidationException('Cannot determine CohortUser in '
-                                              f'index {index}')
-
-        serializer = CohortUserPUTSerializer(current, data=request.data, context=context, many=many)
+        serializer = CohortUserPUTSerializer(instance, data=data, context=context, many=many)
         if serializer.is_valid():
-            serializer.save()
+            instance = serializer.save()
+            serializer = GetCohortUserSerializer(instance, many=many)
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -531,6 +739,10 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
             return Response(serializer.data)
 
         items = CohortTimeSlot.objects.filter(cohort__academy__id=academy_id, cohort__id=cohort_id)
+
+        recurrency_type = request.GET.get('recurrency_type')
+        if recurrency_type:
+            items = items.filter(recurrency_type__in=recurrency_type.upper().split(','))
 
         serializer = GETCohortTimeSlotSerializer(items, many=True)
         return Response(serializer.data)
@@ -692,6 +904,10 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
 
         items = SyllabusScheduleTimeSlot.objects.filter(schedule__academy__id=academy_id,
                                                         schedule__id=certificate_id)
+
+        recurrency_type = request.GET.get('recurrency_type')
+        if recurrency_type:
+            items = items.filter(recurrency_type__in=recurrency_type.upper().split(','))
 
         serializer = GETSyllabusScheduleTimeSlotSerializer(items, many=True)
         return Response(serializer.data)
@@ -1076,6 +1292,10 @@ class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, Generate
         if syllabus_slug:
             items = items.filter(syllabus__slug__in=syllabus_slug.split(','))
 
+        schedule_type = request.GET.get('schedule_type')
+        if schedule_type:
+            items = items.filter(schedule_type__in=schedule_type.upper().split(','))
+
         page = self.paginate_queryset(items, request)
         serializer = GetSyllabusScheduleSerializer(page, many=True)
 
@@ -1418,7 +1638,15 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
         roles = request.GET.get('roles', None)
         if roles is not None:
-            items = items.filter(role__in=roles.split(','))
+            items = items.filter(role__in=roles.upper().split(','))
+
+        finantial_status = request.GET.get('finantial_status', None)
+        if finantial_status is not None:
+            items = items.filter(finantial_status__in=finantial_status.upper().split(','))
+
+        educational_status = request.GET.get('educational_status', None)
+        if educational_status is not None:
+            items = items.filter(educational_status__in=educational_status.upper().split(','))
 
         syllabus = request.GET.get('syllabus', None)
         if syllabus is not None:

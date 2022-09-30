@@ -319,6 +319,18 @@ CAPABILITIES = [
         'slug': 'crud_category',
         'description': 'Update and delete categories from the content registry'
     },
+    {
+        'slug': 'read_project_invoice',
+        'description': 'Read the financial status of a project and invoices'
+    },
+    {
+        'slug': 'read_freelance_projects',
+        'description': 'Read project details without financials'
+    },
+    {
+        'slug': 'read_lead_gen_app',
+        'description': 'Read lead generation apps'
+    },
 ]
 
 ROLES = [
@@ -350,6 +362,7 @@ ROLES = [
             'read_nps_answers',
             'read_won_lead',
             'read_cohort_log',
+            'read_lead_gen_app',
             'read_mentorship_service',
             'read_mentorship_mentor',
         ],
@@ -382,6 +395,7 @@ ROLES = [
             'read_shortlink',
             'read_mentorship_service',
             'read_mentorship_mentor',
+            'read_lead_gen_app',
         ],
     },
     {
@@ -506,7 +520,7 @@ def extend_roles(roles: list[RoleType]) -> None:
     roles.append({
         'slug': 'culture_and_recruitment',
         'name': 'Culture and Recruitment',
-        'caps': extend(roles, ['staff']) + ['crud_member']
+        'caps': extend(roles, ['staff']) + ['crud_member', 'crud_media']
     })
     roles.append({
         'slug':
@@ -536,8 +550,10 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Accountant',
         'caps':
-        extend(roles, ['staff']) +
-        ['read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill']
+        extend(roles, ['staff']) + [
+            'read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill',
+            'read_project_invoice'
+        ]
     })
     roles.append({
         'slug': 'homework_reviewer',
@@ -581,6 +597,8 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_freelancer_bill',
             'get_gitpod_user',
             'update_gitpod_user',
+            'read_project_invoice',
+            'read_freelance_projects',
         ]
     })
     roles.append({
