@@ -9,7 +9,7 @@ from rest_framework import status
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
-from .actions import sync_user_issues, generate_freelancer_bill, add_webhook
+from .actions import sync_user_issues, generate_freelancer_bill, add_webhook, generate_project_invoice
 from .models import (Bill, Freelancer, Issue, RepositoryIssueWebhook, BILL_STATUS, AcademyFreelanceProject,
                      FreelanceProjectMember, ProjectInvoice)
 from .tasks import async_repository_issue_github
@@ -270,6 +270,22 @@ class AcademyProjectInvoiceView(APIView):
 
         serializer = BillSerializer(items, many=True)
         return Response(serializer.data)
+
+    @capable_of('crud_project_invoice')
+    def post(self, request, academy_id=None, project_id=None):
+
+        if project_id is None:
+            raise ValidationException('Missing project ID on the URL', code=404, slug='argument-not-provided')
+
+        project = AcademyFreelanceProject.objects.filter(id=project_id, academy__id=academy_id).first()
+        if project is None:
+            raise ValidationException('This project does not exist for this academy',
+                                      code=404,
+                                      slug='not-found')
+
+        invoices = generate_project_invoice(project)
+        serializer = BigInvoiceSerializer(invoices, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class SingleInvoiceView(APIView):

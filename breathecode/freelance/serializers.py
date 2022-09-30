@@ -13,6 +13,12 @@ class AcademySerializer(serpy.Serializer):
     street_address = serpy.Field()
 
 
+class PublicProfileSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+
+
 class UserSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -20,6 +26,7 @@ class UserSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     email = serpy.Field()
+    profile = PublicProfileSerializer(required=False)
 
 
 class SmallProjectSerializer(serpy.Serializer):
