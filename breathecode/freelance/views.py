@@ -233,7 +233,7 @@ class AcademyProjectInvoiceView(APIView):
     """
 
     @capable_of('read_project_invoice')
-    def get(self, request, invoice_id=None, academy_id=None):
+    def get(self, request, invoice_id=None, academy_id=None, project_id=None):
 
         if invoice_id is not None:
             item = ProjectInvoice.objects.filter(project__academy__id=academy_id, id=invoice_id).first()
@@ -249,8 +249,8 @@ class AcademyProjectInvoiceView(APIView):
             like = self.request.GET.get('like')
             lookup['project__title__icontains'] = like
 
-        if 'project' in self.request.GET:
-            project = self.request.GET.get('project')
+        project = self.request.GET.get('project', project_id)
+        if project:
             lookup['project__id'] = project
 
         if 'status' in self.request.GET:

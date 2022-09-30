@@ -18,6 +18,7 @@ urlpatterns = [
     path('academy/project', AcademyProjectView.as_view()),
     path('academy/project/<int:project_id>', AcademyProjectView.as_view()),
     path('academy/project/member', AcademyProjectMemberView.as_view()),
+    path('academy/project/invoice', AcademyProjectInvoiceView.as_view()),
     path('academy/project/<int:project_id>/invoice', AcademyProjectInvoiceView.as_view()),
     path('academy/project/invoice/<int:invoice_id>', AcademyProjectInvoiceView.as_view()),
     path('academy/project/invoice/<int:invoice_id>/member', AcademyInvoiceMemberView.as_view()),
