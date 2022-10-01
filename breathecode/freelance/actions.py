@@ -120,8 +120,6 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
             assigne = issue['assignees'][0]
             freelancer = Freelancer.objects.filter(github_user__github_id=assigne['id']).first()
             if freelancer is None:
-                _issue.freelancer = None
-                _issue.save()
                 raise Exception(
                     f'Assined github user: {assigne["id"]} is not a freelancer but is the main user asociated to this issue'
                 )
@@ -226,9 +224,8 @@ def generate_project_invoice(project):
             invoices[str(issue.invoice.id)]['hours'] = _hours
             invoices[str(issue.invoice.id)]['minutes'] = invoices[str(
                 issue.invoice.id)]['minutes'] + issue.duration_in_minutes
-            invoices[str(issue.invoice.id)]['price'] = invoices[str(
-                issue.invoice.id)]['price'] + (_hours * issue.freelancer.get_client_hourly_rate(project))
-
+            invoices[str(
+                issue.invoice.id)]['price'] = _hours * issue.freelancer.get_client_hourly_rate(project)
         issue.save()
 
     for inv_id in invoices:
@@ -281,8 +278,7 @@ def generate_freelancer_bill(freelancer):
                 issue.bill.id)]['minutes'] = bills[str(issue.bill.id)]['minutes'] + issue.duration_in_minutes
 
             project = issue.invoice.project if issue.invoice is not None else None
-            bills[str(issue.bill.id)]['price'] = bills[str(
-                issue.bill.id)]['price'] + (_hours * freelancer.get_hourly_rate(project))
+            bills[str(issue.bill.id)]['price'] = _hours * freelancer.get_hourly_rate(project)
 
         issue.save()
 

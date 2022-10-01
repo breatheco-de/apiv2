@@ -124,7 +124,7 @@ class MonitorScript(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        slug = 'unknow' if not self.script_slug else self.script_slug
+        slug = 'unknown' if not self.script_slug else self.script_slug
         return f'{slug}({self.id})'
 
 
