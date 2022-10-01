@@ -284,7 +284,12 @@ def generate_mentor_bills(mentor, reset=False):
             started_at__isnull=False,
         ).order_by('started_at')
 
-    without_service = MentorshipSession.objects.filter(mentor=mentor, service__isnull=True).count()
+    without_service = MentorshipSession.objects.filter(
+        Q(bill__isnull=True)
+        | Q(bill__status='DUE', bill__academy=mentor.academy, bill__paid_at__isnull=True)
+        | Q(bill__status='RECALCULATE', bill__academy=mentor.academy, bill__paid_at__isnull=True),
+        mentor=mentor,
+        service__isnull=True).count()
     if without_service:
         raise ValidationException(
             f'This mentor has {without_service} sessions without an associated service that need to be fixed',

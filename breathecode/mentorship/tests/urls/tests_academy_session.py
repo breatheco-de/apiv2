@@ -28,6 +28,10 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
         'allow_billing': mentorship_session.allow_billing,
         'ended_at': format_datetime(self, mentorship_session.ended_at),
         'id': mentorship_session.id,
+        'bill': mentorship_session.bill if mentorship_session.bill is None else {
+            'id': mentorship_session.bill.id,
+            'status': mentorship_session.bill.status
+        },
         'mentee': {
             'email': user.email,
             'first_name': user.first_name,

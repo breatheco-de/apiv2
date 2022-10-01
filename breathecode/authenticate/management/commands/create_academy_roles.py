@@ -324,6 +324,10 @@ CAPABILITIES = [
         'description': 'Read the financial status of a project and invoices'
     },
     {
+        'slug': 'crud_project_invoice',
+        'description': 'Create, Update and delete project invoices'
+    },
+    {
         'slug': 'read_freelance_projects',
         'description': 'Read project details without financials'
     },
@@ -365,6 +369,7 @@ ROLES = [
             'read_lead_gen_app',
             'read_mentorship_service',
             'read_mentorship_mentor',
+            'read_freelancer_bill',
         ],
     },
     {
@@ -552,7 +557,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill',
-            'read_project_invoice'
+            'read_project_invoice', 'crud_project_invoice'
         ]
     })
     roles.append({

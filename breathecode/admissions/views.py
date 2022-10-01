@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import HeaderLimitOffsetPagination
 from rest_framework.views import APIView
+from django.db.models import Max
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 from .utils import CohortLog
@@ -104,7 +105,10 @@ class AcademyTeacherView(APIView, GenerateLookupsMixin):
             raise ValidationException('No sorting allowed when following filters are applied: ' +
                                       ','.join(no_sort),
                                       slug='no-sorting-allowed')
-        elif sort is not None:
+        elif 'latest_cohorts' in sort:
+            items = items.annotate(latest_cohorts=Max('user__cohortuser__cohort__ending_date'))
+
+        if sort is not None:
             items = items.order_by(sort)
 
         items = handler.queryset(items)

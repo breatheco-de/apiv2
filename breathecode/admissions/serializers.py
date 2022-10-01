@@ -362,7 +362,7 @@ class GetTeacherAcademySmallSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     email = serpy.Field()
-    user = UserPublicSerializer()
+    user = UserPublicSerializer(required=False)
     status = serpy.Field()
     created_at = serpy.Field()
 
@@ -374,8 +374,13 @@ class GetTeacherAcademySmallSerializer(serpy.Serializer):
     cohorts = serpy.MethodField()
 
     def get_cohorts(self, obj):
-        return GetSmallCohortSerializer(Cohort.objects.filter(cohortuser__user__id=obj.user.id).exclude(
-            cohortuser__role__iexact='STUDENT').order_by('-ending_date').all(),
+        if obj.user is None:
+            return []
+
+        return GetSmallCohortSerializer(Cohort.objects.filter(
+            cohortuser__user__id=obj.user.id,
+            cohortuser__role__in=['TEACHER', 'ASSISTANT'
+                                  ]).exclude(stage__iexact='DELETED').order_by('-ending_date').all(),
                                         many=True).data
 
 
