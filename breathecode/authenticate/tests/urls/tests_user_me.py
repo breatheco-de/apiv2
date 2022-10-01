@@ -6,8 +6,6 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
 
-last_permission_id = 488
-
 
 def get_permission_serializer(permission):
     return {
@@ -50,7 +48,14 @@ def get_serializer(self, user, credentials_github=None, profile_academies=[], pr
 
 
 class AuthenticateTestSuite(AuthTestCase):
-    """Authentication test suite"""
+
+    def setUp(self):
+        super().setUp()
+
+        Permission = self.bc.database.get_model('auth.Permission')
+        permission = Permission.objects.filter().order_by('-id').first()
+        self.latest_permission_id = permission.id
+
     """
     🔽🔽🔽 Auth
     """
@@ -190,10 +195,10 @@ class AuthenticateTestSuite(AuthTestCase):
 
         groups = [
             {
-                'permissions': [last_permission_id + 1, last_permission_id + 2],
+                'permissions': [self.latest_permission_id + 1, self.latest_permission_id + 2],
             },
             {
-                'permissions': [last_permission_id + 3, last_permission_id + 4],
+                'permissions': [self.latest_permission_id + 3, self.latest_permission_id + 4],
             },
         ]
         model = self.generate_models(authenticate=True, profile=True, permission=4, group=groups)
@@ -202,6 +207,14 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.user, profile=model.profile, permissions=model.permission)
+        expected = get_serializer(self,
+                                  model.user,
+                                  profile=model.profile,
+                                  permissions=[
+                                      model.permission[3],
+                                      model.permission[2],
+                                      model.permission[1],
+                                      model.permission[0],
+                                  ])
 
         self.assertEqual(json, expected)

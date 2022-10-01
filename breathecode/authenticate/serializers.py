@@ -336,7 +336,7 @@ class UserSerializer(serpy.Serializer):
         for group in obj.groups.all():
             permissions |= group.permissions.all()
 
-        return GetPermissionSmallSerializer(permissions.distinct(), many=True).data
+        return GetPermissionSmallSerializer(permissions.distinct().order_by('-id'), many=True).data
 
     def get_profile(self, obj):
         if not hasattr(obj, 'profile'):
