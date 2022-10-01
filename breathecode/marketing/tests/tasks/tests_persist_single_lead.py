@@ -466,7 +466,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         })
 
         self.assertEqual(self.all_form_entry_dict(), [{
-            'ac_contact_id': '1',
+            'ac_contact_id': None,
             'ac_deal_id': None,
             'ac_expected_cohort': None,
             'academy_id': 1,
@@ -509,12 +509,12 @@ class AnswerIdTestSuite(MarketingTestCase):
             'utm_url': None,
             'won_at': None,
             'lead_generation_app_id': None,
-            'storage_status_text': '',
+            'storage_status_text': 'Saved but not send to AC because SAVE_LEADS is FALSE',
             'zip_code': None
         }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
-        self.check_old_breathecode_calls(mock_old_breathecode, model, course='asdasd')
+        self.assertEqual(mock_old_breathecode.call_args_list, [])
 
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
@@ -630,56 +630,57 @@ class AnswerIdTestSuite(MarketingTestCase):
         })
         form = self.get_form_entry(1)
 
-        self.assertEqual(self.all_form_entry_dict(), [{
-            'ac_contact_id': '1',
-            'ac_deal_id': model['form_entry'].ac_deal_id,
-            'ac_expected_cohort': None,
-            'academy_id': model['form_entry'].academy_id,
-            'automations': model['form_entry'].automations,
-            'browser_lang': model['form_entry'].browser_lang,
-            'city': model['form_entry'].city,
-            'client_comments': model['form_entry'].client_comments,
-            'current_download': model['form_entry'].current_download,
-            'contact_id': model['form_entry'].contact_id,
-            'country': model['form_entry'].country,
-            'course': model['form_entry'].course,
-            'deal_status': model['form_entry'].deal_status,
-            'email': model['form_entry'].email,
-            'fb_ad_id': model['form_entry'].fb_ad_id,
-            'fb_adgroup_id': model['form_entry'].fb_adgroup_id,
-            'fb_form_id': model['form_entry'].fb_form_id,
-            'fb_leadgen_id': model['form_entry'].fb_leadgen_id,
-            'fb_page_id': model['form_entry'].fb_page_id,
-            'first_name': model['form_entry'].first_name,
-            'gclid': model['form_entry'].gclid,
-            'id': model['form_entry'].id,
-            'language': model['form_entry'].language,
-            'last_name': model['form_entry'].last_name,
-            'latitude': form.latitude,
-            'lead_type': model['form_entry'].lead_type,
-            'location': model['form_entry'].location,
-            'longitude': form.longitude,
-            'phone': model['form_entry'].phone,
-            'referral_key': model['form_entry'].referral_key,
-            'sentiment': model['form_entry'].sentiment,
-            'state': model['form_entry'].state,
-            'storage_status': 'PERSISTED',
-            'street_address': model['form_entry'].street_address,
-            'tags': model['form_entry'].tags,
-            'user_id': model['form_entry'].user_id,
-            'utm_campaign': model['form_entry'].utm_campaign,
-            'utm_medium': model['form_entry'].utm_medium,
-            'utm_source': model['form_entry'].utm_source,
-            'utm_content': model['form_entry'].utm_content,
-            'utm_url': model['form_entry'].utm_url,
-            'won_at': model['form_entry'].won_at,
-            'lead_generation_app_id': None,
-            'zip_code': model['form_entry'].zip_code,
-            'storage_status_text': '',
-        }])
+        self.assertEqual(self.all_form_entry_dict(),
+                         [{
+                             'ac_contact_id': None,
+                             'ac_deal_id': model['form_entry'].ac_deal_id,
+                             'ac_expected_cohort': None,
+                             'academy_id': model['form_entry'].academy_id,
+                             'automations': model['form_entry'].automations,
+                             'browser_lang': model['form_entry'].browser_lang,
+                             'city': model['form_entry'].city,
+                             'client_comments': model['form_entry'].client_comments,
+                             'current_download': model['form_entry'].current_download,
+                             'contact_id': model['form_entry'].contact_id,
+                             'country': model['form_entry'].country,
+                             'course': model['form_entry'].course,
+                             'deal_status': model['form_entry'].deal_status,
+                             'email': model['form_entry'].email,
+                             'fb_ad_id': model['form_entry'].fb_ad_id,
+                             'fb_adgroup_id': model['form_entry'].fb_adgroup_id,
+                             'fb_form_id': model['form_entry'].fb_form_id,
+                             'fb_leadgen_id': model['form_entry'].fb_leadgen_id,
+                             'fb_page_id': model['form_entry'].fb_page_id,
+                             'first_name': model['form_entry'].first_name,
+                             'gclid': model['form_entry'].gclid,
+                             'id': model['form_entry'].id,
+                             'language': model['form_entry'].language,
+                             'last_name': model['form_entry'].last_name,
+                             'latitude': form.latitude,
+                             'lead_type': model['form_entry'].lead_type,
+                             'location': model['form_entry'].location,
+                             'longitude': form.longitude,
+                             'phone': model['form_entry'].phone,
+                             'referral_key': model['form_entry'].referral_key,
+                             'sentiment': model['form_entry'].sentiment,
+                             'state': model['form_entry'].state,
+                             'storage_status': 'PERSISTED',
+                             'street_address': model['form_entry'].street_address,
+                             'tags': model['form_entry'].tags,
+                             'user_id': model['form_entry'].user_id,
+                             'utm_campaign': model['form_entry'].utm_campaign,
+                             'utm_medium': model['form_entry'].utm_medium,
+                             'utm_source': model['form_entry'].utm_source,
+                             'utm_content': model['form_entry'].utm_content,
+                             'utm_url': model['form_entry'].utm_url,
+                             'won_at': model['form_entry'].won_at,
+                             'lead_generation_app_id': None,
+                             'zip_code': model['form_entry'].zip_code,
+                             'storage_status_text': 'Saved but not send to AC because SAVE_LEADS is FALSE',
+                         }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
-        self.check_old_breathecode_calls(mock_old_breathecode, model, course='asdasd')
+        self.assertEqual(mock_old_breathecode.call_args_list, [])
 
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     def test_persist_single_lead_with_form_entry_with_data__________(self):
@@ -728,7 +729,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(self.all_form_entry_dict(), [
             fix_db_field(self.bc.format.to_dict(model.form_entry[0])), {
-                'ac_contact_id': '1',
+                'ac_contact_id': None,
                 'ac_deal_id': model['form_entry'][1].ac_deal_id,
                 'ac_expected_cohort': None,
                 'academy_id': model['form_entry'][1].academy_id,
@@ -772,25 +773,12 @@ class AnswerIdTestSuite(MarketingTestCase):
                 'won_at': model['form_entry'][1].won_at,
                 'lead_generation_app_id': None,
                 'zip_code': model['form_entry'][1].zip_code,
-                'storage_status_text': '',
+                'storage_status_text': 'Saved but not send to AC because SAVE_LEADS is FALSE',
             }
         ])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
-        self.assertEqual(mock_old_breathecode.call_args_list, [
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/admin/api.php',
-                 params=[('api_action', 'contact_sync'), ('api_key', model['active_campaign_academy'].ac_key),
-                         ('api_output', 'json')],
-                 data={
-                     'email': 'pokemon@potato.io',
-                     'first_name': 'Konan',
-                     'last_name': 'Amegakure',
-                     'phone': '123123123',
-                     'field[18,0]': model['academy'].slug,
-                     'field[2,0]': 'asdasd',
-                 }),
-        ])
+        self.assertEqual(mock_old_breathecode.call_args_list, [])
 
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
@@ -861,7 +849,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(
             self.all_form_entry_dict(),
             [{
-                'ac_contact_id': '1',
+                'ac_contact_id': None,
                 'ac_deal_id': model['form_entry'].ac_deal_id,
                 'ac_expected_cohort': None,
                 'academy_id': model['form_entry'].academy_id,
@@ -905,45 +893,9 @@ class AnswerIdTestSuite(MarketingTestCase):
                 'won_at': model['form_entry'].won_at,
                 'lead_generation_app_id': None,
                 'zip_code': model['form_entry'].zip_code,
-                'storage_status_text': '',
+                'storage_status_text': 'Saved but not send to AC because SAVE_LEADS is FALSE',
                 # 'zip_code': 10028
             }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
-        self.assertEqual(mock_old_breathecode.call_args_list, [
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/admin/api.php',
-                 params=[('api_action', 'contact_sync'), ('api_key', model['active_campaign_academy'].ac_key),
-                         ('api_output', 'json')],
-                 data={
-                     'email': 'pokemon@potato.io',
-                     'first_name': 'Konan',
-                     'last_name': 'Amegakure',
-                     'phone': '123123123',
-                     'field[18,0]': model['academy'].slug,
-                     'field[46,0]': fake_url,
-                     'field[2,0]': 'asdasd',
-                 }),
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
-                 headers={
-                     'Accept': 'application/json',
-                     'Content-Type': 'application/json',
-                     'Api-Token': model['active_campaign_academy'].ac_key
-                 },
-                 json={'contactAutomation': {
-                     'contact': 1,
-                     'automation': model['automation'].acp_id
-                 }}),
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/api/3/contactTags',
-                 headers={
-                     'Accept': 'application/json',
-                     'Content-Type': 'application/json',
-                     'Api-Token': model['active_campaign_academy'].ac_key
-                 },
-                 json={'contactTag': {
-                     'contact': 1,
-                     'tag': model['tag'].acp_id
-                 }})
-        ])
+        self.assertEqual(mock_old_breathecode.call_args_list, [])

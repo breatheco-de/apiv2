@@ -139,6 +139,9 @@ class Academy(models.Model):
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
+        if created:
+            self.__old_slug = self.slug
+
         academy_saved.send(instance=self, sender=self.__class__, created=created)
 
 
