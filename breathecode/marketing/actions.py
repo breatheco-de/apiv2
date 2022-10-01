@@ -15,8 +15,12 @@ from breathecode.marketing.models import Tag
 
 logger = logging.getLogger(__name__)
 
-SAVE_LEADS = os.getenv('SAVE_LEADS')
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY')
+
+
+def get_save_leads():
+    return os.getenv('SAVE_LEADS')
+
 
 acp_ids = {
     # "strong": "49",
@@ -247,7 +251,8 @@ def register_new_lead(form_entry=None):
 
     is_duplicate = entry.is_duplicate(form_entry)
     # ENV Variable to fake lead storage
-    if SAVE_LEADS == 'FALSE':
+
+    if get_save_leads() == 'FALSE':
         entry.storage_status_text = 'Saved but not send to AC because SAVE_LEADS is FALSE'
         entry.storage_status = 'PERSISTED' if not is_duplicate else 'DUPLICATED'
         entry.save()
