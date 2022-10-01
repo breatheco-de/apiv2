@@ -273,7 +273,8 @@ def register_new_lead(form_entry=None):
         entry.storage_status_text = 'Could not save contact in CRM: Subscriber_id not found'
         entry.save()
 
-    if entry.is_duplicate(form_entry):
+    # if entry.is_duplicate(form_entry):
+    if is_duplicate:
         entry.storage_status = 'DUPLICATED'
         entry.save()
         logger.debug('FormEntry is considered a duplicate, no automations or tags added')

@@ -81,15 +81,11 @@ def get_downloadable(request, slug=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):
-
     data = request.data.copy()
 
     # remove spaces from phone
     if 'phone' in data:
         data['phone'] = data['phone'].replace(' ', '')
-
-    if 'referral_code' in data and 'referral_key' not in data:
-        data['referral_key'] = data['referral_code']
 
     if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
         print('Ignoring lead because its coming from development team')

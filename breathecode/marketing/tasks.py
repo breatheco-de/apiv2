@@ -27,6 +27,7 @@ class BaseTaskWithRetry(Task):
 def persist_leads():
     logger.debug('Starting persist_leads')
     entries = FormEntry.objects.filter(storage_status='PENDING')
+
     for entry in entries:
         form_data = entry.toFormData()
         result = register_new_lead(form_data)
