@@ -3,10 +3,6 @@ from ...mixins.new_auth_test_case import AuthTestCase
 from breathecode.authenticate.management.commands.set_permissions import Command
 from django.contrib.auth.models import Group
 
-LATEST_CONTENT_TYPE_ID = 122
-LATEST_PERMISSION_ID = 488
-JOB_CONTENT_TYPE_ID = 120
-CAN_DELETE_JOB_PERMISSION_ID = 479
 PERMISSIONS = [
     {
         'name': 'Can delete job',
@@ -51,6 +47,21 @@ def sort_by_id(items):
 
 
 class TokenTestSuite(AuthTestCase):
+
+    def setUp(self):
+        super().setUp()
+
+        ContentType = self.bc.database.get_model('contenttypes.ContentType')
+        Permission = self.bc.database.get_model('auth.Permission')
+
+        content_type = ContentType.objects.filter().order_by('-id').first()
+        permission = Permission.objects.filter().order_by('-id').first()
+
+        self.latest_content_type_id = content_type.id
+        self.latest_permission_id = permission.id
+        self.job_content_type_id = self.latest_content_type_id - 2
+        self.can_delete_job_permission_id = self.latest_permission_id - 9
+
     """
     🔽🔽🔽 format of PERMISSIONS
     """
@@ -99,7 +110,7 @@ class TokenTestSuite(AuthTestCase):
             self.bc.database.list_of('contenttypes.ContentType')[-1:], [
                 {
                     'app_label': 'breathecode',
-                    'id': LATEST_CONTENT_TYPE_ID + 1,
+                    'id': self.latest_content_type_id + 1,
                     'model': 'SortingHat',
                 },
             ])
@@ -109,20 +120,20 @@ class TokenTestSuite(AuthTestCase):
             sort_by_id(self.bc.database.list_of('auth.Permission'))[-3:], [
                 {
                     'codename': 'get_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + 1,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 1,
                     'name': 'Get my profile'
                 },
                 {
                     'codename': 'create_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + 2,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 2,
                     'name': 'Create my profile'
                 },
                 {
                     'codename': 'update_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + 3,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 3,
                     'name': 'Update my profile',
                 },
             ])
@@ -148,20 +159,20 @@ class TokenTestSuite(AuthTestCase):
                 *sort_by_id(permissions),
                 {
                     'codename': 'get_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + 1,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 1,
                     'name': 'Get my profile'
                 },
                 {
                     'codename': 'create_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + 2,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 2,
                     'name': 'Create my profile'
                 },
                 {
                     'codename': 'update_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + 3,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 3,
                     'name': 'Update my profile'
                 },
             ])
@@ -171,26 +182,26 @@ class TokenTestSuite(AuthTestCase):
                 Group.objects.filter(name='Default').first().permissions.all())), [
                     {
                         'codename': 'delete_job',
-                        'content_type_id': JOB_CONTENT_TYPE_ID,
-                        'id': CAN_DELETE_JOB_PERMISSION_ID,
+                        'content_type_id': self.job_content_type_id,
+                        'id': self.can_delete_job_permission_id,
                         'name': 'Can delete job'
                     },
                     {
                         'codename': 'get_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + 1,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + 1,
                         'name': 'Get my profile'
                     },
                     {
                         'codename': 'create_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + 2,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + 2,
                         'name': 'Create my profile'
                     },
                     {
                         'codename': 'update_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + 3,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + 3,
                         'name': 'Update my profile'
                     },
                 ])
@@ -200,26 +211,26 @@ class TokenTestSuite(AuthTestCase):
                 Group.objects.filter(name='Student').first().permissions.all())), [
                     {
                         'codename': 'delete_job',
-                        'content_type_id': JOB_CONTENT_TYPE_ID,
-                        'id': CAN_DELETE_JOB_PERMISSION_ID,
+                        'content_type_id': self.job_content_type_id,
+                        'id': self.can_delete_job_permission_id,
                         'name': 'Can delete job'
                     },
                     {
                         'codename': 'get_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + 1,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + 1,
                         'name': 'Get my profile'
                     },
                     {
                         'codename': 'create_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + 2,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + 2,
                         'name': 'Create my profile'
                     },
                     {
                         'codename': 'update_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + 3,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + 3,
                         'name': 'Update my profile'
                     },
                 ])
@@ -238,17 +249,17 @@ class TokenTestSuite(AuthTestCase):
             {
                 'name': 'Get my profile',
                 'codename': 'get_my_profile',
-                'content_type_id': LATEST_CONTENT_TYPE_ID + 1
+                'content_type_id': self.latest_content_type_id + 1
             },
             {
                 'name': 'Create my profile',
                 'codename': 'create_my_profile',
-                'content_type_id': LATEST_CONTENT_TYPE_ID + 1
+                'content_type_id': self.latest_content_type_id + 1
             },
             {
                 'name': 'Update my profile',
                 'codename': 'update_my_profile',
-                'content_type_id': LATEST_CONTENT_TYPE_ID + 1
+                'content_type_id': self.latest_content_type_id + 1
             },
         ]
         content_type = {
@@ -256,9 +267,9 @@ class TokenTestSuite(AuthTestCase):
             'model': 'SortingHat',
         }
         permission_ids = [
-            LATEST_PERMISSION_ID + 1,
-            LATEST_PERMISSION_ID + 2,
-            LATEST_PERMISSION_ID + 3,
+            self.latest_permission_id + 1,
+            self.latest_permission_id + 2,
+            self.latest_permission_id + 3,
         ]
         groups = [
             {
@@ -287,7 +298,7 @@ class TokenTestSuite(AuthTestCase):
             self.bc.database.list_of('contenttypes.ContentType')[-1:], [
                 {
                     'app_label': 'breathecode',
-                    'id': LATEST_CONTENT_TYPE_ID + 1,
+                    'id': self.latest_content_type_id + 1,
                     'model': 'SortingHat',
                 },
             ])
@@ -297,20 +308,20 @@ class TokenTestSuite(AuthTestCase):
             sort_by_id(self.bc.database.list_of('auth.Permission'))[-3:], [
                 {
                     'codename': 'get_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 1,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 1,
                     'name': 'Get my profile'
                 },
                 {
                     'codename': 'create_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 2,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 2,
                     'name': 'Create my profile'
                 },
                 {
                     'codename': 'update_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 3,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 3,
                     'name': 'Update my profile',
                 },
             ])
@@ -336,20 +347,20 @@ class TokenTestSuite(AuthTestCase):
                 *sort_by_id(permissions),
                 {
                     'codename': 'get_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 1,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 1,
                     'name': 'Get my profile'
                 },
                 {
                     'codename': 'create_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 2,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 2,
                     'name': 'Create my profile'
                 },
                 {
                     'codename': 'update_my_profile',
-                    'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                    'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 3,
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 3,
                     'name': 'Update my profile'
                 },
             ])
@@ -359,26 +370,26 @@ class TokenTestSuite(AuthTestCase):
                 Group.objects.filter(name='Default').first().permissions.all())), [
                     {
                         'codename': 'delete_job',
-                        'content_type_id': JOB_CONTENT_TYPE_ID,
-                        'id': CAN_DELETE_JOB_PERMISSION_ID,
+                        'content_type_id': self.job_content_type_id,
+                        'id': self.can_delete_job_permission_id,
                         'name': 'Can delete job'
                     },
                     {
                         'codename': 'get_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 1,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + num_permissions_was_deleted + 1,
                         'name': 'Get my profile'
                     },
                     {
                         'codename': 'create_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 2,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + num_permissions_was_deleted + 2,
                         'name': 'Create my profile'
                     },
                     {
                         'codename': 'update_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 3,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + num_permissions_was_deleted + 3,
                         'name': 'Update my profile'
                     },
                 ])
@@ -388,26 +399,26 @@ class TokenTestSuite(AuthTestCase):
                 Group.objects.filter(name='Student').first().permissions.all())), [
                     {
                         'codename': 'delete_job',
-                        'content_type_id': JOB_CONTENT_TYPE_ID,
-                        'id': CAN_DELETE_JOB_PERMISSION_ID,
+                        'content_type_id': self.job_content_type_id,
+                        'id': self.can_delete_job_permission_id,
                         'name': 'Can delete job'
                     },
                     {
                         'codename': 'get_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 1,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + num_permissions_was_deleted + 1,
                         'name': 'Get my profile'
                     },
                     {
                         'codename': 'create_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 2,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + num_permissions_was_deleted + 2,
                         'name': 'Create my profile'
                     },
                     {
                         'codename': 'update_my_profile',
-                        'content_type_id': LATEST_CONTENT_TYPE_ID + 1,
-                        'id': LATEST_PERMISSION_ID + num_permissions_was_deleted + 3,
+                        'content_type_id': self.latest_content_type_id + 1,
+                        'id': self.latest_permission_id + num_permissions_was_deleted + 3,
                         'name': 'Update my profile'
                     },
                 ])
