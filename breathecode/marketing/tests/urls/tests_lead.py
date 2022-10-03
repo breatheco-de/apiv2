@@ -1,6 +1,7 @@
 """
 Test /academy/lead
 """
+from decimal import Decimal
 from django.utils import timezone
 from datetime import timedelta
 import re, string
@@ -140,11 +141,12 @@ class LeadTestSuite(MarketingTestCase):
         __init__=MagicMock(return_value=None),
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__without_data(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
 
-        response = self.client.post(url)
+        response = self.client.post(url, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -210,12 +212,13 @@ class LeadTestSuite(MarketingTestCase):
         __init__=MagicMock(return_value=None),
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__with__bad_data(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
 
         data = generate_form_entry_kwargs()
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertEqual(
@@ -233,6 +236,7 @@ class LeadTestSuite(MarketingTestCase):
         __init__=MagicMock(return_value=None),
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__with__data(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
@@ -241,7 +245,7 @@ class LeadTestSuite(MarketingTestCase):
         data['phone'] = '123456789'
         data['language'] = 'en'
 
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -355,6 +359,7 @@ class LeadTestSuite(MarketingTestCase):
         __init__=MagicMock(return_value=None),
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__with__data_active_campaign_slug(self):
         """Test /cohort/:id/user without auth"""
         self.generate_models(academy=True, academy_kwargs={'active_campaign_slug': 'midgard'})
@@ -365,7 +370,7 @@ class LeadTestSuite(MarketingTestCase):
         data['language'] = 'en'
         data['location'] = 'midgard'
 
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -479,6 +484,7 @@ class LeadTestSuite(MarketingTestCase):
         __init__=MagicMock(return_value=None),
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__with__data_alias_active_campaign_slug(self):
         """Test /cohort/:id/user without auth"""
         self.generate_models(academy=True,
@@ -491,7 +497,7 @@ class LeadTestSuite(MarketingTestCase):
         data['language'] = 'en'
         data['location'] = 'midgard'
 
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -605,12 +611,12 @@ class LeadTestSuite(MarketingTestCase):
         __init__=MagicMock(return_value=None),
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__with__data_active_campaign_slug_priority(self):
         """Test /cohort/:id/user without auth"""
-        model1 = self.generate_models(academy=True, academy_kwargs={'active_campaign_slug': 'midgard'})
-        model2 = self.generate_models(academy=True,
-                                      academy_alias=True,
-                                      academy_alias_kwargs={'active_campaign_slug': 'midgard'})
+        model = self.generate_models(academy=True,
+                                     academy_alias=True,
+                                     academy_kwargs={'active_campaign_slug': 'midgard'})
 
         url = reverse_lazy('marketing:lead')
 
@@ -619,7 +625,7 @@ class LeadTestSuite(MarketingTestCase):
         data['language'] = 'en'
         data['location'] = 'midgard'
 
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -671,7 +677,7 @@ class LeadTestSuite(MarketingTestCase):
                 'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
-                'academy': 2,
+                'academy': 1,
                 'user': None,
                 'lead_generation_app': None,
                 'tag_objects': [],
@@ -707,8 +713,8 @@ class LeadTestSuite(MarketingTestCase):
             'street_address': json['street_address'],
             'country': json['country'],
             'city': json['city'],
-            'latitude': float(json['latitude']),
-            'longitude': float(json['longitude']),
+            'latitude': Decimal(json['latitude']),
+            'longitude': Decimal(json['longitude']),
             'state': json['state'],
             'zip_code': json['zip_code'],
             'browser_lang': json['browser_lang'],
@@ -716,7 +722,7 @@ class LeadTestSuite(MarketingTestCase):
             'lead_type': json['lead_type'],
             'deal_status': json['deal_status'],
             'sentiment': json['sentiment'],
-            'academy_id': 2,
+            'academy_id': 1,
             'storage_status_text': 'No academy found with slug midgard',
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
@@ -733,13 +739,13 @@ class LeadTestSuite(MarketingTestCase):
         __init__=MagicMock(return_value=None),
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__create_lead(self):
         """Test /lead with create lead happening"""
 
-        model1 = self.generate_models(academy=True, academy_kwargs={'active_campaign_slug': 'midgard'})
-        model2 = self.generate_models(academy=True,
+        model1 = self.generate_models(academy=True,
                                       academy_alias=True,
-                                      academy_alias_kwargs={'active_campaign_slug': 'midgard'})
+                                      academy_kwargs={'active_campaign_slug': 'midgard'})
 
         url = reverse_lazy('marketing:lead')
 
@@ -748,7 +754,7 @@ class LeadTestSuite(MarketingTestCase):
         data['language'] = 'en'
         data['location'] = 'midgard'
 
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -800,7 +806,7 @@ class LeadTestSuite(MarketingTestCase):
                 'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
-                'academy': 2,
+                'academy': 1,
                 'user': None,
                 'lead_generation_app': None,
                 'tag_objects': [],
@@ -836,8 +842,8 @@ class LeadTestSuite(MarketingTestCase):
             'street_address': json['street_address'],
             'country': json['country'],
             'city': json['city'],
-            'latitude': float(json['latitude']),
-            'longitude': float(json['longitude']),
+            'latitude': Decimal(json['latitude']),
+            'longitude': Decimal(json['longitude']),
             'state': json['state'],
             'zip_code': json['zip_code'],
             'browser_lang': json['browser_lang'],
@@ -845,7 +851,7 @@ class LeadTestSuite(MarketingTestCase):
             'lead_type': json['lead_type'],
             'deal_status': json['deal_status'],
             'sentiment': json['sentiment'],
-            'academy_id': 2,
+            'academy_id': 1,
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],

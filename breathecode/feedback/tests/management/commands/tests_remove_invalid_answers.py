@@ -61,6 +61,9 @@ class TokenTestSuite(FeedbackTestCase):
 
         answer_db = self.bc.format.to_dict(model.answer)
 
+        # reset in this line because some people left print in some places
+        sys.stdout.write.call_args_list = []
+
         command = Command()
         command.handle()
 
