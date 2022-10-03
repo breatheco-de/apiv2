@@ -3,18 +3,11 @@ Test /answer/:id
 """
 from breathecode.marketing.tasks import persist_single_lead
 import logging
-import re, string, os
-from datetime import datetime
+import string, os
 from unittest.mock import patch, MagicMock, call
-from django.urls.base import reverse_lazy
-from rest_framework import status
-from breathecode.services.datetime_to_iso_format import datetime_to_iso_format
+
 from random import choice, choices, randint
 from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
     MAILGUN_PATH,
     MAILGUN_INSTANCES,
     apply_mailgun_requests_post_mock,
@@ -34,11 +27,16 @@ def random_string():
     return ''.join(choices(string.ascii_letters, k=10))
 
 
+def fix_db_field(data={}):
+    del data['ac_academy']
+    return data
+
+
 fake = Faker()
 fake_url = fake.url()
 
 
-def generate_form_entry_kwargs():
+def generate_form_entry_kwargs(kwargs={}):
     """That random values is too long that i prefer have it in one function"""
     return {
         'fb_leadgen_id': randint(0, 9999),
@@ -76,14 +74,12 @@ def generate_form_entry_kwargs():
         'deal_status': choice(['WON', 'LOST']),
         'sentiment': choice(['GOOD', 'BAD']),
         'current_download': fake_url,
+        **kwargs,
     }
 
 
 class AnswerIdTestSuite(MarketingTestCase):
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_no_form_entry(self):
@@ -102,9 +98,6 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     """Test /answer/:id"""
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_dict_empty(self):
@@ -121,9 +114,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - Missing location information'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_bad_location(self):
@@ -140,9 +130,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - No academy found with slug they-killed-kenny'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_location(self):
@@ -160,9 +147,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('You need to specify tags for this entry'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_location_academy_alias(self):
@@ -183,9 +167,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('You need to specify tags for this entry'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_bad_tags(self):
@@ -208,9 +189,6 @@ class AnswerIdTestSuite(MarketingTestCase):
                 ),
             ]))
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_tag_type(self):
@@ -235,9 +213,6 @@ class AnswerIdTestSuite(MarketingTestCase):
                  ),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_tag_type_automation(self):
@@ -260,9 +235,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - The email doesn\'t exist'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_automations(self):
@@ -288,9 +260,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('The specified automation they-killed-kenny was not found for this AC Academy'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_automations_slug(self):
@@ -317,9 +286,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - The email doesn\'t exist'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_email(self):
@@ -347,9 +313,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - The first name doesn\'t exist'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_first_name(self):
@@ -378,9 +341,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - The last name doesn\'t exist'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_last_name(self):
@@ -411,9 +371,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - The phone doesn\'t exist'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_phone(self):
@@ -445,9 +402,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - The id doesn\'t exist'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_persist_single_lead_with_id(self):
@@ -480,9 +434,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - FormEntry not found (id: 123123123)'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     def test_persist_single_lead_with_form_entry(self):
@@ -565,9 +516,6 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.check_old_breathecode_calls(mock_old_breathecode, model, course='asdasd')
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     @patch(
@@ -617,9 +565,6 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Status 400 - The course doesn\'t exist'),
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     @patch(
@@ -736,9 +681,117 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.check_old_breathecode_calls(mock_old_breathecode, model, course='asdasd')
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
+    def test_persist_single_lead_with_form_entry_with_data__________(self):
+        """Test /answer/:id without auth"""
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
+        mock_old_breathecode.call_args_list = []
+
+        form_entries = [
+            generate_form_entry_kwargs({
+                'email': 'pokemon@potato.io',
+                'course': 'asdasd',
+                'storage_status': 'PERSISTED',
+            }),
+            generate_form_entry_kwargs({
+                'email': 'pokemon@potato.io',
+                'course': 'asdasd',
+                'storage_status': 'PERSISTED',
+            }),
+        ]
+
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={'tag_type': 'STRONG'},
+            automation=True,
+            automation_kwargs={'slug': 'they-killed-kenny'},
+            form_entry=form_entries,
+            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
+
+        persist_single_lead.delay({
+            'location': model['academy'].slug,
+            'tags': model['tag'].slug,
+            'automations': model['automation'].slug,
+            'email': 'pokemon@potato.io',
+            'first_name': 'Konan',
+            'last_name': 'Amegakure',
+            'phone': '123123123',
+            'course': 'asdasd',
+            'id': 2,
+        })
+        form = self.get_form_entry(1)
+
+        self.assertEqual(self.all_form_entry_dict(), [
+            fix_db_field(self.bc.format.to_dict(model.form_entry[0])), {
+                'ac_contact_id': '1',
+                'ac_deal_id': model['form_entry'][1].ac_deal_id,
+                'ac_expected_cohort': None,
+                'academy_id': model['form_entry'][1].academy_id,
+                'automations': model['form_entry'][1].automations,
+                'browser_lang': model['form_entry'][1].browser_lang,
+                'city': model['form_entry'][1].city,
+                'client_comments': model['form_entry'][1].client_comments,
+                'current_download': model['form_entry'][1].current_download,
+                'contact_id': model['form_entry'][1].contact_id,
+                'country': model['form_entry'][1].country,
+                'course': model['form_entry'][1].course,
+                'deal_status': model['form_entry'][1].deal_status,
+                'email': model['form_entry'][1].email,
+                'fb_ad_id': model['form_entry'][1].fb_ad_id,
+                'fb_adgroup_id': model['form_entry'][1].fb_adgroup_id,
+                'fb_form_id': model['form_entry'][1].fb_form_id,
+                'fb_leadgen_id': model['form_entry'][1].fb_leadgen_id,
+                'fb_page_id': model['form_entry'][1].fb_page_id,
+                'first_name': model['form_entry'][1].first_name,
+                'gclid': model['form_entry'][1].gclid,
+                'id': model['form_entry'][1].id,
+                'language': model['form_entry'][1].language,
+                'last_name': model['form_entry'][1].last_name,
+                'latitude': form.latitude,
+                'lead_type': model['form_entry'][1].lead_type,
+                'location': model['form_entry'][1].location,
+                'longitude': form.longitude,
+                'phone': model['form_entry'][1].phone,
+                'referral_key': model['form_entry'][1].referral_key,
+                'sentiment': model['form_entry'][1].sentiment,
+                'state': model['form_entry'][1].state,
+                'storage_status': 'DUPLICATED',
+                'street_address': model['form_entry'][1].street_address,
+                'tags': model['form_entry'][1].tags,
+                'user_id': model['form_entry'][1].user_id,
+                'utm_campaign': model['form_entry'][1].utm_campaign,
+                'utm_medium': model['form_entry'][1].utm_medium,
+                'utm_source': model['form_entry'][1].utm_source,
+                'utm_content': model['form_entry'][1].utm_content,
+                'utm_url': model['form_entry'][1].utm_url,
+                'won_at': model['form_entry'][1].won_at,
+                'lead_generation_app_id': None,
+                'zip_code': model['form_entry'][1].zip_code,
+                'storage_status_text': '',
+            }
+        ])
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_old_breathecode.call_args_list, [
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/admin/api.php',
+                 params=[('api_action', 'contact_sync'), ('api_key', model['active_campaign_academy'].ac_key),
+                         ('api_output', 'json')],
+                 data={
+                     'email': 'pokemon@potato.io',
+                     'first_name': 'Konan',
+                     'last_name': 'Amegakure',
+                     'phone': '123123123',
+                     'field[18,0]': model['academy'].slug,
+                     'field[2,0]': 'asdasd',
+                 }),
+        ])
+
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     @patch(

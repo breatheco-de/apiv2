@@ -11,6 +11,13 @@ __all__ = [
     'ActiveCampaignWebhook'
 ]
 
+
+class AcademyProxy(Academy):
+
+    class Meta:
+        proxy = True
+
+
 INCOMPLETED = 'INCOMPLETED'
 COMPLETED = 'COMPLETED'
 SYNC_STATUS = (
@@ -204,7 +211,7 @@ class LeadGenerationApp(models.Model):
     app_id = models.CharField(
         max_length=255,
         unique=True,
-        help_text='Unique token generated only for this app, can be reset to revoke acceess')
+        help_text='Unique token generated only for this app, can be reset to revoke access')
 
     hits = models.IntegerField(default=0)
 

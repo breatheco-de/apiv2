@@ -1,6 +1,7 @@
 """
 Test /cohort/user
 """
+import random
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins import AdmissionsTestCase
@@ -212,7 +213,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'cohort_time_slot'),
         }])
 
-    def test_cohort_time_slot__put(self):
+    def test_cohort_time_slot__put__in_lowercase(self):
         self.headers(academy=1)
         academy_kwargs = {'timezone': 'America/Caracas'}
         model = self.generate_models(authenticate=True,
@@ -229,18 +230,21 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         starting_at = self.datetime_now()
         ending_at = self.datetime_now()
+
+        recurrency_type = random.choice(['DAILY', 'WEEKLY', 'MONTHLY'])
         data = {
             'ending_at': self.datetime_to_iso(ending_at),
             'starting_at': self.datetime_to_iso(starting_at),
+            'recurrency_type': recurrency_type.lower(),
         }
         response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
             'cohort': 1,
             'id': 1,
-            'recurrency_type': 'WEEKLY',
             'recurrent': True,
             'timezone': model.academy.timezone,
+            'recurrency_type': recurrency_type,
         }
 
         self.assertEqual(json, expected)
@@ -253,6 +257,56 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.datetime_to_interger(model.academy.timezone, starting_at),
             'timezone':
             model.academy.timezone,
+            'recurrency_type':
+            recurrency_type,
+        }])
+
+    def test_cohort_time_slot__put__in_uppercase(self):
+        self.headers(academy=1)
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato',
+                                     cohort_time_slot=True,
+                                     academy_kwargs=academy_kwargs)
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id',
+                           kwargs={
+                               'cohort_id': 1,
+                               'timeslot_id': 1
+                           })
+
+        starting_at = self.datetime_now()
+        ending_at = self.datetime_now()
+
+        recurrency_type = random.choice(['DAILY', 'WEEKLY', 'MONTHLY'])
+        data = {
+            'ending_at': self.datetime_to_iso(ending_at),
+            'starting_at': self.datetime_to_iso(starting_at),
+            'recurrency_type': recurrency_type,
+        }
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+        expected = {
+            'cohort': 1,
+            'id': 1,
+            'recurrent': True,
+            'timezone': model.academy.timezone,
+            'recurrency_type': recurrency_type,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [{
+            **self.model_to_dict(model, 'cohort_time_slot'),
+            'ending_at':
+            self.datetime_to_interger(model.academy.timezone, ending_at),
+            'starting_at':
+            self.datetime_to_interger(model.academy.timezone, starting_at),
+            'timezone':
+            model.academy.timezone,
+            'recurrency_type':
+            recurrency_type,
         }])
 
     """
