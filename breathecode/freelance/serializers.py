@@ -126,6 +126,12 @@ class BigBillSerializer(serpy.Serializer):
 
     freelancer = SmallFreelancerSerializer()
     reviewer = UserSerializer(required=False)
+    
+    issues = serpy.MethodField()
+
+    def get_issues(self, obj):
+        _issues = obj.issue_set.order_by('created_at').all()
+        return SmallIssueSerializer(_issues, many=True).data
 
 
 class SmallBillSerializer(serpy.Serializer):
