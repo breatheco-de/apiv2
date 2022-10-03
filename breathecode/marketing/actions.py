@@ -1,19 +1,18 @@
-import os, re, requests, logging
+import os, re, requests
 from typing import Optional
 from itertools import chain
 from django.utils import timezone
 from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAlias
-from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
+from rest_framework.exceptions import APIException
 from activecampaign.client import Client
-from rest_framework.decorators import api_view, permission_classes
-from .serializers import FormEntrySerializer
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import CredentialsFacebook
 from breathecode.services.activecampaign import AC_Old_Client, ActiveCampaign
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.marketing.models import Tag
+from breathecode.utils import getLogger
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY')
 
@@ -100,8 +99,8 @@ def add_to_active_campaign(contact, academy_id: int, automation_id: int):
     ac_url, ac_key, event_attendancy_automation_id = ActiveCampaignAcademy.objects.filter(
         academy__id=academy_id).values_list(*active_campaign_academy_values).first()
 
-    logger.debug('ready to send contact with following details')
-    logger.debug(contact)
+    logger.info('ready to send contact with following details')
+    logger.info(contact)
 
     old_client = AC_Old_Client(ac_url, ac_key)
     response = old_client.contacts.create_contact(contact)
@@ -115,14 +114,14 @@ def add_to_active_campaign(contact, academy_id: int, automation_id: int):
 
     if event_attendancy_automation_id != automation_id:
         message = 'Automation doesn\'t exist for this AC Academy'
-        logger.debug(message)
+        logger.info(message)
         raise Exception(message)
 
     acp_id = Automation.objects.filter(id=automation_id).values_list('acp_id', flat=True).first()
 
     if not acp_id:
         message = 'Automation acp_id doesn\'t exist'
-        logger.debug(message)
+        logger.info(message)
         raise Exception(message)
 
     data = {
@@ -137,10 +136,8 @@ def add_to_active_campaign(contact, academy_id: int, automation_id: int):
     if 'contacts' not in response:
         logger.error(f'error triggering automation with id {str(acp_id)}', response)
         raise APIException('Could not add contact to Automation')
-    else:
-        logger.debug(f'Triggered automation with id {str(acp_id)}', response)
-        # auto = Automation.objects.filter(acp_id=acp_id, ac_academy=ac_academy).first()
-        # # entry.automation_objects.add(auto)
+
+    logger.info(f'Triggered automation with id {str(acp_id)}', response)
 
 
 def register_new_lead(form_entry=None):
@@ -168,15 +165,15 @@ def register_new_lead(form_entry=None):
     automations = get_lead_automations(ac_academy, form_entry)
 
     if automations:
-        logger.debug('found automations')
-        logger.debug(automations)
+        logger.info('found automations')
+        logger.info(list(automations))
     else:
-        logger.debug('automations not found')
+        logger.info('automations not found')
 
     tags = get_lead_tags(ac_academy, form_entry)
-    logger.debug('found tags')
-    logger.debug(set(t.slug for t in tags))
-    LEAD_TYPE = tags[0].tag_type
+    logger.info('found tags')
+    logger.info(set(t.slug for t in tags))
+
     if (automations is None or len(automations) == 0) and len(tags) > 0:
         if tags[0].automation is None:
             raise ValidationException(
@@ -258,7 +255,7 @@ def register_new_lead(form_entry=None):
         entry.save()
         return entry
 
-    logger.debug('ready to send contact with following details: ', contact)
+    logger.info('ready to send contact with following details: ' + str(contact))
     old_client = AC_Old_Client(ac_academy.ac_url, ac_academy.ac_key)
     response = old_client.contacts.create_contact(contact)
     contact_id = response['subscriber_id']
@@ -273,31 +270,36 @@ def register_new_lead(form_entry=None):
         entry.storage_status_text = 'Could not save contact in CRM: Subscriber_id not found'
         entry.save()
 
-    # if entry.is_duplicate(form_entry):
     if is_duplicate:
         entry.storage_status = 'DUPLICATED'
         entry.save()
-        logger.debug('FormEntry is considered a duplicate, no automations or tags added')
+        logger.info('FormEntry is considered a duplicate, no automations or tags added')
         return entry
 
     client = Client(ac_academy.ac_url, ac_academy.ac_key)
-    if automations:
+    if automations and not is_duplicate:
         for automation_id in automations:
             data = {'contactAutomation': {'contact': contact_id, 'automation': automation_id}}
             response = client.contacts.add_a_contact_to_an_automation(data)
+
             if 'contacts' not in response:
                 logger.error(f'error triggering automation with id {str(automation_id)}', response)
                 raise APIException('Could not add contact to Automation')
-            else:
-                logger.debug(f'Triggered automation with id {str(automation_id)}', response)
-                auto = Automation.objects.filter(acp_id=automation_id, ac_academy=ac_academy).first()
-                entry.automation_objects.add(auto)
 
-    for t in tags:
-        data = {'contactTag': {'contact': contact_id, 'tag': t.acp_id}}
-        response = client.contacts.add_a_tag_to_contact(data)
-        if 'contacts' in response:
-            entry.tag_objects.add(t.id)
+            logger.info(f'Triggered automation with id {str(automation_id)} ' + str(response))
+            auto = Automation.objects.filter(acp_id=automation_id, ac_academy=ac_academy).first()
+            entry.automation_objects.add(auto)
+
+        logger.info('automations was executed successfully')
+
+    if tags and not is_duplicate:
+        for t in tags:
+            data = {'contactTag': {'contact': contact_id, 'tag': t.acp_id}}
+            response = client.contacts.add_a_tag_to_contact(data)
+            if 'contacts' in response:
+                entry.tag_objects.add(t.id)
+
+        logger.info('contact was tagged successfully')
 
     entry.storage_status = 'PERSISTED'
     entry.save()

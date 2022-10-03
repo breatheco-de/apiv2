@@ -8,12 +8,6 @@ from unittest.mock import patch, MagicMock
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from faker import Faker
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from ..mixins import MarketingTestCase
 
 fake = Faker()
@@ -138,7 +132,7 @@ class FakeRecaptcha:
         self.risk_analysis = self.RiskAnalysis()
 
 
-def generate_form_entry_kwargs():
+def generate_form_entry_kwargs(data={}):
     """That random values is too long that i prefer have it in one function"""
     return {
         'fb_leadgen_id': randint(0, 9999),
@@ -176,15 +170,15 @@ def generate_form_entry_kwargs():
         'deal_status': choice(['WON', 'LOST']),
         'sentiment': choice(['GOOD', 'BAD']),
         'current_download': random_string(),
+        **data,
     }
 
 
 class LeadTestSuite(MarketingTestCase):
-    """Test /academy/lead"""
+    """
+    🔽🔽🔽 Passing nothing
+    """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
@@ -192,7 +186,6 @@ class LeadTestSuite(MarketingTestCase):
     )
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__without_data(self):
-        """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
 
         response = self.client.post(url, format='json')
@@ -216,8 +209,10 @@ class LeadTestSuite(MarketingTestCase):
             })
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    """
+    🔽🔽🔽 Validations of fields
+    """
+
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
@@ -225,7 +220,6 @@ class LeadTestSuite(MarketingTestCase):
     )
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__with__bad_data(self):
-        """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
 
         data = generate_form_entry_kwargs()
@@ -240,8 +234,10 @@ class LeadTestSuite(MarketingTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    """
+    🔽🔽🔽 Passing required fields
+    """
+
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
@@ -249,12 +245,12 @@ class LeadTestSuite(MarketingTestCase):
     )
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_lead__with__data(self):
-        """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:lead')
 
-        data = generate_form_entry_kwargs()
-        data['phone'] = '123456789'
-        data['language'] = 'en'
+        data = generate_form_entry_kwargs({
+            'phone': '123456789',
+            'language': 'en',
+        })
 
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -285,199 +281,69 @@ class LeadTestSuite(MarketingTestCase):
             })
         ])
 
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    """
+    🔽🔽🔽 Passing slug of Academy or AcademyAlias
+    """
+
     @patch.multiple(
         'breathecode.services.google_cloud.Recaptcha',
         __init__=MagicMock(return_value=None),
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_lead__with__data_active_campaign_slug(self):
-        """Test /cohort/:id/user without auth"""
-        self.generate_models(academy=True, academy_kwargs={'active_campaign_slug': 'midgard'})
-        url = reverse_lazy('marketing:lead')
+    def test_passing_slug_of_academy_or_academy_alias(self):
+        cases = [
+            ({
+                'slug': 'midgard'
+            }, None),
+            ({
+                'slug': 'midgard'
+            }, 1),
+            (1, {
+                'active_campaign_slug': 'midgard'
+            }),
+        ]
 
-        data = generate_form_entry_kwargs()
-        data['phone'] = '123456789'
-        data['language'] = 'en'
-        data['location'] = 'midgard'
+        for academy, academy_alias in cases:
+            model = self.generate_models(academy=academy, academy_alias=academy_alias)
+            url = reverse_lazy('marketing:lead')
 
-        response = self.client.post(url, data, format='json')
-        json = response.json()
-
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-        del json['created_at']
-        del json['updated_at']
-
-        expected = post_serializer({
-            **data,
-            'id': 1,
-            'academy': 1,
-            'latitude': self.bc.format.to_decimal_string(data['latitude']),
-            'longitude': self.bc.format.to_decimal_string(data['longitude']),
-        })
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
-            form_entry_field({
-                **data,
-                'id': 1,
-                'academy_id': 1,
-                'latitude': Decimal(data['latitude']),
-                'longitude': Decimal(data['longitude']),
-                'storage_status_text': 'No academy found with slug midgard',
+            data = generate_form_entry_kwargs({
+                'phone': '123456789',
+                'language': 'en',
+                'location': 'midgard',
             })
-        ])
 
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch.multiple(
-        'breathecode.services.google_cloud.Recaptcha',
-        __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=FakeRecaptcha()),
-    )
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_lead__with__data_alias_active_campaign_slug(self):
-        """Test /cohort/:id/user without auth"""
-        self.generate_models(academy=True,
-                             academy_alias=True,
-                             academy_alias_kwargs={'active_campaign_slug': 'midgard'})
-        url = reverse_lazy('marketing:lead')
+            response = self.client.post(url, data, format='json')
+            json = response.json()
 
-        data = generate_form_entry_kwargs()
-        data['phone'] = '123456789'
-        data['language'] = 'en'
-        data['location'] = 'midgard'
+            self.assertDatetime(json['created_at'])
+            self.assertDatetime(json['updated_at'])
+            del json['created_at']
+            del json['updated_at']
 
-        response = self.client.post(url, data, format='json')
-        json = response.json()
-
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-        del json['created_at']
-        del json['updated_at']
-
-        expected = post_serializer({
-            **data,
-            'id': 1,
-            'academy': 1,
-            'latitude': self.bc.format.to_decimal_string(data['latitude']),
-            'longitude': self.bc.format.to_decimal_string(data['longitude']),
-        })
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
-            form_entry_field({
+            expected = post_serializer({
                 **data,
-                'id': 1,
-                'academy_id': 1,
-                'latitude': Decimal(data['latitude']),
-                'longitude': Decimal(data['longitude']),
-                'storage_status_text': 'No academy found with slug midgard',
+                'id': model.academy.id,
+                'academy': model.academy.id,
+                'latitude': self.bc.format.to_decimal_string(data['latitude']),
+                'longitude': self.bc.format.to_decimal_string(data['longitude']),
             })
-        ])
 
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch.multiple(
-        'breathecode.services.google_cloud.Recaptcha',
-        __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=FakeRecaptcha()),
-    )
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_lead__with__data_active_campaign_slug_priority(self):
-        """Test /cohort/:id/user without auth"""
-        model = self.generate_models(academy=True,
-                                     academy_alias=True,
-                                     academy_kwargs={'active_campaign_slug': 'midgard'})
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
+                form_entry_field({
+                    **data,
+                    'id': model.academy.id,
+                    'academy_id': model.academy.id,
+                    'latitude': Decimal(data['latitude']),
+                    'longitude': Decimal(data['longitude']),
+                    'storage_status_text': 'No academy found with slug midgard',
+                })
+            ])
 
-        url = reverse_lazy('marketing:lead')
-
-        data = generate_form_entry_kwargs()
-        data['phone'] = '123456789'
-        data['language'] = 'en'
-        data['location'] = 'midgard'
-
-        response = self.client.post(url, data, format='json')
-        json = response.json()
-
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-        del json['created_at']
-        del json['updated_at']
-
-        expected = post_serializer({
-            **data,
-            'id': 1,
-            'academy': 1,
-            'latitude': self.bc.format.to_decimal_string(data['latitude']),
-            'longitude': self.bc.format.to_decimal_string(data['longitude']),
-        })
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
-            form_entry_field({
-                **data,
-                'id': 1,
-                'academy_id': 1,
-                'latitude': Decimal(data['latitude']),
-                'longitude': Decimal(data['longitude']),
-                'storage_status_text': 'No academy found with slug midgard',
-            })
-        ])
-
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch.multiple(
-        'breathecode.services.google_cloud.Recaptcha',
-        __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=FakeRecaptcha()),
-    )
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_lead__create_lead(self):
-        """Test /lead with create lead happening"""
-
-        model1 = self.generate_models(academy=True,
-                                      academy_alias=True,
-                                      academy_kwargs={'active_campaign_slug': 'midgard'})
-
-        url = reverse_lazy('marketing:lead')
-
-        data = generate_form_entry_kwargs()
-        data['phone'] = '123456789'
-        data['language'] = 'en'
-        data['location'] = 'midgard'
-
-        response = self.client.post(url, data, format='json')
-        json = response.json()
-
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-        del json['created_at']
-        del json['updated_at']
-
-        expected = post_serializer({
-            **data,
-            'id': 1,
-            'academy': 1,
-            'latitude': self.bc.format.to_decimal_string(data['latitude']),
-            'longitude': self.bc.format.to_decimal_string(data['longitude']),
-        })
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
-            form_entry_field({
-                **data,
-                'id': 1,
-                'academy_id': 1,
-                'latitude': Decimal(data['latitude']),
-                'longitude': Decimal(data['longitude']),
-                'storage_status_text': 'No academy found with slug midgard',
-            })
-        ])
+            # teardown
+            self.bc.database.delete('admissions.Academy')
+            self.bc.database.delete('marketing.AcademyAlias')
+            self.bc.database.delete('marketing.FormEntry')

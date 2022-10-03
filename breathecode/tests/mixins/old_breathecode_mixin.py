@@ -1,6 +1,7 @@
 """
 Cache mixin
 """
+import requests
 from breathecode.tests.mocks import OLD_BREATHECODE_INSTANCES
 from unittest.mock import call
 from breathecode.services import SOURCE, CAMPAIGN
@@ -47,11 +48,11 @@ class OldBreathecodeMixin():
                     }})
 
     def reset_old_breathecode_calls(self):
-        mock = OLD_BREATHECODE_INSTANCES['request']
+        mock = requests.request
         mock.call_args_list = []
 
     def check_old_breathecode_calls(self, model, types):
-        mock = OLD_BREATHECODE_INSTANCES['request']
+        mock = requests.request
 
         calls = []
         for type in types:

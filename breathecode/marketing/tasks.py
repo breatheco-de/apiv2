@@ -39,7 +39,7 @@ def persist_leads():
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def persist_single_lead(self, form_data):
-    logger.debug('Starting persist_single_lead')
+    logger.info('Starting persist_single_lead')
 
     entry = None
     try:
