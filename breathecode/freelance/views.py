@@ -372,7 +372,7 @@ class SingleBillView(APIView):
         if item is None:
             raise serializers.ValidationError('Bill not found', code=404)
         else:
-            serializer = BillSerializer(item, many=False)
+            serializer = BigBillSerializer(item, many=False)
             return Response(serializer.data)
 
     @capable_of('crud_freelancer_bill')
