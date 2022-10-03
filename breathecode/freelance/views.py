@@ -3,7 +3,7 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from .serializers import (BillSerializer, SmallIssueSerializer, BigBillSerializer,
                           SmallFreelancerMemberSerializer, SmallProjectSerializer, BigProjectSerializer,
-                          BigInvoiceSerializer)
+                          BigInvoiceSerializer, SmallBillSerializer)
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 from django.utils import timezone
@@ -19,6 +19,7 @@ from breathecode.notify.actions import get_template_content
 from breathecode.utils.decorators import capable_of
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.admissions.models import Academy
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from django.http import HttpResponse
 
 
@@ -124,6 +125,8 @@ class AcademyBillView(APIView):
     List all snippets, or create a new snippet.
     """
 
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
     @capable_of('read_freelancer_bill')
     def get(self, request, academy_id, bill_id=None):
 
@@ -135,6 +138,7 @@ class AcademyBillView(APIView):
                 serializer = BillSerializer(item, many=False)
                 return Response(serializer.data)
 
+        handler = self.extensions(request)
         items = Bill.objects.filter(academy__id=academy_id)
         lookup = {}
 
@@ -157,8 +161,9 @@ class AcademyBillView(APIView):
         sort = self.request.GET.get('sort', '-created_at')
         items = items.filter(**lookup).order_by(sort)
 
-        serializer = BillSerializer(items, many=True)
-        return Response(serializer.data)
+        items = handler.queryset(items)
+        serializer = SmallBillSerializer(items, many=True)
+        return handler.response(serializer.data)
 
     @capable_of('crud_freelancer_bill')
     def put(self, request, bill_id=None, academy_id=None):
