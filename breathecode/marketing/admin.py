@@ -2,7 +2,7 @@ import logging, secrets
 from django.contrib import admin, messages
 from django import forms
 from .models import (FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook,
-                     AcademyAlias, Downloadable, LeadGenerationApp, UTMField)
+                     AcademyAlias, Downloadable, LeadGenerationApp, UTMField, AcademyProxy)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
                       sync_tags, sync_automations, acp_ids, delete_tag)
 from breathecode.services.activecampaign import ActiveCampaign
@@ -84,6 +84,27 @@ class ACAcademyAdmin(admin.ModelAdmin, AdminExportCsvMixin):
 class AcademyAliasAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'active_campaign_slug', 'academy__slug', 'academy__title']
     list_display = ('slug', 'active_campaign_slug', 'academy')
+    list_filter = ['academy__slug']
+
+
+def generate_original_alias(modeladmin, request, queryset):
+    academies = queryset.all()
+    for a in academies:
+        slug = a.active_campaign_slug
+        if slug is None:
+            slug = a.slug
+
+        if AcademyAlias.objects.filter(slug=a.slug).first() is None:
+            AcademyAlias.objects.create(slug=a.slug, active_campaign_slug=slug, academy=a)
+            messages.add_message(request, messages.INFO, f'Alias {a.slug} successfully created')
+        else:
+            messages.add_message(request, messages.ERROR, f'Alias {a.slug} already exists')
+
+
+@admin.register(AcademyProxy)
+class AcademyAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name')
+    actions = [generate_original_alias]
 
 
 def send_to_active_campaign(modeladmin, request, queryset):
@@ -414,7 +435,7 @@ class LeadAppCustomForm(forms.ModelForm):
 @admin.register(LeadGenerationApp)
 class LeadGenerationAppAdmin(admin.ModelAdmin):
     form = LeadAppCustomForm
-    list_display = ('slug', 'name', 'academy', 'status', 'last_call_at')
+    list_display = ('slug', 'name', 'academy', 'status', 'last_call_at', 'app_id')
     readonly_fields = ('app_id', )
     actions = (reset_app_id, )
 

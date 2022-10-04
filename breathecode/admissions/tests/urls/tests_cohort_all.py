@@ -2,6 +2,7 @@
 Test /cohort/all
 """
 from datetime import timedelta
+import random
 import re
 from django.urls.base import reverse_lazy
 from django.utils import timezone
@@ -9,10 +10,10 @@ from rest_framework import status
 from ..mixins import AdmissionsTestCase
 
 
-def get_serializer(cohort, syllabus_version, syllabus, data={}):
+def get_serializer(cohort, syllabus, syllabus_version, data={}):
     return {
         'id': cohort.id,
-        'distance': cohort.id,
+        'distance': None,
         'slug': cohort.slug,
         'name': cohort.name,
         'never_ends': cohort.never_ends,
@@ -22,8 +23,8 @@ def get_serializer(cohort, syllabus_version, syllabus, data={}):
         'language': cohort.language.lower(),
         'remote_available': cohort.remote_available,
         'syllabus_version': {
-            'status': syllabus_version.status,
             'name': syllabus.name,
+            'status': syllabus_version.status,
             'slug': syllabus.slug,
             'syllabus': syllabus_version.syllabus.id,
             'version': cohort.syllabus_version.version,
@@ -107,45 +108,9 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:cohort_all') + '?sort=-slug'
         response = self.client.get(url)
         json = response.json()
-        expected = [{
-            'id': model.cohort.id,
-            'distance': None,
-            'slug': model.cohort.slug,
-            'name': model.cohort.name,
-            'never_ends': model['cohort'].never_ends,
-            'private': model['cohort'].private,
-            'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
-            'ending_date': model.cohort.ending_date,
-            'remote_available': model.cohort.remote_available,
-            'language': model.cohort.language.lower(),
-            'syllabus_version': {
-                'status': model.syllabus_version.status,
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'syllabus': model.syllabus_version.syllabus.id,
-                'version': model.cohort.syllabus_version.version,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': model.cohort.academy.id,
-                'slug': model.cohort.academy.slug,
-                'name': model.cohort.academy.name,
-                'country': {
-                    'code': model.cohort.academy.country.code,
-                    'name': model.cohort.academy.country.name,
-                },
-                'city': {
-                    'name': model.cohort.academy.city.name,
-                },
-                'logo_url': model.cohort.academy.logo_url,
-            },
-            'schedule': None,
-        } for model in ordened_models]
+        expected = [
+            get_serializer(model.cohort, model.syllabus, model.syllabus_version) for model in ordened_models
+        ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -179,45 +144,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = f'{base_url}?academy={model.academy.slug}'
         response = self.client.get(url)
         json = response.json()
-        expected = [{
-            'id': model.cohort.id,
-            'distance': None,
-            'slug': model.cohort.slug,
-            'name': model.cohort.name,
-            'never_ends': model['cohort'].never_ends,
-            'private': model['cohort'].private,
-            'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
-            'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language.lower(),
-            'remote_available': model.cohort.remote_available,
-            'syllabus_version': {
-                'status': model.syllabus_version.status,
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'syllabus': model.syllabus_version.syllabus.id,
-                'version': model.cohort.syllabus_version.version,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': model.cohort.academy.id,
-                'slug': model.cohort.academy.slug,
-                'name': model.cohort.academy.name,
-                'country': {
-                    'code': model.cohort.academy.country.code,
-                    'name': model.cohort.academy.country.name,
-                },
-                'city': {
-                    'name': model.cohort.academy.city.name,
-                },
-                'logo_url': model.cohort.academy.logo_url,
-            },
-            'schedule': None,
-        }]
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -251,45 +178,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = f'{base_url}?location={model.academy.slug}'
         response = self.client.get(url)
         json = response.json()
-        expected = [{
-            'id': model.cohort.id,
-            'distance': None,
-            'slug': model.cohort.slug,
-            'name': model.cohort.name,
-            'never_ends': model['cohort'].never_ends,
-            'private': model['cohort'].private,
-            'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
-            'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language,
-            'remote_available': model.cohort.remote_available,
-            'syllabus_version': {
-                'status': model.syllabus_version.status,
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'syllabus': model.syllabus_version.syllabus.id,
-                'version': model.cohort.syllabus_version.version,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': model.cohort.academy.id,
-                'slug': model.cohort.academy.slug,
-                'name': model.cohort.academy.name,
-                'country': {
-                    'code': model.cohort.academy.country.code,
-                    'name': model.cohort.academy.country.name,
-                },
-                'city': {
-                    'name': model.cohort.academy.city.name,
-                },
-                'logo_url': model.cohort.academy.logo_url,
-            },
-            'schedule': None,
-        }]
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -308,45 +197,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = f'{base_url}?location={model.academy.slug},they-killed-kenny'
         response = self.client.get(url)
         json = response.json()
-        expected = [{
-            'id': model.cohort.id,
-            'distance': None,
-            'slug': model.cohort.slug,
-            'name': model.cohort.name,
-            'never_ends': model['cohort'].never_ends,
-            'private': model['cohort'].private,
-            'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
-            'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language.lower(),
-            'remote_available': model.cohort.remote_available,
-            'syllabus_version': {
-                'status': model.syllabus_version.status,
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'syllabus': model.syllabus_version.syllabus.id,
-                'version': model.cohort.syllabus_version.version,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': model.cohort.academy.id,
-                'slug': model.cohort.academy.slug,
-                'name': model.cohort.academy.name,
-                'country': {
-                    'code': model.cohort.academy.country.code,
-                    'name': model.cohort.academy.country.name,
-                },
-                'city': {
-                    'name': model.cohort.academy.city.name,
-                },
-                'logo_url': model.cohort.academy.logo_url,
-            },
-            'schedule': None,
-        }]
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -365,45 +216,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = f'{base_url}?upcoming=false'
         response = self.client.get(url)
         json = response.json()
-        expected = [{
-            'id': model.cohort.id,
-            'distance': None,
-            'slug': model.cohort.slug,
-            'name': model.cohort.name,
-            'never_ends': model['cohort'].never_ends,
-            'private': model['cohort'].private,
-            'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
-            'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language.lower(),
-            'remote_available': model.cohort.remote_available,
-            'syllabus_version': {
-                'status': model.syllabus_version.status,
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'syllabus': model.syllabus_version.syllabus.id,
-                'version': model.cohort.syllabus_version.version,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': model.cohort.academy.id,
-                'slug': model.cohort.academy.slug,
-                'name': model.cohort.academy.name,
-                'country': {
-                    'code': model.cohort.academy.country.code,
-                    'name': model.cohort.academy.country.name,
-                },
-                'city': {
-                    'name': model.cohort.academy.city.name,
-                },
-                'logo_url': model.cohort.academy.logo_url,
-            },
-            'schedule': None,
-        }]
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -439,45 +252,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = f'{base_url}?upcoming=true'
         response = self.client.get(url)
         json = response.json()
-        expected = [{
-            'id': model.cohort.id,
-            'distance': None,
-            'slug': model.cohort.slug,
-            'name': model.cohort.name,
-            'never_ends': model['cohort'].never_ends,
-            'private': model['cohort'].private,
-            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language.lower(),
-            'remote_available': model.cohort.remote_available,
-            'syllabus_version': {
-                'status': model.syllabus_version.status,
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'syllabus': model.syllabus_version.syllabus.id,
-                'version': model.cohort.syllabus_version.version,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': model.cohort.academy.id,
-                'slug': model.cohort.academy.slug,
-                'name': model.cohort.academy.name,
-                'country': {
-                    'code': model.cohort.academy.country.code,
-                    'name': model.cohort.academy.country.name,
-                },
-                'city': {
-                    'name': model.cohort.academy.city.name,
-                },
-                'logo_url': model.cohort.academy.logo_url,
-            },
-            'schedule': None,
-        }]
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -495,45 +270,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:cohort_all')
         response = self.client.get(url)
         json = response.json()
-        expected = [{
-            'id': model.cohort.id,
-            'distance': None,
-            'slug': model.cohort.slug,
-            'name': model.cohort.name,
-            'never_ends': model['cohort'].never_ends,
-            'private': model['cohort'].private,
-            'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
-            'ending_date': model.cohort.ending_date,
-            'language': model.cohort.language.lower(),
-            'remote_available': model.cohort.remote_available,
-            'syllabus_version': {
-                'status': model.syllabus_version.status,
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'syllabus': model.syllabus_version.syllabus.id,
-                'version': model.cohort.syllabus_version.version,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': model.cohort.academy.id,
-                'slug': model.cohort.academy.slug,
-                'name': model.cohort.academy.name,
-                'country': {
-                    'code': model.cohort.academy.country.code,
-                    'name': model.cohort.academy.country.name,
-                },
-                'city': {
-                    'name': model.cohort.academy.city.name,
-                },
-                'logo_url': model.cohort.academy.logo_url,
-            },
-            'schedule': None,
-        }]
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -562,12 +299,34 @@ class CohortAllTestSuite(AdmissionsTestCase):
         }])
 
     """
-    🔽🔽🔽 coordinates in querystring
+    🔽🔽🔽 Sort querystring
     """
 
-    def test_with_data__with_auth(self):
+    def test_with_data__cohort_with_stage_deleted(self):
         """Test /cohort/all without auth"""
+        cohort = {'stage': 'DELETED'}
+        model = self.generate_models(authenticate=True,
+                                     cohort=cohort,
+                                     profile_academy=True,
+                                     syllabus_version=True)
 
+        url = reverse_lazy('admissions:cohort_all') + '?stage=asdasdasd'
+        response = self.client.get(url)
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+
+    """
+    🔽🔽🔽 Sort querystring
+    """
+
+    def test_with_data__querystring_in_stage__not_found(self):
+        """Test /cohort/all without auth"""
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
@@ -583,6 +342,42 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
             **self.model_to_dict(model, 'cohort')
         }])
+
+    def test_with_data__querystring_in_stage__found(self):
+        """Test /cohort/all without auth"""
+        statuses = ['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED', 'DELETED']
+        cases = [(x, x, random.choice([y for y in statuses if x != y]))
+                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y]))
+                                       for x in statuses]
+
+        model = self.generate_models(authenticate=True, cohort=3, profile_academy=True, syllabus_version=True)
+
+        for current, query, bad_status in cases:
+            model.cohort[0].stage = current
+            model.cohort[0].save()
+
+            model.cohort[1].stage = current
+            model.cohort[1].save()
+
+            model.cohort[2].stage = bad_status
+            model.cohort[2].save()
+
+            url = reverse_lazy('admissions:cohort_all') + f'?stage={query}'
+            response = self.client.get(url)
+            json = response.json()
+            expected = sorted([
+                get_serializer(model.cohort[0], model.syllabus, model.syllabus_version),
+                get_serializer(model.cohort[1], model.syllabus, model.syllabus_version),
+            ],
+                              key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
+                              reverse=True)
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                self.bc.database.list_of('admissions.Cohort'),
+                self.bc.format.to_dict(model.cohort),
+            )
 
     def test_with_data__distance_is_none(self):
         """Test /cohort/all without auth"""
@@ -606,7 +401,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             response = self.client.get(url)
             json = response.json()
             expected = [
-                get_serializer(model.cohort, model.syllabus_version, model.syllabus, data={'distance': None})
+                get_serializer(model.cohort, model.syllabus, model.syllabus_version, data={'distance': None})
             ]
 
             self.assertEqual(json, expected)
@@ -695,8 +490,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
             json = response.json()
             expected = [
                 get_serializer(model.cohort,
-                               model.syllabus_version,
                                model.syllabus,
+                               model.syllabus_version,
                                data={'distance': 1111.9492664455875})
             ]
 
@@ -726,8 +521,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
             json = response.json()
             expected = [
                 get_serializer(model.cohort,
-                               model.syllabus_version,
                                model.syllabus,
+                               model.syllabus_version,
                                data={'distance': distance})
             ]
 
@@ -769,20 +564,20 @@ class CohortAllTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = [
             get_serializer(model.cohort[0],
-                           model.syllabus_version,
                            model.syllabus,
+                           model.syllabus_version,
                            data={'distance': distance1}),
             get_serializer(model.cohort[2],
-                           model.syllabus_version,
                            model.syllabus,
+                           model.syllabus_version,
                            data={'distance': distance2}),
             get_serializer(model.cohort[1],
-                           model.syllabus_version,
                            model.syllabus,
+                           model.syllabus_version,
                            data={'distance': distance3}),
             get_serializer(model.cohort[3],
-                           model.syllabus_version,
                            model.syllabus,
+                           model.syllabus_version,
                            data={'distance': distance4}),
         ]
 
@@ -819,13 +614,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             json = response.json()
             expected = sorted([
                 get_serializer(
-                    model.cohort[0], model.syllabus_version, model.syllabus, data={'distance': None}),
+                    model.cohort[0], model.syllabus, model.syllabus_version, data={'distance': None}),
                 get_serializer(
-                    model.cohort[1], model.syllabus_version, model.syllabus, data={'distance': None}),
+                    model.cohort[1], model.syllabus, model.syllabus_version, data={'distance': None}),
                 get_serializer(
-                    model.cohort[2], model.syllabus_version, model.syllabus, data={'distance': None}),
+                    model.cohort[2], model.syllabus, model.syllabus_version, data={'distance': None}),
                 get_serializer(
-                    model.cohort[3], model.syllabus_version, model.syllabus, data={'distance': None}),
+                    model.cohort[3], model.syllabus, model.syllabus_version, data={'distance': None}),
             ],
                               key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
                               reverse=True)
@@ -857,8 +652,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = sorted([
-            get_serializer(model.cohort[1], model.syllabus_version, model.syllabus, data={'distance': None}),
-            get_serializer(model.cohort[3], model.syllabus_version, model.syllabus, data={'distance': None}),
+            get_serializer(model.cohort[1], model.syllabus, model.syllabus_version, data={'distance': None}),
+            get_serializer(model.cohort[3], model.syllabus, model.syllabus_version, data={'distance': None}),
         ],
                           key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
                           reverse=True)
@@ -889,8 +684,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = sorted([
-            get_serializer(model.cohort[0], model.syllabus_version, model.syllabus, data={'distance': None}),
-            get_serializer(model.cohort[2], model.syllabus_version, model.syllabus, data={'distance': None}),
+            get_serializer(model.cohort[0], model.syllabus, model.syllabus_version, data={'distance': None}),
+            get_serializer(model.cohort[2], model.syllabus, model.syllabus_version, data={'distance': None}),
         ],
                           key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
                           reverse=True)

@@ -61,6 +61,9 @@ class TokenTestSuite(FeedbackTestCase):
 
         answer_db = self.bc.format.to_dict(model.answer)
 
+        # reset in this line because some people left print in some places
+        sys.stdout.write.call_args_list = []
+
         command = Command()
         command.handle()
 
@@ -82,5 +85,6 @@ class TokenTestSuite(FeedbackTestCase):
             self.bc.format.to_dict(answer_db[17]),
         ])
 
-        self.assertEqual(sys.stdout.write.call_args_list, [call('Successfully deleted invalid answers\n')])
+        self.assertEqual(str(sys.stdout.write.call_args_list),
+                         str([call('Successfully deleted invalid answers\n')]))
         self.assertEqual(sys.stderr.write.call_args_list, [])
