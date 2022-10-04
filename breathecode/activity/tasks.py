@@ -64,8 +64,9 @@ def get_attendancy_log(self, cohort_id: int):
             current_day += 1
             if current_day > cohort.current_day:
                 break
-            attendance_ids = list([x['user_id'] for x in attendance if x['day'] == current_day])
-            unattendance_ids = list([x['user_id'] for x in unattendance if x['day'] == current_day])
+
+            attendance_ids = list([x['user_id'] for x in attendance if int(x['day']) == current_day])
+            unattendance_ids = list([x['user_id'] for x in unattendance if int(x['day']) == current_day])
             has_attendance = bool(attendance_ids or unattendance_ids)
 
             result.append({
