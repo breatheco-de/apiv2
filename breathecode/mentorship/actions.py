@@ -384,11 +384,11 @@ def mentor_is_ready(mentor):
         raise Exception(
             f'Mentor {mentor.name} has no syllabus associated, update the value before activating.')
     else:
-        response = requests.head(mentor.booking_url)
+        response = requests.head(mentor.booking_url, timeout=2)
         if response.status_code > 399:
             raise Exception(
                 f'Mentor {mentor.name} booking URL is failing with code {str(response.status_code)}.')
-        response = requests.head(mentor.online_meeting_url)
+        response = requests.head(mentor.online_meeting_url, timeout=2)
         if response.status_code > 399:
             raise Exception(
                 f'Mentor {mentor.name} online_meeting_url is failing with code {str(response.status_code)}.')

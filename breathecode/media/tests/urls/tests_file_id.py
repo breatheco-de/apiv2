@@ -185,7 +185,8 @@ class MediaTestSuite(MediaTestCase):
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
                  },
-                 params={})
+                 params={},
+                 timeout=2)
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -275,7 +276,8 @@ class MediaTestSuite(MediaTestCase):
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
                  },
-                 params={})
+                 params={},
+                 timeout=2)
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -323,7 +325,8 @@ class MediaTestSuite(MediaTestCase):
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
                  },
-                 params={})
+                 params={},
+                 timeout=2)
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -390,7 +393,8 @@ class MediaTestSuite(MediaTestCase):
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
                  },
-                 params={})
+                 params={},
+                 timeout=2)
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -480,7 +484,8 @@ class MediaTestSuite(MediaTestCase):
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
                  },
-                 params={})
+                 params={},
+                 timeout=2)
         ])
 
         self.assertEqual(self.all_media_dict(),
@@ -528,7 +533,8 @@ class MediaTestSuite(MediaTestCase):
                      'Content-Type': 'application/json',
                      'Accept': 'application/json'
                  },
-                 params={})
+                 params={},
+                 timeout=2)
         ])
 
         self.assertEqual(self.all_media_dict(),

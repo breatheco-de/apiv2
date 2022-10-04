@@ -39,7 +39,7 @@ class Command(BaseCommand):
         return AssetAlias.objects.filter(Q(slug=slug) | Q(asset__slug=slug)).first()
 
     def exercises(self, options):
-        response = requests.get(f'{HOST_ASSETS}/registry/all')
+        response = requests.get(f'{HOST_ASSETS}/registry/all', timeout=2)
         items = response.json()
         for slug in items:
             if self._exists(slug) and options['override'] == False:
@@ -62,7 +62,7 @@ class Command(BaseCommand):
             create_asset(data, asset_type='EXERCISE', force=(options['override'] == True))
 
     def projects(self, options):
-        response = requests.get(f'{HOST_ASSETS}/project/registry/all')
+        response = requests.get(f'{HOST_ASSETS}/project/registry/all', timeout=2)
         items = response.json()
         for slug in items:
             if self._exists(slug):
@@ -82,7 +82,7 @@ class Command(BaseCommand):
             create_asset(data, asset_type='PROJECT')
 
     def quiz(self, options):
-        response = requests.get(f'{HOST_ASSETS}/quiz/all')
+        response = requests.get(f'{HOST_ASSETS}/quiz/all', timeout=2)
         items = response.json()
         items.sort(key=lambda x: x['info']['lang'] == 'es')
         for quiz in items:

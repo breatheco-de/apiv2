@@ -383,8 +383,8 @@ def save_get_geolocal(contact, form_entry=None):
 
     result = {}
     resp = requests.get(
-        f"https://maps.googleapis.com/maps/api/geocode/json?latlng={form_entry['latitude']},{form_entry['longitude']}&key={GOOGLE_CLOUD_KEY}"
-    )
+        f"https://maps.googleapis.com/maps/api/geocode/json?latlng={form_entry['latitude']},{form_entry['longitude']}&key={GOOGLE_CLOUD_KEY}",
+        timeout=2)
     data = resp.json()
     if 'status' in data and data['status'] == 'INVALID_REQUEST':
         raise Exception(data['error_message'])
@@ -431,7 +431,7 @@ def get_facebook_lead_info(lead_id, academy_id=None):
         raise APIException('No active facebook credentials to get the leads')
 
     params = {'access_token': credential.token}
-    resp = requests.get(f'https://graph.facebook.com/v8.0/{lead_id}/', params=params)
+    resp = requests.get(f'https://graph.facebook.com/v8.0/{lead_id}/', params=params, timeout=2)
     if resp.status_code == 200:
         logger.debug('Facebook responded with 200')
         data = resp.json()

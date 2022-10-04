@@ -267,8 +267,8 @@ class ActionGetScrapedDataOfPlatformTestCase(CareerTestCase):
             'jobs_saved': 0
         }])
         self.assertEqual(requests.get.call_args_list, [
-            call('https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json'),
-            call('https://storage.scrapinghub.com/items/223344/3/34?apikey=1234567&format=json')
+            call('https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json', timeout=2),
+            call('https://storage.scrapinghub.com/items/223344/3/34?apikey=1234567&format=json', timeout=2)
         ])
 
     @patch(REQUESTS_PATH['get'],

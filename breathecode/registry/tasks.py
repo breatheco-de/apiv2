@@ -84,7 +84,8 @@ def async_create_asset_thumbnail(asset_slug: str):
             'dimension': '1200x630',
             # this should be fixed if the screenshots is taken without load the content properly
             'delay': 1000,
-        })
+        },
+        timeout=5)
 
     if response.status_code >= 400:
         logger.error('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '

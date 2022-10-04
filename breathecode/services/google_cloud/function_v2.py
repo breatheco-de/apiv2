@@ -26,7 +26,7 @@ class FunctionV2:
         self.service_url = url
         self.method = method
 
-    def call(self, data=None, params={}) -> requests.models.Response:
+    def call(self, data=None, params={}, timeout=2) -> requests.models.Response:
         """
         Call a Google Cloud Function, return a `requests.models.Response` object.
 
@@ -43,7 +43,12 @@ class FunctionV2:
             headers['Accept'] = 'application/json'
             data = json.dumps(data)
 
-        request = requests.request(self.method, self.service_url, data=data, headers=headers, params=params)
+        request = requests.request(self.method,
+                                   self.service_url,
+                                   data=data,
+                                   headers=headers,
+                                   params=params,
+                                   timeout=timeout)
 
         logger.info(f'Cloud function {self.service_url}')
         logger.info(request.content.decode('utf-8'))

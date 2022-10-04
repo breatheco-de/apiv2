@@ -289,14 +289,14 @@ def get_config(request, asset_slug):
         raise ValidationException(f'Asset not {asset_slug} found', status.HTTP_404_NOT_FOUND)
 
     main_branch = 'master'
-    response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False)
+    response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False, timeout=2)
     if response.status_code == 302:
         main_branch = 'main'
 
     try:
-        response = requests.get(f'{asset.url}/blob/{main_branch}/learn.json?raw=true')
+        response = requests.get(f'{asset.url}/blob/{main_branch}/learn.json?raw=true', timeout=2)
         if response.status_code == 404:
-            response = requests.get(f'{asset.url}/blob/{main_branch}/bc.json?raw=true')
+            response = requests.get(f'{asset.url}/blob/{main_branch}/bc.json?raw=true', timeout=2)
             if response.status_code == 404:
                 raise ValidationException(f'Config file not found for {asset.url}',
                                           code=404,
