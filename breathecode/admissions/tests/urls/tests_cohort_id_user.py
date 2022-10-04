@@ -502,7 +502,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     def test_cohort_id_user__post__twice(self):
         """Test /cohort/:id/user without auth"""
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      cohort_user=True)
@@ -513,7 +513,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         # self.client.post(url, data)
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
+        expected = {'detail': 'That user already exists in this cohort', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
