@@ -123,7 +123,7 @@ def generate_certificate(user, cohort=None, layout=None):
         if tasks_count_pending:
             raise ValidationException(f'The student has {tasks_count_pending} '
                                       'pending tasks',
-                                      slug='with-pending-tasks')
+                                      slug=f'with-pending-tasks-{tasks_count_pending}')
 
         if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status == UP_TO_DATE):
             message = 'The student must have finantial status FULLY_PAID or UP_TO_DATE'
