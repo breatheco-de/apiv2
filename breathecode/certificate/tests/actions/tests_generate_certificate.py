@@ -338,30 +338,40 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         cohort_kwargs = {'stage': 'ENDED'}
         task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE'}
-        model = self.generate_models(user=True,
-                                     cohort=True,
-                                     cohort_user=True,
-                                     syllabus_version={
-                                         'id': 1,
-                                         'json': {
-                                             'days': [{
-                                                 'assignments': [{
-                                                     'slug': 'testing-slug',
-                                                     'mandatory': True
-                                                 }]
-                                             }]
-                                         }
-                                     },
-                                     syllabus=True,
-                                     syllabus_schedule=True,
-                                     specialty=True,
-                                     layout_design=True,
-                                     task={'associated_slug': 'testing-slug'},
-                                     task_kwargs=task_kwargs,
-                                     cohort_kwargs=cohort_kwargs,
-                                     cohort_user_kwargs=cohort_user_kwargs)
+        model = self.generate_models(
+            user=2,
+            cohort=True,
+            cohort_user=True,
+            cohort_kwargs=cohort_kwargs,
+            cohort_user_kwargs=cohort_user_kwargs,
+            syllabus_version={
+                'id': 1,
+                'json': {
+                    'days': [{
+                        'assignments': [{
+                            'slug': 'testing-slug',
+                            'mandatory': True
+                        }]
+                    }]
+                }
+            },
+            syllabus=True,
+            syllabus_schedule=True,
+            specialty=True,
+            layout_design=True,
+        )
 
-        base = model.copy()
+        task_model = self.generate_models(task=[{
+            'user': model['user'][0],
+            'associated_slug': 'testing-slug'
+        }, {
+            'user': model['user'][1],
+            'associated_slug': 'testing-slug'
+        }],
+                                          task_kwargs=task_kwargs,
+                                          models=model)
+
+        base = task_model.copy()
         del base['user']
         del base['cohort_user']
 
@@ -370,7 +380,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              cohort_user=True,
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
-        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'][0], model['cohort']).__dict__)
 
         self.assertToken(result['token'])
         result['token'] = None
@@ -389,7 +399,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'issued_at': None,
             'status': 'ERROR',
             'token': None,
-            'status_text': 'with-pending-tasks',
+            'status_text': 'with-pending-tasks-1',
             'user_id': 1,
             'update_hash': self.generate_update_hash(user_specialty),
         }
@@ -464,7 +474,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'issued_at': None,
             'status': 'ERROR',
             'token': None,
-            'status_text': 'with-pending-tasks',
+            'status_text': 'with-pending-tasks-1',
             'user_id': 1,
             'update_hash': self.generate_update_hash(user_specialty),
         }
