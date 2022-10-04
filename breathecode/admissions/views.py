@@ -213,8 +213,8 @@ def get_cohorts(request, id=None):
     items = items.order_by(sort)
 
     serializer = PublicCohortSerializer(items, many=True)
-    data = sorted(serializer.data, key=lambda x:
-                  (x is None, x['distance'])) if coordinates else serializer.data
+    data = sorted(serializer.data,
+                  key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
 
     return Response(data)
 
