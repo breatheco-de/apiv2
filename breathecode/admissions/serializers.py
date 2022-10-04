@@ -753,6 +753,15 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             logger.debug(f'Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
+        prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
+
+        if is_post_method and 'cohort' in data and data['cohort'].stage in prohibited_stages:
+
+            stage = data['cohort'].stage
+
+            raise ValidationException(f'You cannot add a student to a cohort that is {stage}.',
+                                      slug='adding-student-to-a-closed-cohort')
+
         if cohort.stage == 'DELETED':
             raise ValidationException('cannot add or edit a user to a cohort that has been deleted',
                                       slug='cohort-with-stage-deleted',
@@ -865,19 +874,6 @@ class CohortUserSerializer(CohortUserSerializerMixin):
     cohort = serializers.PrimaryKeyRelatedField(required=False, queryset=Cohort.objects.filter())
     user = serializers.PrimaryKeyRelatedField(required=False, queryset=User.objects.filter())
     role = serializers.CharField(required=False)
-
-    def validate(self, data):
-
-        prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
-
-        if 'cohort' in data and data['cohort'].stage in prohibited_stages:
-
-            stage = data['cohort'].stage
-
-            raise ValidationException(f'You cannot add a student to a cohort that is {stage}.',
-                                      slug='adding-student-to-a-closed-cohort')
-
-        return data
 
     class Meta:
         model = CohortUser

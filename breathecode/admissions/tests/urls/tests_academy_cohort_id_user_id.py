@@ -181,7 +181,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
@@ -226,7 +226,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         models = [
             self.generate_models(authenticate=True,
                                  user=True,
-                                 cohort=True,
+                                 cohort={'stage': 'STARTED'},
                                  profile_academy=True,
                                  capability='crud_cohort',
                                  role='staff')
@@ -235,7 +235,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         base = models[0].copy()
         del base['cohort']
 
-        models = models + [self.generate_models(cohort=True, models=base)]
+        models = models + [self.generate_models(cohort={'stage': 'STARTED'}, models=base)]
         url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
         data = {
             'user': 1,
