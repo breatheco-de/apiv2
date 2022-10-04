@@ -1,5 +1,8 @@
+from __future__ import annotations
 from datetime import timedelta
 from rest_framework.test import APITestCase
+from . import interfaces
+
 from ..datetime_mixin import DatetimeMixin
 
 __all__ = ['Datetime']
@@ -12,9 +15,11 @@ class Datetime:
     from_iso_string = DatetimeMixin.iso_to_datetime
     now = DatetimeMixin.datetime_now
     _parent: APITestCase
+    _bc: interfaces.BreathecodeInterface
 
-    def __init__(self, parent) -> None:
+    def __init__(self, parent, bc: interfaces.BreathecodeInterface) -> None:
         self._parent = parent
+        self._bc = bc
 
     def from_timedelta(self, delta=timedelta(seconds=0)) -> str:
         """

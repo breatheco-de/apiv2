@@ -11,8 +11,6 @@ from ..mixins import AdmissionsTestCase
 
 
 def get_serializer(cohort, syllabus, syllabus_version, data={}):
-    print(11111111111111111, type(syllabus_version), syllabus_version)
-    print(11111111111111111, type(syllabus), syllabus)
     return {
         'id': cohort.id,
         'distance': None,
