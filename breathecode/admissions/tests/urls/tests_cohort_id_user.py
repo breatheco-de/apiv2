@@ -459,7 +459,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         models = [
             self.generate_models(authenticate=True,
-                                 cohort=True,
+                                 cohort={'stage': 'STARTED'},
                                  user=True,
                                  profile_academy=True,
                                  cohort_user=True,
@@ -472,14 +472,22 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         del base['cohort']
         del base['cohort_user']
 
-        models = models + [self.generate_models(cohort=True, user=True, cohort_user=True, models=base)]
+        models = models + [
+            self.generate_models(cohort={'stage': 'STARTED'}, user=True, cohort_user=True, models=base)
+        ]
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': models[1]['cohort'].id})
         data = {
             'user': models[0]['user'].id,
         }
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
+        expected = {
+            'detail': ('This student is already in another cohort for the same '
+                       'certificate, please mark him/her hi educational status on '
+                       'this prior cohort different than ACTIVE before cotinuing'),
+            'status_code':
+            400
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -520,7 +528,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     def test_cohort_id_user__post__one_teacher__role_student(self):
         """Test /cohort/:id/user without auth"""
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      role='student')
@@ -529,7 +537,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {'user': model['user'].id, 'role': 'TEACHER'}
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
+        expected = {
+            'detail': 'The user must be staff member to this academy before it can be a teacher',
+            'status_code': 400,
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -656,7 +667,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user__post__two_teacher(self):
         """Test /cohort/:id/user without auth"""
-        models = [self.generate_models(authenticate=True, cohort=True, profile_academy=True, role='staff')]
+        models = [
+            self.generate_models(authenticate=True,
+                                 cohort={'stage': 'STARTED'},
+                                 profile_academy=True,
+                                 role='staff')
+        ]
 
         base = models[0].copy()
         del base['user']
@@ -671,7 +687,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
 
-        expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
+        expected = {'detail': 'There can only be one main instructor in a cohort', 'status_code': 400}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -686,7 +702,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         task = {'task_status': 'PENDING', 'task_type': 'PROJECT', 'associated_slug': 'testing-slug'}
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      task=task,
@@ -707,7 +723,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
+        expected = {
+            'detail': 'User has tasks with status pending the educational status cannot be GRADUATED',
+            'status_code': 400
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -721,7 +740,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user__post__with_unsuccess_finantial_status(self):
         """Test /cohort/:id/user without auth"""
-        model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     cohort={'stage': 'STARTED'},
+                                     user=True,
+                                     profile_academy=True)
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'user': model['user'].id,
@@ -730,7 +752,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
+        expected = {
+            'detail': 'Cannot be marked as `GRADUATED` if its financial status is `LATE`',
+            'status_code': 400
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
