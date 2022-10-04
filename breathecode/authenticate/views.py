@@ -88,7 +88,7 @@ PATTERNS = {
     'CONTAINS_SYMBOLS': r'[^a-zA-Z]',
 }
 
-PROFILE_MIME_ALLOWED = ['image/png']
+PROFILE_MIME_ALLOWED = ['image/png', 'image/jpeg']
 
 
 def get_profile_bucket():

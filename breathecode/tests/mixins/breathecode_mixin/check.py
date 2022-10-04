@@ -1,8 +1,11 @@
+from __future__ import annotations
 from datetime import datetime
 from typing import Any
 from rest_framework.test import APITestCase
 from django.db.models import Model
 from django.db.models.query import QuerySet
+from . import interfaces
+
 from ..sha256_mixin import Sha256Mixin
 from ..token_mixin import TokenMixin
 
@@ -15,9 +18,11 @@ class Check:
     sha256 = Sha256Mixin.assertHash
     token = TokenMixin.assertToken
     _parent: APITestCase
+    _bc: interfaces.BreathecodeInterface
 
-    def __init__(self, parent) -> None:
+    def __init__(self, parent, bc: interfaces.BreathecodeInterface) -> None:
         self._parent = parent
+        self._bc = bc
 
     def datetime_in_range(self, start: datetime, end: datetime, date: datetime) -> None:
         """
