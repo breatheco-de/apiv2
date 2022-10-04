@@ -54,8 +54,6 @@ def get_attendancy_log(self, cohort_id: int):
 
     offset = 0
     current_day = 0
-    print('attendance', attendance)
-    print('unattendance', unattendance)
     for day in syllabus:
         if current_day > cohort.current_day:
             break
