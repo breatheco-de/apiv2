@@ -372,32 +372,10 @@ def create_form_entry(self, item, csv_upload_id):
     logger.info('Create form entry started')
 
     csv_upload = CSVUpload.objects.filter(id=csv_upload_id).first()
+
     if not csv_upload:
         logger.error('No CSVUpload found with this id')
         return ''
-
-    # has_error = False
-
-    # if 'first_name' not in item:
-    #     logger.error('Missing first_name')
-    #     has_error = True
-    # if 'last_name' not in item:
-    #     logger.error('Missing last_name')
-    #     has_error = True
-    # if 'email' not in item:
-    #     logger.error('Missing email')
-    #     has_error = True
-    # if 'location' not in item:
-    #     logger.error('Missing location')
-    #     has_error = True
-    # if 'academy' not in item:
-    #     logger.error('Missing academy')
-    #     has_error = True
-
-    # if has_error:
-    #     logger.error('Missing field in received item')
-    #     logger.error(f'{item}')
-    #     return
 
     form_entry = FormEntry()
 
@@ -412,8 +390,9 @@ def create_form_entry(self, item, csv_upload_id):
     if 'location' in item:
         form_entry.location = item['location']
     if 'academy' in item:
-        if Academy.objects.filter(slug=item['academy']).first():
-            form_entry.academy = item['academy']
+        if academy := Academy.objects.filter(slug=item['academy']).first():
+
+            form_entry.academy = academy
         else:
             message = f'No academy exists with this academy slug: {item["academy"]}'
             error_message += f'{message}, '
@@ -472,6 +451,10 @@ def create_form_entry(self, item, csv_upload_id):
         csv_upload.log += error_message
         logger.error('Missing field in received item')
         logger.error(item)
+        csv_upload.status = 'ERROR'
+
+    elif csv_upload.status != 'ERROR':
+        csv_upload.status = 'DONE'
 
     csv_upload.id = csv_upload_id
 

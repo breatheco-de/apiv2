@@ -1,6 +1,7 @@
 """
 Test /answer/:id
 """
+from django.utils import timezone
 from breathecode.marketing.tasks import create_form_entry
 import re, string, os
 import logging
@@ -31,6 +32,8 @@ GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
 
 fake = Faker()
 fake_url = fake.url()
+
+UTC_NOW = timezone.now()
 
 
 def random_string():
@@ -78,6 +81,71 @@ def generate_form_entry_kwargs():
     }
 
 
+def form_entry_field(data={}):
+    return {
+        'id': 1,
+        'fb_leadgen_id': None,
+        'fb_page_id': None,
+        'fb_form_id': None,
+        'fb_adgroup_id': None,
+        'fb_ad_id': None,
+        'first_name': '',
+        'last_name': '',
+        'email': None,
+        'phone': None,
+        'course': None,
+        'client_comments': None,
+        'current_download': None,
+        'location': None,
+        'language': 'en',
+        'utm_url': None,
+        'utm_medium': None,
+        'utm_campaign': None,
+        'utm_content': None,
+        'utm_source': None,
+        'referral_key': None,
+        'gclid': None,
+        'tags': '',
+        'automations': '',
+        'street_address': None,
+        'country': None,
+        'city': None,
+        'latitude': None,
+        'longitude': None,
+        'state': None,
+        'zip_code': None,
+        'browser_lang': None,
+        'storage_status': 'PENDING',
+        'storage_status_text': '',
+        'lead_type': None,
+        'deal_status': None,
+        'sentiment': None,
+        'ac_contact_id': None,
+        'ac_deal_id': None,
+        'ac_expected_cohort': None,
+        'won_at': None,
+        'contact_id': None,
+        'academy_id': None,
+        'user_id': None,
+        'lead_generation_app_id': None,
+        **data,
+    }
+
+
+def csv_upload_field(data={}):
+    return {
+        'academy_id': 1,
+        'finished_at': None,
+        'hash': '',
+        'id': 1,
+        'log': '',
+        'name': '',
+        'status': 'PENDING',
+        'status_message': None,
+        'url': ''
+    }
+
+
 class CreateFormEntryTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
@@ -88,31 +156,30 @@ class CreateFormEntryTestSuite(MarketingTestCase):
         create_form_entry({}, 1)
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'), [])
         self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('No CSVUpload found with this id')])
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_create_form_entry_with_dict_empty_with_csv_upload_id(self):
         """Test create_form_entry task without data"""
 
-        model = self.bc.database.create(csv_upload=1)
+        model = self.bc.database.create(csv_upload={'log': ''})
         logging.Logger.info.call_args_list = []
         create_form_entry({}, 1)
 
         self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
+                         [{
+                             **self.bc.format.to_dict(model.csv_upload),
+                             'status': 'ERROR',
+                             'finished_at': UTC_NOW,
+                             'log': 'No first name in form entry, No last name in form entry, No email '\
+                                'in form entry, No location or academy in form entry. '
+                         }])
         self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
-        print('first: ', str(logging.Logger.error.call_args_list))
-        print(
-            'second: ',
-            str([
-                call('No first name in form entry'),
-                call('No last name in form entry'),
-                call('No email in form entry'),
-                call('No location or academy in form entry'),
-                call('Missing field in received item'),
-                call({})
-            ]))
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('No first name in form entry'),
             call('No last name in form entry'),
@@ -124,7 +191,8 @@ class CreateFormEntryTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_create_form_entry_with_dict_without_regex_first_name(self):
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_create_form_entry_with_dict_check_regex(self):
         """Test create_form_entry task without data"""
         cases = [('Brandon' + self.bc.random.string(number=True, size=1),
                   'Smith' + self.bc.random.string(number=True, size=1), 'test12.net'),
@@ -134,24 +202,39 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                   'Smith' + self.bc.random.string(symbol=True, size=1), 'test12.net@'),
                  ('Brandon' + self.bc.random.string(symbol=True, size=1),
                   'Smith' + self.bc.random.string(symbol=True, size=1), '@test12.net')]
-        model = self.bc.database.create(csv_upload=1)
+
+        model = self.bc.database.create(csv_upload={'log': ''})
 
         for first_name, last_name, email in cases:
+            slug = self.bc.fake.slug()
             logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []
+
+            model.csv_upload.log = ''
+            model.csv_upload.save()
+
             data = {
                 'first_name': first_name,
                 'last_name': last_name,
                 'email': email,
                 'location': 'Madrid',
-                'academy': 1
+                'academy': slug
             }
             create_form_entry(data, 1)
 
             self.assertEqual(self.count_form_entry(), 0)
+            self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
+                             [{
+                                 **self.bc.format.to_dict(model.csv_upload),
+                                 'status': 'ERROR',
+                                 'finished_at': UTC_NOW,
+                                 'log': f'No academy exists with this academy slug: {slug}, first '\
+                                        'name has incorrect characters, last name has incorrect characters, '\
+                                        'email has incorrect format, No location or academy in form entry. '
+                             }])
             self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
             self.assertEqual(logging.Logger.error.call_args_list, [
-                call('The academy needs to have a valid academy id'),
+                call(f'No academy exists with this academy slug: {data["academy"]}'),
                 call('first name has incorrect characters'),
                 call('last name has incorrect characters'),
                 call('email has incorrect format'),
@@ -162,81 +245,38 @@ class CreateFormEntryTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_create_form_entry_with_dict_without_regex_first_name(self):
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_create_form_entry_with_dict_with_correct_format(self):
         """Test create_form_entry task without data"""
-        cases = [('Brandon' + self.bc.random.string(number=True, size=1),
-                  'Smith' + self.bc.random.string(number=True, size=1), 'test12.net'),
-                 ('Brandon' + self.bc.random.string(symbol=True, size=1),
-                  'Smith' + self.bc.random.string(symbol=True, size=1), 'test12@.net'),
-                 ('Brandon' + self.bc.random.string(symbol=True, size=1),
-                  'Smith' + self.bc.random.string(symbol=True, size=1), 'test12.net@'),
-                 ('Brandon' + self.bc.random.string(symbol=True, size=1),
-                  'Smith' + self.bc.random.string(symbol=True, size=1), '@test12.net')]
-        model = self.bc.database.create(csv_upload=1)
 
-        for first_name, last_name, email in cases:
-            logging.Logger.info.call_args_list = []
-            logging.Logger.error.call_args_list = []
-            data = {
-                'first_name': first_name,
-                'last_name': last_name,
-                'email': email,
-                'location': 'Madrid',
-                'academy': self.bc.fake.slug()
-            }
-            create_form_entry(data, 1)
+        model = self.bc.database.create(csv_upload={'log': ''}, academy=1)
 
-            self.assertEqual(self.count_form_entry(), 0)
-            self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
-            self.assertEqual(logging.Logger.error.call_args_list, [
-                call('The academy needs to have a valid academy id'),
-                call('first name has incorrect characters'),
-                call('last name has incorrect characters'),
-                call('email has incorrect format'),
-                call('No location or academy in form entry'),
-                call('Missing field in received item'),
-                call(data)
-            ])
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
 
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_persist_single_lead_dict_empty(self):
-    #     """Test /answer/:id without auth"""
-    #     try:
-    #         persist_single_lead({})
-    #         assert False
-    #     except Exception as e:
-    #         message = str(e)
-    #         self.assertEqual(message, 'Missing location information')
+        data = {
+            'first_name': 'John',
+            'last_name': 'Smith',
+            'email': 'test@gmail.com',
+            'location': 'Madrid',
+            'academy': model.academy.slug
+        }
+        create_form_entry(data, 1)
 
-    #     self.assertEqual(self.count_form_entry(), 0)
+        del data['academy']
 
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_persist_single_lead_with_bad_location(self):
-    #     """Test /answer/:id without auth"""
-    #     try:
-    #         persist_single_lead({'location': 'they-killed-kenny'})
-    #         assert False
-    #     except Exception as e:
-    #         message = str(e)
-    #         self.assertEqual(message, 'No academy found with slug they-killed-kenny')
-
-    #     self.assertEqual(self.count_form_entry(), 0)
-
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_persist_single_lead_with_location(self):
-    #     """Test /answer/:id without auth"""
-    #     model = self.generate_models(academy=True, active_campaign_academy=True)
-    #     try:
-    #         persist_single_lead({'location': model['academy'].slug})
-    #         assert False
-    #     except Exception as e:
-    #         message = str(e)
-    #         self.assertEqual(message, 'You need to specify tags for this entry')
-
-    #     self.assertEqual(self.count_form_entry(), 0)
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'),
+                         [form_entry_field({
+                             **data,
+                             'academy_id': 1,
+                         })])
+        self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
+                         [{
+                             **self.bc.format.to_dict(model.csv_upload),
+                             'status': 'DONE',
+                             'finished_at': UTC_NOW,
+                         }])
+        self.assertEqual(logging.Logger.info.call_args_list,
+                         [call('Create form entry started'),
+                          call('create_form_entry successfully created')])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
