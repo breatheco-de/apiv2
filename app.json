@@ -17,7 +17,8 @@
       },
       "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
       "scripts": {
-        "test": "pipenv run ptest_ci"
+        "test": "pipenv run ptest_ci",
+        "postdeploy": "python manage.py migrate"
       }
     },
     "review": {
@@ -25,6 +26,7 @@
         "ENV": "development",
         "LOG_LEVEL": "DEBUG"
       },
+      "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
       "scripts": {
         "test": "pipenv run ptest_ci",
         "postdeploy": "python manage.py migrate"
