@@ -1,6 +1,7 @@
 """
 Test /answer/:id
 """
+import requests
 from breathecode.marketing.tasks import persist_single_lead
 import logging
 import string, os
@@ -8,19 +9,51 @@ from unittest.mock import patch, MagicMock, call
 
 from random import choice, choices, randint
 from breathecode.tests.mocks import (
-    MAILGUN_PATH,
-    MAILGUN_INSTANCES,
-    apply_mailgun_requests_post_mock,
-    OLD_BREATHECODE_PATH,
     OLD_BREATHECODE_INSTANCES,
     apply_old_breathecode_requests_request_mock,
-    REQUESTS_PATH,
     apply_requests_get_mock,
 )
+from breathecode.tests.mocks.requests import apply_requests_post_mock
 from ..mixins import MarketingTestCase
 from faker import Faker
 
+MAILGUN_URL = f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages"
+
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
+GOOGLE_MAPS_URL = ('https://maps.googleapis.com/maps/api/geocode/json?latlng=15.000000000000000,'
+                   f'15.000000000000000&key={GOOGLE_CLOUD_KEY}')
+
+GOOGLE_MAPS_INVALID_REQUEST = {
+    'status': 'INVALID_REQUEST',
+}
+
+GOOGLE_MAPS_OK = {
+    'status':
+    'OK',
+    'results': [{
+        'address_components': [{
+            'types': {
+                'country': 'US',
+            },
+            'long_name': 'US',
+        }, {
+            'types': {
+                'locality': 'New York',
+            },
+            'long_name': 'New York',
+        }, {
+            'types': {
+                'route': 'Avenue',
+            },
+            'long_name': 'Avenue',
+        }, {
+            'types': {
+                'postal_code': '10028'
+            },
+            'long_name': '10028',
+        }]
+    }]
+}
 
 
 def random_string():
@@ -79,77 +112,133 @@ def generate_form_entry_kwargs(kwargs={}):
 
 
 class AnswerIdTestSuite(MarketingTestCase):
+    """
+    🔽🔽🔽 Passing None
+    """
 
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_no_form_entry(self):
-        """Test /answer/:id without auth"""
+    def test_passing_none(self):
+        data = None
 
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
-
-        persist_single_lead.delay(None)
+        persist_single_lead.delay(data)
 
         self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - You need to specify the form entry data'),
         ])
 
-    """Test /answer/:id"""
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
 
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 Passing empty dict
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_dict_empty(self):
-        """Test /answer/:id without auth"""
+    def test_empty_dict(self):
+        data = {}
 
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
+        persist_single_lead.delay(data)
 
-        persist_single_lead.delay({})
-
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - Missing location information'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 Passing dict with bad location
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_bad_location(self):
-        """Test /answer/:id without auth"""
+    def test_dict_with_bad_location(self):
+        data = {'location': 'they-killed-kenny'}
 
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
-
-        persist_single_lead.delay({'location': 'they-killed-kenny'})
+        persist_single_lead.delay(data)
 
         self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - No academy found with slug they-killed-kenny'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 Passing dict with Academy.slug as location
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_location(self):
+    def test_dict_with_location(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True, active_campaign_academy=True)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({'location': model['academy'].slug})
+        data = {'location': model['academy'].slug}
 
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        persist_single_lead.delay(data)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('automations not found'),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('You need to specify tags for this entry'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 Passing dict with AcademyAlias.active_campaign_slug as location
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_location_academy_alias(self):
+    def test_with_location_academy_alias(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
                                      active_campaign_academy=True,
@@ -159,28 +248,52 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({'location': 'odin'})
+        data = {'location': 'odin'}
 
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        persist_single_lead.delay(data)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('automations not found'),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('You need to specify tags for this entry'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 Passing dict with AcademyAlias.active_campaign_slug as location and bad tags
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_bad_tags(self):
-        # TODO: this test should be reimplemented without depending on the message
+    def test_with_bad_tags(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True, active_campaign_academy=True)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({'location': model['academy'].slug, 'tags': 'they-killed-kenny'})
+        data = {
+            'location': model['academy'].slug,
+            'tags': 'they-killed-kenny',
+        }
 
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        persist_single_lead.delay(data)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('automations not found'),
+        ])
+
         self.assertEqual(
             str(logging.Logger.error.call_args_list),
             str([
@@ -189,106 +302,188 @@ class AnswerIdTestSuite(MarketingTestCase):
                 ),
             ]))
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 Passing dict with AcademyAlias.active_campaign_slug as location and Tag.slug as tags of type STRONG
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_tag_type(self):
+    def test_with_tag_type_strong(self):
         """Test /answer/:id without auth"""
 
-        model = self.generate_models(academy=True,
-                                     active_campaign_academy=True,
-                                     tag=True,
-                                     tag_kwargs={'tag_type': 'STRONG'})
+        model = self.generate_models(academy=1, active_campaign_academy=1, tag={'tag_type': 'STRONG'})
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({'location': model['academy'].slug, 'tags': model['tag'].slug})
-        # self.assertEqual(
-        #     message, 'No automation was specified and the the specified tag has no automation either')
+        data = {
+            'location': model['academy'].slug,
+            'tags': model['tag'].slug,
+        }
+
+        persist_single_lead.delay(data)
 
         self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('automations not found'),
+            call('found tags'),
+            call({model.tag.slug}),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - No automation was specified and the the specified tag has no automation either'
                  ),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+    """
+    🔽🔽🔽 With one Automation but not found
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_tag_type_automation(self):
+    def test_with_tag_type_strong__with_automation(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True,
-                                     active_campaign_academy=True,
-                                     tag=True,
-                                     automation=True,
-                                     tag_kwargs={'tag_type': 'STRONG'})
+        model = self.generate_models(academy=1,
+                                     active_campaign_academy=1,
+                                     tag={'tag_type': 'STRONG'},
+                                     automation=1)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({'location': model['academy'].slug, 'tags': model['tag'].slug})
-        # self.assertEqual(message, "The email doesn't exist")
+        data = {
+            'location': model['academy'].slug,
+            'tags': model['tag'].slug,
+        }
+
+        persist_single_lead.delay(data)
 
         self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('automations not found'),
+            call('found tags'),
+            call({model.tag.slug}),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - The email doesn\'t exist'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+    """
+    🔽🔽🔽 Dict with bad automations and with one Automation but not found
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_automations(self):
+    def test_with_automations__not_found(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True,
-                                     active_campaign_academy=True,
-                                     tag=True,
-                                     tag_kwargs={'tag_type': 'STRONG'},
-                                     automation=True)
+        model = self.generate_models(academy=1,
+                                     active_campaign_academy=1,
+                                     tag={'tag_type': 'STRONG'},
+                                     automation=1)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': 'they-killed-kenny'
-        })
+        }
 
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        persist_single_lead.delay(data)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('The specified automation they-killed-kenny was not found for this AC Academy'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 Dict with automations, without email and with one Automation found
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_automations_slug(self):
+    def test_with_automations_slug(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True,
-                                     active_campaign_academy=True,
-                                     tag=True,
-                                     tag_kwargs={'tag_type': 'STRONG'},
-                                     automation=True,
-                                     automation_kwargs={'slug': 'they-killed-kenny'})
+        model = self.generate_models(academy=1,
+                                     active_campaign_academy=1,
+                                     tag={'tag_type': 'STRONG'},
+                                     automation={'slug': 'they-killed-kenny'})
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug
-        })
+        }
 
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        persist_single_lead.delay(data)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+        ])
+
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - The email doesn\'t exist'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 With email in dict
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_email(self):
+    def test_with_email(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
                                      active_campaign_academy=True,
@@ -300,22 +495,43 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug,
             'email': 'pokemon@potato.io'
-        })
+        }
 
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        persist_single_lead.delay(data)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+        ])
+
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - The first name doesn\'t exist'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 With first_name in dict
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_first_name(self):
+    def test_with_first_name(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
                                      active_campaign_academy=True,
@@ -327,23 +543,44 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug,
             'email': 'pokemon@potato.io',
             'first_name': 'Konan'
-        })
+        }
 
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        persist_single_lead.delay(data)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+        ])
+
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - The last name doesn\'t exist'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 With last_name in dict
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_last_name(self):
+    def test_with_last_name(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
                                      active_campaign_academy=True,
@@ -355,25 +592,45 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug,
             'email': 'pokemon@potato.io',
             'first_name': 'Konan',
             'last_name': 'Amegakure',
-        })
+        }
 
-        self.assertEqual(self.count_form_entry(), 0)
+        persist_single_lead.delay(data)
 
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+        ])
+
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - The phone doesn\'t exist'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 With phone in dict
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_phone(self):
+    def test_with_phone(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
                                      active_campaign_academy=True,
@@ -385,7 +642,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug,
@@ -393,18 +650,37 @@ class AnswerIdTestSuite(MarketingTestCase):
             'first_name': 'Konan',
             'last_name': 'Amegakure',
             'phone': '123123123',
-        })
+        }
 
-        self.assertEqual(self.count_form_entry(), 0)
+        persist_single_lead.delay(data)
 
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - The id doesn\'t exist'),
         ])
 
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
+
+    """
+    🔽🔽🔽 With id in dict but FormEntry doesn't exist
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_id(self):
+    def test_with_id(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True,
                                      active_campaign_academy=True,
@@ -416,7 +692,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug,
@@ -426,113 +702,38 @@ class AnswerIdTestSuite(MarketingTestCase):
             'phone': '123123123',
             'id': 123123123,
             'course': 'asdasd',
-        })
+        }
 
-        self.assertEqual(self.count_form_entry(), 0)
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        persist_single_lead.delay(data)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+        ])
+
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - FormEntry not found (id: 123123123)'),
         ])
 
-    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
-    @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
-    def test_persist_single_lead_with_form_entry(self):
-        """Test /answer/:id without auth"""
-        mock_mailgun = MAILGUN_INSTANCES['post']
-        mock_mailgun.call_args_list = []
+        self.assertEqual(requests.get.error.call_args_list, [])
+        self.assertEqual(requests.post.error.call_args_list, [])
+        self.assertEqual(requests.request.error.call_args_list, [])
 
-        mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
-        mock_old_breathecode.call_args_list = []
-        model = self.generate_models(
-            academy=True,
-            active_campaign_academy=True,
-            tag=True,
-            tag_kwargs={'tag_type': 'STRONG'},
-            automation=True,
-            automation_kwargs={'slug': 'they-killed-kenny'},
-            form_entry=True,
-            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [])
 
-        persist_single_lead.delay({
-            'location': model['academy'].slug,
-            'tags': model['tag'].slug,
-            'automations': model['automation'].slug,
-            'email': 'pokemon@potato.io',
-            'first_name': 'Konan',
-            'last_name': 'Amegakure',
-            'phone': '123123123',
-            'course': 'asdasd',
-            'id': model['form_entry'].id,
-        })
+    """
+    🔽🔽🔽 With id and without course in dict, FormEntry exists
+    """
 
-        self.assertEqual(self.all_form_entry_dict(), [{
-            'ac_contact_id': '1',
-            'ac_deal_id': None,
-            'ac_expected_cohort': None,
-            'academy_id': 1,
-            'automations': '',
-            'browser_lang': None,
-            'city': None,
-            'client_comments': None,
-            'current_download': None,
-            'contact_id': None,
-            'country': None,
-            'course': None,
-            'deal_status': None,
-            'email': None,
-            'fb_ad_id': None,
-            'fb_adgroup_id': None,
-            'fb_form_id': None,
-            'fb_leadgen_id': None,
-            'fb_page_id': None,
-            'first_name': '',
-            'gclid': None,
-            'id': 1,
-            'language': 'en',
-            'last_name': '',
-            'latitude': None,
-            'lead_type': None,
-            'location': None,
-            'longitude': None,
-            'phone': None,
-            'referral_key': None,
-            'sentiment': None,
-            'state': None,
-            'storage_status': 'PERSISTED',
-            'street_address': None,
-            'tags': '',
-            'user_id': None,
-            'utm_campaign': None,
-            'utm_medium': None,
-            'utm_content': None,
-            'utm_source': None,
-            'utm_url': None,
-            'won_at': None,
-            'lead_generation_app_id': None,
-            'storage_status_text': '',
-            'zip_code': None
-        }])
-
-        self.assertEqual(mock_mailgun.call_args_list, [])
-        self.check_old_breathecode_calls(mock_old_breathecode, model, course='asdasd')
-
-    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
-    @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
-    @patch(
-        REQUESTS_PATH['get'],
-        apply_requests_get_mock([(
-            200,
-            f'https://maps.googleapis.com/maps/api/geocode/json?latlng=15.000000000000000,15.000000000000000&key={GOOGLE_CLOUD_KEY}',
-            {
-                'status': 'INVALID_REQUEST',
-            })]))
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_INVALID_REQUEST)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_persist_single_lead_with_form_entry_with_data_invalid(self):
-        """Test /answer/:id without auth"""
-        mock_mailgun = MAILGUN_INSTANCES['post']
-        mock_mailgun.call_args_list = []
-
+    def test_with_form_entry_with_data_invalid(self):
         mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
         mock_old_breathecode.call_args_list = []
         model = self.generate_models(
@@ -549,7 +750,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        persist_single_lead.delay({
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug,
@@ -558,66 +759,61 @@ class AnswerIdTestSuite(MarketingTestCase):
             'last_name': 'Amegakure',
             'phone': '123123123',
             'id': model['form_entry'].id,
-        })
+        }
 
-        self.assertEqual(logging.Logger.info.call_args_list, [])
+        persist_single_lead.delay(data)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+        ])
+
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('Status 400 - The course doesn\'t exist'),
         ])
 
-    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
-    @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
-    @patch(
-        REQUESTS_PATH['get'],
-        apply_requests_get_mock([(
-            200,
-            f'https://maps.googleapis.com/maps/api/geocode/json?latlng=15.000000000000000,15.000000000000000&key={GOOGLE_CLOUD_KEY}',
-            {
-                'status':
-                'OK',
-                'results': [{
-                    'address_components': [{
-                        'types': {
-                            'country': 'US',
-                        },
-                        'long_name': 'US',
-                    }, {
-                        'types': {
-                            'locality': 'New York',
-                        },
-                        'long_name': 'New York',
-                    }, {
-                        'types': {
-                            'route': 'Avenue',
-                        },
-                        'long_name': 'Avenue',
-                    }, {
-                        'types': {
-                            'postal_code': '10028'
-                        },
-                        'long_name': '10028',
-                    }]
-                }]
-            })]))
-    def test_persist_single_lead_with_form_entry_with_data(self):
+        self.assertEqual(requests.get.call_args_list, [])
+        self.assertEqual(requests.post.call_args_list, [])
+        self.assertEqual(requests.request.call_args_list, [])
+
+        db = self.bc.format.to_dict(model['form_entry'])
+        del db['ac_academy']
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'),
+                         [{
+                             **db,
+                             'ac_contact_id': None,
+                             'storage_status_text': "The course doesn't exist",
+                         }])
+
+    """
+    🔽🔽🔽 First successful response, with id in dict, FormEntry found
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    def test_with_form_entry_with_data(self):
         """Test /answer/:id without auth"""
-        mock_mailgun = MAILGUN_INSTANCES['post']
-        mock_mailgun.call_args_list = []
 
         mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
         mock_old_breathecode.call_args_list = []
         model = self.generate_models(
-            academy=True,
-            active_campaign_academy=True,
-            tag=True,
-            tag_kwargs={'tag_type': 'STRONG'},
-            automation=True,
-            automation_kwargs={'slug': 'they-killed-kenny'},
-            form_entry=True,
-            form_entry_kwargs=generate_form_entry_kwargs(),
-            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
+            academy=1,
+            active_campaign_academy={'ac_url': 'https://old.hardcoded.breathecode.url'},
+            tag={'tag_type': 'STRONG'},
+            automation={'slug': 'they-killed-kenny'},
+            form_entry=generate_form_entry_kwargs())
 
-        persist_single_lead.delay({
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug,
@@ -627,69 +823,96 @@ class AnswerIdTestSuite(MarketingTestCase):
             'phone': '123123123',
             'id': model['form_entry'].id,
             'course': 'asdasd',
-        })
-        form = self.get_form_entry(1)
+        }
 
-        self.assertEqual(self.all_form_entry_dict(), [{
+        persist_single_lead.delay(data)
+
+        db = self.bc.format.to_dict(model['form_entry'])
+        del db['ac_academy']
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [{
+            **db,
             'ac_contact_id': '1',
-            'ac_deal_id': model['form_entry'].ac_deal_id,
-            'ac_expected_cohort': None,
-            'academy_id': model['form_entry'].academy_id,
-            'automations': model['form_entry'].automations,
-            'browser_lang': model['form_entry'].browser_lang,
-            'city': model['form_entry'].city,
-            'client_comments': model['form_entry'].client_comments,
-            'current_download': model['form_entry'].current_download,
-            'contact_id': model['form_entry'].contact_id,
-            'country': model['form_entry'].country,
-            'course': model['form_entry'].course,
-            'deal_status': model['form_entry'].deal_status,
-            'email': model['form_entry'].email,
-            'fb_ad_id': model['form_entry'].fb_ad_id,
-            'fb_adgroup_id': model['form_entry'].fb_adgroup_id,
-            'fb_form_id': model['form_entry'].fb_form_id,
-            'fb_leadgen_id': model['form_entry'].fb_leadgen_id,
-            'fb_page_id': model['form_entry'].fb_page_id,
-            'first_name': model['form_entry'].first_name,
-            'gclid': model['form_entry'].gclid,
-            'id': model['form_entry'].id,
-            'language': model['form_entry'].language,
-            'last_name': model['form_entry'].last_name,
-            'latitude': form.latitude,
-            'lead_type': model['form_entry'].lead_type,
-            'location': model['form_entry'].location,
-            'longitude': form.longitude,
-            'phone': model['form_entry'].phone,
-            'referral_key': model['form_entry'].referral_key,
-            'sentiment': model['form_entry'].sentiment,
-            'state': model['form_entry'].state,
             'storage_status': 'PERSISTED',
-            'street_address': model['form_entry'].street_address,
-            'tags': model['form_entry'].tags,
-            'user_id': model['form_entry'].user_id,
-            'utm_campaign': model['form_entry'].utm_campaign,
-            'utm_medium': model['form_entry'].utm_medium,
-            'utm_source': model['form_entry'].utm_source,
-            'utm_content': model['form_entry'].utm_content,
-            'utm_url': model['form_entry'].utm_url,
-            'won_at': model['form_entry'].won_at,
-            'lead_generation_app_id': None,
-            'zip_code': model['form_entry'].zip_code,
             'storage_status_text': '',
         }])
 
-        self.assertEqual(mock_mailgun.call_args_list, [])
-        self.check_old_breathecode_calls(mock_old_breathecode, model, course='asdasd')
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+            call('ready to send contact with following details: ' + str({
+                'email': 'pokemon@potato.io',
+                'first_name': 'Konan',
+                'last_name': 'Amegakure',
+                'phone': '123123123',
+                'field[18,0]': model.academy.slug,
+                'field[2,0]': 'asdasd',
+            })),
+            call(f'Triggered automation with id {model.automation.acp_id} ' + str({
+                'subscriber_id': 1,
+                'result_code': 1,
+                'contacts': [{
+                    'id': 1
+                }]
+            })),
+            call('automations was executed successfully'),
+            call('contact was tagged successfully'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
-    @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
-    def test_persist_single_lead_with_form_entry_with_data__________(self):
+        self.assertEqual(requests.get.call_args_list, [])
+        self.assertEqual(requests.post.call_args_list, [])
+        self.assertEqual(requests.request.call_args_list, [
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/admin/api.php',
+                 params=[('api_action', 'contact_sync'), ('api_key', model['active_campaign_academy'].ac_key),
+                         ('api_output', 'json')],
+                 data={
+                     'email': 'pokemon@potato.io',
+                     'first_name': 'Konan',
+                     'last_name': 'Amegakure',
+                     'phone': '123123123',
+                     'field[18,0]': model['academy'].slug,
+                     'field[2,0]': 'asdasd',
+                 }),
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
+                 headers={
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json',
+                     'Api-Token': model['active_campaign_academy'].ac_key
+                 },
+                 json={'contactAutomation': {
+                     'contact': 1,
+                     'automation': model['automation'].acp_id
+                 }}),
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/api/3/contactTags',
+                 headers={
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json',
+                     'Api-Token': model['active_campaign_academy'].ac_key
+                 },
+                 json={'contactTag': {
+                     'contact': 1,
+                     'tag': model['tag'].acp_id
+                 }})
+        ])
+
+    """
+    🔽🔽🔽 First successful response, with id in dict, FormEntry found two times
+    """
+
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    def test_with_form_entry_with_data__two_form_entries_found(self):
         """Test /answer/:id without auth"""
-        mock_mailgun = MAILGUN_INSTANCES['post']
-        mock_mailgun.call_args_list = []
-
-        mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
-        mock_old_breathecode.call_args_list = []
-
         form_entries = [
             generate_form_entry_kwargs({
                 'email': 'pokemon@potato.io',
@@ -713,7 +936,10 @@ class AnswerIdTestSuite(MarketingTestCase):
             form_entry=form_entries,
             active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
 
-        persist_single_lead.delay({
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug,
@@ -723,61 +949,48 @@ class AnswerIdTestSuite(MarketingTestCase):
             'phone': '123123123',
             'course': 'asdasd',
             'id': 2,
-        })
+        }
+
+        persist_single_lead.delay(data)
         form = self.get_form_entry(1)
 
-        self.assertEqual(self.all_form_entry_dict(), [
+        db = self.bc.format.to_dict(model['form_entry'][1])
+        del db['ac_academy']
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
             fix_db_field(self.bc.format.to_dict(model.form_entry[0])), {
+                **db,
                 'ac_contact_id': '1',
-                'ac_deal_id': model['form_entry'][1].ac_deal_id,
                 'ac_expected_cohort': None,
-                'academy_id': model['form_entry'][1].academy_id,
-                'automations': model['form_entry'][1].automations,
-                'browser_lang': model['form_entry'][1].browser_lang,
-                'city': model['form_entry'][1].city,
-                'client_comments': model['form_entry'][1].client_comments,
-                'current_download': model['form_entry'][1].current_download,
-                'contact_id': model['form_entry'][1].contact_id,
-                'country': model['form_entry'][1].country,
-                'course': model['form_entry'][1].course,
-                'deal_status': model['form_entry'][1].deal_status,
-                'email': model['form_entry'][1].email,
-                'fb_ad_id': model['form_entry'][1].fb_ad_id,
-                'fb_adgroup_id': model['form_entry'][1].fb_adgroup_id,
-                'fb_form_id': model['form_entry'][1].fb_form_id,
-                'fb_leadgen_id': model['form_entry'][1].fb_leadgen_id,
-                'fb_page_id': model['form_entry'][1].fb_page_id,
-                'first_name': model['form_entry'][1].first_name,
-                'gclid': model['form_entry'][1].gclid,
-                'id': model['form_entry'][1].id,
-                'language': model['form_entry'][1].language,
-                'last_name': model['form_entry'][1].last_name,
                 'latitude': form.latitude,
-                'lead_type': model['form_entry'][1].lead_type,
-                'location': model['form_entry'][1].location,
                 'longitude': form.longitude,
-                'phone': model['form_entry'][1].phone,
-                'referral_key': model['form_entry'][1].referral_key,
-                'sentiment': model['form_entry'][1].sentiment,
-                'state': model['form_entry'][1].state,
                 'storage_status': 'DUPLICATED',
-                'street_address': model['form_entry'][1].street_address,
-                'tags': model['form_entry'][1].tags,
-                'user_id': model['form_entry'][1].user_id,
-                'utm_campaign': model['form_entry'][1].utm_campaign,
-                'utm_medium': model['form_entry'][1].utm_medium,
-                'utm_source': model['form_entry'][1].utm_source,
-                'utm_content': model['form_entry'][1].utm_content,
-                'utm_url': model['form_entry'][1].utm_url,
-                'won_at': model['form_entry'][1].won_at,
                 'lead_generation_app_id': None,
-                'zip_code': model['form_entry'][1].zip_code,
                 'storage_status_text': '',
             }
         ])
 
-        self.assertEqual(mock_mailgun.call_args_list, [])
-        self.assertEqual(mock_old_breathecode.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+            call('ready to send contact with following details: ' + str({
+                'email': 'pokemon@potato.io',
+                'first_name': 'Konan',
+                'last_name': 'Amegakure',
+                'phone': '123123123',
+                'field[18,0]': model.academy.slug,
+                'field[2,0]': 'asdasd',
+            })),
+            call('FormEntry is considered a duplicate, no automations or tags added'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(requests.get.call_args_list, [])
+        self.assertEqual(requests.post.call_args_list, [])
+        self.assertEqual(requests.request.call_args_list, [
             call('POST',
                  'https://old.hardcoded.breathecode.url/admin/api.php',
                  params=[('api_action', 'contact_sync'), ('api_key', model['active_campaign_academy'].ac_key),
@@ -792,59 +1005,30 @@ class AnswerIdTestSuite(MarketingTestCase):
                  }),
         ])
 
-    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
-    @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
-    @patch(
-        REQUESTS_PATH['get'],
-        apply_requests_get_mock([(
-            200,
-            f'https://maps.googleapis.com/maps/api/geocode/json?latlng=15.000000000000000,15.000000000000000&key={GOOGLE_CLOUD_KEY}',
-            {
-                'status':
-                'OK',
-                'results': [{
-                    'address_components': [{
-                        'types': {
-                            'country': 'US',
-                        },
-                        'long_name': 'US',
-                    }, {
-                        'types': {
-                            'locality': 'New York',
-                        },
-                        'long_name': 'New York',
-                    }, {
-                        'types': {
-                            'route': 'Avenue',
-                        },
-                        'long_name': 'Avenue',
-                    }, {
-                        'types': {
-                            'postal_code': '10028'
-                        },
-                        'long_name': '10028',
-                    }]
-                }]
-            })]))
-    def test_persist_single_lead_with_form_entry_with_data__current_download(self):
-        """Test /answer/:id without auth"""
-        mock_mailgun = MAILGUN_INSTANCES['post']
-        mock_mailgun.call_args_list = []
+    """
+    🔽🔽🔽 Successful response, dict with current_download ---
+    """
 
+    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    def test_with_form_entry_with_data__current_download(self):
         mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
         mock_old_breathecode.call_args_list = []
-        model = self.generate_models(
-            academy=True,
-            active_campaign_academy=True,
-            tag=True,
-            tag_kwargs={'tag_type': 'STRONG'},
-            automation=True,
-            automation_kwargs={'slug': 'they-killed-kenny'},
-            form_entry=True,
-            form_entry_kwargs=generate_form_entry_kwargs(),
-            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
 
-        persist_single_lead.delay({
+        model = self.generate_models(
+            academy=1,
+            active_campaign_academy={'ac_url': 'https://old.hardcoded.breathecode.url'},
+            tag={'tag_type': 'STRONG'},
+            automation={'slug': 'they-killed-kenny'},
+            form_entry=generate_form_entry_kwargs())
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        data = {
             'location': model['academy'].slug,
             'tags': model['tag'].slug,
             'automations': model['automation'].slug,
@@ -855,62 +1039,50 @@ class AnswerIdTestSuite(MarketingTestCase):
             'id': model['form_entry'].id,
             'course': 'asdasd',
             'current_download': fake_url
-        })
-        form = self.get_form_entry(1)
+        }
 
-        self.assertEqual(
-            self.all_form_entry_dict(),
-            [{
-                'ac_contact_id': '1',
-                'ac_deal_id': model['form_entry'].ac_deal_id,
-                'ac_expected_cohort': None,
-                'academy_id': model['form_entry'].academy_id,
-                'automations': model['form_entry'].automations,
-                'browser_lang': model['form_entry'].browser_lang,
-                'city': model['form_entry'].city,
-                'client_comments': model['form_entry'].client_comments,
-                'current_download': model['form_entry'].current_download,
-                'contact_id': model['form_entry'].contact_id,
-                'country': model['form_entry'].country,
-                'course': model['form_entry'].course,
-                'deal_status': model['form_entry'].deal_status,
-                'email': model['form_entry'].email,
-                'fb_ad_id': model['form_entry'].fb_ad_id,
-                'fb_adgroup_id': model['form_entry'].fb_adgroup_id,
-                'fb_form_id': model['form_entry'].fb_form_id,
-                'fb_leadgen_id': model['form_entry'].fb_leadgen_id,
-                'fb_page_id': model['form_entry'].fb_page_id,
-                'first_name': model['form_entry'].first_name,
-                'gclid': model['form_entry'].gclid,
-                'id': model['form_entry'].id,
-                'language': model['form_entry'].language,
-                'last_name': model['form_entry'].last_name,
-                'latitude': form.latitude,
-                'lead_type': model['form_entry'].lead_type,
-                'location': model['form_entry'].location,
-                'longitude': form.longitude,
-                'phone': model['form_entry'].phone,
-                'referral_key': model['form_entry'].referral_key,
-                'sentiment': model['form_entry'].sentiment,
-                'state': model['form_entry'].state,
-                'storage_status': 'PERSISTED',
-                'street_address': model['form_entry'].street_address,
-                'tags': model['form_entry'].tags,
-                'user_id': model['form_entry'].user_id,
-                'utm_campaign': model['form_entry'].utm_campaign,
-                'utm_medium': model['form_entry'].utm_medium,
-                'utm_source': model['form_entry'].utm_source,
-                'utm_content': model['form_entry'].utm_content,
-                'utm_url': model['form_entry'].utm_url,
-                'won_at': model['form_entry'].won_at,
-                'lead_generation_app_id': None,
-                'zip_code': model['form_entry'].zip_code,
-                'storage_status_text': '',
-                # 'zip_code': 10028
-            }])
+        persist_single_lead.delay(data)
 
-        self.assertEqual(mock_mailgun.call_args_list, [])
-        self.assertEqual(mock_old_breathecode.call_args_list, [
+        db = self.bc.format.to_dict(model['form_entry'])
+        del db['ac_academy']
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [{
+            **db,
+            'ac_contact_id': '1',
+            'storage_status': 'PERSISTED',
+            'storage_status_text': '',
+        }])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting persist_single_lead'),
+            call('found automations'),
+            call([model.automation.acp_id]),
+            call('found tags'),
+            call({model.tag.slug}),
+            call('ready to send contact with following details: ' + str({
+                'email': 'pokemon@potato.io',
+                'first_name': 'Konan',
+                'last_name': 'Amegakure',
+                'phone': '123123123',
+                'field[18,0]': model.academy.slug,
+                'field[2,0]': 'asdasd',
+                'field[46,0]': fake_url,
+            })),
+            call(f'Triggered automation with id {model.automation.acp_id} ' + str({
+                'subscriber_id': 1,
+                'result_code': 1,
+                'contacts': [{
+                    'id': 1
+                }]
+            })),
+            call('automations was executed successfully'),
+            call('contact was tagged successfully'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(requests.get.call_args_list, [])
+        self.assertEqual(requests.post.call_args_list, [])
+        self.assertEqual(requests.request.call_args_list, [
             call('POST',
                  'https://old.hardcoded.breathecode.url/admin/api.php',
                  params=[('api_action', 'contact_sync'), ('api_key', model['active_campaign_academy'].ac_key),
