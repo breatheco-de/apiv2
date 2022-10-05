@@ -6,7 +6,7 @@ from django.template.loader import get_template
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from django.db.models import Q
-from .signals import asset_slug_modified
+from .signals import asset_slug_modified, asset_readme_modified
 from slugify import slugify
 from breathecode.assessment.models import Assessment
 
@@ -203,9 +203,13 @@ TYPE = (
 
 BEGINNER = 'BEGINNER'
 EASY = 'EASY'
+INTERMEDIATE = 'INTERMEDIATE'
+HARD = 'HARD'
 DIFFICULTY = (
-    (BEGINNER, 'Beginner'),
+    (HARD, 'Hard'),
+    (INTERMEDIATE, 'Intermediate'),
     (EASY, 'Easy'),
+    (BEGINNER, 'Beginner'),
 )
 
 DRAFT = 'DRAFT'
@@ -232,6 +236,7 @@ class Asset(models.Model):
     def __init__(self, *args, **kwargs):
         super(Asset, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
+        self.__old_readme = self.readme
 
     slug = models.SlugField(
         max_length=200,
@@ -364,17 +369,26 @@ class Asset(models.Model):
 
     def save(self, *args, **kwargs):
 
+        slug_modified = False
+        readme_modified = False
+
+        if self.__old_readme != self.readme:
+            readme_modified = True
+            self.sync_status = 'PENDING'
+
         # only validate this on creation
         if self.pk is None or self.__old_slug != self.slug:
+            slug_modified = True
             alias = AssetAlias.objects.filter(slug=self.slug).first()
             if alias is not None:
                 raise Exception(f'New slug {self.slug} for {self.__old_slug} is already taken by alias')
 
-            super().save(*args, **kwargs)
-            self.__old_slug = self.slug
-            asset_slug_modified.send(instance=self, sender=Asset)
-        else:
-            super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+        self.__old_slug = self.slug
+        self.__old_readme = self.readme
+
+        if slug_modified: asset_slug_modified.send(instance=self, sender=Asset)
+        if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
 
     def get_readme(self, parse=None, raw=False, remove_frontmatter=False):
 
@@ -510,13 +524,23 @@ class AssetComment(models.Model):
 
     text = models.TextField()
     resolved = models.BooleanField(default=False)
+    delivered = models.BooleanField(default=False)
+    urgent = models.BooleanField(default=False)
+    priority = models.SmallIntegerField(default=False)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     author = models.ForeignKey(User,
                                on_delete=models.SET_NULL,
                                default=None,
                                blank=True,
                                null=True,
-                               help_text='Who wrote the lesson, not necessarily the owner')
+                               help_text='Who wrote the comment or issue')
+    owner = models.ForeignKey(User,
+                              on_delete=models.SET_NULL,
+                              default=None,
+                              blank=True,
+                              null=True,
+                              related_name='assigned_comments',
+                              help_text='In charge of resolving the comment or issue')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 

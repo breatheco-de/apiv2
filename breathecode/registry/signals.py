@@ -5,3 +5,4 @@ declare a new variable here like this:
 from django import dispatch
 
 asset_slug_modified = dispatch.Signal()
+asset_readme_modified = dispatch.Signal()

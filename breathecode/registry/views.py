@@ -10,7 +10,7 @@ from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment)
 
-from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset
+from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
@@ -470,17 +470,24 @@ class AcademyAssetActionView(APIView):
         if asset is None:
             raise ValidationException('This asset does not exist for this academy', 404)
 
-        possible_actions = ['test', 'sync', 'analyze_seo']
+        possible_actions = ['test', 'pull', 'push', 'analyze_seo']
         if action_slug not in possible_actions:
             raise ValidationException(f'Invalid action {action_slug}')
         try:
             if action_slug == 'test':
                 test_asset(asset)
-            elif action_slug == 'sync':
+            elif action_slug == 'pull':
                 override_meta = False
                 if request.data and 'override_meta' in request.data:
                     override_meta = request.data['override_meta']
                 pull_from_github(asset.slug, override_meta=override_meta)
+            elif action_slug == 'push':
+                if asset.asset_type not in ['ARTICLE', 'LESSON']:
+                    raise ValidationException(
+                        f'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
+                    )
+
+                push_to_github(asset.slug)
             elif action_slug == 'analyze_seo':
                 report = SEOAnalyzer(asset)
                 report.start()

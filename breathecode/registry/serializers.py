@@ -85,7 +85,9 @@ class AcademyCommentSerializer(serpy.Serializer):
     text = serpy.Field()
     asset = SmallAsset()
     resolved = serpy.Field()
-    author = UserSerializer()
+    delivered = serpy.Field()
+    author = UserSerializer(required=False)
+    owner = UserSerializer(required=False)
     created_at = serpy.Field()
 
 

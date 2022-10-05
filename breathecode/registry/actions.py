@@ -1,4 +1,4 @@
-import logging, json, os, re, pathlib
+import logging, json, os, re, pathlib, base64
 from typing import Optional
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
@@ -230,9 +230,68 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         g = Github(credentials.token)
         if asset.asset_type in ['LESSON', 'ARTICLE']:
-            asset = sync_github_lesson(g, asset, override_meta=override_meta)
+            asset = pull_github_lesson(g, asset, override_meta=override_meta)
         else:
-            asset = sync_learnpack_asset(g, asset, override_meta=override_meta)
+            asset = pull_learnpack_asset(g, asset, override_meta=override_meta)
+
+        asset.status_text = 'Successfully Synched'
+        asset.sync_status = 'OK'
+        asset.last_synch_at = timezone.now()
+        asset.save()
+        logger.debug(f'Successfully re-synched asset {asset_slug} with github')
+
+        return asset
+    except Exception as e:
+        # raise e
+        message = ''
+        if hasattr(e, 'data'):
+            message = e.data['message']
+        else:
+            message = str(e).replace('"', '\'')
+
+        logger.error(f'Error updating {asset_slug} from github: ' + str(message))
+        # if the exception triggered too early, the asset will be early
+        if asset is not None:
+            asset.status_text = str(message)
+            asset.sync_status = 'ERROR'
+            asset.save()
+            return asset.sync_status
+
+    return 'ERROR'
+
+
+def push_to_github(asset_slug):
+
+    logger.debug(f'Push asset {asset_slug} to github')
+
+    asset = None
+    try:
+
+        asset = Asset.objects.filter(slug=asset_slug).first()
+        if asset is None:
+            raise Exception(f'Asset with slug {asset_slug} not found when attempting github push')
+
+        asset.status_text = 'Starting to push...'
+        asset.sync_status = 'PENDING'
+        asset.save()
+
+        if asset.external:
+            raise Exception('Asset is marked as "external" so it cannot push to github')
+
+        if asset.owner is None:
+            raise Exception('Asset must have an owner with write permissions on the repository')
+
+        if asset.url is None or 'github.com' not in asset.url:
+            raise Exception(f'Missing or invalid URL on {asset_slug}, it does not belong to github.com')
+
+        credentials = CredentialsGithub.objects.filter(user__id=asset.owner.id).first()
+        if credentials is None:
+            raise Exception(
+                f'Github credentials for asset owner id {asset.owner.id} not found when sync asset {asset_slug}'
+            )
+
+        g = Github(credentials.token)
+        asset = push_github_asset(g, asset)
 
         asset.status_text = 'Successfully Synched'
         asset.sync_status = 'OK'
@@ -291,9 +350,53 @@ def get_blob_content(repo, path_name, branch='main'):
     return repo.get_git_blob(sha[0])
 
 
-def sync_github_lesson(github, asset, override_meta=False):
+def set_blob_content(repo, path_name, content, branch='main'):
 
-    logger.debug(f'Sync sync_github_lesson {asset.slug}')
+    if content is None or content == '':
+        raise Exception(f'Blob content is empty for {path_name}')
+
+    # first get the branch reference
+    ref = repo.get_git_ref(f'heads/{branch}')
+    # then get the tree
+    tree = repo.get_git_tree(ref.object.sha, recursive='/' in path_name).tree
+    # look for path in tree
+    file = [x for x in tree if x.path == path_name]
+    if not file:
+        # well, not found..
+        return None
+
+    # update
+    return repo.update_file(file[0].path, 'Updated from admin.4Geeks.com', content, file[0].sha)
+
+
+def push_github_asset(github, asset):
+
+    logger.debug(f'Sync pull_github_lesson {asset.slug}')
+
+    if asset.readme_url is None:
+        raise Exception('Missing Readme URL for asset ' + asset.slug + '.')
+
+    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    repo = github.get_repo(f'{org_name}/{repo_name}')
+
+    file_name = os.path.basename(asset.readme_url)
+
+    if branch_name is None:
+        raise Exception('Readme URL must include branch name after blob')
+
+    result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
+    branch, file_path = result.groups()
+    logger.debug(f'Fetching readme: {file_path}')
+
+    decoded_readme = base64.b64decode(asset.readme.encode('utf-8')).decode('utf-8')
+    set_blob_content(repo, file_path, decoded_readme, branch=branch)
+
+    return asset
+
+
+def pull_github_lesson(github, asset, override_meta=False):
+
+    logger.debug(f'Sync pull_github_lesson {asset.slug}')
 
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for lesson ' + asset.slug + '.')
@@ -459,7 +562,7 @@ class AssetThumbnailGenerator:
         return bool((self.width and not self.height) or (not self.width and self.height))
 
 
-def sync_learnpack_asset(github, asset, override_meta):
+def pull_learnpack_asset(github, asset, override_meta):
 
     org_name, repo_name, branch_name = get_url_info(asset.url)
     repo = github.get_repo(f'{org_name}/{repo_name}')
