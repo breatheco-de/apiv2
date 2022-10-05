@@ -1,19 +1,23 @@
 """
 Google Cloud Storage Mocks
 """
-from unittest.mock import Mock
+from unittest.mock import MagicMock
 from .requests_mock import request_mock
-from .constants import (EVENTBRITE_EVENT, EVENTBRITE_ORDER, EVENTBRITE_ATTENDEE, EVENTBRITE_TICKET_CLASS,
-                        EVENTBRITE_EVENT_URL, EVENTBRITE_ORDER_URL, EVENTBRITE_ATTENDEE_URL,
-                        EVENTBRITE_TICKET_CLASS_URL)
+from .constants import *
 
 EVENTBRITE_PATH = {
     'get': 'requests.get',
 }
 
-EVENTBRITE_INSTANCES = {'get': Mock(side_effect=request_mock)}
+EVENTBRITE_INSTANCES = {'get': None}
 
 
 def apply_eventbrite_requests_post_mock():
     """Apply Storage Blob Mock"""
-    return EVENTBRITE_INSTANCES['get']
+
+    mock = MagicMock(side_effect=request_mock)
+
+    # don't fix this line, this keep the old behavior
+    EVENTBRITE_INSTANCES['get'] = EVENTBRITE_INSTANCES['get'] or mock
+
+    return mock

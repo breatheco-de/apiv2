@@ -80,13 +80,13 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(
             str(FunctionV1.call.call_args_list),
             str([
-                call(
-                    params={
-                        'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
-                        'name': f'learn-to-code-{model.asset.slug}.png',
-                        'dimension': '1200x630',
-                        'delay': 1000,
-                    })
+                call(params={
+                    'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                    'name': f'learn-to-code-{model.asset.slug}.png',
+                    'dimension': '1200x630',
+                    'delay': 1000,
+                },
+                     timeout=5)
             ]))
 
     """
@@ -142,13 +142,13 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(
             str(FunctionV1.call.call_args_list),
             str([
-                call(
-                    params={
-                        'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
-                        'name': f'learn-to-code-{model.asset.slug}.png',
-                        'dimension': '1200x630',
-                        'delay': 1000,
-                    })
+                call(params={
+                    'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                    'name': f'learn-to-code-{model.asset.slug}.png',
+                    'dimension': '1200x630',
+                    'delay': 1000,
+                },
+                     timeout=5)
             ]))
 
     """
@@ -189,13 +189,13 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(
             str(FunctionV1.call.call_args_list),
             str([
-                call(
-                    params={
-                        'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
-                        'name': f'learn-to-code-{model.asset.slug}.png',
-                        'dimension': '1200x630',
-                        'delay': 1000,
-                    })
+                call(params={
+                    'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                    'name': f'learn-to-code-{model.asset.slug}.png',
+                    'dimension': '1200x630',
+                    'delay': 1000,
+                },
+                     timeout=5)
             ]))
 
     """
@@ -241,11 +241,11 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(
             str(FunctionV1.call.call_args_list),
             str([
-                call(
-                    params={
-                        'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
-                        'name': f'learn-to-code-{model.asset.slug}.png',
-                        'dimension': '1200x630',
-                        'delay': 1000,
-                    })
+                call(params={
+                    'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                    'name': f'learn-to-code-{model.asset.slug}.png',
+                    'dimension': '1200x630',
+                    'delay': 1000,
+                },
+                     timeout=5)
             ]))

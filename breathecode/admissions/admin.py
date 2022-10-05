@@ -326,7 +326,8 @@ def pull_from_github(modeladmin, request, queryset):
             response = requests.get(
                 f'https://api.github.com/repos/{matches[0][0]}/{matches[0][1]}/contents/{matches[0][3]}?ref='
                 + matches[0][2],
-                headers=headers)
+                headers=headers,
+                timeout=2)
             if response.status_code == 200:
                 _file = response.json()
                 syl.json = json.loads(base64.b64decode(_file['content']).decode())

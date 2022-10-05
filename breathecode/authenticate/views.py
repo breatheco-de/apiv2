@@ -834,7 +834,10 @@ def save_github_token(request):
         'code': code,
     }
     headers = {'Accept': 'application/json'}
-    resp = requests.post('https://github.com/login/oauth/access_token', data=payload, headers=headers)
+    resp = requests.post('https://github.com/login/oauth/access_token',
+                         data=payload,
+                         headers=headers,
+                         timeout=2)
     if resp.status_code == 200:
 
         logger.debug('Github responded with 200')
@@ -844,14 +847,17 @@ def save_github_token(request):
             raise APIException(body['error_description'])
 
         github_token = body['access_token']
-        resp = requests.get('https://api.github.com/user', headers={'Authorization': 'token ' + github_token})
+        resp = requests.get('https://api.github.com/user',
+                            headers={'Authorization': 'token ' + github_token},
+                            timeout=2)
         if resp.status_code == 200:
             github_user = resp.json()
             logger.debug(github_user)
 
             if github_user['email'] is None:
                 resp = requests.get('https://api.github.com/user/emails',
-                                    headers={'Authorization': 'token ' + github_token})
+                                    headers={'Authorization': 'token ' + github_token},
+                                    timeout=2)
                 if resp.status_code == 200:
                     emails = resp.json()
                     primary_emails = [x for x in emails if x['primary'] == True]
@@ -1067,7 +1073,7 @@ def save_slack_token(request):
         'redirect_uri': os.getenv('SLACK_REDIRECT_URL', '') + '?payload=' + original_payload,
         'code': code,
     }
-    resp = requests.post('https://slack.com/api/oauth.v2.access', data=params)
+    resp = requests.post('https://slack.com/api/oauth.v2.access', data=params, timeout=2)
     if resp.status_code == 200:
 
         logger.debug('Slack responded with 200')
@@ -1213,7 +1219,7 @@ def save_facebook_token(request):
         'redirect_uri': os.getenv('FACEBOOK_REDIRECT_URL', ''),
         'code': code,
     }
-    resp = requests.post('https://graph.facebook.com/v8.0/oauth/access_token', data=params)
+    resp = requests.post('https://graph.facebook.com/v8.0/oauth/access_token', data=params, timeout=2)
     if resp.status_code == 200:
 
         logger.debug('Facebook responded with 200')
@@ -1243,7 +1249,7 @@ def save_facebook_token(request):
             'access_token': facebook_data['access_token'],
             'fields': 'id,email',
         }
-        resp = requests.post('https://graph.facebook.com/me', data=params)
+        resp = requests.post('https://graph.facebook.com/me', data=params, timeout=2)
         if resp.status_code == 200:
             logger.debug('Facebook responded with 200')
             facebook_data = resp.json()
@@ -1785,7 +1791,7 @@ def save_google_token(request):
         'code': code,
     }
     headers = {'Accept': 'application/json'}
-    resp = requests.post('https://oauth2.googleapis.com/token', data=payload, headers=headers)
+    resp = requests.post('https://oauth2.googleapis.com/token', data=payload, headers=headers, timeout=2)
     if resp.status_code == 200:
 
         logger.debug('Google responded with 200')

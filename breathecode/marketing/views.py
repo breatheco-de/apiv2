@@ -1,4 +1,4 @@
-import os, re, datetime, logging, csv, pytz, secrets, json
+import os, re, datetime, logging, csv, pytz, json
 from urllib import parse
 from django.utils import timezone
 from datetime import timedelta
@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination, validate_captcha)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
@@ -38,7 +38,6 @@ from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
-from breathecode.services.google_cloud import Recaptcha
 
 logger = logging.getLogger(__name__)
 
@@ -81,15 +80,11 @@ def get_downloadable(request, slug=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):
-
     data = request.data.copy()
 
     # remove spaces from phone
     if 'phone' in data:
         data['phone'] = data['phone'].replace(' ', '')
-
-    if 'referral_code' in data and 'referral_key' not in data:
-        data['referral_key'] = data['referral_code']
 
     if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
         print('Ignoring lead because its coming from development team')

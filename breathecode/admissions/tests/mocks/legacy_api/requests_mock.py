@@ -31,7 +31,7 @@ class ResponseMock():
         return self.data
 
 
-def get_mock(url: str, stream=False):
+def get_mock(url: str, stream=False, timeout=30):
     """Requests get mock"""
     if url == f'{HOST}/students/' or url == f'{HOST}/students':
         return ResponseMock(data=legacy_students, status_code=200)
