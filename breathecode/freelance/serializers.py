@@ -126,6 +126,24 @@ class BigBillSerializer(serpy.Serializer):
 
     freelancer = SmallFreelancerSerializer()
     reviewer = UserSerializer(required=False)
+    
+    issues = serpy.MethodField()
+
+    def get_issues(self, obj):
+        _issues = obj.issue_set.order_by('created_at').all()
+        return SmallIssueSerializer(_issues, many=True).data
+
+
+class SmallBillSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    status = serpy.Field()
+    total_duration_in_hours = serpy.Field()
+    total_price = serpy.Field()
+    paid_at = serpy.Field()
+    created_at = serpy.Field()
+    freelancer = SmallFreelancerSerializer()
 
 
 class BillSerializer(serializers.ModelSerializer):
