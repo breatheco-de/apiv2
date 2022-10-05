@@ -320,7 +320,9 @@ class EventbriteWebhookTestSuite(EventTestCase):
         }])
 
         self.assertEqual(requests.get.call_args_list, [
-            call('https://www.eventbriteapi.com/v3/events/1/orders/1/', headers={'Authorization': 'Bearer '}),
+            call('https://www.eventbriteapi.com/v3/events/1/orders/1/',
+                 headers={'Authorization': 'Bearer '},
+                 timeout=2),
         ])
 
         self.check_old_breathecode_calls(model, ['create_contact', 'contact_automations'])
@@ -384,7 +386,9 @@ class EventbriteWebhookTestSuite(EventTestCase):
         }])
 
         self.assertEqual(requests.get.call_args_list, [
-            call('https://www.eventbriteapi.com/v3/events/1/orders/1/', headers={'Authorization': 'Bearer '}),
+            call('https://www.eventbriteapi.com/v3/events/1/orders/1/',
+                 headers={'Authorization': 'Bearer '},
+                 timeout=2),
         ])
 
         self.check_old_breathecode_calls(model, ['create_contact', 'contact_automations'])

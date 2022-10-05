@@ -5,8 +5,25 @@ import logging
 import breathecode.services.activecampaign.actions as actions
 from breathecode.utils import APIException
 from slugify import slugify
+from activecampaign.client import Client
 
 logger = logging.getLogger(__name__)
+
+
+class ActiveCampaignClient(Client):
+
+    def _request(self, method, endpoint, headers=None, **kwargs):
+        _headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Api-Token': self.api_key
+        }
+        if headers:
+            _headers.update(headers)
+
+        kwargs['timeout'] = 2
+
+        return self._parse(requests.request(method, self.BASE_URL + endpoint, headers=_headers, **kwargs))
 
 
 class ActiveCampaign:
@@ -381,6 +398,7 @@ class AC_Old_Client(object):
                                     params=params,
                                     data=data,
                                     timeout=2)
+
         if response.status_code >= 200 and response.status_code < 400:
             data = response.json()
             return self._parse(data)

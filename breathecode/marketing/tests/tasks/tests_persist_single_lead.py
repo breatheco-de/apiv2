@@ -868,8 +868,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.request.call_args_list, [
             call('POST',
                  'https://old.hardcoded.breathecode.url/admin/api.php',
-                 params=[('api_action', 'contact_sync'), ('api_key', model['active_campaign_academy'].ac_key),
-                         ('api_output', 'json')],
+                 params=[
+                     ('api_action', 'contact_sync'),
+                     ('api_key', model['active_campaign_academy'].ac_key),
+                     ('api_output', 'json'),
+                 ],
                  data={
                      'email': 'pokemon@potato.io',
                      'first_name': 'Konan',
@@ -877,7 +880,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                      'phone': '123123123',
                      'field[18,0]': model['academy'].slug,
                      'field[2,0]': 'asdasd',
-                 }),
+                 },
+                 timeout=2),
             call('POST',
                  'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
                  headers={
@@ -888,7 +892,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactAutomation': {
                      'contact': 1,
                      'automation': model['automation'].acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('POST',
                  'https://old.hardcoded.breathecode.url/api/3/contactTags',
                  headers={
@@ -899,7 +904,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model['tag'].acp_id
-                 }})
+                 }},
+                 timeout=2)
         ])
 
     """
@@ -1002,7 +1008,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                      'phone': '123123123',
                      'field[18,0]': model['academy'].slug,
                      'field[2,0]': 'asdasd',
-                 }),
+                 },
+                 timeout=2),
         ])
 
     """
@@ -1085,8 +1092,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.request.call_args_list, [
             call('POST',
                  'https://old.hardcoded.breathecode.url/admin/api.php',
-                 params=[('api_action', 'contact_sync'), ('api_key', model['active_campaign_academy'].ac_key),
-                         ('api_output', 'json')],
+                 params=[
+                     ('api_action', 'contact_sync'),
+                     ('api_key', model['active_campaign_academy'].ac_key),
+                     ('api_output', 'json'),
+                 ],
                  data={
                      'email': 'pokemon@potato.io',
                      'first_name': 'Konan',
@@ -1095,7 +1105,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                      'field[18,0]': model['academy'].slug,
                      'field[46,0]': fake_url,
                      'field[2,0]': 'asdasd',
-                 }),
+                 },
+                 timeout=2),
             call('POST',
                  'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
                  headers={
@@ -1106,7 +1117,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactAutomation': {
                      'contact': 1,
                      'automation': model['automation'].acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('POST',
                  'https://old.hardcoded.breathecode.url/api/3/contactTags',
                  headers={
@@ -1117,5 +1129,6 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model['tag'].acp_id
-                 }})
+                 }},
+                 timeout=2)
         ])
