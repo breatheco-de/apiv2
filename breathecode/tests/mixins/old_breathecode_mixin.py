@@ -46,7 +46,8 @@ class OldBreathecodeMixin():
                     json={'contactAutomation': {
                         'contact': 1,
                         'automation': model['automation'].acp_id,
-                    }})  # this endpoint cannot have a timeout
+                    }},
+                    timeout=2)
 
     def reset_old_breathecode_calls(self):
         mock = requests.request

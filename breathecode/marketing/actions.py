@@ -4,10 +4,9 @@ from itertools import chain
 from django.utils import timezone
 from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAlias
 from rest_framework.exceptions import APIException
-from activecampaign.client import Client
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import CredentialsFacebook
-from breathecode.services.activecampaign import AC_Old_Client, ActiveCampaign
+from breathecode.services.activecampaign import AC_Old_Client, ActiveCampaign, ActiveCampaignClient
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.marketing.models import Tag
 from breathecode.utils import getLogger
@@ -110,7 +109,7 @@ def add_to_active_campaign(contact, academy_id: int, automation_id: int):
         logger.error('error adding contact', response)
         raise APIException('Could not save contact in CRM')
 
-    client = Client(ac_url, ac_key)
+    client = ActiveCampaignClient(ac_url, ac_key)
 
     if event_attendancy_automation_id != automation_id:
         message = 'Automation doesn\'t exist for this AC Academy'
@@ -276,7 +275,7 @@ def register_new_lead(form_entry=None):
         logger.info('FormEntry is considered a duplicate, no automations or tags added')
         return entry
 
-    client = Client(ac_academy.ac_url, ac_academy.ac_key)
+    client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
     if automations and not is_duplicate:
         for automation_id in automations:
             data = {'contactAutomation': {'contact': contact_id, 'automation': automation_id}}
@@ -310,14 +309,14 @@ def register_new_lead(form_entry=None):
 
 
 def test_ac_connection(ac_academy):
-    client = Client(ac_academy.ac_url, ac_academy.ac_key)
+    client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
     response = client.tags.list_all_tags(limit=1)
     return response
 
 
 def sync_tags(ac_academy):
 
-    client = Client(ac_academy.ac_url, ac_academy.ac_key)
+    client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
     response = client.tags.list_all_tags(limit=100)
 
     if 'tags' not in response:
@@ -348,7 +347,7 @@ def sync_tags(ac_academy):
 
 def sync_automations(ac_academy):
 
-    client = Client(ac_academy.ac_url, ac_academy.ac_key)
+    client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
     response = client.automations.list_all_automations(limit=100)
 
     if 'automations' not in response:
