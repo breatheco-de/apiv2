@@ -81,7 +81,8 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
     """
     response = requests.post(url=target,
                              data=json.dumps(payload, cls=DjangoJSONEncoder),
-                             headers={'Content-Type': 'application/json'})
+                             headers={'Content-Type': 'application/json'},
+                             timeout=2)
 
     if hook_id:
         HookModel = HookManager.get_hook_model()

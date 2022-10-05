@@ -32,7 +32,8 @@ class OldBreathecodeMixin():
                     f'{self.old_breathecode_host}/admin/api.php',
                     params=[('api_action', 'contact_sync'),
                             ('api_key', model['active_campaign_academy'].ac_key), ('api_output', 'json')],
-                    data=data)
+                    data=data,
+                    timeout=2)
 
     def __contact_automations_call__(self, model):
         return call('POST',
@@ -45,7 +46,7 @@ class OldBreathecodeMixin():
                     json={'contactAutomation': {
                         'contact': 1,
                         'automation': model['automation'].acp_id,
-                    }})
+                    }})  # this endpoint cannot have a timeout
 
     def reset_old_breathecode_calls(self):
         mock = requests.request

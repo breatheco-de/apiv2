@@ -178,7 +178,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             call('GET',
                  'https://www.eventbriteapi.com/v3/events/1/structured_content/',
                  headers={'Authorization': f'Bearer {model.organization.eventbrite_key}'},
-                 data=None)
+                 data=None,
+                 timeout=2)
         ])
 
     """
@@ -220,7 +221,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             call('GET',
                  'https://www.eventbriteapi.com/v3/events/1/structured_content/',
                  headers={'Authorization': f'Bearer {model.organization.eventbrite_key}'},
-                 data=None),
+                 data=None,
+                 timeout=2),
             call('POST',
                  'https://www.eventbriteapi.com/v3/events/1/structured_content/1/',
                  headers={'Authorization': f'Bearer {model.organization.eventbrite_key}'},
@@ -239,7 +241,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                      True,
                      'purpose':
                      'listing'
-                 })
+                 },
+                 timeout=2)
         ])
 
     """
@@ -279,7 +282,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             call('GET',
                  'https://www.eventbriteapi.com/v3/events/1/structured_content/',
                  headers={'Authorization': f'Bearer {model.organization.eventbrite_key}'},
-                 data=None),
+                 data=None,
+                 timeout=2),
             call('POST',
                  'https://www.eventbriteapi.com/v3/events/1/structured_content/1/',
                  headers={'Authorization': f'Bearer {model.organization.eventbrite_key}'},
@@ -298,5 +302,6 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                      True,
                      'purpose':
                      'listing'
-                 })
+                 },
+                 timeout=2)
         ])

@@ -35,7 +35,7 @@ class Command(BaseCommand):
 
     def quiz(self, options):
 
-        response = requests.get(f'{HOST_ASSETS}/quiz/all')
+        response = requests.get(f'{HOST_ASSETS}/quiz/all', timeout=2)
         quizzes = response.json()
 
         for quiz in quizzes:

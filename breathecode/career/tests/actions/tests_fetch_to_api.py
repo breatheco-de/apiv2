@@ -177,5 +177,6 @@ class ActionTestfetchToApiTestCase(CareerTestCase):
                      ('spider', model.zyte_project.platform.name),
                      ('state', 'finished'),
                  ),
-                 auth=(model.zyte_project.zyte_api_key, ''))
+                 auth=(model.zyte_project.zyte_api_key, ''),
+                 timeout=2)
         ])

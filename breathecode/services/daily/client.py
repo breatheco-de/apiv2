@@ -24,7 +24,11 @@ class DailyClient:
         if query_string is not None:
             _query_string = '?' + urllib.parse.urlencode(query_string)
 
-        response = requests.request(_type, self.host + url + _query_string, headers=_headers, json=data)
+        response = requests.request(_type,
+                                    self.host + url + _query_string,
+                                    headers=_headers,
+                                    json=data,
+                                    timeout=2)
         result = response.json()
 
         if result is None:
