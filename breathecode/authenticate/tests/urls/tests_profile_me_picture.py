@@ -93,8 +93,8 @@ class AuthenticateTestSuite(AuthTestCase):
     filename = ''
 
     def tearDown(self):
-        if self.filename:
-            os.remove(self.filename)
+        self.bc.garbage_collector.collect()
+        super().tearDown()
 
     @patch('os.getenv',
            MagicMock(side_effect=apply_get_env({
@@ -261,38 +261,50 @@ class AuthenticateTestSuite(AuthTestCase):
                'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
            })))
     def test__passing_file__with_profile__file_exists(self):
-        file, self.filename = self.bc.random.image(2, 2)
-
+        exts = ['png', 'jpg', 'jpeg']
         permission = {'codename': 'update_my_profile'}
-        model = self.bc.database.create(user=1, permission=permission, profile=1)
+        base = self.bc.database.create(permission=permission)
 
-        self.bc.request.authenticate(model.user)
-        url = reverse_lazy('authenticate:profile_me_picture')
-        response = self.client.put(url, {'name': 'filename.lbs', 'file': file})
+        for ext in exts:
+            file, self.filename = self.bc.random.image(2, 2, ext)
 
-        json = response.json()
-        expected = put_serializer_updating(
-            model.profile,
-            model.user,
-            data={
-                'avatar_url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100',
-            })
+            model = self.bc.database.create(user=1, permission=base.permission, profile=1)
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
-            profile_row(
-                {
-                    'user_id': 1,
-                    'id': 1,
+            self.bc.request.authenticate(model.user)
+            url = reverse_lazy('authenticate:profile_me_picture')
+            response = self.client.put(url, {'name': 'filename.lbs', 'file': file})
+
+            json = response.json()
+            expected = put_serializer_updating(
+                model.profile,
+                model.user,
+                data={
                     'avatar_url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100',
-                }),
-        ])
+                })
 
-        self.assertEqual(Storage.__init__.call_args_list, [call()])
-        self.assertEqual(File.upload.call_args_list, [])
-        self.assertEqual(File.exists.call_args_list, [call()])
-        self.assertEqual(File.url.call_args_list, [call()])
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
+                profile_row(
+                    {
+                        'user_id': model.user.id,
+                        'id': model.profile.id,
+                        'avatar_url':
+                        'https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100',
+                    }),
+            ])
+
+            self.assertEqual(Storage.__init__.call_args_list, [call()])
+            self.assertEqual(File.upload.call_args_list, [])
+            self.assertEqual(File.exists.call_args_list, [call()])
+            self.assertEqual(File.url.call_args_list, [call()])
+
+            # teardown
+            self.bc.database.delete('authenticate.Profile')
+            Storage.__init__.call_args_list = []
+            File.upload.call_args_list = []
+            File.exists.call_args_list = []
+            File.url.call_args_list = []
 
     """
     🔽🔽🔽 Put with Profile, passing file and does'nt exists in google cloud, shape is square

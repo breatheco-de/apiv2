@@ -126,7 +126,7 @@ class BigBillSerializer(serpy.Serializer):
 
     freelancer = SmallFreelancerSerializer()
     reviewer = UserSerializer(required=False)
-    
+
     issues = serpy.MethodField()
 
     def get_issues(self, obj):

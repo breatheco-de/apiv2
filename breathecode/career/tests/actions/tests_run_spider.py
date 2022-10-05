@@ -55,7 +55,8 @@ class ActionRunSpiderTestCase(CareerTestCase):
                          'job': model.spider.job_search,
                          'loc': model.spider.loc_search
                      },
-                     auth=(model.zyte_project.zyte_api_key, ''))
+                     auth=(model.zyte_project.zyte_api_key, ''),
+                     timeout=2)
             ])
         except Exception as e:
             self.assertEqual(str(e), ('bad-request'))
@@ -86,7 +87,8 @@ class ActionRunSpiderTestCase(CareerTestCase):
                      'job': model.spider.job_search,
                      'loc': model.spider.loc_search
                  },
-                 auth=(model.zyte_project.zyte_api_key, ''))
+                 auth=(model.zyte_project.zyte_api_key, ''),
+                 timeout=2)
         ])
 
     @patch(REQUESTS_PATH['post'],
@@ -115,7 +117,8 @@ class ActionRunSpiderTestCase(CareerTestCase):
                      'job': model_1.spider.job_search,
                      'loc': model_1.spider.loc_search
                  },
-                 auth=(model_1.zyte_project.zyte_api_key, '')),
+                 auth=(model_1.zyte_project.zyte_api_key, ''),
+                 timeout=2),
             call('https://app.scrapinghub.com/api/run.json',
                  data={
                      'project': model_2.zyte_project.zyte_api_deploy,
@@ -123,5 +126,6 @@ class ActionRunSpiderTestCase(CareerTestCase):
                      'job': model_2.spider.job_search,
                      'loc': model_2.spider.loc_search
                  },
-                 auth=(model_2.zyte_project.zyte_api_key, ''))
+                 auth=(model_2.zyte_project.zyte_api_key, ''),
+                 timeout=2)
         ])

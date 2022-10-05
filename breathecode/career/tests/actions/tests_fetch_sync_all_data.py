@@ -181,9 +181,10 @@ class ActionTestFetchSyncAllDataAdminTestCase(CareerTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://app.scrapinghub.com/api/jobs/list.json',
                  params=(('project', '223344'), ('spider', 'indeed'), ('state', 'finished')),
-                 auth=('1234567', '')),
-            call('https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json'),
-            call('https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json')
+                 auth=('1234567', ''),
+                 timeout=2),
+            call('https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', timeout=2),
+            call('https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json', timeout=2)
         ])
 
     @patch(REQUESTS_PATH['get'],
@@ -203,6 +204,7 @@ class ActionTestFetchSyncAllDataAdminTestCase(CareerTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://app.scrapinghub.com/api/jobs/list.json',
                  params=(('project', '223344'), ('spider', 'indeed'), ('state', 'finished')),
-                 auth=('1234567', '')),
-            call('https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json')
+                 auth=('1234567', ''),
+                 timeout=2),
+            call('https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', timeout=2),
         ])

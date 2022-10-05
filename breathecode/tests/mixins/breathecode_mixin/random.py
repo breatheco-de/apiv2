@@ -1,3 +1,4 @@
+from __future__ import annotations
 from io import TextIOWrapper
 import os
 import random
@@ -7,20 +8,29 @@ from faker import Faker
 import numpy as np
 from PIL import Image
 import tempfile
+from . import interfaces
 
 __all__ = ['Check']
 fake = Faker()
+
+IMAGE_TYPES = {
+    'png': 'PNG',
+    'jpg': 'JPEG',
+    'jpeg': 'JPEG',
+}
 
 
 class Random:
     """Mixin with the purpose of cover all the related with the custom asserts"""
 
     _parent: APITestCase
+    _bc: interfaces.BreathecodeInterface
 
-    def __init__(self, parent) -> None:
+    def __init__(self, parent, bc: interfaces.BreathecodeInterface) -> None:
         self._parent = parent
+        self._bc = bc
 
-    def image(self, width: int = 10, height: int = 10) -> tuple[TextIOWrapper, str]:
+    def image(self, width: int = 10, height: int = 10, ext='png') -> tuple[TextIOWrapper, str]:
         """
         Generate a random image.
 
@@ -33,14 +43,16 @@ class Random:
         """
 
         size = (width, height)
-        filename = fake.slug() + '.png'
+        filename = fake.slug() + f'.{ext}'
         image = Image.new('RGB', size)
         arr = np.random.randint(low=0, high=255, size=(size[1], size[0]))
 
         image = Image.fromarray(arr.astype('uint8'))
-        image.save(filename, 'PNG')
+        image.save(filename, IMAGE_TYPES[ext])
 
         file = open(filename, 'rb')
+
+        self._bc.garbage_collector.register_image(file)
 
         return file, filename
 
@@ -60,6 +72,8 @@ class Random:
 
         file = tempfile.NamedTemporaryFile(suffix=f'.{ext}', delete=False)
         file.write(os.urandom(1024))
+
+        self._bc.garbage_collector.register_file(file)
 
         return file, file.name
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import base64
 import yaml
 import urllib.parse
@@ -5,6 +6,8 @@ from typing import Any
 from rest_framework.test import APITestCase
 from django.db.models import Model
 from django.db.models.query import QuerySet
+from . import interfaces
+
 from ..models_mixin import ModelsMixin
 
 __all__ = ['Format']
@@ -16,10 +19,12 @@ class Format:
     """Mixin with the purpose of cover all the related with format or parse something"""
 
     _parent: APITestCase
+    _bc: interfaces.BreathecodeInterface
     ENCODE = ENCODE
 
-    def __init__(self, parent) -> None:
+    def __init__(self, parent, bc: interfaces.BreathecodeInterface) -> None:
         self._parent = parent
+        self._bc = bc
 
     def table(self, arg: QuerySet) -> dict[str, Any] | list[dict[str, Any]]:
         """
@@ -60,6 +65,18 @@ class Format:
             return [self._one_to_dict(x) for x in arg]
 
         return self._one_to_dict(arg)
+
+    def to_decimal_string(self, decimal: int | float) -> str:
+        """
+        Parse a number to the django representation of a decimal.
+
+        Usage:
+
+        ```py
+        self.bc.format.to_decimal(1)  # returns '1.000000000000000'
+        ```
+        """
+        return '%.15f' % round(decimal, 15)
 
     def _one_to_dict(self, arg) -> dict[str, Any]:
         """Parse the object to a `dict`"""

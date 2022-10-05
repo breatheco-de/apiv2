@@ -51,7 +51,7 @@ def get_root_schema_view(elements, extend={}):
 
         schema_dicts = []
         for element in schema_urls:
-            response = requests.get(host + element)
+            response = requests.get(host + element, timeout=2)
 
             if response.status_code >= 300:
                 raise ValidationException(f'Unhandled {element}', 500, slug='unhandled-app')

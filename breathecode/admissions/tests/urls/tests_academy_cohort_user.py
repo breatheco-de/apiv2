@@ -8,6 +8,8 @@ from django.utils import timezone
 from random import choice
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.admissions.models import STARTED
 from ..mixins import AdmissionsTestCase
 
 UTC_NOW = timezone.now()
@@ -930,7 +932,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
@@ -970,7 +972,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         base = self.generate_models(authenticate=True,
-                                    cohort=True,
+                                    cohort={'stage': 'STARTED'},
                                     profile_academy=True,
                                     capability='crud_cohort',
                                     role='potato')
@@ -1025,7 +1027,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
@@ -1157,4 +1159,64 @@ class CohortUserTestSuite(AdmissionsTestCase):
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(self.all_cohort_user_dict(), [])
+
+    def test_academy_cohort_user__post__1_item(self):
+
+        prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
+        for stage in prohibited_stages:
+
+            model = self.generate_models(authenticate=True,
+                                         cohort={'stage': stage},
+                                         user=True,
+                                         profile_academy=True,
+                                         capability='crud_cohort',
+                                         role='potato')
+
+            self.headers(academy=model.academy.id)
+
+            url = reverse_lazy('admissions:academy_cohort_user')
+            data = {
+                'user': model['user'].id,
+                'cohort': model['cohort'].id,
+            }
+
+            response = self.client.post(url, data, format='json')
+            json = response.json()
+            expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(self.all_cohort_user_dict(), [])
+
+    def test_academy_cohort_user__post__2_item(self):
+        #incomplete test
+        prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
+        for stage in prohibited_stages:
+
+            model = self.generate_models(authenticate=True,
+                                         cohort=(2, {
+                                             'stage': stage
+                                         }),
+                                         user=True,
+                                         profile_academy=True,
+                                         capability='crud_cohort',
+                                         role='potato')
+
+            self.headers(academy=model.academy.id)
+
+            url = reverse_lazy('admissions:academy_cohort_user')
+            data = [{
+                'user': model['user'].id,
+                'cohort': model['cohort'][0].id,
+            }, {
+                'user': model['user'].id,
+                'cohort': model['cohort'][1].id,
+            }]
+            response = self.client.post(url, data, format='json')
+            json = response.json()
+            expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(self.all_cohort_user_dict(), [])

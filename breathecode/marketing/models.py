@@ -413,7 +413,6 @@ class FormEntry(models.Model):
         return self.first_name + ' ' + self.last_name
 
     def is_duplicate(self, incoming_lead):
-
         duplicate_leads_delta_avoidance = timedelta(minutes=30)
         if self.academy is not None and self.academy.activecampaignacademy is not None:
             duplicate_leads_delta_avoidance = self.academy.activecampaignacademy.duplicate_leads_delta_avoidance
@@ -423,8 +422,10 @@ class FormEntry(models.Model):
             course=incoming_lead['course'],
             storage_status='PERSISTED',
             created_at__lte=self.created_at).exclude(id=self.id).order_by('-created_at').first()
+
         if last_one is None:
             return False
+
         delta = self.created_at - last_one.created_at
         if duplicate_leads_delta_avoidance >= delta:
             return True

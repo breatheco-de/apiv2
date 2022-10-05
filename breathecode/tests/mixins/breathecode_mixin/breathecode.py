@@ -1,8 +1,12 @@
+from __future__ import annotations
 import re
 import inspect
 from rest_framework.test import APITestCase
 from typing import Optional
 from faker import Faker
+
+from .interfaces import BreathecodeInterface
+from .garbage_collector import GarbageCollector
 from .cache import Cache
 from .datetime import Datetime
 from .request import Request
@@ -24,7 +28,7 @@ def print_arguments(func: callable) -> str:
     return varnames.replace('self, ', '').replace('cls, ', '')
 
 
-class Breathecode:
+class Breathecode(BreathecodeInterface):
     """Collection of mixins for testing purposes"""
 
     cache: Cache
@@ -34,19 +38,21 @@ class Breathecode:
     database: Database
     check: Check
     format: Format
-    _parent: APITestCase
     fake: Faker
+    garbage_collector: GarbageCollector
+    _parent: APITestCase
 
     def __init__(self, parent) -> None:
         self._parent = parent
 
-        self.cache = Cache(parent)
-        self.random = Random(parent)
-        self.datetime = Datetime(parent)
-        self.request = Request(parent)
-        self.database = Database(parent)
-        self.check = Check(parent)
-        self.format = Format(parent)
+        self.cache = Cache(parent, self)
+        self.random = Random(parent, self)
+        self.datetime = Datetime(parent, self)
+        self.request = Request(parent, self)
+        self.database = Database(parent, self)
+        self.check = Check(parent, self)
+        self.format = Format(parent, self)
+        self.garbage_collector = GarbageCollector(parent, self)
         self.fake = fake
 
     def help(self, *args) -> None:
