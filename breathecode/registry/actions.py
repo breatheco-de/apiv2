@@ -220,7 +220,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
                 f'System does not know what github credentials to use to retrive asset info for: {asset_slug}'
             )
 
-        if asset.url is None or 'github.com' not in asset.url:
+        if asset.readme_url is None or 'github.com' not in asset.readme_url:
             raise Exception(f'Missing or invalid URL on {asset_slug}, it does not belong to github.com')
 
         credentials = CredentialsGithub.objects.filter(user__id=author_id).first()
@@ -284,7 +284,7 @@ def push_to_github(asset_slug, author=None):
         if author is None:
             raise Exception('Asset must have an owner with write permissions on the repository')
 
-        if asset.url is None or 'github.com' not in asset.url:
+        if asset.readme_url is None or 'github.com' not in asset.readme_url:
             raise Exception(f'Missing or invalid URL on {asset_slug}, it does not belong to github.com')
 
         credentials = CredentialsGithub.objects.filter(user__id=author.id).first()
