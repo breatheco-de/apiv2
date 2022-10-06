@@ -259,6 +259,8 @@ def render_readme(request, asset_slug, extension='raw'):
                               remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
 
     response = HttpResponse('Invalid extension format', content_type='text/html')
+    if extension == 'raw':
+        response = HttpResponse(readme['decoded_raw'], content_type='text/markdown')
     if extension == 'html':
         response = HttpResponse(readme['html'], content_type='text/html')
     elif extension in ['md', 'mdx', 'txt']:
@@ -487,7 +489,7 @@ class AcademyAssetActionView(APIView):
                         f'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
                     )
 
-                push_to_github(asset.slug)
+                push_to_github(asset.slug, author=request.user)
             elif action_slug == 'analyze_seo':
                 report = SEOAnalyzer(asset)
                 report.start()

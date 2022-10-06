@@ -236,7 +236,7 @@ class Asset(models.Model):
     def __init__(self, *args, **kwargs):
         super(Asset, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
-        self.__old_readme = self.readme
+        self.__old_readme_raw = self.readme_raw
 
     slug = models.SlugField(
         max_length=200,
@@ -276,6 +276,7 @@ class Asset(models.Model):
     intro_video_url = models.URLField(null=True, blank=True, default=None)
     solution_video_url = models.URLField(null=True, blank=True, default=None)
     readme = models.TextField(null=True, blank=True, default=None)
+    readme_raw = models.TextField(null=True, blank=True, default=None)
     html = models.TextField(null=True, blank=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None)
@@ -361,6 +362,17 @@ class Asset(models.Model):
     last_seo_scan_at = models.DateTimeField(null=True, blank=True, default=None)
     seo_json_status = models.JSONField(null=True, blank=True, default=None)
 
+    # clean status refers to the cleaning of the readme file
+    last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None)
+    cleaning_status_details = models.TextField(null=True, blank=True, default=None)
+    cleaning_status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default='PENDING',
+        null=True,
+        blank=True,
+        help_text='Internal state automatically set by the system based on cleanup')
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -372,7 +384,7 @@ class Asset(models.Model):
         slug_modified = False
         readme_modified = False
 
-        if self.__old_readme != self.readme:
+        if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
             self.sync_status = 'PENDING'
 
@@ -385,12 +397,12 @@ class Asset(models.Model):
 
         super().save(*args, **kwargs)
         self.__old_slug = self.slug
-        self.__old_readme = self.readme
+        self.__old_readme_raw = self.readme_raw
 
         if slug_modified: asset_slug_modified.send(instance=self, sender=Asset)
         if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
 
-    def get_readme(self, parse=None, raw=False, remove_frontmatter=False):
+    def get_readme(self, parse=None, remove_frontmatter=False):
 
         if self.readme is None or self.readme == '':
             if self.asset_type != 'QUIZ':
@@ -406,17 +418,17 @@ class Asset(models.Model):
                     'asset_type': self.asset_type,
                 }))
 
-        if raw:
-            return self.readme
-
         if self.readme_url is None and self.asset_type == 'LESSON':
             self.readme_url = self.url
             self.save()
 
         readme = {
-            'raw': self.readme,
-            'decoded': base64.b64decode(self.readme.encode('utf-8')).decode('utf-8')
+            'clean': self.readme,
+            'decoded': Asset.decode(self.readme),
+            'raw': self.readme_raw,
+            'decoded_raw': Asset.decode(self.readme_raw)
         }
+
         if parse:
             # external assets will have a default markdown readme generated internally
             extension = '.md'
@@ -456,8 +468,16 @@ class Asset(models.Model):
             readme['html'] = body
         return readme
 
+    @staticmethod
+    def encode(content):
+        return str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
+
+    @staticmethod
+    def decode(content):
+        return base64.b64decode(content.encode('utf-8')).decode('utf-8')
+
     def set_readme(self, content):
-        self.readme = str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
+        self.readme = Asset.encode(content)
         return self
 
     def log_error(self, error_slug, status_text=None):
