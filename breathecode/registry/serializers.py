@@ -410,7 +410,8 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
         session_user = self.context.get('request').user
 
         if self.instance.author is not None and self.instance.author.id != session_user.id:
-            raise ValidationException('Only the comment author can mark this comment as resolved')
+            if 'resolved' in data['resolved'] and data['resolved'] != self.instance.resolved:
+                raise ValidationException('Only the comment/issue author can update the resolved property')
 
         return validated_data
 
