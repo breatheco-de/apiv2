@@ -470,11 +470,15 @@ class Asset(models.Model):
 
     @staticmethod
     def encode(content):
-        return str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
+        if content is not None:
+            return str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
+        return None
 
     @staticmethod
     def decode(content):
-        return base64.b64decode(content.encode('utf-8')).decode('utf-8')
+        if content is not None:
+            return base64.b64decode(content.encode('utf-8')).decode('utf-8')
+        return None
 
     def set_readme(self, content):
         self.readme = Asset.encode(content)
