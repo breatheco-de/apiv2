@@ -180,47 +180,6 @@ class ActivityTypeView(APIView):
         return Response(res)
 
 
-#FIXME: please delete me
-from rest_framework.permissions import AllowAny, IsAuthenticated
-
-
-#FIXME: please delete me
-class PleaseDeleteMe(APIView):
-
-    permission_classes = (AllowAny, )
-
-    def get(self, request):
-        handler = logger.info
-
-        handler_name = request.GET.get('handler', 'info')
-        message = request.GET.get('message', 'hello')
-
-        if handler_name == 'debug':
-            handler = logger.debug
-
-        elif handler_name == 'warning':
-            handler = logger.warning
-
-        elif handler_name == 'warn':
-            handler = logger.warn
-
-        elif handler_name == 'error':
-            handler = logger.error
-
-        elif handler_name == 'exception':
-            handler = logger.exception
-
-        elif handler_name == 'critical':
-            handler = logger.critical
-
-        elif handler_name == 'fatal':
-            handler = logger.fatal
-
-        handler(message)
-
-        return Response([])
-
-
 class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
 
     @capable_of('read_activity')
