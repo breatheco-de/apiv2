@@ -1019,10 +1019,9 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
                     raise ValidationException(
                         f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
                         slug='syllabus-with-errors')
-            except:
-                raise ValidationException(
-                    'There are some errors in your syllabus, please validate before submitting',
-                    slug='syllabus-with-errors')
+            except Exception as e:
+                raise ValidationException(f'Error when testing the syllabus: {str(e)}',
+                                          slug='syllabus-with-errors')
 
         return _data
 
