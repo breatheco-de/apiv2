@@ -282,7 +282,7 @@ def test_syllabus(syl, validate_assets=False):
 
             if validate_assets:
                 exists = AssetAlias.objects.filter(slug=a['slug']).first()
-                if exists is None:
+                if exists is None and not ('target' in a and a['target'] == 'blank'):
                     _log.error(f'Missing {_type} with slug {a["slug"]} on module {index}')
         return True
 
