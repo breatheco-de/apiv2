@@ -179,7 +179,7 @@ logging.config.dictConfig({
     'formatters': {
         'default': {
             # exact format is not important, this is the minimum information
-            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+            'format': '[%(asctime)s] %(name)-12s %(levelname)-8s %(message)s',
         },
         'django.server': DEFAULT_LOGGING['formatters']['django.server'],
     },
@@ -189,44 +189,49 @@ logging.config.dictConfig({
         },
     },
     'handlers': {
-        # console logs to stderr
+        'coralogix': {
+            'class': 'coralogix.handlers.CoralogixLogger',
+            'formatter': 'default',
+            'private_key': os.getenv('CORALOGIX_PRIVATE_KEY', ''),
+            'app_name': os.getenv('CORALOGIX_APP_NAME', 'localhost'),
+            'subsystem': os.getenv('CORALOGIX_SUBSYSTEM', 'logger'),
+        },
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'default',
         },
-        # Add Handler for Rollbar
-        # 'rollbar': {
-        #     'filters': ['require_debug_false'],
-        #     'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
-        #     'environment': ENVIRONMENT,
-        #     'class': 'rollbar.logger.RollbarHandler',
-        # },
         'django.server': DEFAULT_LOGGING['handlers']['django.server'],
     },
     'loggers': {
-        # default for all undefined Python modules
         '': {
             'level': 'WARNING',
-            # 'handlers': ['console', 'rollbar'],
-            'handlers': ['console'],
+            'handlers': [
+                'coralogix',
+                'console',
+            ],
         },
         # Our application code
         'breathecode': {
             'level': LOG_LEVEL,
-            # 'handlers': ['console', 'rollbar'],
-            'handlers': ['console'],
+            'handlers': [
+                'coralogix',
+                'console',
+            ],
             # Avoid double logging because of root logger
             'propagate': False,
         },
         # Prevent noisy modules from logging to Sentry
         'noisy_module': {
             'level': 'ERROR',
-            'handlers': ['console'],
+            'handlers': [
+                'coralogix',
+                'console',
+            ],
             'propagate': False,
         },
         # Default runserver request logging
         'django.server': DEFAULT_LOGGING['loggers']['django.server'],
-    },
+    }
 })
 
 ROLLBAR = {

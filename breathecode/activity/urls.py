@@ -1,8 +1,10 @@
 from django.urls import path
-from .views import ActivityCohortView, ActivityTypeView, ActivityMeView, ActivityClassroomView, StudentActivityView
+from .views import (ActivityCohortView, ActivityTypeView, ActivityMeView, ActivityClassroomView,
+                    StudentActivityView, PleaseDeleteMe)
 
 app_name = 'activity'
 urlpatterns = [
+    path('logger', PleaseDeleteMe.as_view(), name='logger'),
     path('me', ActivityMeView.as_view(), name='root'),
     path('type/', ActivityTypeView.as_view(), name='type'),
     path('type/<str:activity_slug>', ActivityTypeView.as_view(), name='type_slug'),
