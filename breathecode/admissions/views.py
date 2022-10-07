@@ -1589,6 +1589,7 @@ class SyllabusVersionView(APIView):
 
         serializer = SyllabusVersionSerializer(data=request.data,
                                                context={
+                                                   'request': request,
                                                    'academy': academy,
                                                    'syllabus': syllabus
                                                })
