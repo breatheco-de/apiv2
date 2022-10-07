@@ -239,6 +239,8 @@ class SyllabusLog(object):
 
     def error(self, msg):
         if len(self.errors) > 10:
+            logger.debug('Too many errors on syllabus')
+            logger.debug(errors)
             raise Exception('Too many errors on syllabus')
 
         self.errors.append(msg)
