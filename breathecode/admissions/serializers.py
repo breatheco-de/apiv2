@@ -1010,6 +1010,7 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
+        request = self.context['request']
 
         _data = super().validate(data)
         if 'json' in data:
