@@ -69,6 +69,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     def test_with_one_surveys(self):
         model = self.bc.database.create(survey=1)
 
+        logging.Logger.debug.call_args_list = []
+
         recalculate_survey_scores.delay(1)
 
         self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting recalculate_survey_score')])
