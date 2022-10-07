@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
+from breathecode.utils import getLogger
 
 from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,
@@ -20,6 +21,8 @@ from google.cloud.ndb.query import OR
 # https://www.programcreek.com/python/example/88825/google.cloud.datastore.Entity
 # https://cloud.google.com/datastore/docs/concepts/entities
 # https://googleapis.dev/python/datastore/latest/index.html
+
+logger = getLogger(__name__)
 
 ACTIVITIES = {
     'breathecode_login': 'Every time it logs in',
@@ -175,6 +178,47 @@ class ActivityTypeView(APIView):
 
         res = [self.get_activity_object(slug) for slug in ACTIVITIES.keys()]
         return Response(res)
+
+
+#FIXME: please delete me
+from rest_framework.permissions import AllowAny, IsAuthenticated
+
+
+#FIXME: please delete me
+class PleaseDeleteMe(APIView):
+
+    permission_classes = (AllowAny, )
+
+    def get(self, request):
+        handler = logger.info
+
+        handler_name = request.GET.get('handler', 'info')
+        message = request.GET.get('message', 'hello')
+
+        if handler_name == 'debug':
+            handler = logger.debug
+
+        elif handler_name == 'warning':
+            handler = logger.warning
+
+        elif handler_name == 'warn':
+            handler = logger.warn
+
+        elif handler_name == 'error':
+            handler = logger.error
+
+        elif handler_name == 'exception':
+            handler = logger.exception
+
+        elif handler_name == 'critical':
+            handler = logger.critical
+
+        elif handler_name == 'fatal':
+            handler = logger.fatal
+
+        handler(message)
+
+        return Response([])
 
 
 class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
