@@ -261,7 +261,7 @@ class SyllabusLog(object):
         return 400
 
 
-def test_syllabus(syl, validate_assets=False):
+def test_syllabus(syl, validate_assets=False, ignore=[]):
     from breathecode.registry.models import AssetAlias
 
     if isinstance(syl, str):
@@ -290,12 +290,14 @@ def test_syllabus(syl, validate_assets=False):
 
     count = 0
 
+    types_to_validate = ['lessons', 'quizzes', 'replits', 'projects', 'assignments']
+
+    #ignore: an array with types to ignore, for example: ['lessons']
+    types_to_validate = [a for a in types_to_validate if a not in ignore]
     for day in syl['days']:
         count += 1
-        validate('lessons', syllabus_log, day, count)
-        validate('quizzes', syllabus_log, day, count)
-        validate('replits', syllabus_log, day, count)
-        validate('projects', syllabus_log, day, count)
+        for _name in types_to_validate:
+            validate(_name, syllabus_log, day, count)
         if 'teacher_instructions' not in day or day['teacher_instructions'] == '':
             syllabus_log.warn(f'Empty teacher instructions on module {count}')
 

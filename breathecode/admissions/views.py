@@ -120,7 +120,8 @@ class AcademyTeacherView(APIView, GenerateLookupsMixin):
 @permission_classes([AllowAny])
 def handle_test_syllabus(request):
     try:
-        syllabus_log = test_syllabus(request.data, validate_assets=True)
+        ignore = request.GET.get('ignore', '')
+        syllabus_log = test_syllabus(request.data, validate_assets=True, ignore=ignore.lower().split(','))
         return Response(syllabus_log.serialize(), status=syllabus_log.http_status())
     except Exception as e:
         return Response({'details': str(e)}, status=400)
@@ -1616,7 +1617,10 @@ class SyllabusVersionView(APIView):
                                       code=400,
                                       slug='syllabus-not-found')
 
-        serializer = SyllabusVersionPutSerializer(syllabus_version, data=request.data, many=False)
+        serializer = SyllabusVersionPutSerializer(syllabus_version,
+                                                  data=request.data,
+                                                  many=False,
+                                                  context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

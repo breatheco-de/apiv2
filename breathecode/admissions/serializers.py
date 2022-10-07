@@ -1014,7 +1014,8 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
         _data = super().validate(data)
         if 'json' in data:
             try:
-                _log = test_syllabus(data['json'])
+                ignore = request.GET.get('ignore', '')
+                _log = test_syllabus(data['json'], ignore=ignore.lower().split(','))
                 if _log.http_status() != 200:
                     raise ValidationException(
                         f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
