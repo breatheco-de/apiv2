@@ -173,10 +173,13 @@ LOGGING_CONFIG = None
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
-LOGGING_HANDLERS = ['console']
 
-if not IS_TEST_ENV:
-    LOGGING_HANDLERS.append('coralogix')
+# this prevent the duplications of logs because heroku redirect the output to Coralogix
+if IS_TEST_ENV:
+    LOGGING_HANDLERS = ['console']
+
+else:
+    LOGGING_HANDLERS = ['coralogix']
 
 logging.config.dictConfig({
     'version': 1,
