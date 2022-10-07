@@ -171,7 +171,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # Disable Django's logging setup
 LOGGING_CONFIG = None
 
+IS_TEST_ENV = os.getenv('ENV') == 'test'
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+LOGGING_HANDLERS = ['console']
+
+if not IS_TEST_ENV:
+    LOGGING_HANDLERS.append('coralogix')
 
 logging.config.dictConfig({
     'version': 1,
@@ -205,28 +210,19 @@ logging.config.dictConfig({
     'loggers': {
         '': {
             'level': 'WARNING',
-            'handlers': [
-                'coralogix',
-                'console',
-            ],
+            'handlers': LOGGING_HANDLERS,
         },
         # Our application code
         'breathecode': {
             'level': LOG_LEVEL,
-            'handlers': [
-                'coralogix',
-                'console',
-            ],
+            'handlers': LOGGING_HANDLERS,
             # Avoid double logging because of root logger
             'propagate': False,
         },
         # Prevent noisy modules from logging to Sentry
         'noisy_module': {
             'level': 'ERROR',
-            'handlers': [
-                'coralogix',
-                'console',
-            ],
+            'handlers': LOGGING_HANDLERS,
             'propagate': False,
         },
         # Default runserver request logging
@@ -302,7 +298,6 @@ CORS_ALLOW_HEADERS = [
 
 REDIS_URL = os.getenv('REDIS_URL', '')
 
-IS_TEST_ENV = os.getenv('ENV') == 'test'
 IS_REDIS_WITH_SSL = REDIS_URL.startswith('rediss://')
 
 CACHES = {
