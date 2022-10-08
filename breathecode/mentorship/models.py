@@ -18,6 +18,13 @@ from slugify import slugify
 #       if settings is None:
 #           settings = AcademySettings.objects.create(academy=pk)
 #       return settings
+#     def warnings(self):
+#       # return a dictionary with a list of the fields and warning messages related to them
+#       # for example: { "is_video_streaming_active": "Please settup a video streaming" }
+#       return {}
+#     def errors(self):
+#       # return a dictionary with a list of the fields and errors messages related to them
+#       return {}
 
 
 DRAFT = 'DRAFT'
