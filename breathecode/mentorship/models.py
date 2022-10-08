@@ -13,7 +13,11 @@ from slugify import slugify
 #     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
 #     @staticmethod
 #     def get(pk):
-#       return AcademySettings.objects.filter(academy__id=pk).first()
+#       settings = AcademySettings.objects.filter(academy__id=pk).first()
+#       # lets create the settings if they dont exist for this academy
+#       if settings is None:
+#           settings = AcademySettings.objects.create(academy=pk)
+#       return settings
 
 
 DRAFT = 'DRAFT'
