@@ -611,6 +611,10 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('utm_campaign')
             items = items.filter(utm_campaign__icontains=param)
 
+        if 'tags' in self.request.GET:
+            lookups = self.generate_lookups(request, many_fields=['tags'])
+            items = items.filter(tag_objects__slug__in=lookups['tags__in'])
+
         items = items.filter(**lookup)
 
         like = request.GET.get('like', None)
