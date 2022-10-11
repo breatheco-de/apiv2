@@ -1,6 +1,7 @@
 import logging, json
 from django.dispatch import receiver
 from .models import Asset, AssetAlias
+from .tasks import async_clean_asset_readme
 from .signals import asset_slug_modified, asset_readme_modified
 from breathecode.assignments.signals import assignment_created
 from breathecode.assignments.models import Task
@@ -21,6 +22,12 @@ def post_asset_slug_modified(sender, instance: Asset, **kwargs):
     a = Asset.objects.get(id=instance.id)
     a.all_translations.add(instance)
     instance.save()
+
+
+@receiver(asset_readme_modified, sender=Asset)
+def post_asset_readme_modified(sender, instance: Asset, **kwargs):
+    logger.debug('Cleaning asset raw readme')
+    async_clean_asset_readme.delay(instance.slug)
 
 
 @receiver(assignment_created, sender=Task)

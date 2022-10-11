@@ -220,7 +220,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
                 f'System does not know what github credentials to use to retrive asset info for: {asset_slug}'
             )
 
-        if asset.url is None or 'github.com' not in asset.url:
+        if asset.readme_url is None or 'github.com' not in asset.readme_url:
             raise Exception(f'Missing or invalid URL on {asset_slug}, it does not belong to github.com')
 
         credentials = CredentialsGithub.objects.filter(user__id=author_id).first()
@@ -260,7 +260,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
     return 'ERROR'
 
 
-def push_to_github(asset_slug):
+def push_to_github(asset_slug, author=None):
 
     logger.debug(f'Push asset {asset_slug} to github')
 
@@ -275,19 +275,22 @@ def push_to_github(asset_slug):
         asset.sync_status = 'PENDING'
         asset.save()
 
+        if author is None:
+            author = asset.owner
+
         if asset.external:
             raise Exception('Asset is marked as "external" so it cannot push to github')
 
-        if asset.owner is None:
+        if author is None:
             raise Exception('Asset must have an owner with write permissions on the repository')
 
-        if asset.url is None or 'github.com' not in asset.url:
+        if asset.readme_url is None or 'github.com' not in asset.readme_url:
             raise Exception(f'Missing or invalid URL on {asset_slug}, it does not belong to github.com')
 
-        credentials = CredentialsGithub.objects.filter(user__id=asset.owner.id).first()
+        credentials = CredentialsGithub.objects.filter(user__id=author.id).first()
         if credentials is None:
             raise Exception(
-                f'Github credentials for asset owner id {asset.owner.id} not found when sync asset {asset_slug}'
+                f'Github credentials for user {author.first_name} {author.last_name} (id: {author.id}) not found when synching asset {asset_slug}'
             )
 
         g = Github(credentials.token)
@@ -413,29 +416,12 @@ def pull_github_lesson(github, asset, override_meta=False):
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
 
-    asset.readme = get_blob_content(repo, file_path, branch=branch_name).content
-
-    readme = asset.get_readme(parse=True)
-    asset.html = readme['html']
-
-    base_url = os.path.dirname(asset.readme_url)
-    relative_urls = list(re.finditer(r'((?:\.\.?\/)+[^)"\']+)', readme['decoded']))
-    replaced = readme['decoded']
-    while len(relative_urls) > 0:
-        match = relative_urls.pop(0)
-        found_url = match.group()
-        if found_url.endswith('\\'):
-            found_url = found_url[:-1].strip()
-        extension = pathlib.Path(found_url).suffix
-        if readme['decoded'][match.start() - 1] in ['(', "'", '"'] and extension and extension.strip() in [
-                '.png', '.jpg', '.png', '.jpeg', '.svg', '.gif'
-        ]:
-            logger.debug('Replaced url: ' + base_url + '/' + found_url + '?raw=true')
-            replaced = replaced.replace(found_url, base_url + '/' + found_url + '?raw=true')
-
-    asset.set_readme(replaced)
+    base64_readme = get_blob_content(repo, file_path, branch=branch_name).content
+    asset.readme = base64_readme
+    asset.readme_raw = base64_readme
 
     # only the first time a lesson is synched it will override some of the properties
+    readme = asset.get_readme(parse=True)
     if asset.last_synch_at is None or override_meta:
         fm = dict(readme['frontmatter'].items())
         if 'slug' in fm and fm['slug'] != asset.slug:
@@ -461,6 +447,46 @@ def pull_github_lesson(github, asset, override_meta=False):
 
 
 def clean_asset_readme(asset):
+
+    asset.last_cleaning_at = timezone.now()
+    try:
+        asset = clean_readme_relative_paths(asset)
+        asset = clean_readme_hide_comments(asset)
+        readme = asset.get_readme(parse=True)
+        asset.html = readme['html']
+
+        asset.cleaning_status = 'OK'
+        asset.save()
+    except Exception as e:
+        asset.cleaning_status = 'ERROR'
+        asset.cleaning_status_details = str(e)
+        asset.save()
+
+    return asset
+
+
+def clean_readme_relative_paths(asset):
+    readme = asset.get_readme()
+    base_url = os.path.dirname(asset.readme_url)
+    relative_urls = list(re.finditer(r'((?:\.\.?\/)+[^)"\']+)', readme['decoded']))
+    replaced = readme['decoded']
+    while len(relative_urls) > 0:
+        match = relative_urls.pop(0)
+        found_url = match.group()
+        if found_url.endswith('\\'):
+            found_url = found_url[:-1].strip()
+        extension = pathlib.Path(found_url).suffix
+        if readme['decoded'][match.start() - 1] in ['(', "'", '"'] and extension and extension.strip() in [
+                '.png', '.jpg', '.png', '.jpeg', '.svg', '.gif'
+        ]:
+            logger.debug('Replaced url: ' + base_url + '/' + found_url + '?raw=true')
+            replaced = replaced.replace(found_url, base_url + '/' + found_url + '?raw=true')
+
+    asset.set_readme(replaced)
+    return asset
+
+
+def clean_readme_hide_comments(asset):
     logger.debug(f'Clearning readme for asset {asset.slug}')
     readme = asset.get_readme()
     regex = r'<!--\s+(:?end)?hide\s+-->'
@@ -564,7 +590,10 @@ class AssetThumbnailGenerator:
 
 def pull_learnpack_asset(github, asset, override_meta):
 
-    org_name, repo_name, branch_name = get_url_info(asset.url)
+    if asset.readme_url is None:
+        raise Exception('Missing Readme URL for asset ' + asset.slug + '.')
+
+    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     lang = asset.lang
@@ -596,8 +625,9 @@ def pull_learnpack_asset(github, asset, override_meta):
                 except:
                     raise Exception('No configuration learn.json or bc.json file was found')
 
-    asset.readme = str(readme_file.content)
-    asset = clean_asset_readme(asset)
+    base64_readme = str(readme_file.content)
+    asset.readme = base64_readme
+    asset.readme_raw = base64_readme
 
     if learn_file is not None and (asset.last_synch_at is None or override_meta):
         config = json.loads(learn_file.decoded_content.decode('utf-8'))

@@ -1,3 +1,4 @@
+import serpy, base64
 from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
@@ -5,7 +6,6 @@ from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-import serpy
 from breathecode.utils.validation_exception import ValidationException
 from django.utils import timezone
 
@@ -260,15 +260,23 @@ class PostAssetSerializer(serializers.ModelSerializer):
         if alias is not None:
             raise ValidationException('Asset alias already exists with this slug')
 
+        if 'readme' in validated_data:
+            raise ValidationException(
+                'Property readme is read only, please update property readme_raw instead')
+
         return validated_data
 
     def create(self, validated_data):
         academy_id = self.context['academy']
         academy = Academy.objects.filter(id=academy_id).first()
 
+        readme_raw = None
+        if 'readme_raw' in validated_data:
+            readme_raw = validated_data['readme_raw']
+
         return super(PostAssetSerializer, self).create({
-            **validated_data,
-            'academy': academy,
+            **validated_data, 'academy': academy,
+            'readme_raw': readme_raw
         })
 
 
@@ -410,7 +418,8 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
         session_user = self.context.get('request').user
 
         if self.instance.author is not None and self.instance.author.id != session_user.id:
-            raise ValidationException('Only the comment author can mark this comment as resolved')
+            if 'resolved' in data and data['resolved'] != self.instance.resolved:
+                raise ValidationException('Only the comment/issue author can update the resolved property')
 
         return validated_data
 
