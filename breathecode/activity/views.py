@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
+from breathecode.utils import getLogger
 
 from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,
@@ -20,6 +21,8 @@ from google.cloud.ndb.query import OR
 # https://www.programcreek.com/python/example/88825/google.cloud.datastore.Entity
 # https://cloud.google.com/datastore/docs/concepts/entities
 # https://googleapis.dev/python/datastore/latest/index.html
+
+logger = getLogger(__name__)
 
 ACTIVITIES = {
     'breathecode_login': 'Every time it logs in',
