@@ -469,6 +469,7 @@ def clean_readme_relative_paths(asset):
     readme = asset.get_readme()
     base_url = os.path.dirname(asset.readme_url)
     relative_urls = list(re.finditer(r'((?:\.\.?\/)+[^)"\']+)', readme['decoded']))
+
     replaced = readme['decoded']
     while len(relative_urls) > 0:
         match = relative_urls.pop(0)
