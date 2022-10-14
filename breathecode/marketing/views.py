@@ -387,6 +387,13 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
         if like is not None:
             items = items.filter(slug__icontains=like)
 
+        status = request.GET.get('status', None)
+        if status is not None:
+            aproved = True
+            if status == 'DISPUTED':
+                aproved = False
+            items = items.filter(disputed_at__isnull=aproved)
+
         types = request.GET.get('type', None)
         if types is not None:
             _types = types.split(',')

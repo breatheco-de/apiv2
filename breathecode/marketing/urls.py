@@ -34,7 +34,7 @@ urlpatterns = [
 
     # path('report/summary', get_summary, name="report_summary"),
     path('activecampaign', ActiveCampaignView.as_view(), name='activecampaign'),
-    path('activecampaign/<int:ac_id>', ActiveCampaignView.as_view(), name='activecampaign'),
+    path('activecampaign/<int:ac_id>', ActiveCampaignView.as_view(), name='activecampaign_id'),
     path('activecampaign/webhook/<int:ac_academy_id>', activecampaign_webhook, name='activecampaign_webhook'),
     path('activecampaign/webhook/<str:academy_slug>', activecampaign_webhook, name='activecampaign_webhook'),
     path('googleads/enrollments/<str:academy_slugs>', googleads_enrollments, name='activecampaign_webhook'),
