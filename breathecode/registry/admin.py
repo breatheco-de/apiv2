@@ -303,6 +303,7 @@ class AssetAdmin(admin.ModelAdmin):
         generate_spanish_translation,
         remove_dot_from_slug,
         load_readme_tasks,
+        async_regenerate_readme,
     ] + change_field(['DRAFT', 'UNASSIGNED', 'PUBLISHED'], name='status') + change_field(['us', 'es'],
                                                                                          name='lang')
 
