@@ -77,7 +77,7 @@ def async_regenerate_readme(modeladmin, request, queryset):
     queryset.update(cleaning_status='PENDING', cleaning_status_details='Starting to clean...')
     assets = queryset.all()
     for a in assets:
-        async_regenerate_asset_readme.delay(a.slug, request.user.id)
+        async_regenerate_asset_readme.delay(a.slug)
 
 
 def make_me_author(modeladmin, request, queryset):
