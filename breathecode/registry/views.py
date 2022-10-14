@@ -472,7 +472,7 @@ class AcademyAssetActionView(APIView):
         if asset is None:
             raise ValidationException('This asset does not exist for this academy', 404)
 
-        possible_actions = ['test', 'pull', 'push', 'analyze_seo']
+        possible_actions = ['test', 'pull', 'push', 'analyze_seo', 'clean']
         if action_slug not in possible_actions:
             raise ValidationException(f'Invalid action {action_slug}')
         try:
