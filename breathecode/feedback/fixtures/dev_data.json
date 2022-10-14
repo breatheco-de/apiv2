@@ -1,0 +1,74 @@
+[
+    {
+        "model": "feedback.survey",
+        "pk": 1,
+        "fields": {
+            "lang": "en",
+            "cohort": 1,
+            "max_assistants_to_ask": 2,
+            "max_teachers_to_ask": 1,
+            "scores": null,
+            "response_rate": null,
+            "status": "PENDING",
+            "status_json": null,
+            "duration": "1 00:00:00",
+            "created_at": "2022-10-13T13:20:02.482Z",
+            "updated_at": "2022-10-13T13:20:02.482Z",
+            "sent_at": "2022-10-13T13:20:02Z"
+        }
+    },
+    {
+        "model": "feedback.answer",
+        "pk": 1,
+        "fields": {
+            "title": "How has been your experience with your mentor Michael Book so far?",
+            "lowest": "not likely",
+            "highest": "very likely",
+            "lang": "en",
+            "event": null,
+            "mentorship_session": null,
+            "mentor": null,
+            "cohort": 1,
+            "academy": 1,
+            "token": 6,
+            "score": null,
+            "comment": "",
+            "survey": 1,
+            "status": "SENT",
+            "user": 8,
+            "opened_at": "2022-10-13T13:23:35Z",
+            "sent_at": "2022-10-13T13:23:31Z",
+            "created_at": "2022-10-13T13:23:56.971Z",
+            "updated_at": "2022-10-13T13:23:56.971Z"
+        }
+    },
+    {
+        "model": "feedback.reviewplatform",
+        "pk": "google",
+        "fields": {
+            "name": "Google",
+            "website": "https://www.google.com",
+            "review_signup": "https://www.google.com/search?q=4geeks+academy",
+            "contact_email": "contact@google.com",
+            "contact_name": null,
+            "contact_phone": null
+        }
+    },
+    {
+        "model": "feedback.review",
+        "pk": 1,
+        "fields": {
+            "nps_previous_rating": null,
+            "total_rating": 8.0,
+            "public_url": null,
+            "status": "PENDING",
+            "status_text": null,
+            "comments": "",
+            "cohort": 1,
+            "author": 8,
+            "platform": "google",
+            "created_at": "2022-10-13T13:25:34.965Z",
+            "updated_at": "2022-10-13T13:25:34.965Z"
+        }
+    }
+]
