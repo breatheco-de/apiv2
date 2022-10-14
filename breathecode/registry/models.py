@@ -386,7 +386,7 @@ class Asset(models.Model):
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
-            self.sync_status = 'PENDING'
+            self.cleaning_status = 'PENDING'
 
         # only validate this on creation
         if self.pk is None or self.__old_slug != self.slug:

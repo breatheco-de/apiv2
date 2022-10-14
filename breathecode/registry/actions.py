@@ -242,7 +242,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         return asset
     except Exception as e:
-        # raise e
+
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
