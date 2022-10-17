@@ -74,6 +74,7 @@ def get_serializer(self, form_entry):
         'utm_campaign': form_entry.utm_campaign,
         'utm_medium': form_entry.utm_medium,
         'utm_source': form_entry.utm_source,
+        'utm_content': form_entry.utm_content,
         'utm_url': form_entry.utm_url,
         'ac_expected_cohort': form_entry.ac_expected_cohort,
         'user': None,

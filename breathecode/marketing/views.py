@@ -599,6 +599,22 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('location')
             lookup['location'] = param
 
+        if 'utm_medium' in self.request.GET:
+            param = self.request.GET.get('utm_medium')
+            items = items.filter(utm_medium__icontains=param)
+
+        if 'utm_url' in self.request.GET:
+            param = self.request.GET.get('utm_url')
+            items = items.filter(utm_url__icontains=param)
+
+        if 'utm_campaign' in self.request.GET:
+            param = self.request.GET.get('utm_campaign')
+            items = items.filter(utm_campaign__icontains=param)
+
+        if 'tags' in self.request.GET:
+            lookups = self.generate_lookups(request, many_fields=['tags'])
+            items = items.filter(tag_objects__slug__in=lookups['tags__in'])
+
         items = items.filter(**lookup)
 
         like = request.GET.get('like', None)

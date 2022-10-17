@@ -976,6 +976,24 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
             },
         }
 
+    def validate(self, data):
+        request = self.context['request']
+
+        _data = super().validate(data)
+        if 'json' in data:
+            try:
+                ignore = request.GET.get('ignore', '')
+                _log = test_syllabus(data['json'], ignore=ignore.lower().split(','))
+                if _log.http_status() != 200:
+                    raise ValidationException(
+                        f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
+                        slug='syllabus-with-errors')
+            except Exception as e:
+                raise ValidationException(f'Error when testing the syllabus: {str(e)}',
+                                          slug='syllabus-with-errors')
+
+        return _data
+
     def create(self, validated_data):
         syllabus = self.context['syllabus']
 
@@ -1010,19 +1028,20 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
+        request = self.context['request']
 
         _data = super().validate(data)
         if 'json' in data:
             try:
-                _log = test_syllabus(data['json'])
-                if _log.http_status() == 200:
+                ignore = request.GET.get('ignore', '')
+                _log = test_syllabus(data['json'], ignore=ignore.lower().split(','))
+                if _log.http_status() != 200:
                     raise ValidationException(
-                        'There are some errors in your syllabus, please validate before submitting',
+                        f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
                         slug='syllabus-with-errors')
-            except:
-                raise ValidationException(
-                    'There are some errors in your syllabus, please validate before submitting',
-                    slug='syllabus-with-errors')
+            except Exception as e:
+                raise ValidationException(f'Error when testing the syllabus: {str(e)}',
+                                          slug='syllabus-with-errors')
 
         return _data
 
