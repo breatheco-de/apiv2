@@ -15,7 +15,6 @@ from slugify import slugify
 #     def get(pk):
 #       return AcademySettings.objects.filter(academy__id=pk).first()
 
-
 DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
 UNLISTED = 'UNLISTED'
