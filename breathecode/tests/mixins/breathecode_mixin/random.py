@@ -10,7 +10,7 @@ from PIL import Image
 import tempfile
 from . import interfaces
 
-__all__ = ['Check']
+__all__ = ['Random', 'fake']
 fake = Faker()
 
 IMAGE_TYPES = {

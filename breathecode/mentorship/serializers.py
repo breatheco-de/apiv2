@@ -71,6 +71,7 @@ class GETServiceTinySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    duration = serpy.Field()
 
 
 class GETServiceSmallSerializer(serpy.Serializer):
