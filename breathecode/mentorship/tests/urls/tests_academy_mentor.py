@@ -620,7 +620,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         json = response.json()
         expected = {
-            'academy': ['This field is required.'],
             'price_per_hour': ['This field is required.'],
             'services': ['This field is required.'],
             'user': ['This field is required.'],
@@ -651,8 +650,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             'name': 'Mirai Nikki',
             'price_per_hour': 20,
             'services': [1],
-            'user': 1,
-            'academy': 1,
+            'user': 1
         }
         response = self.client.post(url, data, format='json')
 
