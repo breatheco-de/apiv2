@@ -145,7 +145,7 @@ class HookForm(forms.ModelForm):
 
     class Meta:
         model = HookModel
-        fields = ['user', 'target', 'event']
+        exclude = []
 
     def __init__(self, *args, **kwargs):
         super(HookForm, self).__init__(*args, **kwargs)
@@ -157,7 +157,11 @@ class HookForm(forms.ModelForm):
 
 
 class HookAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in HookModel._meta.fields]
+    list_display = [
+        'user', 'target', 'event', 'service_id', 'total_calls', 'last_response_code', 'last_call_at'
+    ]
+    search_fields = ['user__username', 'event', 'target', 'service_id']
+    list_filter = ['event', 'last_response_code']
     raw_id_fields = [
         'user',
     ]

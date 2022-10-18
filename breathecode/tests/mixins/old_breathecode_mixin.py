@@ -1,6 +1,7 @@
 """
 Cache mixin
 """
+import requests
 from breathecode.tests.mocks import OLD_BREATHECODE_INSTANCES
 from unittest.mock import call
 from breathecode.services import SOURCE, CAMPAIGN
@@ -31,7 +32,8 @@ class OldBreathecodeMixin():
                     f'{self.old_breathecode_host}/admin/api.php',
                     params=[('api_action', 'contact_sync'),
                             ('api_key', model['active_campaign_academy'].ac_key), ('api_output', 'json')],
-                    data=data)
+                    data=data,
+                    timeout=2)
 
     def __contact_automations_call__(self, model):
         return call('POST',
@@ -44,14 +46,15 @@ class OldBreathecodeMixin():
                     json={'contactAutomation': {
                         'contact': 1,
                         'automation': model['automation'].acp_id,
-                    }})
+                    }},
+                    timeout=2)
 
     def reset_old_breathecode_calls(self):
-        mock = OLD_BREATHECODE_INSTANCES['request']
+        mock = requests.request
         mock.call_args_list = []
 
     def check_old_breathecode_calls(self, model, types):
-        mock = OLD_BREATHECODE_INSTANCES['request']
+        mock = requests.request
 
         calls = []
         for type in types:

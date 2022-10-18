@@ -311,6 +311,30 @@ CAPABILITIES = [
         'slug': 'crud_cohort_log',
         'description': 'Update and delete things like the cohort attendance, teacher comments, etc'
     },
+    {
+        'slug': 'read_category',
+        'description': 'Read categories from the content registry'
+    },
+    {
+        'slug': 'crud_category',
+        'description': 'Update and delete categories from the content registry'
+    },
+    {
+        'slug': 'read_project_invoice',
+        'description': 'Read the financial status of a project and invoices'
+    },
+    {
+        'slug': 'crud_project_invoice',
+        'description': 'Create, Update and delete project invoices'
+    },
+    {
+        'slug': 'read_freelance_projects',
+        'description': 'Read project details without financials'
+    },
+    {
+        'slug': 'read_lead_gen_app',
+        'description': 'Read lead generation apps'
+    },
 ]
 
 ROLES = [
@@ -342,8 +366,10 @@ ROLES = [
             'read_nps_answers',
             'read_won_lead',
             'read_cohort_log',
+            'read_lead_gen_app',
             'read_mentorship_service',
             'read_mentorship_mentor',
+            'read_freelancer_bill',
         ],
     },
     {
@@ -374,6 +400,8 @@ ROLES = [
             'read_shortlink',
             'read_mentorship_service',
             'read_mentorship_mentor',
+            'read_lead_gen_app',
+            'read_technology',
         ],
     },
     {
@@ -382,14 +410,8 @@ ROLES = [
         'name':
         'Content Writer (Base)',
         'caps': [
-            'read_keywordcluster',
-            'read_member',
-            'read_media',
-            'read_keyword',
-            'read_my_academy',
-            'read_asset',
-            'crud_asset',
-            'crud_technology',
+            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
+            'read_asset', 'crud_asset', 'read_category', 'crud_category'
         ],
     },
     {
@@ -498,13 +520,13 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Syllabus Coordinator',
         'caps':
-        extend(roles, ['staff']) +
-        ['crud_syllabus', 'crud_media', 'crud_asset', 'read_asset', 'read_keywordcluster', 'read_keyword']
+        extend(roles, ['staff', 'content_writer']) +
+        ['crud_syllabus', 'crud_media', 'crud_technology', 'read_freelancer_bill', 'crud_freelancer_bill']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
         'name': 'Culture and Recruitment',
-        'caps': extend(roles, ['staff']) + ['crud_member']
+        'caps': extend(roles, ['staff']) + ['crud_member', 'crud_media']
     })
     roles.append({
         'slug':
@@ -534,8 +556,10 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Accountant',
         'caps':
-        extend(roles, ['staff']) +
-        ['read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill']
+        extend(roles, ['staff']) + [
+            'read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill',
+            'read_project_invoice', 'crud_project_invoice'
+        ]
     })
     roles.append({
         'slug': 'homework_reviewer',
@@ -576,8 +600,11 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_session',
             'crud_mentorship_bill',
             'read_mentorship_bill',
+            'crud_freelancer_bill',
             'get_gitpod_user',
             'update_gitpod_user',
+            'read_project_invoice',
+            'read_freelance_projects',
         ]
     })
     roles.append({

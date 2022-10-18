@@ -27,7 +27,14 @@ class ResponseMock():
         return self.data
 
 
-def request_mock(method: str, url: str, auth=None, data=None, headers=None, params=None, json=None):
+def request_mock(method: str,
+                 url: str,
+                 auth=None,
+                 data=None,
+                 headers=None,
+                 params=None,
+                 json=None,
+                 timeout=30):
     """Requests get mock"""
     if url == OLD_BREATHECODE_ADMIN_URL:
         return ResponseMock(data=OLD_BREATHECODE_ADMIN, status_code=200)

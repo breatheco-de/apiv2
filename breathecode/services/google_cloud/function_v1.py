@@ -26,7 +26,7 @@ class FunctionV1:
         self.service_url = f'{region}-{project_id}.cloudfunctions.net/{name}'
         self.method = method
 
-    def call(self, data=None, params={}) -> requests.models.Response:
+    def call(self, data=None, params={}, timeout=2) -> requests.models.Response:
         """Call a Google Cloud Function
             Args:
                 data (dict): Arguments of Google Cloud Function.
@@ -48,7 +48,8 @@ class FunctionV1:
                                    'https://' + self.service_url,
                                    data=data,
                                    headers=headers,
-                                   params=params)
+                                   params=params,
+                                   timeout=timeout)
 
         logger.info(f'Cloud function {self.service_url}')
         logger.info(request.content.decode('utf-8'))

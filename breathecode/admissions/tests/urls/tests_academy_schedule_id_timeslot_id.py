@@ -1,6 +1,7 @@
 """
 Test /cohort/user
 """
+import random
 import pytz
 from datetime import datetime, date, time
 from django.urls.base import reverse_lazy
@@ -252,7 +253,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'syllabus_schedule_time_slot'),
         }])
 
-    def test_schedule_time_slot__put(self):
+    def test_schedule_time_slot__put__passing_all_status__in_lowercase(self):
         self.headers(academy=1)
         academy_kwargs = {'timezone': 'Europe/Amsterdam'}
 
@@ -275,9 +276,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                'timeslot_id': 1
                            })
 
+        recurrency_type = random.choice(['DAILY', 'WEEKLY', 'MONTHLY'])
         data = {
             'ending_at': iso_string,
             'starting_at': iso_string,
+            'recurrency_type': recurrency_type.lower(),
         }
 
         response = self.client.put(url, data, format='json')
@@ -285,9 +288,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
         expected = {
             'schedule': 1,
             'id': 1,
-            'recurrency_type': 'WEEKLY',
             'recurrent': True,
-            'timezone': model.academy.timezone
+            'timezone': model.academy.timezone,
+            'recurrency_type': recurrency_type,
         }
 
         self.assertEqual(json, expected)
@@ -298,6 +301,58 @@ class CohortUserTestSuite(AdmissionsTestCase):
                              'ending_at': date,
                              'starting_at': date,
                              'timezone': model.academy.timezone,
+                             'recurrency_type': recurrency_type,
+                         }])
+
+    def test_schedule_time_slot__put__passing_all_status__in_uppercase(self):
+        self.headers(academy=1)
+        academy_kwargs = {'timezone': 'Europe/Amsterdam'}
+
+        date = 202310301330
+        iso_string = datetime(2023, 10, 30, 13, 30, tzinfo=gettz('Europe/Amsterdam')).astimezone(
+            pytz.UTC).isoformat()[:-6] + 'Z'
+
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_certificate',
+                                     role='potato',
+                                     syllabus=True,
+                                     syllabus_schedule_time_slot=True,
+                                     syllabus_schedule=True,
+                                     academy_kwargs=academy_kwargs)
+
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
+                           kwargs={
+                               'certificate_id': 1,
+                               'timeslot_id': 1
+                           })
+
+        recurrency_type = random.choice(['DAILY', 'WEEKLY', 'MONTHLY'])
+        data = {
+            'ending_at': iso_string,
+            'starting_at': iso_string,
+            'recurrency_type': recurrency_type,
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+        expected = {
+            'schedule': 1,
+            'id': 1,
+            'recurrent': True,
+            'timezone': model.academy.timezone,
+            'recurrency_type': recurrency_type,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_syllabus_schedule_time_slot_dict(),
+                         [{
+                             **self.model_to_dict(model, 'syllabus_schedule_time_slot'),
+                             'ending_at': date,
+                             'starting_at': date,
+                             'timezone': model.academy.timezone,
+                             'recurrency_type': recurrency_type,
                          }])
 
     """

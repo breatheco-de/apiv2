@@ -38,7 +38,7 @@ class Command(BaseCommand):
 
     def academies(self, options):
 
-        response = requests.get(f'{HOST}/locations/')
+        response = requests.get(f'{HOST}/locations/', timeout=2)
         locations = response.json()
 
         for loc in locations['data']:
@@ -57,7 +57,7 @@ class Command(BaseCommand):
 
     def syllabus(self, options):
 
-        response = requests.get(f'{HOST_ASSETS}/syllabus/all')
+        response = requests.get(f'{HOST_ASSETS}/syllabus/all', timeout=2)
         syllabus = response.json()
 
         for syl in syllabus:
@@ -78,7 +78,7 @@ class Command(BaseCommand):
             _syl = Syllabus.objects.filter(version=version, certificate=cert).first()
             if _syl is None:
 
-                response = requests.get(f'{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}')
+                response = requests.get(f'{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}', timeout=2)
 
                 _syl = Syllabus(
                     version=version,
@@ -94,7 +94,7 @@ class Command(BaseCommand):
 
     def certificates(self, options):
 
-        response = requests.get(f'{HOST}/profiles/')
+        response = requests.get(f'{HOST}/profiles/', timeout=2)
         profiles = response.json()
 
         for pro in profiles['data']:
@@ -116,7 +116,7 @@ class Command(BaseCommand):
 
     def syllabus(self, options):
 
-        response = requests.get(f'{HOST_ASSETS}/syllabus/all')
+        response = requests.get(f'{HOST_ASSETS}/syllabus/all', timeout=2)
         syllabus = response.json()
 
         for syl in syllabus:
@@ -136,7 +136,7 @@ class Command(BaseCommand):
 
             _syl = Syllabus.objects.filter(version=version, certificate=cert).first()
             if _syl is None:
-                response = requests.get(f'{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}')
+                response = requests.get(f'{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}', timeout=2)
                 _syl = Syllabus(
                     version=version,
                     certificate=cert,
@@ -150,7 +150,7 @@ class Command(BaseCommand):
 
     def cohorts(self, options):
 
-        response = requests.get(f'{HOST}/cohorts/')
+        response = requests.get(f'{HOST}/cohorts/', timeout=2)
         cohorts = response.json()
 
         for _cohort in cohorts['data']:
@@ -181,7 +181,7 @@ class Command(BaseCommand):
         if 'limit' in options and options['limit']:
             limit = options['limit']
 
-        response = requests.get(f'{HOST}/students/')
+        response = requests.get(f'{HOST}/students/', timeout=2)
         students = response.json()
 
         total = 0
@@ -233,7 +233,7 @@ class Command(BaseCommand):
         if 'limit' in options and options['limit']:
             limit = options['limit']
 
-        response = requests.get(f'{HOST}/teachers/')
+        response = requests.get(f'{HOST}/teachers/', timeout=2)
         teachers = response.json()
 
         total = 0
@@ -284,7 +284,7 @@ class Command(BaseCommand):
                                            DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC')),
             current_day=_cohort['current_day'],
             stage=stages[_cohort['stage']],
-            language=_cohort['language'],
+            language=_cohort['language'].lower(),
             academy=academy,
             syllabus=syllabus,
         )
@@ -312,7 +312,7 @@ class Command(BaseCommand):
                                                     DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
         cohort.current_day = data['current_day']
         cohort.stage = stages[data['stage']]
-        cohort.language = data['language']
+        cohort.language = data['language'].lower()
         if 'kickoff_date' in data and data['ending_date'] is not None:
             cohort.ending_date = datetime.strptime(data['ending_date'],
                                                    DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))

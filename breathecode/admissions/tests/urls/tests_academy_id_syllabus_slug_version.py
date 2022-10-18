@@ -1,6 +1,7 @@
 """
 Test /certificate
 """
+import random
 from unittest.mock import patch
 from breathecode.services import datetime_to_iso_format
 from django.urls.base import reverse_lazy
@@ -12,6 +13,46 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import AdmissionsTestCase
+
+
+def generate_syllabus_json(lesson_slug,
+                           quiz_slug=None,
+                           reply_slug=None,
+                           project_slug=None,
+                           assignment_slug=None):
+
+    if quiz_slug == None:
+        quiz_slug = lesson_slug
+
+    if reply_slug == None:
+        reply_slug = quiz_slug
+
+    if project_slug == None:
+        project_slug = reply_slug
+
+    if assignment_slug == None:
+        assignment_slug = project_slug
+
+    n = random.randint(1, 10)
+    return {
+        'days': [{
+            'lessons': [{
+                'slug': lesson_slug,
+            }],
+            'quizzes': [{
+                'slug': quiz_slug,
+            }],
+            'replits': [{
+                'slug': reply_slug,
+            }],
+            'projects': [{
+                'slug': project_slug,
+            }],
+            'assignments': [{
+                'slug': assignment_slug,
+            }],
+        } for _ in range(n)]
+    }
 
 
 class CertificateTestSuite(AdmissionsTestCase):
@@ -204,19 +245,22 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        slug = self.bc.fake.slug()
+        asset_alias = {'slug': slug}
         model = self.generate_models(authenticate=True,
                                      syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
                                      syllabus=True,
+                                     asset_alias=asset_alias,
                                      syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_id_syllabus_slug_version',
                            kwargs={
                                'academy_id': 1,
                                'syllabus_slug': 'they-killed-kenny',
                            })
-        data = {'json': {}}
+        data = {'json': generate_syllabus_json(slug)}
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
@@ -231,11 +275,14 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_syllabus_version_dict(), [{
             'id': 1,
+            'integrity_check_at': None,
+            'integrity_report': None,
+            'integrity_status': 'PENDING',
             'change_log_details': None,
             'status': 'PUBLISHED',
-            'json': {},
             'syllabus_id': 1,
-            'version': 1
+            'version': 1,
+            **data,
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -245,6 +292,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        slug = self.bc.fake.slug()
+        asset_alias = {'slug': slug}
         model = self.generate_models(authenticate=True,
                                      syllabus_schedule=True,
                                      profile_academy=True,
@@ -252,13 +301,14 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
+                                     asset_alias=asset_alias,
                                      syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_id_syllabus_slug_version',
                            kwargs={
                                'academy_id': 1,
                                'syllabus_slug': 'they-killed-kenny',
                            })
-        data = {'json': {}}
+        data = {'json': generate_syllabus_json(slug)}
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
@@ -275,9 +325,12 @@ class CertificateTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'syllabus_version')
         }, {
             'id': 2,
+            'integrity_check_at': None,
+            'integrity_report': None,
+            'integrity_status': 'PENDING',
             'change_log_details': None,
             'status': 'PUBLISHED',
-            'json': {},
             'syllabus_id': 1,
             'version': model.syllabus_version.version + 1,
+            **data,
         }])

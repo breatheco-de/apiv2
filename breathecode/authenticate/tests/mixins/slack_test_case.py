@@ -23,5 +23,4 @@ class SlackTestCase(APITestCase):
     def get_academy(self):
         """Generate a academy with mixer"""
         academy = mixer.blend('admissions.Academy')
-        academy.save()
         self.academy = academy

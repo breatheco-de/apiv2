@@ -36,7 +36,8 @@ def run_spider(spider):
     data['loc'] = spider.loc_search
     response = requests.post('https://app.scrapinghub.com/api/run.json',
                              data=data,
-                             auth=(spider.zyte_project.zyte_api_key, ''))
+                             auth=(spider.zyte_project.zyte_api_key, ''),
+                             timeout=2)
     result = response.json()
 
     if result['status'] == 'error':
@@ -67,7 +68,8 @@ def fetch_to_api(spider):
 
     res = requests.get('https://app.scrapinghub.com/api/jobs/list.json',
                        params=params,
-                       auth=(spider.zyte_project.zyte_api_key, '')).json()
+                       auth=(spider.zyte_project.zyte_api_key, ''),
+                       timeout=2).json()
     return res
 
 
@@ -89,8 +91,8 @@ def get_scraped_data_of_platform(spider, api_fetch):
 
         if num_spider == spider.zyte_spider_number and num_job >= spider.zyte_job_number:
             response = requests.get(
-                f'https://storage.scrapinghub.com/items/{res_api_jobs["id"]}?apikey={spider.zyte_project.zyte_api_key}&format=json'
-            )
+                f'https://storage.scrapinghub.com/items/{res_api_jobs["id"]}?apikey={spider.zyte_project.zyte_api_key}&format=json',
+                timeout=2)
 
             if response.status_code != 200:
                 spider.sync_status = 'ERROR'

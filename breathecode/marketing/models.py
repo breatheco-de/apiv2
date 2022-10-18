@@ -1,5 +1,7 @@
 import secrets
 from django.db import models
+from datetime import timedelta
+from django.utils import timezone
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from django.core.validators import RegexValidator
@@ -8,6 +10,13 @@ __all__ = [
     'ActiveCampaignAcademy', 'AcademyAlias', 'Automation', 'Tag', 'Contact', 'FormEntry', 'ShortLink',
     'ActiveCampaignWebhook'
 ]
+
+
+class AcademyProxy(Academy):
+
+    class Meta:
+        proxy = True
+
 
 INCOMPLETED = 'INCOMPLETED'
 COMPLETED = 'COMPLETED'
@@ -27,6 +36,10 @@ class ActiveCampaignAcademy(models.Model):
                                                     default=None)
 
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+
+    duplicate_leads_delta_avoidance = models.DurationField(
+        default=timedelta(minutes=30),
+        help_text='Leads that apply to the same course on this timedelta will not be sent to AC')
 
     sync_status = models.CharField(
         max_length=15,
@@ -198,7 +211,7 @@ class LeadGenerationApp(models.Model):
     app_id = models.CharField(
         max_length=255,
         unique=True,
-        help_text='Unique token generated only for this app, can be reset to revoke acceess')
+        help_text='Unique token generated only for this app, can be reset to revoke access')
 
     hits = models.IntegerField(default=0)
 
@@ -251,9 +264,13 @@ class LeadGenerationApp(models.Model):
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
+DUPLICATED = 'DUPLICATED'
+ERROR = 'ERROR'
 STORAGE_SATUS = (
     (PENDING, 'Pending'),
     (PERSISTED, 'Persisted'),
+    (DUPLICATED, 'Duplicated'),
+    (ERROR, 'Error'),
 )
 
 LEAD_TYPE = (
@@ -349,6 +366,12 @@ class FormEntry(models.Model):
 
     # is it saved into active campaign?
     storage_status = models.CharField(max_length=15, choices=STORAGE_SATUS, default=PENDING)
+    storage_status_text = models.CharField(
+        default='',
+        blank=True,
+        max_length=250,
+        help_text='Will show exception message or any other cloud on the error that occurred (if any)')
+
     lead_type = models.CharField(max_length=15, choices=LEAD_TYPE, null=True, default=None)
 
     deal_status = models.CharField(max_length=15, choices=DEAL_STATUS, default=None, null=True, blank=True)
@@ -388,6 +411,26 @@ class FormEntry(models.Model):
 
     def __str__(self):
         return self.first_name + ' ' + self.last_name
+
+    def is_duplicate(self, incoming_lead):
+        duplicate_leads_delta_avoidance = timedelta(minutes=30)
+        if self.academy is not None and self.academy.activecampaignacademy is not None:
+            duplicate_leads_delta_avoidance = self.academy.activecampaignacademy.duplicate_leads_delta_avoidance
+
+        last_one = FormEntry.objects.filter(
+            email=self.email,
+            course=incoming_lead['course'],
+            storage_status='PERSISTED',
+            created_at__lte=self.created_at).exclude(id=self.id).order_by('-created_at').first()
+
+        if last_one is None:
+            return False
+
+        delta = self.created_at - last_one.created_at
+        if duplicate_leads_delta_avoidance >= delta:
+            return True
+
+        return False
 
     def toFormData(self):
         _entry = {
@@ -455,7 +498,6 @@ class ShortLink(models.Model):
 
 PENDING = 'PENDING'
 DONE = 'DONE'
-ERROR = 'ERROR'
 WEBHOOK_STATUS = (
     (PENDING, 'Pending'),
     (DONE, 'Done'),

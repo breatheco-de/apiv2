@@ -3,12 +3,12 @@ from django.dispatch import receiver
 from breathecode.authenticate.signals import invite_accepted
 from breathecode.events.signals import event_saved
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.admissions.models import CohortUser, Cohort
+from breathecode.admissions.models import CohortUser, Cohort, Academy
 from breathecode.events.models import Event
-from breathecode.admissions.signals import student_edu_status_updated, cohort_saved
+from breathecode.admissions.signals import student_edu_status_updated, cohort_saved, academy_saved
 from .models import FormEntry, ActiveCampaignAcademy
 import breathecode.marketing.tasks as tasks
-from .models import Downloadable
+from .models import Downloadable, AcademyAlias
 from .signals import downloadable_saved
 from .tasks import add_downloadable_slug_as_acp_tag
 
@@ -41,6 +41,19 @@ def cohort_post_save(sender, instance, created, *args, **kwargs):
         ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=instance.academy.id).first()
         if ac_academy is not None:
             tasks.add_cohort_slug_as_acp_tag.delay(instance.id, instance.academy.id)
+
+
+@receiver(academy_saved, sender=Academy)
+def academy_post_save(sender, instance, created, *args, **kwargs):
+    if created:
+        alias = AcademyAlias.objects.filter(slug=instance.slug).first()
+        if alias is None:
+            slug = instance.active_campaign_slug
+            if slug is None:
+                slug = instance.slug
+
+            alias = AcademyAlias(slug=instance.slug, active_campaign_slug=slug, academy=instance)
+            alias.save()
 
 
 @receiver(event_saved, sender=Event)

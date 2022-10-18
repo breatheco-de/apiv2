@@ -32,6 +32,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.certificate.actions.generate_certificate', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_generate_one_certificate_with_user_role_student(self):
         cohort_user = {'role': 'STUDENT'}
         model = self.generate_models(cohort_user=cohort_user)
@@ -56,6 +57,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.certificate.actions.generate_certificate', MagicMock(side_effect=Exception()))
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_generate_one_certificate_with_user_role_teacher(self):
         cohort_user = {'role': 'STUDENT'}
         model = self.generate_models(cohort_user=cohort_user)

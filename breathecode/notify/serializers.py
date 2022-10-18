@@ -13,13 +13,6 @@ class UserSerializer(serpy.Serializer):
     last_name = serpy.Field()
 
 
-class HookSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
-    user = UserSerializer()
-    target = serpy.Field()
-    event = serpy.Field()
-
-
 class DeviceSerializer(serpy.Serializer):
     id = serpy.Field()
     registration_id = serpy.Field()
@@ -27,6 +20,11 @@ class DeviceSerializer(serpy.Serializer):
 
 
 class HookSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Hook
+        read_only_fields = ('user', )
+        exclude = ['sample_data']
 
     def validate(self, data):
 
@@ -43,8 +41,3 @@ class HookSerializer(serializers.ModelSerializer):
         data['user'] = self.context['request'].user
 
         return super().validate(data)
-
-    class Meta:
-        model = Hook
-        fields = '__all__'
-        read_only_fields = ('user', )

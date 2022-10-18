@@ -5,8 +5,25 @@ import logging
 import breathecode.services.activecampaign.actions as actions
 from breathecode.utils import APIException
 from slugify import slugify
+from activecampaign.client import Client
 
 logger = logging.getLogger(__name__)
+
+
+class ActiveCampaignClient(Client):
+
+    def _request(self, method, endpoint, headers=None, **kwargs):
+        _headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Api-Token': self.api_key
+        }
+        if headers:
+            _headers.update(headers)
+
+        kwargs['timeout'] = 2
+
+        return self._parse(requests.request(method, self.BASE_URL + endpoint, headers=_headers, **kwargs))
 
 
 class ActiveCampaign:
@@ -108,7 +125,9 @@ class ActiveCampaign:
     def get_deal(self, deal_id):
         #/api/3/deals/id
         #Api-Token
-        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}', headers={'Api-Token': self.token})
+        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}',
+                            headers={'Api-Token': self.token},
+                            timeout=2)
         logger.debug(f'Get deal {self.host}/api/3/deals/{deal_id}', resp.status_code)
         return resp.json()
 
@@ -119,7 +138,8 @@ class ActiveCampaign:
         #Api-Token
         resp = requests.get(f'{self.host}/api/3/contacts',
                             headers={'Api-Token': self.token},
-                            params={'email': email})
+                            params={'email': email},
+                            timeout=2)
         logger.debug(f'Get contact by email {self.host}/api/3/contacts {resp.status_code}')
         data = resp.json()
         if data and 'contacts' in data and len(data['contacts']) == 1:
@@ -131,7 +151,8 @@ class ActiveCampaign:
         #/api/3/deals/id
         #Api-Token
         resp = requests.get(f'{self.host}/api/3/deals/{deal_id}/dealCustomFieldData',
-                            headers={'Api-Token': self.token})
+                            headers={'Api-Token': self.token},
+                            timeout=2)
         logger.debug(
             f'Get custom fields {self.host}/api/3/deals/{deal_id}/dealCustomFieldData with status {str(resp.status_code)}'
         )
@@ -156,7 +177,7 @@ class ActiveCampaign:
             'Content-Type': 'application/json',
             'Accept': 'application/json',
         }
-        resp = requests.post(f'{self.host}/api/3/contactTags', headers=headers, json=body)
+        resp = requests.post(f'{self.host}/api/3/contactTags', headers=headers, json=body, timeout=2)
         logger.debug(f'Add tag to contact')
 
         # can return status 200 if the contact have has been tagged, this case is not a error
@@ -176,7 +197,10 @@ class ActiveCampaign:
         #/api/3/deals/id
         #Api-Token
         body = {'tag': {'tag': slugify(slug), 'tagType': 'contact', 'description': description}}
-        resp = requests.post(f'{self.host}/api/3/tags', headers={'Api-Token': self.token}, json=body)
+        resp = requests.post(f'{self.host}/api/3/tags',
+                             headers={'Api-Token': self.token},
+                             json=body,
+                             timeout=2)
         logger.warn(f'Creating tag `{body["tag"]["tag"]}` on active campaign')
 
         if resp.status_code == 201:
@@ -207,6 +231,7 @@ class ActiveCampaign:
         resp = requests.delete(
             f'{self.host}/api/3/tags/{tag_id}',
             headers={'Api-Token': self.token},
+            timeout=2,
         )
         logger.debug(f'Deleting tag {str(tag_id)} on active campaign')
 
@@ -368,7 +393,12 @@ class AC_Old_Client(object):
         if aditional_data is not None:
             for aditional in aditional_data:
                 params.append(aditional)
-        response = requests.request(method, self._base_url + '/admin/api.php', params=params, data=data)
+        response = requests.request(method,
+                                    self._base_url + '/admin/api.php',
+                                    params=params,
+                                    data=data,
+                                    timeout=2)
+
         if response.status_code >= 200 and response.status_code < 400:
             data = response.json()
             return self._parse(data)

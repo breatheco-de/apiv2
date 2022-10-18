@@ -1204,13 +1204,18 @@ class MemberGetTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
         role = 'konan'
         self.bc.request.set_headers(academy=1)
-        self.bc.database.create(authenticate=True, role=role, capability='read_member', profile_academy=True)
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='read_member',
+                                        profile_academy=True)
         url = reverse_lazy('authenticate:academy_member')
         url = f'{url}?roles='
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [])
+        self.assertEqual(json, [
+            format_profile_academy(self, model.profile_academy, model.role, model.academy),
+        ])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,

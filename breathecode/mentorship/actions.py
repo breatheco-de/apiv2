@@ -275,7 +275,8 @@ def generate_mentor_bills(mentor, reset=False):
     def get_unpaid_sessions():
         return MentorshipSession.objects.filter(
             Q(bill__isnull=True)
-            | Q(bill__status='DUE', bill__academy=mentor.academy, bill__paid_at__isnull=True),
+            | Q(bill__status='DUE', bill__academy=mentor.academy, bill__paid_at__isnull=True)
+            | Q(bill__status='RECALCULATE', bill__academy=mentor.academy, bill__paid_at__isnull=True),
             service__isnull=False,
             allow_billing=True,
             mentor__id=mentor.id,
@@ -283,17 +284,28 @@ def generate_mentor_bills(mentor, reset=False):
             started_at__isnull=False,
         ).order_by('started_at')
 
-    without_service = MentorshipSession.objects.filter(mentor=mentor, service__isnull=True).count()
+    without_service = MentorshipSession.objects.filter(
+        Q(bill__isnull=True)
+        | Q(bill__status='DUE', bill__academy=mentor.academy, bill__paid_at__isnull=True)
+        | Q(bill__status='RECALCULATE', bill__academy=mentor.academy, bill__paid_at__isnull=True),
+        mentor=mentor,
+        service__isnull=True).count()
     if without_service:
         raise ValidationException(
             f'This mentor has {without_service} sessions without an associated service that need to be fixed',
             slug='session_without_service')
 
+    recalculate_bills = MentorshipBill.objects.filter(Q(status='DUE') | Q(status='RECALCULATE'),
+                                                      mentor__id=mentor.id,
+                                                      academy__id=mentor.academy.id)
+
     unpaid_sessions = get_unpaid_sessions()
     if not unpaid_sessions:
+        if recalculate_bills:
+            for bill in recalculate_bills:
+                bill.status = 'DUE'
+                bill.save()
         return []
-
-    MentorshipBill.objects.filter(mentor__id=mentor.id, academy__id=mentor.academy.id, status='DUE').delete()
 
     pending_months = sorted({(x.year, x.month) for x in unpaid_sessions.values_list('started_at', flat=True)})
     for year, month in pending_months:
@@ -303,11 +315,18 @@ def generate_mentor_bills(mentor, reset=False):
         end_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC) + relativedelta(
             months=1) - datetime.timedelta(microseconds=1)
 
-        open_bill = MentorshipBill(mentor=mentor,
-                                   academy=mentor.academy,
-                                   started_at=start_at,
-                                   ended_at=end_at)
-        open_bill.save()
+        open_bill = None
+        if recalculate_bills:
+            open_bill = recalculate_bills.filter(started_at__month=month, started_at__year=year).first()
+
+        if open_bill is None:
+            open_bill = MentorshipBill(mentor=mentor,
+                                       academy=mentor.academy,
+                                       started_at=start_at,
+                                       ended_at=end_at)
+            open_bill.save()
+        else:
+            open_bill.status = 'DUE'
 
         open_bill = generate_mentor_bill(mentor, open_bill, sessions_of_month, reset)
 
@@ -365,11 +384,11 @@ def mentor_is_ready(mentor):
         raise Exception(
             f'Mentor {mentor.name} has no syllabus associated, update the value before activating.')
     else:
-        response = requests.head(mentor.booking_url)
+        response = requests.head(mentor.booking_url, timeout=2)
         if response.status_code > 399:
             raise Exception(
                 f'Mentor {mentor.name} booking URL is failing with code {str(response.status_code)}.')
-        response = requests.head(mentor.online_meeting_url)
+        response = requests.head(mentor.online_meeting_url, timeout=2)
         if response.status_code > 399:
             raise Exception(
                 f'Mentor {mentor.name} online_meeting_url is failing with code {str(response.status_code)}.')

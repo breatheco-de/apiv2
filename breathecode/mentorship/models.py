@@ -8,16 +8,12 @@ import breathecode.mentorship.signals as signals
 from slugify import slugify
 
 # settings customizable for each academy
-# class MentorshipAcademy(models.Model):
-#     ac_key = models.CharField(max_length=150)
-#     ac_url = models.URLField()
-#     event_attendancy_automation = models.ForeignKey('Automation',
-#                                                     on_delete=models.CASCADE,
-#                                                     blank=True,
-#                                                     null=True,
-#                                                     default=None)
-
+# class AcademySettings(models.Model):
+#     is_video_streaming_active = models.BooleanField(default=False)
 #     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+#     @staticmethod
+#     def get(pk):
+#       return AcademySettings.objects.filter(academy__id=pk).first()
 
 DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
@@ -161,11 +157,13 @@ class MentorProfile(models.Model):
         return f'{name} ({self.id})'
 
 
+RECALCULATE = 'RECALCULATE'
 DUE = 'DUE'
 APPROVED = 'APPROVED'
 PAID = 'PAID'
 IGNORED = 'IGNORED'
 BILL_STATUS = (
+    (RECALCULATE, 'Recalculate'),
     (DUE, 'Due'),
     (APPROVED, 'Approved'),
     (PAID, 'Paid'),

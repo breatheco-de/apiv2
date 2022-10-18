@@ -1,4 +1,4 @@
-import re, logging, os, urllib, time
+import logging, os, urllib, time
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,11 @@ class DailyClient:
         if query_string is not None:
             _query_string = '?' + urllib.parse.urlencode(query_string)
 
-        response = requests.request(_type, self.host + url + _query_string, headers=_headers, json=data)
+        response = requests.request(_type,
+                                    self.host + url + _query_string,
+                                    headers=_headers,
+                                    json=data,
+                                    timeout=2)
         result = response.json()
 
         if result is None:

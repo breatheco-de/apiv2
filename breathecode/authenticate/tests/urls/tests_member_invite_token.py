@@ -115,7 +115,7 @@ def render_page_post_successfully():
     request = None
 
     return loader.render_to_string('message.html', {
-        'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in',
+        'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in',
     }, request)
 
 
@@ -367,8 +367,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp1',
-            'password2': '^3^3uUppppp2',
+            'password': '^3^3uUppppp1',
+            'repeat_password': '^3^3uUppppp2',
         }
         response = self.client.post(url, data)
 
@@ -408,8 +408,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -464,8 +464,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
             'callback': '/1337'
         }
         response = self.client.post(url, data, format='multipart')
@@ -522,8 +522,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -577,13 +577,13 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
     def test_member_invite_token__post__with_cohort__with_role(self):
         user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
-        model = self.bc.database.create(user=user, user_invite=user, cohort=1, role=1)
+        model = self.bc.database.create(user=user, user_invite=user, cohort=1, role='student')
         url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite.token})
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -630,14 +630,14 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_member_invite_token__post__with_cohort__with_role__accept_first_invite(self):
         user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
         user_invites = [{**user, 'cohort_id': 1}, {**user, 'cohort_id': 2}]
-        model = self.bc.database.create(user=user, user_invite=user_invites, cohort=2, role=1)
+        model = self.bc.database.create(user=user, user_invite=user_invites, cohort=2, role='student')
 
         url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite[0].token})
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -681,14 +681,14 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_member_invite_token__post__with_cohort__with_role__accept_second_invite(self):
         user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
         user_invites = [{**user, 'cohort_id': 1}, {**user, 'cohort_id': 2}]
-        model = self.bc.database.create(user=user, user_invite=user_invites, cohort=2, role=1)
+        model = self.bc.database.create(user=user, user_invite=user_invites, cohort=2, role='student')
 
         url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite[1].token})
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -742,8 +742,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 
@@ -775,7 +775,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'educational_status': None,
             'finantial_status': None,
             'id': 1,
-            'role': 'student',
+            'role': 'STUDENT',
             'user_id': 1,
             'watching': False,
         }])
@@ -794,8 +794,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {
             'first_name': 'abc',
             'last_name': 'xyz',
-            'password1': '^3^3uUppppp',
-            'password2': '^3^3uUppppp',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
         }
         response = self.client.post(url, data)
 

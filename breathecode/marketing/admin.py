@@ -2,7 +2,7 @@ import logging, secrets
 from django.contrib import admin, messages
 from django import forms
 from .models import (FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook,
-                     AcademyAlias, Downloadable, LeadGenerationApp, UTMField)
+                     AcademyAlias, Downloadable, LeadGenerationApp, UTMField, AcademyProxy)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
                       sync_tags, sync_automations, acp_ids, delete_tag)
 from breathecode.services.activecampaign import ActiveCampaign
@@ -84,25 +84,51 @@ class ACAcademyAdmin(admin.ModelAdmin, AdminExportCsvMixin):
 class AcademyAliasAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'active_campaign_slug', 'academy__slug', 'academy__title']
     list_display = ('slug', 'active_campaign_slug', 'academy')
+    list_filter = ['academy__slug']
 
 
-def send_to_ac(modeladmin, request, queryset):
+def generate_original_alias(modeladmin, request, queryset):
+    academies = queryset.all()
+    for a in academies:
+        slug = a.active_campaign_slug
+        if slug is None:
+            slug = a.slug
+
+        if AcademyAlias.objects.filter(slug=a.slug).first() is None:
+            AcademyAlias.objects.create(slug=a.slug, active_campaign_slug=slug, academy=a)
+            messages.add_message(request, messages.INFO, f'Alias {a.slug} successfully created')
+        else:
+            messages.add_message(request, messages.ERROR, f'Alias {a.slug} already exists')
+
+
+@admin.register(AcademyProxy)
+class AcademyAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name')
+    actions = [generate_original_alias]
+
+
+def send_to_active_campaign(modeladmin, request, queryset):
     entries = queryset.all()
-    total = 0
+    total = {'error': 0, 'persisted': 0}
+    entry = None
     try:
         for entry in entries:
-            register_new_lead(entry.toFormData())
-            total += 1
+            entry = register_new_lead(entry.toFormData())
+            if entry.storage_status == 'PERSISTED':
+                total['persisted'] += 1
+            else:
+                total['error'] += 1
 
-        messages.add_message(request, messages.SUCCESS, f'{total} entries were successfully added')
     except Exception as e:
-        messages.add_message(
-            request, messages.ERROR,
-            f'{total} entries were successfully added but an error was found on entry {entry.id}: \n ' +
-            str(e))
+        total['error'] += 1
+        entry.storage_status = 'ERROR'
+        entry.storage_status_text = str(e)
+        entry.save()
 
-
-send_to_ac.short_description = '⨁ Add lead to automations in AC'
+    messages.add_message(
+        request, messages.SUCCESS,
+        f"Persisted leads: {total['persisted']}. Not persisted: {total['error']}. You can check each lead storage_status_text for details."
+    )
 
 
 def fetch_more_facebook_info(modeladmin, request, queryset):
@@ -145,14 +171,39 @@ class PPCFilter(SimpleListFilter):
 
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    search_fields = ['email', 'first_name', 'last_name', 'phone']
-    list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course',
-                    'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
+    search_fields = ['email', 'first_name', 'last_name', 'phone', 'utm_campaign']
+    list_display = ('id', '_storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location',
+                    'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = [
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app',
-        'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'country'
+        'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'utm_campaign', 'utm_source'
     ]
-    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
+    actions = [send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
+
+    def _storage_status(self, obj):
+        colors = {
+            'PUBLISHED': 'bg-success',
+            'OK': 'bg-success',
+            'ERROR': 'bg-error',
+            'WARNING': 'bg-warning',
+            'DUPLICATED': '',
+            None: 'bg-warning',
+            'DRAFT': 'bg-error',
+            'PENDING_TRANSLATION': 'bg-error',
+            'PENDING': 'bg-warning',
+            'WARNING': 'bg-warning',
+            'UNASSIGNED': 'bg-error',
+            'UNLISTED': 'bg-warning',
+        }
+
+        def from_status(s):
+            if s in colors:
+                return colors[s]
+            return ''
+
+        return format_html(
+            f"<p class='{from_status(obj.storage_status)}'>{obj.storage_status}</p><small>{obj.storage_status_text}</small>"
+        )
 
 
 def add_dispute(modeladmin, request, queryset):
@@ -371,8 +422,9 @@ class LeadAppCustomForm(forms.ModelForm):
         super(LeadAppCustomForm, self).__init__(*args, **kwargs)
 
         try:
-            self.fields['default_automations'].queryset = Automation.objects.filter(
-                ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
+            if 'default_automations' in self.fields:
+                self.fields['default_automations'].queryset = Automation.objects.filter(
+                    ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
             self.fields['default_tags'].queryset = Tag.objects.filter(
                 ac_academy__academy__id=self.instance.academy.id)  # or something else
         except:
@@ -383,7 +435,7 @@ class LeadAppCustomForm(forms.ModelForm):
 @admin.register(LeadGenerationApp)
 class LeadGenerationAppAdmin(admin.ModelAdmin):
     form = LeadAppCustomForm
-    list_display = ('slug', 'name', 'academy', 'status', 'last_call_at')
+    list_display = ('slug', 'name', 'academy', 'status', 'last_call_at', 'app_id')
     readonly_fields = ('app_id', )
     actions = (reset_app_id, )
 

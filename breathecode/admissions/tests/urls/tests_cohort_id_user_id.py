@@ -14,6 +14,39 @@ from breathecode.tests.mocks import (
 from ..mixins import AdmissionsTestCase
 
 
+def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={}):
+    return {
+        'cohort': {
+            'ending_date': cohort.ending_date,
+            'id': cohort.id,
+            'kickoff_date': self.bc.datetime.to_iso_string(cohort.kickoff_date),
+            'name': cohort.name,
+            'slug': cohort.slug,
+            'stage': cohort.stage,
+        },
+        'created_at': self.bc.datetime.to_iso_string(cohort_user.created_at),
+        'educational_status': cohort_user.educational_status,
+        'finantial_status': cohort_user.finantial_status,
+        'id': cohort_user.id,
+        'profile_academy': {
+            'email': profile_academy.email,
+            'first_name': profile_academy.first_name,
+            'id': profile_academy.id,
+            'last_name': profile_academy.last_name,
+            'phone': profile_academy.phone,
+        } if profile_academy else None,
+        'role': cohort_user.role,
+        'user': {
+            'email': user.email,
+            'first_name': user.first_name,
+            'id': user.id,
+            'last_name': user.last_name,
+        },
+        'watching': cohort_user.watching,
+        **data,
+    }
+
+
 class CohortIdUserIdTestSuite(AdmissionsTestCase):
     """Test /cohort/:id/user/:id"""
 
@@ -41,9 +74,9 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True)
         url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
         data = {}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = {'status_code': 400, 'detail': 'invalid cohort_id'}
+        expected = {'status_code': 400, 'detail': 'Cannot determine CohortUser'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -60,9 +93,9 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'user_id': 999
                            })
         data = {}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = {'status_code': 400, 'detail': 'invalid user_id'}
+        expected = {'status_code': 400, 'detail': 'Cannot determine CohortUser'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -79,9 +112,9 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'user_id': model.user.id
                            })
         data = {}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = {'status_code': 400, 'detail': 'Specified cohort not be found'}
+        expected = {'status_code': 400, 'detail': 'Cannot determine CohortUser'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -98,9 +131,9 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'user_id': model.user.id
                            })
         data = {}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = {'status_code': 400, 'detail': 'Specified cohort not be found'}
+        expected = {'status_code': 400, 'detail': 'Cannot determine CohortUser'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -117,9 +150,9 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'user_id': model.user.id
                            })
         data = {}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = {'status_code': 400, 'detail': 'Specified cohort not be found'}
+        expected = {'status_code': 400, 'detail': 'Cannot determine CohortUser'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -142,15 +175,14 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'user_id': model.user.id
                            })
         data = {'schedule': model.syllabus_schedule.id}
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = {
-            'id': model.cohort_user.id,
-            'role': model.cohort_user.role,
-            'educational_status': model.cohort_user.educational_status,
-            'finantial_status': model.cohort_user.finantial_status,
-            'watching': False,
-        }
+        expected = put_serializer(self,
+                                  model.cohort_user,
+                                  model.cohort,
+                                  model.user,
+                                  model.profile_academy,
+                                  data={})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -223,13 +255,23 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_unsuccess_task(self):
         """Test /cohort/:id/user/:id without auth"""
-        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT', 'associated_slug': 'testing-slug'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
                                      cohort_user=True,
-                                     task=task)
+                                     task=task,
+                                     syllabus_version={
+                                         'id': 1,
+                                         'json': {
+                                             'days': [{
+                                                 'assignments': [{
+                                                     'slug': 'testing-slug',
+                                                 }]
+                                             }]
+                                         }
+                                     })
         url = reverse_lazy('admissions:cohort_id_user_id',
                            kwargs={
                                'cohort_id': model.cohort.id,
@@ -238,7 +280,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {
             'educational_status': 'GRADUATED',
         }
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
             'status_code': 400,
@@ -267,7 +309,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'educational_status': 'GRADUATED',
             'finantial_status': 'LATE',
         }
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
             'status_code': 400,
@@ -296,7 +338,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'educational_status': 'GRADUATED',
             'finantial_status': 'LATE',
         }
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
             'status_code': 400,

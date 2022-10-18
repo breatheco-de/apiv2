@@ -42,7 +42,8 @@ def send_email_message(template_slug, to, data={}):
                                    'subject': template['subject'],
                                    'text': template['text'],
                                    'html': template['html']
-                               })
+                               },
+                               timeout=2)
 
         if result.status_code != 200:
             logger.error(f'Error sending email, mailgun status code: {str(result.status_code)}')

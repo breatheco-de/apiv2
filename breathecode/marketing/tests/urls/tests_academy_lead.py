@@ -57,6 +57,33 @@ def generate_form_entry_kwargs():
     }
 
 
+def get_serializer(self, form_entry):
+    return {
+        'country': form_entry.country,
+        'course': form_entry.course,
+        'email': form_entry.email,
+        'first_name': form_entry.first_name,
+        'gclid': form_entry.gclid,
+        'id': form_entry.id,
+        'language': form_entry.language,
+        'last_name': form_entry.last_name,
+        'lead_type': form_entry.lead_type,
+        'location': form_entry.location,
+        'storage_status': form_entry.storage_status,
+        'tags': form_entry.tags,
+        'utm_campaign': form_entry.utm_campaign,
+        'utm_medium': form_entry.utm_medium,
+        'utm_source': form_entry.utm_source,
+        'utm_content': form_entry.utm_content,
+        'utm_url': form_entry.utm_url,
+        'ac_expected_cohort': form_entry.ac_expected_cohort,
+        'user': None,
+        'phone': form_entry.phone,
+        'created_at': self.bc.datetime.to_iso_string(form_entry.created_at),
+        'storage_status_text': form_entry.storage_status_text,
+    }
+
+
 class CohortUserTestSuite(MarketingTestCase):
     """Test /academy/lead"""
     """
@@ -122,7 +149,6 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('marketing:academy_lead')
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_lead',
@@ -130,33 +156,11 @@ class CohortUserTestSuite(MarketingTestCase):
                                      form_entry=True,
                                      form_entry_kwargs=generate_form_entry_kwargs())
 
+        url = reverse_lazy('marketing:academy_lead')
         response = self.client.get(url)
+
         json = response.json()
-
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': model.form_entry.country,
-            'course': model.form_entry.course,
-            'email': model.form_entry.email,
-            'first_name': model.form_entry.first_name,
-            'gclid': model.form_entry.gclid,
-            'id': model.form_entry.id,
-            'language': model.form_entry.language,
-            'last_name': model.form_entry.last_name,
-            'lead_type': model.form_entry.lead_type,
-            'location': model.form_entry.location,
-            'storage_status': model.form_entry.storage_status,
-            'tags': model.form_entry.tags,
-            'utm_campaign': model.form_entry.utm_campaign,
-            'utm_medium': model.form_entry.utm_medium,
-            'utm_source': model.form_entry.utm_source,
-            'utm_url': model.form_entry.utm_url,
-            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': model.form_entry.phone,
-        }]
+        expected = [get_serializer(self, model.form_entry)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -197,32 +201,9 @@ class CohortUserTestSuite(MarketingTestCase):
 
         url = reverse_lazy('marketing:academy_lead') + f'?storage_status={model.form_entry.storage_status}'
         response = self.client.get(url)
+
         json = response.json()
-
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': model.form_entry.country,
-            'course': model.form_entry.course,
-            'email': model.form_entry.email,
-            'first_name': model.form_entry.first_name,
-            'gclid': model.form_entry.gclid,
-            'id': model.form_entry.id,
-            'language': model.form_entry.language,
-            'last_name': model.form_entry.last_name,
-            'lead_type': model.form_entry.lead_type,
-            'location': model.form_entry.location,
-            'storage_status': model.form_entry.storage_status,
-            'tags': model.form_entry.tags,
-            'utm_campaign': model.form_entry.utm_campaign,
-            'utm_medium': model.form_entry.utm_medium,
-            'utm_source': model.form_entry.utm_source,
-            'utm_url': model.form_entry.utm_url,
-            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': model.form_entry.phone,
-        }]
+        expected = [get_serializer(self, model.form_entry)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -263,32 +244,9 @@ class CohortUserTestSuite(MarketingTestCase):
 
         url = reverse_lazy('marketing:academy_lead') + f'?course={model.form_entry.course}'
         response = self.client.get(url)
+
         json = response.json()
-
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': model.form_entry.country,
-            'course': model.form_entry.course,
-            'email': model.form_entry.email,
-            'first_name': model.form_entry.first_name,
-            'gclid': model.form_entry.gclid,
-            'id': model.form_entry.id,
-            'language': model.form_entry.language,
-            'last_name': model.form_entry.last_name,
-            'lead_type': model.form_entry.lead_type,
-            'location': model.form_entry.location,
-            'storage_status': model.form_entry.storage_status,
-            'tags': model.form_entry.tags,
-            'utm_campaign': model.form_entry.utm_campaign,
-            'utm_medium': model.form_entry.utm_medium,
-            'utm_source': model.form_entry.utm_source,
-            'utm_url': model.form_entry.utm_url,
-            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': model.form_entry.phone,
-        }]
+        expected = [get_serializer(self, model.form_entry)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -329,32 +287,9 @@ class CohortUserTestSuite(MarketingTestCase):
 
         url = reverse_lazy('marketing:academy_lead') + f'?location={model.form_entry.location}'
         response = self.client.get(url)
+
         json = response.json()
-
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': model.form_entry.country,
-            'course': model.form_entry.course,
-            'email': model.form_entry.email,
-            'first_name': model.form_entry.first_name,
-            'gclid': model.form_entry.gclid,
-            'id': model.form_entry.id,
-            'language': model.form_entry.language,
-            'last_name': model.form_entry.last_name,
-            'lead_type': model.form_entry.lead_type,
-            'location': model.form_entry.location,
-            'storage_status': model.form_entry.storage_status,
-            'tags': model.form_entry.tags,
-            'utm_campaign': model.form_entry.utm_campaign,
-            'utm_medium': model.form_entry.utm_medium,
-            'utm_source': model.form_entry.utm_source,
-            'utm_url': model.form_entry.utm_url,
-            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': model.form_entry.phone,
-        }]
+        expected = [get_serializer(self, model.form_entry)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -394,32 +329,9 @@ class CohortUserTestSuite(MarketingTestCase):
 
         url = reverse_lazy('marketing:academy_lead') + f'?start={query_date}'
         response = self.client.get(url)
+
         json = response.json()
-
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': model.form_entry.country,
-            'course': model.form_entry.course,
-            'email': model.form_entry.email,
-            'first_name': model.form_entry.first_name,
-            'gclid': model.form_entry.gclid,
-            'id': model.form_entry.id,
-            'language': model.form_entry.language,
-            'last_name': model.form_entry.last_name,
-            'lead_type': model.form_entry.lead_type,
-            'location': model.form_entry.location,
-            'storage_status': model.form_entry.storage_status,
-            'tags': model.form_entry.tags,
-            'utm_campaign': model.form_entry.utm_campaign,
-            'utm_medium': model.form_entry.utm_medium,
-            'utm_source': model.form_entry.utm_source,
-            'utm_url': model.form_entry.utm_url,
-            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': None,
-        }]
+        expected = [get_serializer(self, model.form_entry)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -459,32 +371,9 @@ class CohortUserTestSuite(MarketingTestCase):
 
         url = reverse_lazy('marketing:academy_lead') + f'?end={query_date}'
         response = self.client.get(url)
+
         json = response.json()
-
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': model.form_entry.country,
-            'course': model.form_entry.course,
-            'email': model.form_entry.email,
-            'first_name': model.form_entry.first_name,
-            'gclid': model.form_entry.gclid,
-            'id': model.form_entry.id,
-            'language': model.form_entry.language,
-            'last_name': model.form_entry.last_name,
-            'lead_type': model.form_entry.lead_type,
-            'location': model.form_entry.location,
-            'storage_status': model.form_entry.storage_status,
-            'tags': model.form_entry.tags,
-            'utm_campaign': model.form_entry.utm_campaign,
-            'utm_medium': model.form_entry.utm_medium,
-            'utm_source': model.form_entry.utm_source,
-            'utm_url': model.form_entry.utm_url,
-            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': model.form_entry.phone,
-        }]
+        expected = [get_serializer(self, model.form_entry)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -582,34 +471,10 @@ class CohortUserTestSuite(MarketingTestCase):
 
         base_url = reverse_lazy('marketing:academy_lead')
         url = f'{base_url}?like={models[0].form_entry.first_name} {models[0].form_entry.last_name}'
-
         response = self.client.get(url)
+
         json = response.json()
-
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': models[0].form_entry.country,
-            'course': models[0].form_entry.course,
-            'email': models[0].form_entry.email,
-            'first_name': models[0].form_entry.first_name,
-            'gclid': models[0].form_entry.gclid,
-            'id': models[0].form_entry.id,
-            'language': models[0].form_entry.language,
-            'last_name': models[0].form_entry.last_name,
-            'lead_type': models[0].form_entry.lead_type,
-            'location': models[0].form_entry.location,
-            'storage_status': models[0].form_entry.storage_status,
-            'tags': models[0].form_entry.tags,
-            'utm_campaign': models[0].form_entry.utm_campaign,
-            'utm_medium': models[0].form_entry.utm_medium,
-            'utm_source': models[0].form_entry.utm_source,
-            'utm_url': models[0].form_entry.utm_url,
-            'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': models[0].form_entry.phone,
-        }]
+        expected = [get_serializer(self, models[0].form_entry)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -638,34 +503,10 @@ class CohortUserTestSuite(MarketingTestCase):
         ]
         base_url = reverse_lazy('marketing:academy_lead')
         url = f'{base_url}?like={models[0].form_entry.first_name}'
-
         response = self.client.get(url)
+
         json = response.json()
-
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': models[0].form_entry.country,
-            'course': models[0].form_entry.course,
-            'email': models[0].form_entry.email,
-            'first_name': models[0].form_entry.first_name,
-            'gclid': models[0].form_entry.gclid,
-            'id': models[0].form_entry.id,
-            'language': models[0].form_entry.language,
-            'last_name': models[0].form_entry.last_name,
-            'lead_type': models[0].form_entry.lead_type,
-            'location': models[0].form_entry.location,
-            'storage_status': models[0].form_entry.storage_status,
-            'tags': models[0].form_entry.tags,
-            'utm_campaign': models[0].form_entry.utm_campaign,
-            'utm_medium': models[0].form_entry.utm_medium,
-            'utm_source': models[0].form_entry.utm_source,
-            'utm_url': models[0].form_entry.utm_url,
-            'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': models[0].form_entry.phone,
-        }]
+        expected = [get_serializer(self, models[0].form_entry)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -695,34 +536,10 @@ class CohortUserTestSuite(MarketingTestCase):
 
         base_url = reverse_lazy('marketing:academy_lead')
         url = f'{base_url}?like={models[0].form_entry.last_name}'
-
         response = self.client.get(url)
+
         json = response.json()
-
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': models[0].form_entry.country,
-            'course': models[0].form_entry.course,
-            'email': models[0].form_entry.email,
-            'first_name': models[0].form_entry.first_name,
-            'gclid': models[0].form_entry.gclid,
-            'id': models[0].form_entry.id,
-            'language': models[0].form_entry.language,
-            'last_name': models[0].form_entry.last_name,
-            'lead_type': models[0].form_entry.lead_type,
-            'location': models[0].form_entry.location,
-            'storage_status': models[0].form_entry.storage_status,
-            'tags': models[0].form_entry.tags,
-            'utm_campaign': models[0].form_entry.utm_campaign,
-            'utm_medium': models[0].form_entry.utm_medium,
-            'utm_source': models[0].form_entry.utm_source,
-            'utm_url': models[0].form_entry.utm_url,
-            'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': models[0].form_entry.phone,
-        }]
+        expected = [get_serializer(self, models[0].form_entry)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -750,34 +567,11 @@ class CohortUserTestSuite(MarketingTestCase):
 
         base_url = reverse_lazy('marketing:academy_lead')
         url = f'{base_url}?like={models[0].form_entry.email}'
-
         response = self.client.get(url)
+
         json = response.json()
+        expected = [get_serializer(self, models[0].form_entry)]
 
-        self.assertDatetime(json[0]['created_at'])
-        del json[0]['created_at']
-
-        expected = [{
-            'country': models[0].form_entry.country,
-            'course': models[0].form_entry.course,
-            'email': models[0].form_entry.email,
-            'first_name': models[0].form_entry.first_name,
-            'gclid': models[0].form_entry.gclid,
-            'id': models[0].form_entry.id,
-            'language': models[0].form_entry.language,
-            'last_name': models[0].form_entry.last_name,
-            'lead_type': models[0].form_entry.lead_type,
-            'location': models[0].form_entry.location,
-            'storage_status': models[0].form_entry.storage_status,
-            'tags': models[0].form_entry.tags,
-            'utm_campaign': models[0].form_entry.utm_campaign,
-            'utm_medium': models[0].form_entry.utm_medium,
-            'utm_source': models[0].form_entry.utm_source,
-            'utm_url': models[0].form_entry.utm_url,
-            'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
-            'user': None,
-            'phone': models[0].form_entry.phone,
-        }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{
