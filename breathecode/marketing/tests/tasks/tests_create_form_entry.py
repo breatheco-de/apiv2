@@ -132,21 +132,10 @@ def form_entry_field(data={}):
     }
 
 
-def csv_upload_field(data={}):
-    return {
-        'academy_id': 1,
-        'finished_at': None,
-        'hash': '',
-        'id': 1,
-        'log': '',
-        'name': '',
-        'status': 'PENDING',
-        'status_message': None,
-        'url': ''
-    }
-
-
 class CreateFormEntryTestSuite(MarketingTestCase):
+
+    def tearDown(self):
+        self.clear_cache()
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())

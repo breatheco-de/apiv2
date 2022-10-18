@@ -435,13 +435,6 @@ def create_form_entry(self, item, csv_upload_id):
         error_message += f'{message}, '
         logger.error(message)
 
-    # Not needed because of Academy slug query problem
-
-    # if form_entry.academy and not re.findall(r'/^[a-z0-9]+(?:[a-z0-9-]+)+[a-z0-9]+$/', form_entry.academy):
-    #     message = 'academy has incorrect format'
-    #     error_message += f'{message}, '
-    #     logger.error(message)
-
     if error_message.endswith(', '):
         error_message = error_message[0:-2]
         error_message = f'{error_message}. '

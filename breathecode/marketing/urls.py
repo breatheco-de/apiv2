@@ -15,7 +15,6 @@ urlpatterns = [
     path('app/lead', create_lead_from_app, name='app_lead'),
     path('lead/all', get_leads, name='lead_all'),  # TODO: HERE
     path('academy/lead', AcademyLeadView.as_view(), name='academy_lead'),
-    ### Testing UploadView ###
     path('academy/upload', UploadView.as_view(), name='upload'),
     path('academy/lead/process', AcademyProcessView.as_view(), name='academy_process_lead'),
     path('academy/lead/won', AcademyWonLeadView.as_view(), name='academy_won_lead'),

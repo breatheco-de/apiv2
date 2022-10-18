@@ -18,6 +18,7 @@ UTC_NOW = timezone.now()
 
 class MarketingTestSuite(MarketingTestCase):
     """Test /answer"""
+
     def test_upload_without_auth(self):
         from breathecode.services.google_cloud import Storage, File
 
