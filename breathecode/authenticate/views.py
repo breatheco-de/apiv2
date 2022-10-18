@@ -88,7 +88,7 @@ PATTERNS = {
     'CONTAINS_SYMBOLS': r'[^a-zA-Z]',
 }
 
-PROFILE_MIME_ALLOWED = ['image/png']
+PROFILE_MIME_ALLOWED = ['image/png', 'image/jpeg']
 
 
 def get_profile_bucket():
@@ -109,7 +109,14 @@ class TemporalTokenView(ObtainAuthToken):
 
     def post(self, request):
 
-        token, created = Token.get_or_create(user=request.user, token_type='temporal')
+        token_type = request.data.get('token_type', 'temporal')
+
+        allowed_token_types = ['temporal', 'one_time']
+        if token_type not in allowed_token_types:
+            raise ValidationException(f'The token type must be one of {", ".join(allowed_token_types)}',
+                                      slug='token-type-invalid-or-not-allowed')
+
+        token, created = Token.get_or_create(user=request.user, token_type=token_type)
         return Response({
             'token': token.key,
             'token_type': token.token_type,
@@ -204,9 +211,9 @@ class MemberView(APIView, GenerateLookupsMixin):
         if not 'student' in include:
             items = items.exclude(role__slug='student')
 
-        roles = request.GET.get('roles', None)
-        if roles is not None:
-            items = items.filter(role__in=roles.split(','))
+        roles = request.GET.get('roles', '')
+        if roles != '':
+            items = items.filter(role__in=roles.lower().split(','))
 
         status = request.GET.get('status', None)
         if status is not None:
@@ -512,6 +519,11 @@ class StudentView(APIView, GenerateLookupsMixin):
         status = request.GET.get('status', None)
         if status is not None:
             items = items.filter(status__iexact=status)
+
+        cohort = request.GET.get('cohort', None)
+        if cohort is not None:
+            lookups = self.generate_lookups(request, many_fields=['cohort'])
+            items = items.filter(user__cohortuser__cohort__slug__in=lookups['cohort__in'])
 
         items = handler.queryset(items)
         serializer = GetProfileAcademySmallSerializer(items, many=True)
@@ -822,7 +834,10 @@ def save_github_token(request):
         'code': code,
     }
     headers = {'Accept': 'application/json'}
-    resp = requests.post('https://github.com/login/oauth/access_token', data=payload, headers=headers)
+    resp = requests.post('https://github.com/login/oauth/access_token',
+                         data=payload,
+                         headers=headers,
+                         timeout=2)
     if resp.status_code == 200:
 
         logger.debug('Github responded with 200')
@@ -832,14 +847,17 @@ def save_github_token(request):
             raise APIException(body['error_description'])
 
         github_token = body['access_token']
-        resp = requests.get('https://api.github.com/user', headers={'Authorization': 'token ' + github_token})
+        resp = requests.get('https://api.github.com/user',
+                            headers={'Authorization': 'token ' + github_token},
+                            timeout=2)
         if resp.status_code == 200:
             github_user = resp.json()
             logger.debug(github_user)
 
             if github_user['email'] is None:
                 resp = requests.get('https://api.github.com/user/emails',
-                                    headers={'Authorization': 'token ' + github_token})
+                                    headers={'Authorization': 'token ' + github_token},
+                                    timeout=2)
                 if resp.status_code == 200:
                     emails = resp.json()
                     primary_emails = [x for x in emails if x['primary'] == True]
@@ -1055,7 +1073,7 @@ def save_slack_token(request):
         'redirect_uri': os.getenv('SLACK_REDIRECT_URL', '') + '?payload=' + original_payload,
         'code': code,
     }
-    resp = requests.post('https://slack.com/api/oauth.v2.access', data=params)
+    resp = requests.post('https://slack.com/api/oauth.v2.access', data=params, timeout=2)
     if resp.status_code == 200:
 
         logger.debug('Slack responded with 200')
@@ -1201,7 +1219,7 @@ def save_facebook_token(request):
         'redirect_uri': os.getenv('FACEBOOK_REDIRECT_URL', ''),
         'code': code,
     }
-    resp = requests.post('https://graph.facebook.com/v8.0/oauth/access_token', data=params)
+    resp = requests.post('https://graph.facebook.com/v8.0/oauth/access_token', data=params, timeout=2)
     if resp.status_code == 200:
 
         logger.debug('Facebook responded with 200')
@@ -1231,7 +1249,7 @@ def save_facebook_token(request):
             'access_token': facebook_data['access_token'],
             'fields': 'id,email',
         }
-        resp = requests.post('https://graph.facebook.com/me', data=params)
+        resp = requests.post('https://graph.facebook.com/me', data=params, timeout=2)
         if resp.status_code == 200:
             logger.debug('Facebook responded with 200')
             facebook_data = resp.json()
@@ -1485,6 +1503,8 @@ def render_user_invite(request, token):
         })
 
 
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
 def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
     _dict['token'] = token
@@ -1518,8 +1538,8 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'POST':
         form = InviteForm(_dict)
-        password1 = request.POST.get('password1', None)
-        password2 = request.POST.get('password2', None)
+        password1 = request.POST.get('password', None)
+        password2 = request.POST.get('repeat_password', None)
 
         invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
         if invite is None:
@@ -1584,8 +1604,8 @@ def render_invite(request, token, member_id=None):
             profile.save()
 
         if invite.cohort is not None:
-            role = 'student'
-            if invite.role is not None and invite.role.slug != 'student':
+            role = 'STUDENT'
+            if invite.role is not None and invite.role.slug != 'STUDENT':
                 role = invite.role.slug.upper()
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
@@ -1608,7 +1628,7 @@ def render_invite(request, token, member_id=None):
                 return HttpResponseRedirect(redirect_to=uri)
         else:
             return render(request, 'message.html',
-                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
+                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in'})
 
 
 @private_view()
@@ -1771,7 +1791,7 @@ def save_google_token(request):
         'code': code,
     }
     headers = {'Accept': 'application/json'}
-    resp = requests.post('https://oauth2.googleapis.com/token', data=payload, headers=headers)
+    resp = requests.post('https://oauth2.googleapis.com/token', data=payload, headers=headers, timeout=2)
     if resp.status_code == 200:
 
         logger.debug('Google responded with 200')

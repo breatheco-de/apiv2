@@ -16,6 +16,11 @@ class GetAcademySmallSerializer(serpy.Serializer):
     icon_url = serpy.Field()
 
 
+class TinyBillSerializer(serpy.Serializer):
+    status = serpy.Field()
+    id = serpy.Field()
+
+
 class AnswerSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
@@ -66,6 +71,7 @@ class GETServiceTinySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    duration = serpy.Field()
 
 
 class GETServiceSmallSerializer(serpy.Serializer):
@@ -111,6 +117,8 @@ class GETSessionSmallSerializer(serpy.Serializer):
     allow_billing = serpy.Field()
     accounted_duration = serpy.Field()
     summary = serpy.Field()
+
+    bill = TinyBillSerializer(required=False)
 
 
 class GETServiceSmallSerializer(serpy.Serializer):
@@ -281,7 +289,7 @@ class BillSessionSerializer(serpy.Serializer):
     billed_str = serpy.MethodField()
     extra_time = serpy.MethodField()
     mentor_late = serpy.MethodField()
-    mente_joined = serpy.MethodField()
+    mentee_joined = serpy.MethodField()
     rating = serpy.MethodField()
 
     def get_tooltip(self, obj):
@@ -369,12 +377,12 @@ class BillSessionSerializer(serpy.Serializer):
         else:
             return None
 
-    def get_mente_joined(self, obj):
+    def get_mentee_joined(self, obj):
 
         if obj.started_at is None:
             return 'Session did not start because mentee never joined'
         else:
-            return None
+            return True
 
     def get_rating(self, obj):
 
@@ -504,7 +512,18 @@ class SessionPUTSerializer(serializers.ModelSerializer):
 
         mentor = MentorProfile.objects.filter(id=instance.mentor_id).first()
 
-        generate_mentor_bill(mentor, bill, bill.mentorshipsession_set.all())
+        sessions = bill.mentorshipsession_set.all()
+
+        success_status = ['APPROVED', 'PAID', 'IGNORED']
+        is_dirty = [x for x in sessions if x.bill.status not in success_status and not x.service]
+
+        # this prevent errors 500
+        if not is_dirty:
+            generate_mentor_bill(mentor, bill, bill.mentorshipsession_set.all())
+
+        else:
+            bill.status = 'RECALCULATE'
+            bill.save()
 
         return result
 

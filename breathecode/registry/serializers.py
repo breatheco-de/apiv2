@@ -1,11 +1,11 @@
-from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster
+import serpy, base64
+from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-import serpy
 from breathecode.utils.validation_exception import ValidationException
 from django.utils import timezone
 
@@ -85,7 +85,9 @@ class AcademyCommentSerializer(serpy.Serializer):
     text = serpy.Field()
     asset = SmallAsset()
     resolved = serpy.Field()
-    author = UserSerializer()
+    delivered = serpy.Field()
+    author = UserSerializer(required=False)
+    owner = UserSerializer(required=False)
     created_at = serpy.Field()
 
 
@@ -201,6 +203,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
 
 
 class AssetCategorySerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
@@ -240,11 +243,11 @@ class TechSerializer(serializers.ModelSerializer):
 
 
 class PostAssetSerializer(serializers.ModelSerializer):
-    technologies = TechSerializer(many=True, required=False)
+    technologies = serializers.ListField(required=False)
 
     class Meta:
         model = Asset
-        exclude = ()
+        exclude = ('academy', )
 
     def validate(self, data):
 
@@ -257,15 +260,23 @@ class PostAssetSerializer(serializers.ModelSerializer):
         if alias is not None:
             raise ValidationException('Asset alias already exists with this slug')
 
+        if 'readme' in validated_data:
+            raise ValidationException(
+                'Property readme is read only, please update property readme_raw instead')
+
         return validated_data
 
     def create(self, validated_data):
         academy_id = self.context['academy']
         academy = Academy.objects.filter(id=academy_id).first()
 
+        readme_raw = None
+        if 'readme_raw' in validated_data:
+            readme_raw = validated_data['readme_raw']
+
         return super(PostAssetSerializer, self).create({
-            **validated_data,
-            'academy': academy,
+            **validated_data, 'academy': academy,
+            'readme_raw': readme_raw
         })
 
 
@@ -315,6 +326,35 @@ class PUTKeywordSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
+
+
+class PUTCategorySerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=False)
+    title = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
+
+    class Meta:
+        model = AssetCategory
+        exclude = ('academy', )
+
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
+class POSTCategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AssetCategory
+        exclude = ('academy', )
+
+    def create(self, validated_data):
+        academy_id = self.context['academy']
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        return super().create({
+            **validated_data,
+            'academy': academy,
+        })
 
 
 class TechnologyPUTSerializer(serializers.ModelSerializer):
@@ -378,18 +418,21 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
         session_user = self.context.get('request').user
 
         if self.instance.author is not None and self.instance.author.id != session_user.id:
-            raise ValidationException('Only the comment author can mark this comment as resolved')
+            if 'resolved' in data and data['resolved'] != self.instance.resolved:
+                raise ValidationException('Only the comment/issue author can update the resolved property')
 
         return validated_data
 
 
 class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
+    technologies = serializers.ListField(required=False)
+    slug = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
 
     class Meta:
         model = Asset
-        exclude = ('technologies', 'academy')
+        exclude = ('academy', )
 
     def validate(self, data):
 
@@ -416,7 +459,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                                           status.HTTP_400_BAD_REQUEST)
 
         if 'status' in data and data['status'] == 'PUBLISHED':
-            if self.instance.test_status != 'Ok':
+            if self.instance.test_status != 'OK':
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
 

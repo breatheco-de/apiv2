@@ -26,7 +26,11 @@ class Eventbrite(object):
         _headers = {**self.headers, **headers}
         _query_string = '?' + urllib.parse.urlencode(query_string) if query_string else ''
 
-        response = requests.request(_type, self.host + url + _query_string, headers=_headers, data=data)
+        response = requests.request(_type,
+                                    self.host + url + _query_string,
+                                    headers=_headers,
+                                    data=data,
+                                    timeout=2)
         result = response.json()
 
         if 'status_code' in result and result['status_code'] >= 400:

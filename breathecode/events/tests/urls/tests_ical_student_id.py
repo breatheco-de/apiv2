@@ -74,8 +74,8 @@ class AcademyCohortTestSuite(EventTestCase):
             'never_ends': True,
         }
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -115,8 +115,8 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_one__cohort_without_ending_date(self):
         device_id_kwargs = {'name': 'server'}
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -157,8 +157,8 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -229,8 +229,8 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -299,8 +299,8 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_one__without_ending_date(self):
         device_id_kwargs = {'name': 'server'}
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -359,8 +359,8 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {'stage': 'DELETED'}
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -402,8 +402,8 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_one__with_incoming_true__return_zero_time_slots(self):
         device_id_kwargs = {'name': 'server'}
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -447,8 +447,8 @@ class AcademyCohortTestSuite(EventTestCase):
             datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0, tzinfo=pytz.timezone('UTC')),
         }
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -521,8 +521,8 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
         teacher_kwargs = {'role': 'TEACHER'}
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -605,8 +605,8 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
         teacher_kwargs = {'role': 'TEACHER'}
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,
@@ -730,8 +730,8 @@ class AcademyCohortTestSuite(EventTestCase):
         }
         teacher_kwargs = {'role': 'TEACHER'}
 
-        # don't forget 🦾
-        datetime_interger = 191109111330
+        # don't forget 🦾 2021 - 1010
+        datetime_interger = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
             'starting_at': datetime_interger,

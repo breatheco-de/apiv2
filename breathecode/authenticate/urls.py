@@ -13,8 +13,6 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-# from django.contrib import admin
-# from rest_framework.authtoken import views
 from django.urls import path
 from .views import (ProfileMePictureView, TokenTemporalView, WaitingListView, get_users,
                     get_user_by_id_or_email, UserMeView, LoginView, LogoutView, TemporalTokenView,
@@ -43,6 +41,9 @@ urlpatterns = [
          TokenTemporalView.as_view(),
          name='profile_academy_reset_github_link'),
     path('academy/member', MemberView.as_view(), name='academy_member'),
+    path('academy/member/<int:profileacademy_id>/invite',
+         AcademyInviteView.as_view(),
+         name='academy_member_id_invite'),
     path('academy/<int:academy_id>/member', MemberView.as_view(), name='academy_id_member'),
     path('academy/<int:academy_id>/member/<str:user_id_or_email>',
          MemberView.as_view(),
@@ -57,9 +58,6 @@ urlpatterns = [
          name='academy_user_me_invite_status'),
     # 🔼🔼🔼
     path('academy/invite/<int:invite_id>', AcademyInviteView.as_view(), name='academy_invite_id'),
-    path('academy/member/<int:profileacademy_id>/invite',
-         AcademyInviteView.as_view(),
-         name='academy_member_id_invite'),
     path('academy/user/invite', AcademyInviteView.as_view(), name='academy_user_invite'),
     path('academy/html/invite', render_academy_invite, name='academy_html_invite'),
     # path('group/', get_groups, name="group"),
@@ -69,7 +67,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     # get a another token (temporal), from a logged in user
     path('academy/token/', AcademyTokenView.as_view(), name='academy_token'),
-    path('token/me', TemporalTokenView.as_view(), name='token'),
+    path('token/me', TemporalTokenView.as_view(), name='token_me'),
     path('token/<str:token>', get_token_info, name='token'),  # get token information
     path('password/reset', reset_password_view, name='password_reset'),
     path('member/<int:profileacademy_id>/password/reset',

@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.urls import path, include
 from .views import (AssetThumbnailView, AssetView, get_keywords, get_categories, render_readme,
-                    get_technologies, get_config, get_translations, handle_test_syllabus, render_preview_html,
-                    handle_test_asset, forward_asset_url, get_alias_redirects, AcademyAssetView,
-                    AcademyAssetActionView, AcademyAssetCommentView, AcademyTechnologyView,
-                    AcademyKeywordView, AcademyKeywordClusterView)
+                    get_technologies, get_config, get_translations, render_preview_html, handle_test_asset,
+                    forward_asset_url, get_alias_redirects, AcademyAssetView, AcademyAssetActionView,
+                    AcademyAssetCommentView, AcademyTechnologyView, AcademyKeywordView,
+                    AcademyKeywordClusterView, AcademyCategoryView)
 
 app_name = 'registry'
 urlpatterns = [
@@ -22,6 +22,8 @@ urlpatterns = [
     path('academy/asset/<str:asset_slug>/action/<str:action_slug>', AcademyAssetActionView.as_view()),
     path('academy/asset/<str:asset_slug>', AcademyAssetView.as_view()),
     path('keyword', get_keywords),
+    path('academy/category', AcademyCategoryView.as_view()),
+    path('academy/category/<str:category_slug>', AcademyCategoryView.as_view()),
     path('academy/keyword', AcademyKeywordView.as_view()),
     path('academy/keyword/<str:keyword_slug>', AcademyKeywordView.as_view()),
     path('academy/keywordcluster', AcademyKeywordClusterView.as_view()),
@@ -31,6 +33,5 @@ urlpatterns = [
     path('academy/technology', AcademyTechnologyView.as_view(), name='academy_technology'),
     path('academy/technology/<str:tech_slug>', AcademyTechnologyView.as_view()),
     path('translation', get_translations),
-    path('syllabus/test', handle_test_syllabus),
     path('alias/redirect', get_alias_redirects),
 ]

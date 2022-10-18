@@ -11,6 +11,7 @@ class TokenTestSuite(FeedbackTestCase):
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('sys.stdout.write', MagicMock())
     @patch('sys.stderr.write', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_run_handler(self):
         surveys = [{'cohort_id': n} for n in range(1, 4)]
         cohort_users = [{'cohort_id': n, 'user_id': n} for n in range(1, 4)]
@@ -60,6 +61,9 @@ class TokenTestSuite(FeedbackTestCase):
 
         answer_db = self.bc.format.to_dict(model.answer)
 
+        # reset in this line because some people left print in some places
+        sys.stdout.write.call_args_list = []
+
         command = Command()
         command.handle()
 
@@ -81,5 +85,6 @@ class TokenTestSuite(FeedbackTestCase):
             self.bc.format.to_dict(answer_db[17]),
         ])
 
-        self.assertEqual(sys.stdout.write.call_args_list, [call('Successfully deleted invalid answers\n')])
+        self.assertEqual(str(sys.stdout.write.call_args_list),
+                         str([call('Successfully deleted invalid answers\n')]))
         self.assertEqual(sys.stderr.write.call_args_list, [])

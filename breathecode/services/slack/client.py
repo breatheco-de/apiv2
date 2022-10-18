@@ -40,7 +40,8 @@ class Slack:
                                 url=self.HOST + action_name,
                                 headers=self.headers,
                                 params=params,
-                                json=json)
+                                json=json,
+                                timeout=2)
 
         if resp.status_code == 200:
             data = resp.json()
@@ -111,7 +112,7 @@ class Slack:
             response = getattr(_class, method)(payload=payload)  # call action method
 
             if 'response_url' in payload and response:
-                resp = requests.post(payload['response_url'], json=response)
+                resp = requests.post(payload['response_url'], json=response, timeout=2)
                 return resp.status_code == 200
             else:
                 return True

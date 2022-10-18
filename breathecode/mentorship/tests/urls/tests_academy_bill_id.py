@@ -109,7 +109,7 @@ def get_mente_joined(obj):
     if obj.started_at is None:
         return 'Session did not start because mentee never joined'
     else:
-        return None
+        return True
 
 
 def get_rating(obj):
@@ -134,7 +134,7 @@ def get_sessions(self, obj):
         'ended_at': session.ended_at,
         'extra_time': get_extra_time(session),
         'id': session.id,
-        'mente_joined': get_mente_joined(session),
+        'mentee_joined': get_mente_joined(session),
         'mentee': {
             'email': session.mentee.email,
             'first_name': session.mentee.first_name,
@@ -650,6 +650,37 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
+            self.bc.format.to_dict(model.mentorship_bill),
+        ])
+
+    """
+    🔽🔽🔽 PUT with one MentorshipSession, MentorProfile and MentorshipService, edit status of dirty bill
+    """
+
+    def test__put__with_one_mentor_profile__edit_status_of_dirty_bill(self):
+        mentorship_bill = {'status': 'RECALCULATE'}
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_bill',
+                                        mentorship_session=1,
+                                        mentor_profile=1,
+                                        mentorship_service=1,
+                                        mentorship_bill=mentorship_bill,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
+        data = {'status': 'PAID'}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'trying-edit-status-to-dirty-bill', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
             self.bc.format.to_dict(model.mentorship_bill),
         ])

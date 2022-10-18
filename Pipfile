@@ -93,3 +93,5 @@ twisted = {extras = ["http2", "tls"], version = "*"}
 nbconvert = "~=6.5.0"
 certifi = "*"
 numpy = "*"
+google-cloud-recaptcha-enterprise = "*"
+coralogix-logger = "*"

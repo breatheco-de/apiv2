@@ -59,7 +59,8 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
                      'subject': template['subject'],
                      'text': template['text'],
                      'html': template['html']
-                 })
+                 },
+                 timeout=2)
         ])
 
         html = template['html']
@@ -132,7 +133,8 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
                      }],
                      'parse':
                      'full'
-                 })
+                 },
+                 timeout=2)
         ]
 
         self.assertEqual(args_list, expected)

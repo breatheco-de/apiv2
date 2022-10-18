@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
+from breathecode.utils import getLogger
 
 from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,
@@ -21,6 +22,8 @@ from google.cloud.ndb.query import OR
 # https://cloud.google.com/datastore/docs/concepts/entities
 # https://googleapis.dev/python/datastore/latest/index.html
 
+logger = getLogger(__name__)
+
 ACTIVITIES = {
     'breathecode_login': 'Every time it logs in',
     'online_platform_registration': 'First day using breathecode',
@@ -30,9 +33,9 @@ ACTIVITIES = {
     'lesson_opened': 'When a lessons is opened on the platform',
     'office_attendance': 'When the office raspberry pi detects the student',
     'nps_survey_answered': 'When a nps survey is answered by the student',
-    'exercise_success': 'When student successfuly tests exercise',
-    'registration': 'When student successfuly joins breathecode',
-    'educational_status_change': 'Student cohort changes like: starts, drop, pospone, etc',
+    'exercise_success': 'When student successfully tests exercise',
+    'registration': 'When student successfully joins breathecode',
+    'educational_status_change': 'Student cohort changes like: starts, drop, postpone, etc',
     'educational_note':
     'Notes that can be added by teachers, TA\'s or anyone involved in the student education',
     'career_note': 'Notes related to the student career',
@@ -472,7 +475,7 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
 
         public_iter = datastore.fetch(
             **kwargs
-        )  # TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
+        )  # TODO: remove this in the future because the academy_id was not present before and students didn't have it
 
         # query_iter = academy_iter + public_iter
         public_iter.sort(key=lambda x: x['created_at'], reverse=True)

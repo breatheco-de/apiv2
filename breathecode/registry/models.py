@@ -6,7 +6,7 @@ from django.template.loader import get_template
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from django.db.models import Q
-from .signals import asset_slug_modified
+from .signals import asset_slug_modified, asset_readme_modified
 from slugify import slugify
 from breathecode.assessment.models import Assessment
 
@@ -203,9 +203,13 @@ TYPE = (
 
 BEGINNER = 'BEGINNER'
 EASY = 'EASY'
+INTERMEDIATE = 'INTERMEDIATE'
+HARD = 'HARD'
 DIFFICULTY = (
-    (BEGINNER, 'Beginner'),
+    (HARD, 'Hard'),
+    (INTERMEDIATE, 'Intermediate'),
     (EASY, 'Easy'),
+    (BEGINNER, 'Beginner'),
 )
 
 DRAFT = 'DRAFT'
@@ -232,6 +236,7 @@ class Asset(models.Model):
     def __init__(self, *args, **kwargs):
         super(Asset, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
+        self.__old_readme_raw = self.readme_raw
 
     slug = models.SlugField(
         max_length=200,
@@ -271,6 +276,7 @@ class Asset(models.Model):
     intro_video_url = models.URLField(null=True, blank=True, default=None)
     solution_video_url = models.URLField(null=True, blank=True, default=None)
     readme = models.TextField(null=True, blank=True, default=None)
+    readme_raw = models.TextField(null=True, blank=True, default=None)
     html = models.TextField(null=True, blank=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None)
@@ -356,6 +362,17 @@ class Asset(models.Model):
     last_seo_scan_at = models.DateTimeField(null=True, blank=True, default=None)
     seo_json_status = models.JSONField(null=True, blank=True, default=None)
 
+    # clean status refers to the cleaning of the readme file
+    last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None)
+    cleaning_status_details = models.TextField(null=True, blank=True, default=None)
+    cleaning_status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default='PENDING',
+        null=True,
+        blank=True,
+        help_text='Internal state automatically set by the system based on cleanup')
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -364,19 +381,28 @@ class Asset(models.Model):
 
     def save(self, *args, **kwargs):
 
+        slug_modified = False
+        readme_modified = False
+
+        if self.__old_readme_raw != self.readme_raw:
+            readme_modified = True
+            self.sync_status = 'PENDING'
+
         # only validate this on creation
         if self.pk is None or self.__old_slug != self.slug:
+            slug_modified = True
             alias = AssetAlias.objects.filter(slug=self.slug).first()
             if alias is not None:
                 raise Exception(f'New slug {self.slug} for {self.__old_slug} is already taken by alias')
 
-            super().save(*args, **kwargs)
-            self.__old_slug = self.slug
-            asset_slug_modified.send(instance=self, sender=Asset)
-        else:
-            super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+        self.__old_slug = self.slug
+        self.__old_readme_raw = self.readme_raw
 
-    def get_readme(self, parse=None, raw=False, remove_frontmatter=False):
+        if slug_modified: asset_slug_modified.send(instance=self, sender=Asset)
+        if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
+
+    def get_readme(self, parse=None, remove_frontmatter=False):
 
         if self.readme is None or self.readme == '':
             if self.asset_type != 'QUIZ':
@@ -392,17 +418,17 @@ class Asset(models.Model):
                     'asset_type': self.asset_type,
                 }))
 
-        if raw:
-            return self.readme
-
         if self.readme_url is None and self.asset_type == 'LESSON':
             self.readme_url = self.url
             self.save()
 
         readme = {
-            'raw': self.readme,
-            'decoded': base64.b64decode(self.readme.encode('utf-8')).decode('utf-8')
+            'clean': self.readme,
+            'decoded': Asset.decode(self.readme),
+            'raw': self.readme_raw,
+            'decoded_raw': Asset.decode(self.readme_raw)
         }
+
         if parse:
             # external assets will have a default markdown readme generated internally
             extension = '.md'
@@ -442,8 +468,20 @@ class Asset(models.Model):
             readme['html'] = body
         return readme
 
+    @staticmethod
+    def encode(content):
+        if content is not None:
+            return str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
+        return None
+
+    @staticmethod
+    def decode(content):
+        if content is not None:
+            return base64.b64decode(content.encode('utf-8')).decode('utf-8')
+        return None
+
     def set_readme(self, content):
-        self.readme = str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
+        self.readme = Asset.encode(content)
         return self
 
     def log_error(self, error_slug, status_text=None):
@@ -510,13 +548,23 @@ class AssetComment(models.Model):
 
     text = models.TextField()
     resolved = models.BooleanField(default=False)
+    delivered = models.BooleanField(default=False)
+    urgent = models.BooleanField(default=False)
+    priority = models.SmallIntegerField(default=False)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     author = models.ForeignKey(User,
                                on_delete=models.SET_NULL,
                                default=None,
                                blank=True,
                                null=True,
-                               help_text='Who wrote the lesson, not necessarily the owner')
+                               help_text='Who wrote the comment or issue')
+    owner = models.ForeignKey(User,
+                              on_delete=models.SET_NULL,
+                              default=None,
+                              blank=True,
+                              null=True,
+                              related_name='assigned_comments',
+                              help_text='In charge of resolving the comment or issue')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
@@ -601,12 +649,14 @@ class SEOReport(models.Model):
         self.__log.append({'rating': rating, 'msg': msg})
 
     def get_rating(self):
-        total_rating = 0
+        total_rating = 100
         for entry in self.__log:
             total_rating += entry['rating']
 
         if total_rating < 0:
             return 0
+        elif total_rating > 100:
+            return 100
         else:
             return total_rating
 
