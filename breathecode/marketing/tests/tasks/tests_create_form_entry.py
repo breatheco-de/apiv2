@@ -134,9 +134,6 @@ def form_entry_field(data={}):
 
 class CreateFormEntryTestSuite(MarketingTestCase):
 
-    def tearDown(self):
-        self.clear_cache()
-
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_create_form_entry_with_dict_empty_without_csv_upload_id(self):

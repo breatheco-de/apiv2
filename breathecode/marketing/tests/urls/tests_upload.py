@@ -19,6 +19,14 @@ UTC_NOW = timezone.now()
 class MarketingTestSuite(MarketingTestCase):
     """Test /answer"""
 
+    def setUp(self):
+        super().setUp()
+        self.file_name = ''
+
+    def tearDown(self):
+        if self.file_name:
+            os.remove(self.file_name)
+
     def test_upload_without_auth(self):
         from breathecode.services.google_cloud import Storage, File
 
@@ -150,6 +158,9 @@ class MarketingTestSuite(MarketingTestCase):
         df = pd.DataFrame(obj)
 
         # saving the dataframe
+
+        self.file_name = file.name
+
         df.to_csv(file.name)
 
         with open(file.name, 'rb') as data:
