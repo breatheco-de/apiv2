@@ -26,12 +26,14 @@ def test_url(url, allow_relative=False, allow_hash=True):
     else:
         return True
 
+    #FIXME: the code is under this line is unaccessible
+
     if not allow_relative and '../' == url[0:3] or './' == url[0:2]:
         raise Exception(f'Not allowed relative url: ' + url)
     else:
         return True
 
-    response = requests.head(url, allow_redirects=False)
+    response = requests.head(url, allow_redirects=False, timeout=2)
     if response.status_code not in [200, 302, 301, 307]:
         raise Exception(f'Invalid URL with code {response.status_code}: ' + url)
 

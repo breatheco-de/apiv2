@@ -33,7 +33,8 @@ class Facebook:
                                 url=self.HOST + action_name,
                                 headers=self.headers,
                                 params=params,
-                                json=json)
+                                json=json,
+                                timeout=2)
 
         if resp.status_code == 200:
             data = resp.json()

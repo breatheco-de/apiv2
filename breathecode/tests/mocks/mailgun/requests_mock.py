@@ -22,6 +22,6 @@ class ResponseMock():
         return self.data
 
 
-def post_mock(url: str, auth=None, data=None):
+def post_mock(url: str, auth=None, data=None, timeout=30):
     """Requests get mock"""
     return ResponseMock(data='ok', status_code=200)

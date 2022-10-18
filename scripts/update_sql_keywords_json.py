@@ -6,7 +6,7 @@ from pathlib import Path
 
 url_source_of_postgres_keywords = 'https://www.postgresql.org/docs/8.1/sql-keywords-appendix.html'
 
-request = requests.get(url_source_of_postgres_keywords)
+request = requests.get(url_source_of_postgres_keywords, timeout=2)
 soup = BeautifulSoup(request.text, features='lxml')
 
 BLACKLIST = {

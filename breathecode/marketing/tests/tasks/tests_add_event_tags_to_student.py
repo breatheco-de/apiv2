@@ -375,7 +375,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model.active_campaign_academy.ac_key},
-                 params={'email': model.user.email}),
+                 params={'email': model.user.email},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [])
@@ -412,7 +413,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model.active_campaign_academy.ac_key},
-                 params={'email': 'pokemon@potato.io'}),
+                 params={'email': 'pokemon@potato.io'},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [])
@@ -453,7 +455,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model.active_campaign_academy.ac_key},
-                 params={'email': model.user.email}),
+                 params={'email': model.user.email},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [
@@ -466,7 +469,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
         ])
 
     @patch('logging.Logger.warn', MagicMock())
@@ -500,7 +504,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model.active_campaign_academy.ac_key},
-                 params={'email': 'pokemon@potato.io'}),
+                 params={'email': 'pokemon@potato.io'},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [
@@ -513,7 +518,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
         ])
 
     """
@@ -556,7 +562,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model1.active_campaign_academy.ac_key},
-                 params={'email': model1.user.email}),
+                 params={'email': model1.user.email},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [
@@ -569,7 +576,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('https://ac.ca/api/3/contactTags',
                  headers={
                      'Api-Token': model1.active_campaign_academy.ac_key,
@@ -579,7 +587,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
         ])
 
     @patch('logging.Logger.warn', MagicMock())
@@ -617,7 +626,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model1.active_campaign_academy.ac_key},
-                 params={'email': 'pokemon@potato.io'}),
+                 params={'email': 'pokemon@potato.io'},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [
@@ -630,7 +640,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('https://ac.ca/api/3/contactTags',
                  headers={
                      'Api-Token': model1.active_campaign_academy.ac_key,
@@ -640,7 +651,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
         ])
 
     """
@@ -686,7 +698,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model1.active_campaign_academy.ac_key},
-                 params={'email': model1.user.email}),
+                 params={'email': model1.user.email},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [
@@ -699,7 +712,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('https://ac.ca/api/3/contactTags',
                  headers={
                      'Api-Token': model1.active_campaign_academy.ac_key,
@@ -709,7 +723,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
         ])
 
     @patch('logging.Logger.warn', MagicMock())
@@ -750,7 +765,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model1.active_campaign_academy.ac_key},
-                 params={'email': 'pokemon@potato.io'}),
+                 params={'email': 'pokemon@potato.io'},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [
@@ -763,7 +779,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('https://ac.ca/api/3/contactTags',
                  headers={
                      'Api-Token': model1.active_campaign_academy.ac_key,
@@ -773,7 +790,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
         ])
 
     """
@@ -824,7 +842,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model1.active_campaign_academy.ac_key},
-                 params={'email': model1.user.email}),
+                 params={'email': model1.user.email},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [
@@ -837,7 +856,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('https://ac.ca/api/3/contactTags',
                  headers={
                      'Api-Token': model1.active_campaign_academy.ac_key,
@@ -847,7 +867,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('https://ac.ca/api/3/contactTags',
                  headers={
                      'Api-Token': model1.active_campaign_academy.ac_key,
@@ -857,7 +878,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model3.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
         ])
 
     @patch('logging.Logger.warn', MagicMock())
@@ -903,7 +925,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model1.active_campaign_academy.ac_key},
-                 params={'email': 'pokemon@potato.io'}),
+                 params={'email': 'pokemon@potato.io'},
+                 timeout=2),
         ])
 
         self.assertEqual(requests.post.call_args_list, [
@@ -916,7 +939,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model1.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('https://ac.ca/api/3/contactTags',
                  headers={
                      'Api-Token': model1.active_campaign_academy.ac_key,
@@ -926,7 +950,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model2.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
             call('https://ac.ca/api/3/contactTags',
                  headers={
                      'Api-Token': model1.active_campaign_academy.ac_key,
@@ -936,5 +961,6 @@ class AnswerIdTestSuite(MarketingTestCase):
                  json={'contactTag': {
                      'contact': 1,
                      'tag': model3.tag.acp_id
-                 }}),
+                 }},
+                 timeout=2),
         ])

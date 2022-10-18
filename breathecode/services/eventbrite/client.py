@@ -37,7 +37,7 @@ class Eventbrite:
         if query_string is not None:
             _query_string = '?' + urllib.parse.urlencode(query_string)
 
-        response = requests.request(_type, self.host + url + _query_string, headers=_headers)
+        response = requests.request(_type, self.host + url + _query_string, headers=_headers, timeout=2)
         result = response.json()
 
         if 'status_code' in result and result['status_code'] >= 400:
@@ -112,7 +112,7 @@ class Eventbrite:
 
         logger.debug(f'Executing => {action}')
         if hasattr(actions, action):
-            response = requests.get(api_url, headers=self.headers)
+            response = requests.get(api_url, headers=self.headers, timeout=2)
             json = response.json()
 
             # logger.debug("Eventbrite response")

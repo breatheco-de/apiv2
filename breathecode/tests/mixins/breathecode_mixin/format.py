@@ -66,6 +66,18 @@ class Format:
 
         return self._one_to_dict(arg)
 
+    def to_decimal_string(self, decimal: int | float) -> str:
+        """
+        Parse a number to the django representation of a decimal.
+
+        Usage:
+
+        ```py
+        self.bc.format.to_decimal(1)  # returns '1.000000000000000'
+        ```
+        """
+        return '%.15f' % round(decimal, 15)
+
     def _one_to_dict(self, arg) -> dict[str, Any]:
         """Parse the object to a `dict`"""
 

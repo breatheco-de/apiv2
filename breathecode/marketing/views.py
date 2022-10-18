@@ -88,15 +88,11 @@ def get_downloadable(request, slug=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):
-
     data = request.data.copy()
 
     # remove spaces from phone
     if 'phone' in data:
         data['phone'] = data['phone'].replace(' ', '')
-
-    if 'referral_code' in data and 'referral_key' not in data:
-        data['referral_key'] = data['referral_code']
 
     if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
         print('Ignoring lead because its coming from development team')
@@ -385,22 +381,26 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_tag')
     def get(self, request, format=None, academy_id=None):
-        tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
+        handler = self.extensions(request)
+
+        items = Tag.objects.filter(ac_academy__academy__id=academy_id)
 
         like = request.GET.get('like', None)
         if like is not None:
-            tags = tags.filter(slug__icontains=like)
+            items = items.filter(slug__icontains=like)
 
         types = request.GET.get('type', None)
         if types is not None:
             _types = types.split(',')
-            tags = tags.filter(tag_type__in=[x.upper() for x in _types])
+            items = items.filter(tag_type__in=[x.upper() for x in _types])
 
-        serializer = TagSmallSerializer(tags, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        items = handler.queryset(items)
+        serializer = TagSmallSerializer(items, many=True)
+        return handler.response(serializer.data)
 
     @capable_of('crud_tag')
     def put(self, request, tag_slug, academy_id=None):
@@ -425,14 +425,25 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
+        handler = self.extensions(request)
+        items = Automation.objects.filter(ac_academy__academy__id=academy_id)
 
-        tags = Automation.objects.filter(ac_academy__academy__id=academy_id)
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(Q(slug__icontains=like) | Q(name__icontains=like))
 
-        serializer = AutomationSmallSerializer(tags, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        status = request.GET.get('status', None)
+        if status is not None:
+            _status = status.split(',')
+            items = items.filter(status__in=[x.upper() for x in _status])
+
+        items = handler.queryset(items)
+        serializer = AutomationSmallSerializer(items, many=True)
+        return handler.response(serializer.data)
 
 
 class AcademyAppView(APIView, GenerateLookupsMixin):
@@ -595,6 +606,22 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
         if 'location' in self.request.GET:
             param = self.request.GET.get('location')
             lookup['location'] = param
+
+        if 'utm_medium' in self.request.GET:
+            param = self.request.GET.get('utm_medium')
+            items = items.filter(utm_medium__icontains=param)
+
+        if 'utm_url' in self.request.GET:
+            param = self.request.GET.get('utm_url')
+            items = items.filter(utm_url__icontains=param)
+
+        if 'utm_campaign' in self.request.GET:
+            param = self.request.GET.get('utm_campaign')
+            items = items.filter(utm_campaign__icontains=param)
+
+        if 'tags' in self.request.GET:
+            lookups = self.generate_lookups(request, many_fields=['tags'])
+            items = items.filter(tag_objects__slug__in=lookups['tags__in'])
 
         items = items.filter(**lookup)
 

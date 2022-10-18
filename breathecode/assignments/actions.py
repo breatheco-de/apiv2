@@ -59,7 +59,7 @@ def sync_student_tasks(user, cohort=None):
         if cu is not None:
             cohort = cu.cohort
 
-    response = requests.get(f'{HOST}/student/{user.email}/task/')
+    response = requests.get(f'{HOST}/student/{user.email}/task/', timeout=2)
     if response.status_code != 200:
         raise Exception(f'Student {user.email} not found on the old API')
 

@@ -10,7 +10,7 @@ from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment)
 
-from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset
+from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
@@ -259,6 +259,8 @@ def render_readme(request, asset_slug, extension='raw'):
                               remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
 
     response = HttpResponse('Invalid extension format', content_type='text/html')
+    if extension == 'raw':
+        response = HttpResponse(readme['decoded_raw'], content_type='text/markdown')
     if extension == 'html':
         response = HttpResponse(readme['html'], content_type='text/html')
     elif extension in ['md', 'mdx', 'txt']:
@@ -289,14 +291,14 @@ def get_config(request, asset_slug):
         raise ValidationException(f'Asset not {asset_slug} found', status.HTTP_404_NOT_FOUND)
 
     main_branch = 'master'
-    response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False)
+    response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False, timeout=2)
     if response.status_code == 302:
         main_branch = 'main'
 
     try:
-        response = requests.get(f'{asset.url}/blob/{main_branch}/learn.json?raw=true')
+        response = requests.get(f'{asset.url}/blob/{main_branch}/learn.json?raw=true', timeout=2)
         if response.status_code == 404:
-            response = requests.get(f'{asset.url}/blob/{main_branch}/bc.json?raw=true')
+            response = requests.get(f'{asset.url}/blob/{main_branch}/bc.json?raw=true', timeout=2)
             if response.status_code == 404:
                 raise ValidationException(f'Config file not found for {asset.url}',
                                           code=404,
@@ -470,17 +472,24 @@ class AcademyAssetActionView(APIView):
         if asset is None:
             raise ValidationException('This asset does not exist for this academy', 404)
 
-        possible_actions = ['test', 'sync', 'analyze_seo']
+        possible_actions = ['test', 'pull', 'push', 'analyze_seo']
         if action_slug not in possible_actions:
             raise ValidationException(f'Invalid action {action_slug}')
         try:
             if action_slug == 'test':
                 test_asset(asset)
-            elif action_slug == 'sync':
+            elif action_slug == 'pull':
                 override_meta = False
                 if request.data and 'override_meta' in request.data:
                     override_meta = request.data['override_meta']
                 pull_from_github(asset.slug, override_meta=override_meta)
+            elif action_slug == 'push':
+                if asset.asset_type not in ['ARTICLE', 'LESSON']:
+                    raise ValidationException(
+                        f'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
+                    )
+
+                push_to_github(asset.slug, author=request.user)
             elif action_slug == 'analyze_seo':
                 report = SEOAnalyzer(asset)
                 report.start()

@@ -116,6 +116,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
     utm_medium = serpy.Field()
     utm_campaign = serpy.Field()
     utm_source = serpy.Field()
+    utm_content = serpy.Field()
     tags = serpy.Field()
     storage_status = serpy.Field()
     storage_status_text = serpy.Field()
