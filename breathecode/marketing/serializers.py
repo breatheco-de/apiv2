@@ -1,7 +1,7 @@
 import serpy, logging, hashlib, re
 from django.utils import timezone
 from datetime import timedelta
-from .models import FormEntry, AcademyAlias, ShortLink, Tag
+from .models import FormEntry, AcademyAlias, ShortLink, Tag, ActiveCampaignAcademy
 from breathecode.monitoring.actions import test_link
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -62,6 +62,20 @@ class AutomationSmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     status = serpy.Field()
+
+
+class ActiveCampaignAcademyBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    ac_key = serpy.Field()
+    ac_url = serpy.Field()
+    academy = AcademySmallSerializer()
+    duplicate_leads_delta_avoidance = serpy.Field()
+    sync_status = serpy.Field()
+    sync_message = serpy.Field()
+    last_interaction_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    event_attendancy_automation = AutomationSmallSerializer(required=False)
 
 
 class DownloadableSerializer(serpy.Serializer):
@@ -212,3 +226,22 @@ class PUTTagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         exclude = ('slug', 'acp_id', 'subscribers', 'ac_academy', 'created_at', 'updated_at')
+
+
+class ActiveCampaignAcademySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ActiveCampaignAcademy
+        exclude = ('academy', )
+
+    def validate(self, data):
+
+        academy = Academy.objects.filter(id=self.context['academy']).first()
+        if academy is None:
+            raise ValidationException(f'Academy {self.context["academy"]} not found',
+                                      slug='academy-not-found')
+
+        return {**data, 'academy': academy}
+
+    def create(self, validated_data):
+        return ActiveCampaignAcademy.objects.create(**validated_data)
