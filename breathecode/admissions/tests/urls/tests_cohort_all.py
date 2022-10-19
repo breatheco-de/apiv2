@@ -49,6 +49,8 @@ def get_serializer(cohort, syllabus, syllabus_version, data={}):
             'logo_url': cohort.academy.logo_url,
         },
         'schedule': None,
+        'timeslots': [],
+        'timezone': None,
         **data,
     }
 
@@ -335,7 +337,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:cohort_all') + '?coordinates=a'
         response = self.client.get(url)
         json = response.json()
-        expected = {'detail': 'coordinates-with-auth', 'status_code': 400}
+        expected = {'detail': 'bad-coordinates', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

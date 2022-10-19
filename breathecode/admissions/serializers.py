@@ -336,6 +336,13 @@ class PublicCohortSerializer(serpy.Serializer):
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
     distance = serpy.MethodField()
+    timezone = serpy.Field()
+    schedule = GetSmallSyllabusScheduleSerializer(required=False)
+    timeslots = serpy.MethodField()
+
+    def get_timeslots(self, obj):
+        timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
+        return SmallCohortTimeSlotSerializer(timeslots, many=True).data
 
     def get_distance(self, obj):
         if not obj.latitude or not obj.longitude or not obj.academy.latitude or not obj.academy.longitude:
