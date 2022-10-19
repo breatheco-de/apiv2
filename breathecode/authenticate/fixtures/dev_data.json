@@ -1,1 +1,1901 @@
-[{"model": "authenticate.profile", "pk": 1, "fields": {"user": 2, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "437348734", "show_tutorial": true, "twitter_username": null, "github_username": "http://github.com/alesanchezr", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 2, "fields": {"user": 3, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "32452134", "show_tutorial": true, "twitter_username": null, "github_username": "http://github.com/joeblackdandt", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 3, "fields": {"user": 4, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "787-243-0466", "show_tutorial": true, "twitter_username": null, "github_username": "http://www.github.com/edgarbrignoni", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 4, "fields": {"user": 5, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "7864988329", "show_tutorial": true, "twitter_username": null, "github_username": "http://www.github.com/Doives", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 5, "fields": {"user": 6, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "3053023449", "show_tutorial": true, "twitter_username": null, "github_username": "http://www.github.com/mikevee", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 6, "fields": {"user": 7, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "3059046601", "show_tutorial": true, "twitter_username": null, "github_username": "http://www.github.com/imjose", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 7, "fields": {"user": 8, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "3052834593", "show_tutorial": true, "twitter_username": null, "github_username": "http://www.github.com/joshlew", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 8, "fields": {"user": 9, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "7869739606", "show_tutorial": true, "twitter_username": null, "github_username": "http://www.github.com/otlwstr", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 9, "fields": {"user": 10, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 10, "fields": {"user": 11, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "7867971520", "show_tutorial": true, "twitter_username": null, "github_username": "http://www.github.com/ximenapuig", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 11, "fields": {"user": 12, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 12, "fields": {"user": 13, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 13, "fields": {"user": 14, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 14, "fields": {"user": 15, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 15, "fields": {"user": 16, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 16, "fields": {"user": 17, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "04149102758", "show_tutorial": true, "twitter_username": null, "github_username": "https://github.com/carlos10796", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 17, "fields": {"user": 18, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 18, "fields": {"user": 19, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 19, "fields": {"user": 20, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 20, "fields": {"user": 21, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "0412-6087447", "show_tutorial": true, "twitter_username": null, "github_username": "franfossi", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 21, "fields": {"user": 22, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 22, "fields": {"user": 23, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 23, "fields": {"user": 24, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 24, "fields": {"user": 25, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 25, "fields": {"user": 26, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 26, "fields": {"user": 27, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 27, "fields": {"user": 28, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 28, "fields": {"user": 29, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 29, "fields": {"user": 30, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 30, "fields": {"user": 31, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": "simonstengel", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 31, "fields": {"user": 32, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 32, "fields": {"user": 33, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 33, "fields": {"user": 34, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 34, "fields": {"user": 35, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 35, "fields": {"user": 36, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 36, "fields": {"user": 37, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 37, "fields": {"user": 38, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 38, "fields": {"user": 39, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 39, "fields": {"user": 40, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 40, "fields": {"user": 41, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 41, "fields": {"user": 42, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 42, "fields": {"user": 43, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 43, "fields": {"user": 44, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 44, "fields": {"user": 45, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 45, "fields": {"user": 46, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 46, "fields": {"user": 47, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "0412-334-5409", "show_tutorial": true, "twitter_username": null, "github_username": "onofreliscano", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 47, "fields": {"user": 48, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 48, "fields": {"user": 49, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 49, "fields": {"user": 50, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 50, "fields": {"user": 51, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 51, "fields": {"user": 52, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 52, "fields": {"user": 53, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 53, "fields": {"user": 54, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 54, "fields": {"user": 55, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 55, "fields": {"user": 56, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 56, "fields": {"user": 57, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 57, "fields": {"user": 58, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 58, "fields": {"user": 59, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 59, "fields": {"user": 60, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 60, "fields": {"user": 61, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "997782778", "show_tutorial": true, "twitter_username": null, "github_username": "nmolero12", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 61, "fields": {"user": 62, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 62, "fields": {"user": 63, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 63, "fields": {"user": 64, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 64, "fields": {"user": 65, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "786-612-9973", "show_tutorial": true, "twitter_username": null, "github_username": "https://github.com/Riciglianomarcelo", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 65, "fields": {"user": 66, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 66, "fields": {"user": 67, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 67, "fields": {"user": 68, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": "Lasharonb", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 68, "fields": {"user": 69, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 69, "fields": {"user": 70, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 70, "fields": {"user": 71, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 71, "fields": {"user": 72, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 72, "fields": {"user": 73, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 73, "fields": {"user": 74, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 74, "fields": {"user": 75, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 75, "fields": {"user": 76, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 76, "fields": {"user": 77, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 77, "fields": {"user": 78, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 78, "fields": {"user": 79, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 79, "fields": {"user": 80, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": "jrivero3122", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 80, "fields": {"user": 81, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 81, "fields": {"user": 82, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 82, "fields": {"user": 83, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": "juancarlosdlb", "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 83, "fields": {"user": 84, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 84, "fields": {"user": 85, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 85, "fields": {"user": 86, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 86, "fields": {"user": 87, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 87, "fields": {"user": 88, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 88, "fields": {"user": 89, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 89, "fields": {"user": 90, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 90, "fields": {"user": 91, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 91, "fields": {"user": 92, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 92, "fields": {"user": 93, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 93, "fields": {"user": 94, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 94, "fields": {"user": 95, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 95, "fields": {"user": 96, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 96, "fields": {"user": 97, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 97, "fields": {"user": 98, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 98, "fields": {"user": 99, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 99, "fields": {"user": 100, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.profile", "pk": 100, "fields": {"user": 101, "avatar_url": "https://breathecode.herokuapp.com/static/img/avatar.png", "bio": "", "phone": "", "show_tutorial": true, "twitter_username": null, "github_username": null, "portfolio_url": null, "linkedin_url": null, "blog": null}}, {"model": "authenticate.capability", "pk": "crud_assignment", "fields": {"description": "Update assignments"}}, {"model": "authenticate.capability", "pk": "crud_certificate", "fields": {"description": "Create, update or delete student certificates"}}, {"model": "authenticate.capability", "pk": "crud_cohort", "fields": {"description": "Create, update or delete cohort info"}}, {"model": "authenticate.capability", "pk": "crud_event", "fields": {"description": "Create, update or delete event information"}}, {"model": "authenticate.capability", "pk": "crud_member", "fields": {"description": "Create, update or delete academy members (very high level, almost the academy admin)"}}, {"model": "authenticate.capability", "pk": "crud_student", "fields": {"description": "Create, update or delete students"}}, {"model": "authenticate.capability", "pk": "crud_syllabus", "fields": {"description": "Create, update or delete syllabus versions"}}, {"model": "authenticate.capability", "pk": "read_assignment", "fields": {"description": "Read assigment information"}}, {"model": "authenticate.capability", "pk": "read_certificate", "fields": {"description": "List and read all academy certificates"}}, {"model": "authenticate.capability", "pk": "read_cohort", "fields": {"description": "List all the cohorts or a single cohort information"}}, {"model": "authenticate.capability", "pk": "read_cohort_activity", "fields": {"description": "Read low level activity in a cohort (attendancy, etc.)"}}, {"model": "authenticate.capability", "pk": "read_event", "fields": {"description": "List and retrieve event information"}}, {"model": "authenticate.capability", "pk": "read_eventcheckin", "fields": {"description": "List and read all the event_checkins"}}, {"model": "authenticate.capability", "pk": "read_lead", "fields": {"description": "List all the leads"}}, {"model": "authenticate.capability", "pk": "read_member", "fields": {"description": "Read academy staff member information"}}, {"model": "authenticate.capability", "pk": "read_nps_answers", "fields": {"description": "List all the nps answers"}}, {"model": "authenticate.capability", "pk": "read_student", "fields": {"description": "Read student information"}}, {"model": "authenticate.capability", "pk": "read_syllabus", "fields": {"description": "List and read syllabus information"}}, {"model": "authenticate.role", "pk": "academy_coordinator", "fields": {"name": "Mentor in residence", "created_at": "2021-02-26T06:51:06.844Z", "updated_at": "2021-02-26T06:51:06.844Z", "capabilities": ["crud_assignment", "crud_syllabus", "read_cohort_activity"]}}, {"model": "authenticate.role", "pk": "admin", "fields": {"name": "Admin", "created_at": "2021-02-26T06:51:06.674Z", "updated_at": "2021-02-26T06:51:06.674Z", "capabilities": ["crud_member", "read_member", "crud_student", "read_student", "read_assignment", "crud_assignment", "read_certificate", "crud_certificate", "read_syllabus", "crud_syllabus", "read_event", "crud_event", "read_cohort", "crud_cohort", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort_activity"]}}, {"model": "authenticate.role", "pk": "admissions_developer", "fields": {"name": "Admissions Developer", "created_at": "2021-02-26T06:51:06.773Z", "updated_at": "2021-02-26T06:51:06.773Z", "capabilities": ["crud_student", "read_student", "read_event", "read_cohort", "crud_cohort", "read_eventcheckin", "read_lead"]}}, {"model": "authenticate.role", "pk": "assistant", "fields": {"name": "Teacher Assistant", "created_at": "2021-02-26T06:51:06.744Z", "updated_at": "2021-02-26T06:51:06.744Z", "capabilities": ["crud_assignment", "read_cohort_activity"]}}, {"model": "authenticate.role", "pk": "career_support", "fields": {"name": "Career Support Specialist", "created_at": "2021-02-26T06:51:06.759Z", "updated_at": "2021-02-26T06:51:06.759Z", "capabilities": ["read_student", "read_certificate", "crud_certificate"]}}, {"model": "authenticate.role", "pk": "country_manager", "fields": {"name": "Country Manager", "created_at": "2021-02-26T06:51:06.860Z", "updated_at": "2021-02-26T06:51:06.860Z", "capabilities": ["crud_member", "read_member", "crud_student", "read_student", "read_assignment", "crud_assignment", "read_certificate", "crud_certificate", "read_syllabus", "crud_syllabus", "read_event", "crud_event", "read_cohort", "crud_cohort", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort_activity"]}}, {"model": "authenticate.role", "pk": "growth_manager", "fields": {"name": "Growth Manager", "created_at": "2021-02-26T06:51:06.808Z", "updated_at": "2021-02-26T06:51:06.808Z", "capabilities": ["read_student", "read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead"]}}, {"model": "authenticate.role", "pk": "student", "fields": {"name": "Student", "created_at": "2021-02-26T06:51:06.730Z", "updated_at": "2021-02-26T06:51:06.730Z", "capabilities": ["read_assignment", "crud_assignment", "read_syllabus"]}}, {"model": "authenticate.role", "pk": "syllabus_coordinator", "fields": {"name": "Manage Syllabus, Exercises and all academy content", "created_at": "2021-02-26T06:51:06.798Z", "updated_at": "2021-02-26T06:51:06.798Z", "capabilities": ["read_syllabus"]}}, {"model": "authenticate.role", "pk": "teacher", "fields": {"name": "Teacher", "created_at": "2021-02-26T06:51:06.829Z", "updated_at": "2021-02-26T06:51:06.829Z", "capabilities": ["crud_assignment", "read_cohort_activity"]}}, {"model": "authenticate.profileacademy", "pk": 1, "fields": {"user": 1, "email": "aalejo@gmail.com", "academy": 4, "role": "admin", "first_name": "Alejandro", "last_name": "Sanchez", "address": null, "phone": "", "status": "ACTIVE", "created_at": "2021-02-26T06:51:35.818Z", "updated_at": "2021-02-26T06:51:35.818Z"}}, {"model": "authenticate.profileacademy", "pk": 2, "fields": {"user": 1, "email": "aalejo@gmail.com", "academy": 5, "role": "country_manager", "first_name": "Alejandro", "last_name": "Sanchez", "address": null, "phone": "", "status": "INVITED", "created_at": "2021-02-26T06:52:04.673Z", "updated_at": "2021-02-26T06:52:04.673Z"}}, {"model": "authenticate.profileacademy", "pk": 3, "fields": {"user": 2, "email": "a+fakestudent8@4geeks.us", "academy": 5, "role": "growth_manager", "first_name": "Alejandro", "last_name": "Sanchez", "address": null, "phone": "", "status": "ACTIVE", "created_at": "2021-02-26T06:52:59.579Z", "updated_at": "2021-02-26T06:52:59.579Z"}}]
+[
+    {
+        "model": "authenticate.profile",
+        "pk": 1,
+        "fields": {
+            "user": 1,
+            "avatar_url": "https://avatars.githubusercontent.com/u/115666706?v=4",
+            "bio": null,
+            "phone": "",
+            "show_tutorial": false,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 2,
+        "fields": {
+            "user": 4,
+            "avatar_url": "https://avatars.githubusercontent.com/u/115666706?v=4",
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 3,
+        "fields": {
+            "user": 10,
+            "avatar_url": "https://avatars.githubusercontent.com/u/115666706?v=4",
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 4,
+        "fields": {
+            "user": 9,
+            "avatar_url": "https://avatars.githubusercontent.com/u/115666706?v=4",
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 5,
+        "fields": {
+            "user": 12,
+            "avatar_url": "https://avatars.githubusercontent.com/u/115666706?v=4",
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 6,
+        "fields": {
+            "user": 3,
+            "avatar_url": "https://avatars.githubusercontent.com/u/115666706?v=4",
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 7,
+        "fields": {
+            "user": 5,
+            "avatar_url": null,
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 8,
+        "fields": {
+            "user": 11,
+            "avatar_url": null,
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 9,
+        "fields": {
+            "user": 7,
+            "avatar_url": "https://avatars.githubusercontent.com/u/115666706?v=4",
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 10,
+        "fields": {
+            "user": 8,
+            "avatar_url": "https://avatars.githubusercontent.com/u/115666706?v=4",
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.profile",
+        "pk": 11,
+        "fields": {
+            "user": 2,
+            "avatar_url": "https://avatars.githubusercontent.com/u/115666706?v=4",
+            "bio": null,
+            "phone": "",
+            "show_tutorial": true,
+            "twitter_username": null,
+            "github_username": null,
+            "portfolio_url": null,
+            "linkedin_url": null,
+            "blog": null
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "academy_reporting",
+        "fields": {
+            "description": "Get detailed reports about the academy activity"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "classroom_activity",
+        "fields": {
+            "description": "To report student activities during the classroom or cohorts (Specially meant for teachers)"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_activity",
+        "fields": {
+            "description": "Create, update or delete a user activities"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_asset",
+        "fields": {
+            "description": "Update, create and delete registry assets"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_assignment",
+        "fields": {
+            "description": "Create, update or delete a assignment"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_category",
+        "fields": {
+            "description": "Update and delete categories from the content registry"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_certificate",
+        "fields": {
+            "description": "Create, update or delete student certificates"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_cohort",
+        "fields": {
+            "description": "Create, update or delete cohort info"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_cohort_log",
+        "fields": {
+            "description": "Update and delete things like the cohort attendance, teacher comments, etc"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_event",
+        "fields": {
+            "description": "Create, update or delete event information"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_freelancer_bill",
+        "fields": {
+            "description": "Create, delete or update all freelancer bills from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_invite",
+        "fields": {
+            "description": "Create, update or delete invites from users"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_keyword",
+        "fields": {
+            "description": "Update, create and delete SEO keywords"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_keywordcluster",
+        "fields": {
+            "description": "Update, create and delete asset technologies"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_lead",
+        "fields": {
+            "description": "Create, update or delete academy leads"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_media",
+        "fields": {
+            "description": "Create, update or delete academy medias"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_media_resolution",
+        "fields": {
+            "description": "Create, update or delete academy media resolutions"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_member",
+        "fields": {
+            "description": "Create, update or delete academy members (very high level, almost the academy admin)"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_mentorship_bill",
+        "fields": {
+            "description": "Create, delete or update all mentroship bills from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_mentorship_mentor",
+        "fields": {
+            "description": "Create, delete or update all mentorship mentors from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_mentorship_service",
+        "fields": {
+            "description": "Create, delete or update all mentorship services from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_mentorship_session",
+        "fields": {
+            "description": "Create, delete or update all session from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_my_academy",
+        "fields": {
+            "description": "Read, or update your academy information (very high level, almost the academy admin)"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_organization",
+        "fields": {
+            "description": "Update, create or delete academy organization details"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_project_invoice",
+        "fields": {
+            "description": "Create, Update and delete project invoices"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_review",
+        "fields": {
+            "description": "Create, update or delete academy reviews"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_shortlink",
+        "fields": {
+            "description": "Create, update and delete marketing short links"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_student",
+        "fields": {
+            "description": "Create, update or delete students"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_survey",
+        "fields": {
+            "description": "Create, update or delete surveys"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_syllabus",
+        "fields": {
+            "description": "Create, update or delete syllabus versions"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_tag",
+        "fields": {
+            "description": "Update, create and delete a marketing tag and its details"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "crud_technology",
+        "fields": {
+            "description": "Update, create and delete asset technologies"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "generate_academy_token",
+        "fields": {
+            "description": "Create a new token only to be used by the academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "generate_temporal_token",
+        "fields": {
+            "description": "Generate a temporal token to reset github credential or forgot password"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "get_academy_token",
+        "fields": {
+            "description": "Read the academy token"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "get_gitpod_user",
+        "fields": {
+            "description": "List gitpod user the academy is consuming"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "invite_resend",
+        "fields": {
+            "description": "Resent invites for user academies"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_activity",
+        "fields": {
+            "description": "List all the user activities"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_all_cohort",
+        "fields": {
+            "description": "List all the cohorts or single cohort information"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_asset",
+        "fields": {
+            "description": "Read all academy registry assets"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_assignment",
+        "fields": {
+            "description": "List all the assignments"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_assignment_sensitive_details",
+        "fields": {
+            "description": "The mentor in residence is allowed to see aditional info about the task, like the \"delivery url\""
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_category",
+        "fields": {
+            "description": "Read categories from the content registry"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_certificate",
+        "fields": {
+            "description": "List and read all academy certificates"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_cohort",
+        "fields": {
+            "description": "List all the cohorts or a single cohort information"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_cohort_activity",
+        "fields": {
+            "description": "Read low level activity in a cohort (attendancy, etc.)"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_cohort_log",
+        "fields": {
+            "description": "Read the cohort logo that contains attendance and other info logged each day"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_event",
+        "fields": {
+            "description": "List and retrieve event information"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_eventcheckin",
+        "fields": {
+            "description": "List and read all the event_checkins"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_freelance_projects",
+        "fields": {
+            "description": "Read project details without financials"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_freelancer_bill",
+        "fields": {
+            "description": "Read all all freelancer bills from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_invite",
+        "fields": {
+            "description": "Read invites from users"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_keyword",
+        "fields": {
+            "description": "Read SEO keywords"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_keywordcluster",
+        "fields": {
+            "description": "Update, create and delete asset technologies"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_layout",
+        "fields": {
+            "description": "Read layouts to generate new certificates"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_lead",
+        "fields": {
+            "description": "List all the leads"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_lead_gen_app",
+        "fields": {
+            "description": "Read lead generation apps"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_media",
+        "fields": {
+            "description": "List all the medias"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_media_resolution",
+        "fields": {
+            "description": "List all the medias resolutions"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_member",
+        "fields": {
+            "description": "Read academy staff member information"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_mentorship_bill",
+        "fields": {
+            "description": "Read all mentroship bills from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_mentorship_mentor",
+        "fields": {
+            "description": "Get all mentorship mentors from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_mentorship_service",
+        "fields": {
+            "description": "Get all mentorship services from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_mentorship_session",
+        "fields": {
+            "description": "Get all session from one academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_my_academy",
+        "fields": {
+            "description": "Read your academy information"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_nps_answers",
+        "fields": {
+            "description": "List all the nps answers"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_organization",
+        "fields": {
+            "description": "Read academy organization details"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_project_invoice",
+        "fields": {
+            "description": "Read the financial status of a project and invoices"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_review",
+        "fields": {
+            "description": "Read review for a particular academy"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_shortlink",
+        "fields": {
+            "description": "Access the list of marketing shortlinks"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_single_cohort",
+        "fields": {
+            "description": "single cohort information related to a user"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_student",
+        "fields": {
+            "description": "Read student information"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_survey",
+        "fields": {
+            "description": "List all the nps answers"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_syllabus",
+        "fields": {
+            "description": "List and read syllabus information"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_tag",
+        "fields": {
+            "description": "Read marketing tags and their details"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_technology",
+        "fields": {
+            "description": "Read asset technologies"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "read_won_lead",
+        "fields": {
+            "description": "List all the won leads"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "send_reset_password",
+        "fields": {
+            "description": "Generate a temporal token and resend forgot password link"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "task_delivery_details",
+        "fields": {
+            "description": "Get delivery URL for a task, that url can be sent to students for delivery"
+        }
+    },
+    {
+        "model": "authenticate.capability",
+        "pk": "update_gitpod_user",
+        "fields": {
+            "description": "Update gitpod user expiration based on available information"
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "academy_coordinator",
+        "fields": {
+            "name": "Mentor in residence",
+            "created_at": "2021-02-26T06:51:06.844Z",
+            "updated_at": "2021-02-26T06:51:06.844Z",
+            "capabilities": [
+                "academy_reporting",
+                "classroom_activity",
+                "crud_activity",
+                "crud_assignment",
+                "crud_certificate",
+                "crud_cohort",
+                "crud_cohort_log",
+                "crud_freelancer_bill",
+                "crud_invite",
+                "crud_member",
+                "crud_mentorship_bill",
+                "crud_mentorship_mentor",
+                "crud_mentorship_service",
+                "crud_mentorship_session",
+                "crud_review",
+                "crud_shortlink",
+                "crud_student",
+                "crud_survey",
+                "crud_syllabus",
+                "generate_temporal_token",
+                "get_academy_token",
+                "get_gitpod_user",
+                "invite_resend",
+                "read_activity",
+                "read_all_cohort",
+                "read_assignment",
+                "read_assignment_sensitive_details",
+                "read_certificate",
+                "read_cohort_activity",
+                "read_cohort_log",
+                "read_event",
+                "read_eventcheckin",
+                "read_freelance_projects",
+                "read_invite",
+                "read_layout",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_bill",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_mentorship_session",
+                "read_my_academy",
+                "read_nps_answers",
+                "read_project_invoice",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead",
+                "send_reset_password",
+                "task_delivery_details",
+                "update_gitpod_user"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "academy_token",
+        "fields": {
+            "name": "Academy Token",
+            "created_at": "2022-10-12T20:35:29.194Z",
+            "updated_at": "2022-10-12T20:35:29.194Z",
+            "capabilities": [
+                "crud_lead",
+                "crud_tag",
+                "read_all_cohort",
+                "read_cohort_log",
+                "read_freelancer_bill",
+                "read_invite",
+                "read_lead",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_nps_answers",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "accountant",
+        "fields": {
+            "name": "Accountant",
+            "created_at": "2022-10-12T20:35:29.445Z",
+            "updated_at": "2022-10-12T20:35:29.445Z",
+            "capabilities": [
+                "academy_reporting",
+                "crud_activity",
+                "crud_freelancer_bill",
+                "crud_mentorship_bill",
+                "crud_project_invoice",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_certificate",
+                "read_event",
+                "read_eventcheckin",
+                "read_freelancer_bill",
+                "read_invite",
+                "read_layout",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_bill",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_project_invoice",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "admin",
+        "fields": {
+            "name": "Admin",
+            "created_at": "2021-02-26T06:51:06.674Z",
+            "updated_at": "2021-02-26T06:51:06.674Z",
+            "capabilities": [
+                "academy_reporting",
+                "classroom_activity",
+                "crud_activity",
+                "crud_asset",
+                "crud_assignment",
+                "crud_category",
+                "crud_certificate",
+                "crud_cohort",
+                "crud_cohort_log",
+                "crud_event",
+                "crud_freelancer_bill",
+                "crud_invite",
+                "crud_keyword",
+                "crud_keywordcluster",
+                "crud_lead",
+                "crud_media",
+                "crud_media_resolution",
+                "crud_member",
+                "crud_mentorship_bill",
+                "crud_mentorship_mentor",
+                "crud_mentorship_service",
+                "crud_mentorship_session",
+                "crud_my_academy",
+                "crud_organization",
+                "crud_project_invoice",
+                "crud_review",
+                "crud_shortlink",
+                "crud_student",
+                "crud_survey",
+                "crud_syllabus",
+                "crud_tag",
+                "crud_technology",
+                "generate_academy_token",
+                "generate_temporal_token",
+                "get_academy_token",
+                "get_gitpod_user",
+                "invite_resend",
+                "read_activity",
+                "read_all_cohort",
+                "read_asset",
+                "read_assignment",
+                "read_assignment_sensitive_details",
+                "read_category",
+                "read_certificate",
+                "read_cohort_activity",
+                "read_cohort_log",
+                "read_event",
+                "read_eventcheckin",
+                "read_freelance_projects",
+                "read_freelancer_bill",
+                "read_invite",
+                "read_keyword",
+                "read_keywordcluster",
+                "read_layout",
+                "read_lead",
+                "read_lead_gen_app",
+                "read_media",
+                "read_media_resolution",
+                "read_member",
+                "read_mentorship_bill",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_mentorship_session",
+                "read_my_academy",
+                "read_nps_answers",
+                "read_organization",
+                "read_project_invoice",
+                "read_review",
+                "read_shortlink",
+                "read_single_cohort",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead",
+                "send_reset_password",
+                "task_delivery_details",
+                "update_gitpod_user"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "admissions_developer",
+        "fields": {
+            "name": "Admissions Developer",
+            "created_at": "2021-02-26T06:51:06.773Z",
+            "updated_at": "2021-02-26T06:51:06.773Z",
+            "capabilities": [
+                "academy_reporting",
+                "crud_activity",
+                "crud_cohort",
+                "crud_lead",
+                "crud_student",
+                "get_academy_token",
+                "invite_resend",
+                "read_activity",
+                "read_all_cohort",
+                "read_certificate",
+                "read_event",
+                "read_eventcheckin",
+                "read_invite",
+                "read_layout",
+                "read_lead",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "assistant",
+        "fields": {
+            "name": "Teacher Assistant",
+            "created_at": "2021-02-26T06:51:06.744Z",
+            "updated_at": "2021-02-26T06:51:06.744Z",
+            "capabilities": [
+                "academy_reporting",
+                "classroom_activity",
+                "crud_activity",
+                "crud_assignment",
+                "crud_cohort",
+                "crud_cohort_log",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_assignment",
+                "read_certificate",
+                "read_cohort_activity",
+                "read_cohort_log",
+                "read_event",
+                "read_eventcheckin",
+                "read_invite",
+                "read_layout",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_nps_answers",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead",
+                "task_delivery_details"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "career_support",
+        "fields": {
+            "name": "Career Support Specialist",
+            "created_at": "2021-02-26T06:51:06.759Z",
+            "updated_at": "2021-02-26T06:51:06.759Z",
+            "capabilities": [
+                "academy_reporting",
+                "crud_activity",
+                "crud_certificate",
+                "crud_mentorship_bill",
+                "crud_mentorship_mentor",
+                "crud_mentorship_service",
+                "crud_mentorship_session",
+                "crud_shortlink",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_certificate",
+                "read_event",
+                "read_eventcheckin",
+                "read_invite",
+                "read_layout",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_bill",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_mentorship_session",
+                "read_my_academy",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "community_manager",
+        "fields": {
+            "name": "Manage Syllabus, Exercises and all academy content",
+            "created_at": "2022-10-12T20:35:29.383Z",
+            "updated_at": "2022-10-12T20:35:29.383Z",
+            "capabilities": [
+                "academy_reporting",
+                "crud_activity",
+                "crud_asset",
+                "crud_event",
+                "crud_lead",
+                "crud_media",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_asset",
+                "read_certificate",
+                "read_event",
+                "read_eventcheckin",
+                "read_invite",
+                "read_keyword",
+                "read_keywordcluster",
+                "read_layout",
+                "read_lead",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_nps_answers",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "content_writer",
+        "fields": {
+            "name": "Content Writer (Base)",
+            "created_at": "2022-10-12T20:35:29.233Z",
+            "updated_at": "2022-10-12T20:35:29.233Z",
+            "capabilities": [
+                "read_my_academy",
+                "read_media",
+                "read_asset",
+                "crud_asset",
+                "read_keyword",
+                "read_keywordcluster",
+                "read_category",
+                "crud_category",
+                "read_member"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "country_manager",
+        "fields": {
+            "name": "Country Manager",
+            "created_at": "2021-02-26T06:51:06.860Z",
+            "updated_at": "2021-02-26T06:51:06.860Z",
+            "capabilities": [
+                "academy_reporting",
+                "classroom_activity",
+                "crud_activity",
+                "crud_asset",
+                "crud_assignment",
+                "crud_category",
+                "crud_certificate",
+                "crud_cohort",
+                "crud_cohort_log",
+                "crud_event",
+                "crud_freelancer_bill",
+                "crud_invite",
+                "crud_keyword",
+                "crud_keywordcluster",
+                "crud_lead",
+                "crud_media",
+                "crud_member",
+                "crud_mentorship_bill",
+                "crud_mentorship_mentor",
+                "crud_mentorship_service",
+                "crud_mentorship_session",
+                "crud_my_academy",
+                "crud_organization",
+                "crud_project_invoice",
+                "crud_review",
+                "crud_shortlink",
+                "crud_student",
+                "crud_survey",
+                "crud_syllabus",
+                "crud_tag",
+                "crud_technology",
+                "generate_academy_token",
+                "generate_temporal_token",
+                "get_academy_token",
+                "get_gitpod_user",
+                "invite_resend",
+                "read_activity",
+                "read_all_cohort",
+                "read_asset",
+                "read_assignment",
+                "read_assignment_sensitive_details",
+                "read_category",
+                "read_certificate",
+                "read_cohort_activity",
+                "read_cohort_log",
+                "read_event",
+                "read_eventcheckin",
+                "read_freelance_projects",
+                "read_freelancer_bill",
+                "read_invite",
+                "read_keyword",
+                "read_keywordcluster",
+                "read_layout",
+                "read_lead",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_bill",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_mentorship_session",
+                "read_my_academy",
+                "read_nps_answers",
+                "read_organization",
+                "read_project_invoice",
+                "read_review",
+                "read_shortlink",
+                "read_single_cohort",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead",
+                "send_reset_password",
+                "task_delivery_details",
+                "update_gitpod_user"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "culture_and_recruitment",
+        "fields": {
+            "name": "Culture and Recruitment",
+            "created_at": "2022-10-12T20:35:29.361Z",
+            "updated_at": "2022-10-12T20:35:29.361Z",
+            "capabilities": [
+                "academy_reporting",
+                "crud_activity",
+                "crud_media",
+                "crud_member",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_certificate",
+                "read_event",
+                "read_eventcheckin",
+                "read_invite",
+                "read_layout",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "growth_manager",
+        "fields": {
+            "name": "Growth Manager",
+            "created_at": "2021-02-26T06:51:06.808Z",
+            "updated_at": "2021-02-26T06:51:06.808Z",
+            "capabilities": [
+                "academy_reporting",
+                "crud_activity",
+                "crud_asset",
+                "crud_event",
+                "crud_keyword",
+                "crud_keywordcluster",
+                "crud_lead",
+                "crud_media",
+                "crud_review",
+                "crud_shortlink",
+                "crud_tag",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_asset",
+                "read_certificate",
+                "read_event",
+                "read_eventcheckin",
+                "read_invite",
+                "read_keyword",
+                "read_keywordcluster",
+                "read_layout",
+                "read_lead",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_nps_answers",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "homework_reviewer",
+        "fields": {
+            "name": "Homework Reviewer",
+            "created_at": "2022-10-12T20:35:29.470Z",
+            "updated_at": "2022-10-12T20:35:29.470Z",
+            "capabilities": [
+                "academy_reporting",
+                "classroom_activity",
+                "crud_activity",
+                "crud_assignment",
+                "crud_cohort",
+                "crud_cohort_log",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_assignment",
+                "read_certificate",
+                "read_cohort_activity",
+                "read_cohort_log",
+                "read_event",
+                "read_eventcheckin",
+                "read_invite",
+                "read_layout",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_nps_answers",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead",
+                "task_delivery_details"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "staff",
+        "fields": {
+            "name": "Staff (Base)",
+            "created_at": "2022-10-12T20:35:29.212Z",
+            "updated_at": "2022-10-12T20:35:29.212Z",
+            "capabilities": [
+                "academy_reporting",
+                "crud_activity",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_certificate",
+                "read_event",
+                "read_eventcheckin",
+                "read_invite",
+                "read_layout",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "student",
+        "fields": {
+            "name": "Student",
+            "created_at": "2021-02-26T06:51:06.730Z",
+            "updated_at": "2021-02-26T06:51:06.730Z",
+            "capabilities": [
+                "read_all_cohort",
+                "read_single_cohort",
+                "read_mentorship_mentor",
+                "read_my_academy",
+                "crud_activity",
+                "crud_assignment",
+                "read_mentorship_service",
+                "read_cohort_log",
+                "read_syllabus",
+                "read_assignment"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "syllabus_coordinator",
+        "fields": {
+            "name": "Manage Syllabus, Exercises and all academy content",
+            "created_at": "2021-02-26T06:51:06.798Z",
+            "updated_at": "2021-02-26T06:51:06.798Z",
+            "capabilities": [
+                "academy_reporting",
+                "crud_activity",
+                "crud_asset",
+                "crud_category",
+                "crud_freelancer_bill",
+                "crud_media",
+                "crud_syllabus",
+                "crud_technology",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_asset",
+                "read_category",
+                "read_certificate",
+                "read_event",
+                "read_eventcheckin",
+                "read_freelancer_bill",
+                "read_invite",
+                "read_keyword",
+                "read_keywordcluster",
+                "read_layout",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.role",
+        "pk": "teacher",
+        "fields": {
+            "name": "Teacher",
+            "created_at": "2021-02-26T06:51:06.829Z",
+            "updated_at": "2021-02-26T06:51:06.829Z",
+            "capabilities": [
+                "academy_reporting",
+                "classroom_activity",
+                "crud_activity",
+                "crud_assignment",
+                "crud_cohort",
+                "crud_cohort_log",
+                "get_academy_token",
+                "read_activity",
+                "read_all_cohort",
+                "read_assignment",
+                "read_certificate",
+                "read_cohort_activity",
+                "read_cohort_log",
+                "read_event",
+                "read_eventcheckin",
+                "read_invite",
+                "read_layout",
+                "read_lead_gen_app",
+                "read_media",
+                "read_member",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "read_my_academy",
+                "read_nps_answers",
+                "read_review",
+                "read_shortlink",
+                "read_student",
+                "read_survey",
+                "read_syllabus",
+                "read_tag",
+                "read_technology",
+                "read_won_lead",
+                "task_delivery_details"
+            ]
+        }
+    },
+    {
+        "model": "authenticate.userinvite",
+        "pk": 1,
+        "fields": {
+            "email": "gonzalez.tommy2001@gmail.com",
+            "academy": 1,
+            "cohort": 1,
+            "role": "student",
+            "first_name": "Tomas",
+            "last_name": "Gonzalez",
+            "token": "ad96576994f98792ee2fecdb80ab13326e8397d0",
+            "author": 2,
+            "status": "PENDING",
+            "process_status": "PENDING",
+            "process_message": "Click on create account",
+            "phone": "+584149544966",
+            "created_at": "2022-10-13T00:17:59.970Z",
+            "updated_at": "2022-10-13T00:17:59.970Z",
+            "sent_at": "2022-10-13T00:16:50Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 1,
+        "fields": {
+            "user": 1,
+            "email": "aalejo@gmail.com",
+            "academy": 1,
+            "role": "admin",
+            "first_name": "Alejandro",
+            "last_name": "Sanchez",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T21:59:33.999Z",
+            "updated_at": "2022-10-12T21:59:33.999Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 2,
+        "fields": {
+            "user": 4,
+            "email": "acalisaya@4geeksacademy.com",
+            "academy": 1,
+            "role": "admin",
+            "first_name": "Ariel",
+            "last_name": "Calisaya",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T21:59:59.202Z",
+            "updated_at": "2022-10-12T22:00:02.128Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 3,
+        "fields": {
+            "user": 10,
+            "email": "albertoperez@teacher.com",
+            "academy": 2,
+            "role": "teacher",
+            "first_name": "Alberto",
+            "last_name": "Perez",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:00:23.874Z",
+            "updated_at": "2022-10-12T22:00:23.874Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 4,
+        "fields": {
+            "user": 9,
+            "email": "allenmartinez@gmail.com",
+            "academy": 1,
+            "role": "student",
+            "first_name": "Allen",
+            "last_name": "Martinez",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:01:06.396Z",
+            "updated_at": "2022-10-12T22:01:06.396Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 5,
+        "fields": {
+            "user": 9,
+            "email": "allenmartinez@gmail.com",
+            "academy": 1,
+            "role": "student",
+            "first_name": "Allen",
+            "last_name": "Martinez",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:01:50.580Z",
+            "updated_at": "2022-10-12T22:01:50.580Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 6,
+        "fields": {
+            "user": 12,
+            "email": "carlossainz@gmail.com",
+            "academy": 2,
+            "role": "student",
+            "first_name": "Carlos",
+            "last_name": "Sainz",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:02:12.262Z",
+            "updated_at": "2022-10-12T22:02:12.262Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 7,
+        "fields": {
+            "user": 3,
+            "email": "gmarquez@4geeksacademy.com",
+            "academy": 1,
+            "role": "admin",
+            "first_name": "Gustavo",
+            "last_name": "Marquez",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:03:01.305Z",
+            "updated_at": "2022-10-12T22:03:01.305Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 8,
+        "fields": {
+            "user": 5,
+            "email": "jdefreitaspinto@gmail.com",
+            "academy": 1,
+            "role": "admin",
+            "first_name": "Jeferson",
+            "last_name": "De Freitas",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:03:27.082Z",
+            "updated_at": "2022-10-12T22:03:27.082Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 9,
+        "fields": {
+            "user": 11,
+            "email": "jesussolis@teacherassistant.com",
+            "academy": 1,
+            "role": "assistant",
+            "first_name": "Jesus",
+            "last_name": "Solis",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:03:52.497Z",
+            "updated_at": "2022-10-12T22:03:52.497Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 10,
+        "fields": {
+            "user": 11,
+            "email": "jesussolis@teacherassistant.com",
+            "academy": 2,
+            "role": "assistant",
+            "first_name": "Jesus",
+            "last_name": "Solis",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:04:16.910Z",
+            "updated_at": "2022-10-12T22:04:16.910Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 11,
+        "fields": {
+            "user": 7,
+            "email": "joedoe@gmail.com",
+            "academy": 1,
+            "role": "student",
+            "first_name": "Joe",
+            "last_name": "Doe",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:04:52.244Z",
+            "updated_at": "2022-10-12T22:04:52.244Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 12,
+        "fields": {
+            "user": 8,
+            "email": "marydoe@gmail.com",
+            "academy": 1,
+            "role": "student",
+            "first_name": "Mary",
+            "last_name": "Doe",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:05:13.631Z",
+            "updated_at": "2022-10-12T22:05:13.631Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 13,
+        "fields": {
+            "user": 2,
+            "email": "tgonzalez@4geeksacademy.com",
+            "academy": 1,
+            "role": "admin",
+            "first_name": "Tomas",
+            "last_name": "Gonzalez",
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:05:59.444Z",
+            "updated_at": "2022-10-12T22:05:59.444Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 14,
+        "fields": {
+            "user": 13,
+            "email": null,
+            "academy": 3,
+            "role": "academy_token",
+            "first_name": null,
+            "last_name": null,
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:23:09.821Z",
+            "updated_at": "2022-10-12T22:23:09.821Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 15,
+        "fields": {
+            "user": 14,
+            "email": null,
+            "academy": 2,
+            "role": "academy_token",
+            "first_name": null,
+            "last_name": null,
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:23:09.832Z",
+            "updated_at": "2022-10-12T22:23:09.832Z"
+        }
+    },
+    {
+        "model": "authenticate.profileacademy",
+        "pk": 16,
+        "fields": {
+            "user": 15,
+            "email": null,
+            "academy": 1,
+            "role": "academy_token",
+            "first_name": null,
+            "last_name": null,
+            "address": null,
+            "phone": "",
+            "status": "ACTIVE",
+            "created_at": "2022-10-12T22:23:09.841Z",
+            "updated_at": "2022-10-12T22:23:09.841Z"
+        }
+    },
+    {
+        "model": "authenticate.token",
+        "pk": 4,
+        "fields": {
+            "created": "2022-10-12T22:23:09.826Z",
+            "key": "03dc61dd4a2d294112f98364ab28846feac304d0",
+            "user": 13,
+            "token_type": "permanent",
+            "expires_at": null
+        }
+    },
+    {
+        "model": "authenticate.token",
+        "pk": 5,
+        "fields": {
+            "created": "2022-10-12T22:23:09.835Z",
+            "key": "b377438b2e4edec0b66822b8fc166c9f19948252",
+            "user": 14,
+            "token_type": "permanent",
+            "expires_at": null
+        }
+    },
+    {
+        "model": "authenticate.token",
+        "pk": 6,
+        "fields": {
+            "created": "2022-10-12T22:23:09.845Z",
+            "key": "3f3a72640af58e2d3e76118117dcb35280ea3d1d",
+            "user": 15,
+            "token_type": "permanent",
+            "expires_at": null
+        }
+    },
+    {
+        "model": "authenticate.token",
+        "pk": 7,
+        "fields": {
+            "created": "2022-10-13T00:10:10.276Z",
+            "key": "fee18976a7bcd5e03652b79afe12cb87395d8b66",
+            "user": 7,
+            "token_type": "temporal",
+            "expires_at": "2022-10-13T00:20:10.275Z"
+        }
+    },
+    {
+        "model": "authenticate.token",
+        "pk": 8,
+        "fields": {
+            "created": "2022-10-13T00:10:10.280Z",
+            "key": "1f4cf3431f9cfc3d90a4fd5ce3744635549d94ae",
+            "user": 12,
+            "token_type": "temporal",
+            "expires_at": "2022-10-13T00:20:10.280Z"
+        }
+    },
+    {
+        "model": "authenticate.token",
+        "pk": 9,
+        "fields": {
+            "created": "2022-10-13T00:10:10.292Z",
+            "key": "1b3beda5794a1fefd22a26f0908800c8de635106",
+            "user": 8,
+            "token_type": "temporal",
+            "expires_at": "2022-10-13T00:20:10.292Z"
+        }
+    },
+    {
+        "model": "authenticate.token",
+        "pk": 10,
+        "fields": {
+            "created": "2022-10-13T00:17:50.746Z",
+            "key": "ad96576994f98792ee2fecdb80ab13326e8397d0",
+            "user": 2,
+            "token_type": "permanent",
+            "expires_at": null
+        }
+    },
+    {
+        "model": "authenticate.deviceid",
+        "pk": 1,
+        "fields": {
+            "name": "server",
+            "key": "27qc.91fd.19yg"
+        }
+    }
+]
