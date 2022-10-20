@@ -374,6 +374,22 @@ ROLES = [
     },
     {
         'slug':
+        'basic',
+        'name':
+        'Basic (Base)',
+        'caps': [
+            'read_media',
+            'read_my_academy',
+            'read_invite',
+            'crud_activity',
+            'read_tag',
+            'academy_reporting',
+            'read_activity',
+            'read_technology',
+        ],
+    },
+    {
+        'slug':
         'staff',
         'name':
         'Staff (Base)',
@@ -402,16 +418,6 @@ ROLES = [
             'read_mentorship_mentor',
             'read_lead_gen_app',
             'read_technology',
-        ],
-    },
-    {
-        'slug':
-        'content_writer',
-        'name':
-        'Content Writer (Base)',
-        'caps': [
-            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
-            'read_asset', 'crud_asset', 'read_category', 'crud_category'
         ],
     },
     {
@@ -471,6 +477,19 @@ def extend_roles(roles: list[RoleType]) -> None:
     These are additional roles that extend from the base roles above,
     you can extend from more than one role but also add additional capabilities at the end.
     """
+    
+    roles.append({
+        'slug':
+        'content_writer',
+        'name':
+        'Content Writer',
+        'caps':
+        extend(roles, ['basic']) + [
+            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
+            'read_asset', 'crud_asset', 'read_category', 'crud_category'
+        ]
+    })
+    
     roles.append({
         'slug':
         'assistant',
