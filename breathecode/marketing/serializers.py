@@ -92,6 +92,7 @@ class TagSmallSerializer(serpy.Serializer):
     disputed_at = serpy.Field()
     disputed_reason = serpy.Field()
     automation = AutomationSmallSerializer(required=False)
+    created_at = serpy.Field()
 
 
 class FormEntrySerializer(serpy.Serializer):
