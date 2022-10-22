@@ -1,11 +1,14 @@
 import json
-from rest_framework.views import APIView
+
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
+from rest_framework.views import APIView
+
 import breathecode.utils.decorators as decorators
-from rest_framework.permissions import AllowAny
-from rest_framework import status
+
 from ..mixins import UtilsTestCase
 
 PERMISSION = 'can_kill_kenny'
@@ -559,6 +562,7 @@ class ViewTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert 0
 
     """
     🔽🔽🔽 View get id

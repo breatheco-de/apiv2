@@ -1,7 +1,11 @@
 from unittest.mock import MagicMock, patch
-from ...mixins.new_auth_test_case import AuthTestCase
-from breathecode.authenticate.management.commands.set_permissions import Command
+
 from django.contrib.auth.models import Group
+
+from breathecode.authenticate.management.commands.set_permissions import \
+    Command
+
+from ...mixins.new_auth_test_case import AuthTestCase
 
 PERMISSIONS = [
     {
@@ -67,7 +71,8 @@ class TokenTestSuite(AuthTestCase):
     """
 
     def test__format__permissions(self):
-        from breathecode.authenticate.management.commands.set_permissions import PERMISSIONS
+        from breathecode.authenticate.management.commands.set_permissions import \
+            PERMISSIONS
 
         for permission in PERMISSIONS:
             self.assertRegex(permission['name'], r'^[a-zA-Z ]+$')
@@ -80,7 +85,8 @@ class TokenTestSuite(AuthTestCase):
     """
 
     def test__format__groups(self):
-        from breathecode.authenticate.management.commands.set_permissions import GROUPS
+        from breathecode.authenticate.management.commands.set_permissions import \
+            GROUPS
 
         for group in GROUPS:
             self.assertRegex(group['name'], r'^[a-zA-Z ]+$')

@@ -2,22 +2,20 @@ import os
 import logging
 from typing import Optional
 from rest_framework.exceptions import APIException
-from django.db.models import QuerySet
 
-__all__ = ['ValidationException', 'APIException']
+__all__ = ['PaymentException']
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
 logger = logging.getLogger(__name__)
 
 
-class ValidationException(APIException):
-    status_code: int = 400
+class PaymentException(APIException):
+    status_code: int = 402
     default_detail: str = 'There is an error in your request'
     default_code: str = 'client_error'
     slug: Optional[str] = None
 
-    def __init__(self, details: str, code: int = 400, slug: Optional[str] = None):
-        self.status_code = code
+    def __init__(self, details: str, slug: Optional[str] = None):
         self.default_detail = details
         self.slug = slug
         self.detail = details

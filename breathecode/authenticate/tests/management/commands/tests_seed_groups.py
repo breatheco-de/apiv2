@@ -1,7 +1,10 @@
 from unittest.mock import MagicMock, patch
-from ...mixins.new_auth_test_case import AuthTestCase
-from breathecode.authenticate.management.commands.seed_groups import Command
+
 from django.contrib.auth.models import Group
+
+from breathecode.authenticate.management.commands.seed_groups import Command
+
+from ...mixins.new_auth_test_case import AuthTestCase
 
 LATEST_CONTENT_TYPE_ID = 114
 LATEST_PERMISSION_ID = 456
