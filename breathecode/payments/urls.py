@@ -1,22 +1,27 @@
-from django.contrib import admin
-from django.urls import include, path
+from django.urls import path
 
-from .views import PlanView, CreditView, ServiceView, ServiceItemView
+from .views import (AcademyPlanView, AcademySubscriptionView, ConsumableView, InvoiceView, PlanView,
+                    CreditView, ServiceView, ServiceItemView, SubscriptionView)
 
-app_name = 'notify'
+app_name = 'payments'
 urlpatterns = [
-    # path('plan', PlanView.as_view()),
-    # path('plan/<slug:plan_slug>', PlanView.as_view()),
-    # path('plan/<slug:plan_slug>/services', ServiceView.as_view()),
+    path('plan', PlanView.as_view()),
+    path('plan/<slug:plan_slug>', PlanView.as_view()),
+    path('academy/plan', AcademyPlanView.as_view()),
+    path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view()),
     path('service', ServiceView.as_view()),
     path('service/<slug:service_slug>', ServiceView.as_view()),
-    # path('service/<slug:service_slug>/plans', PlanView.as_view()),
-    # path('subscription', PlanView.as_view()),
-    # path('subscription/<slug:plan_slug>', PlanView.as_view()),
-    # path('subscription/<slug:plan_slug>/services', ServiceView.as_view()),
+    path('service/<slug:service_slug>/items', ServiceItemView.as_view()),
+    path('service/<slug:service_slug>/consumable', ConsumableView.as_view()),
+    path('consumable', ConsumableView.as_view()),
+    path('subscription', SubscriptionView.as_view()),
+    path('subscription/<int:subscription_id>', SubscriptionView.as_view()),
+    path('academy/subscription', AcademySubscriptionView.as_view()),
+    path('academy/subscription/<int:subscription_id>', AcademySubscriptionView.as_view()),
     path('credit', CreditView.as_view()),
-    path('credit/<slug:service_slug>', CreditView.as_view()),
-    path('credit/<int:invoice_id>', CreditView.as_view()),
-    # path('credit/<slug:plan_slug>/services', ServiceView.as_view()),
-    # path('credit/<slug:plan_slug>/service_slug/item', ServiceItemView.as_view()),
+    path('credit/<int:credit_id>', CreditView.as_view()),
+    path('invoice', InvoiceView.as_view()),
+    path('invoice/<int:invoice_id>', InvoiceView.as_view()),
+    path('academy/invoice', InvoiceView.as_view()),
+    path('academy/invoice/<int:invoice_id>', InvoiceView.as_view()),
 ]

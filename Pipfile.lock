@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "5698daecd64e7fced9755209d62aae85cde4a23d4992d26d698478dba2bb5d72"
+            "sha256": "592ab1a9c1334a6bedf64afca8bc566a059a035591fee674d1a2435bb7ef836a"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -358,6 +358,14 @@
             ],
             "markers": "python_version >= '3.6'",
             "version": "==38.0.1"
+        },
+        "currencies": {
+            "hashes": [
+                "sha256:33b017bd11b0a70707ffa917e80cd8c4e07a1a6b412239ee19c10f145ed5f031",
+                "sha256:400cf313b8f6f33a59dcc9c9723dbe458eb8ff18a74ad2b79eba8a295a44b556"
+            ],
+            "index": "pypi",
+            "version": "==2020.12.12"
         },
         "daphne": {
             "hashes": [
@@ -783,11 +791,11 @@
         },
         "icalendar": {
             "hashes": [
-                "sha256:47f0e00a9ff4d50345f97e5ccd54bf78f0298afc8b55e3bd1942d9e169c07144",
-                "sha256:cabfa6b800072318d7a4b415786bdd30129618afa4620ea55b99c656d85ea22d"
+                "sha256:35faeae20e58d0fe26e33c04bbfd08b424192d61ae3e1da1d7611ba06ab33570",
+                "sha256:41f2f450707a503365a81c22954be4053779994c8ff01fc11bf4ce33a724092e"
             ],
             "index": "pypi",
-            "version": "==5.0.0"
+            "version": "==5.0.1"
         },
         "idna": {
             "hashes": [
@@ -2390,11 +2398,11 @@
         },
         "pymdown-extensions": {
             "hashes": [
-                "sha256:1e36490adc7bfcef1fdb21bb0306e93af99cff8ec2db199bd17e3bf009768c11",
-                "sha256:b956b806439bbff10f726103a941266beb03fbe99f897c7d5e774d7170339ad9"
+                "sha256:651b0107bc9ee790aedea3673cb88832c0af27d2569cf45c2de06f1d65292e96",
+                "sha256:767d07d9dead0f52f5135545c01f4ed627f9a7918ee86c646d893e24c59db87d"
             ],
             "markers": "python_version >= '3.7'",
-            "version": "==9.6"
+            "version": "==9.7"
         },
         "pyparsing": {
             "hashes": [

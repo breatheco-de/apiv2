@@ -2,36 +2,53 @@ import re
 from django.contrib.auth.models import Group, User
 from django.db import models
 
-from breathecode.admissions.models import DRAFT, Academy, Cohort
+from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
 from breathecode.mentorship.models import MentorshipService
+from currencies import Currency as CurrencyFormatter
+from . import signals
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
 
 
 class Currency(models.Model):
+    """
+    Represents a currency.
+    """
+
     code = models.CharField(max_length=3)
     name = models.CharField(max_length=20)
 
-    # to represent the value
-    template = models.CharField(max_length=15)
+    countries = models.ManyToManyField(Country,
+                                       related_name='currencies',
+                                       help_text='Countries that use this currency officially')
 
-    # to extract the value
-    regex = models.CharField(max_length=15)
+    def format_price(self, value):
+        currency = CurrencyFormatter('USD')
+        currency.get_money_currency()
+        return currency.get_money_format(value)
 
-    def format_value(self, value):
-        return self.template.format(value)
-
-    def get_value(self, value):
-        # regex = re.compile(self.regex)
-        raise NotImplementedError()
+    def clean(self) -> None:
+        self.code = self.code.upper()
+        return super().clean()
 
 
 class Price(models.Model):
+    """
+    This model is used to store the price of a Product or a Service.
+    """
+
     price = models.FloatField(default=0)
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
 
+    def format_price(self):
+        return self.currency.format_price(self.price)
+
 
 class Asset(models.Model):
+    """
+    This model represents a product or a service that can be sold.
+    """
+
     slug = models.CharField(max_length=60, unique=True)
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
@@ -48,6 +65,9 @@ class Asset(models.Model):
 
 
 class Service(Asset):
+    """
+    Represents the service that can be purchased by the customer.
+    """
 
     groups = models.ManyToManyField(Group)
     cohorts = models.ManyToManyField(Cohort)
@@ -73,6 +93,10 @@ SERVICE_UNITS = [
 
 
 class CommonServiceItem:
+    """
+    Common fields for ServiceItem and Consumable.
+    """
+
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
 
     # the unit between a service and a product are different
@@ -85,11 +109,10 @@ class CommonServiceItem:
 
 # this class is used as referenced of units of a service can be used
 class ServiceItem(models.Model, CommonServiceItem):
-    pass
+    """
+    This model is used as referenced of units of a service can be used.
+    """
 
-
-# this class can be consumed by the api
-class ServiceCreditItem(models.Model, CommonServiceItem):
     pass
 
 
@@ -117,6 +140,10 @@ PLAN_STATUS = [
 
 
 class Plan(models.Model):
+    """
+    A plan is a group of services that can be purchased by a user.
+    """
+
     slug = models.CharField(max_length=60, unique=True)
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
@@ -147,13 +174,14 @@ SUBSCRIPTION_STATUS = [
 ]
 
 
-class Consumable(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+# this class can be consumed by the api
+class Consumable(models.Model, CommonServiceItem):
+    """
+    This model is used to represent the units of a service that can be consumed.
+    """
 
-    # the unit between a service and a product are different
-    unit_type = models.CharField(max_length=10, choices=SERVICE_UNITS, default=UNIT)
-    how_many = models.IntegerField(default=0)
+    # if null, this is valid until resources are exhausted
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     # if null, this is valid until resources are exhausted
     valid_until = models.DateTimeField(null=True, blank=True, default=None)
@@ -162,32 +190,45 @@ class Consumable(models.Model):
 FULFILLED = 'FULFILLED'
 REJECTED = 'REJECTED'
 PENDING = 'PENDING'
+REFUNDED = 'REFUNDED'
+DISPUTED_AS_FRAUD = 'DISPUTED_AS_FRAUD'
 INVOICE_STATUS = [
     (FULFILLED, 'Fulfilled'),
     (REJECTED, 'Rejected'),
     (PENDING, 'Pending'),
+    (REFUNDED, 'Refunded'),
+    (DISPUTED_AS_FRAUD, 'Disputed as fraud'),
 ]
 
 
 class Invoice(models.Model):
+    """
+    Represents a payment made by a user
+    """
+
     amount = models.FloatField(default=0)
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
     paid_at = models.DateTimeField()
     status = models.CharField(max_length=10, choices=INVOICE_STATUS, default=PENDING)
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
-#TODO: think more about subscriptions
 class Subscription(models.Model):
+    """
+    Allows to create a subscription to a plan and services.
+    """
+
     paid_at = models.DateTimeField()
     status = models.CharField(max_length=9, choices=SUBSCRIPTION_STATUS, default=ACTIVE)
 
     is_cancellable = models.BooleanField(default=True)
     is_refundable = models.BooleanField(default=True)
+    is_recurrent = models.BooleanField(default=True)
     invoices = models.ManyToManyField(Invoice)
 
     # if null, this is valid until resources are exhausted
@@ -210,12 +251,68 @@ class Subscription(models.Model):
 
 
 class Credit(models.Model):
+    """
+    Represents a credit that can be used by a user to use a service.
+    """
+
     # if null, this is valid until resources are exhausted
     valid_until = models.DateTimeField(null=True, blank=True, default=None)
     is_free_trial = models.BooleanField(default=False)
 
-    services = models.ManyToManyField(ServiceCreditItem)
+    services = models.ManyToManyField(Consumable)
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        created = not self.id
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        if created:
+            signals.grant_service_permissions.send(instance=self, sender=self.__class__)
+
+
+GOOD = 'GOOD'
+BAD = 'BAD'
+FRAUD = 'FRAUD'
+UNKNOWN = 'UNKNOWN'
+REPUTATION_STATUS = [
+    (GOOD, 'Good'),
+    (BAD, 'BAD'),
+    (FRAUD, 'Fraud'),
+    (UNKNOWN, 'Unknown'),
+]
+
+
+class FinancialReputation(models.Model):
+    """
+    The purpose of this model is to store the reputation of a user, if the user has a bad reputation, the
+    user will not be able to buy services.
+    """
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='reputation')
+
+    in_4geeks = models.CharField(max_length=10, choices=INVOICE_STATUS, default=GOOD)
+    in_stripe = models.CharField(max_length=10, choices=INVOICE_STATUS, default=GOOD)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def get_reputation(self):
+        """
+        Returns the worst reputation between the two.
+        """
+
+        if self.in_4geeks == FRAUD or self.in_stripe == FRAUD:
+            return FRAUD
+
+        if self.in_4geeks == BAD or self.in_stripe == BAD:
+            return BAD
+
+        if self.in_4geeks == GOOD or self.in_stripe == GOOD:
+            return GOOD
+
+        return UNKNOWN

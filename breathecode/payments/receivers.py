@@ -3,11 +3,10 @@ import logging
 from django.db.models import Q
 from django.dispatch import receiver
 from django.utils import timezone
-from breathecode.notify import actions as notify_actions
 
-from .models import Consumable, ServiceItem, Subscription, Invoice
+from .models import Consumable
 from .signals import (consume_service, grant_service_permissions, lose_service_permissions,
-                      reimburse_service_units, renew_plan, renew_plan_fulfilled, renew_plan_rejected)
+                      reimburse_service_units)
 
 logger = logging.getLogger(__name__)
 
@@ -44,13 +43,13 @@ def lose_service_permissions_receiver(sender, instance: Consumable, **kwargs):
 
     consumables = Consumable.objects.filter(Q(valid_until__lte=now) | Q(valid_until=None),
                                             user=instance.user,
-                                            service=instance.service)  #TODO: check if cant delete the service
+                                            how_many=0)
 
     names = []
 
     for group in instance.groups.all():
         how_many = consumables.filter(service__groups__name=group.name).distinct().count()
-        if how_many == 1:
+        if how_many == 0:
             names.append(group.name)
 
     # lose the permissions
@@ -64,86 +63,3 @@ def grant_service_permissions_receiver(sender, instance: Consumable, **kwargs):
     for group in groups:
         if not instance.user.groups.filter(name=group.name).exists():
             instance.user.groups.add(group)
-
-
-@receiver(renew_plan, sender=Subscription)
-def renew_plan_receiver(sender, instance: Subscription, **kwargs):
-    # put here the code of stripe
-    now = timezone.now()
-
-    successfully = True
-
-    service_items = ServiceItem.objects.none()
-
-    for service_item in instance.services:
-        if successfully:
-            consumable = Consumable(user=instance.user,
-                                    service=service_item.service,
-                                    unit_type=service_item.unit_type,
-                                    how_many=service_item.how_many,
-                                    valid_until=None)
-
-            consumable.save()
-
-        service_items |= service_item
-
-    for plan in instance.plans:
-        for service_item in plan.services:
-            if successfully:
-                #TODO: calculate valid_until
-                consumable = Consumable(user=instance.user,
-                                        service=service_item.service,
-                                        unit_type=service_item.unit_type,
-                                        how_many=service_item.how_many,
-                                        valid_until=...)
-
-                consumable.save()
-
-            service_items |= service_item
-
-    #TODO: calculate valid_until
-    invoice = Invoice(amount=instance.amount,
-                      user=instance.user,
-                      currency=instance.currency,
-                      paid_at=now,
-                      services=service_items,
-                      status='FULFILLED' if successfully else 'REJECTED',
-                      valid_until=...)
-
-    invoice.save()
-
-    if successfully:
-        renew_plan_fulfilled.send(sender=invoice.__class__, instance=invoice)
-
-    else:
-        renew_plan_rejected.send(sender=invoice.__class__, instance=invoice)
-
-
-@receiver(renew_plan_fulfilled, sender=Invoice)
-def renew_plan_fulfilled_receiver(sender, instance: Invoice, **kwargs):
-    value = instance.currency.format_value(instance.amount)
-
-    notify_actions.send_email_message(
-        'message',
-        instance.user.email,
-        {
-            'SUBJECT': 'Your 4Geeks subscription was successfully renewed',
-            'MESSAGE': f'The amount was {value}',
-            'BUTTON': f'See the invoice',
-            # 'LINK': f'{APP_URL}/invoice/{instance.id}',
-        })
-
-
-@receiver(renew_plan_rejected, sender=Invoice)
-def renew_plan_rejected_receiver(sender, instance: Invoice, **kwargs):
-    value = instance.currency.format_value(instance.amount)
-
-    notify_actions.send_email_message(
-        'message',
-        instance.user.email,
-        {
-            'SUBJECT': 'Your 4Geeks subscription could not be renewed',
-            'MESSAGE': f'The amount was {value} but the payment failed',
-            'BUTTON': f'See the invoice',
-            # 'LINK': f'{APP_URL}/invoice/{instance.id}',
-        })

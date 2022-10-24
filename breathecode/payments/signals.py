@@ -14,10 +14,3 @@ reimburse_service_units = Signal()
 lose_service_permissions = Signal()
 grant_service_permissions = Signal()
 revoke_service_permissions = Signal()
-
-# automatic renew of plan
-renew_plan = Signal()
-
-# notifications
-renew_plan_fulfilled = Signal()
-renew_plan_rejected = Signal()
