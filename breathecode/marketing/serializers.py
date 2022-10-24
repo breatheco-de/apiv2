@@ -86,6 +86,7 @@ class DownloadableSerializer(serpy.Serializer):
 
 
 class TagSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     tag_type = serpy.Field()
     subscribers = serpy.Field()
