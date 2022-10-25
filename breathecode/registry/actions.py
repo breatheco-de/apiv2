@@ -452,7 +452,8 @@ def clean_asset_readme(asset):
         asset = clean_readme_relative_paths(asset)
         asset = clean_readme_hide_comments(asset)
         readme = asset.get_readme(parse=True)
-        asset.html = readme['html']
+        if 'html' in readme:
+            asset.html = readme['html']
 
         asset.cleaning_status = 'OK'
         asset.save()
