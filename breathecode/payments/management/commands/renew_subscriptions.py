@@ -2,12 +2,8 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from breathecode.payments import tasks
 
-from breathecode.payments.actions import payWithStripe
-from ...models import Consumable, Subscription, Credit
+from ...models import Subscription
 from django.utils import timezone
-from breathecode.notify import actions as notify_actions
-
-from dateutil.relativedelta import relativedelta
 
 
 # renew the subscriptions every 1 hours

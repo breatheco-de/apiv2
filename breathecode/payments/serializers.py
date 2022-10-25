@@ -162,6 +162,20 @@ class GetCreditSerializer(serpy.Serializer):
     invoice = GetInvoiceSerializer(many=False)
 
 
+class GetBagSerializer(GetInvoiceSmallSerializer):
+    services = GetServiceItemSerializer(many=True)
+    plans = GetPlanSerializer(many=True)
+
+
+class GetCheckingSerializer(GetInvoiceSmallSerializer):
+    amount = GetServiceItemSerializer(many=True)
+    token = GetPlanSerializer(many=True)
+    expires_at = GetPlanSerializer(many=True)
+
+    services = GetServiceItemSerializer(many=True)
+    plans = GetPlanSerializer(many=True)
+
+
 class ServiceSerializer(serializers.Serializer):
 
     class Meta:

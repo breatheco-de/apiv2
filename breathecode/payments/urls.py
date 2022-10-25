@@ -1,7 +1,8 @@
 from django.urls import path
 
-from .views import (AcademyPlanView, AcademySubscriptionView, ConsumableView, InvoiceView, PlanView,
-                    CreditView, ServiceView, ServiceItemView, SubscriptionView)
+from .views import (AcademyPlanView, AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableView,
+                    InvoiceView, PayView, PlanView, CreditView, ServiceView, ServiceItemView,
+                    SubscriptionView)
 
 app_name = 'payments'
 urlpatterns = [
@@ -24,4 +25,8 @@ urlpatterns = [
     path('invoice/<int:invoice_id>', InvoiceView.as_view()),
     path('academy/invoice', InvoiceView.as_view()),
     path('academy/invoice/<int:invoice_id>', InvoiceView.as_view()),
+    path('card', CardView.as_view()),
+    path('bag', BagView.as_view()),
+    path('checking', CheckingView.as_view()),
+    path('pay', PayView.as_view()),
 ]

@@ -1,13 +1,18 @@
+from pyexpat import model
 import re
 from django.contrib.auth.models import Group, User
 from django.db import models
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
-from breathecode.mentorship.models import MentorshipService
+from breathecode.mentorship.models import APPROVED, MentorshipService
 from currencies import Currency as CurrencyFormatter
 from . import signals
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
+
+# ⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇
+# ↕ Remember do not save the card info in the backend ↕
+# ⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆
 
 
 class Currency(models.Model):
@@ -211,8 +216,11 @@ class Invoice(models.Model):
     paid_at = models.DateTimeField()
     status = models.CharField(max_length=10, choices=INVOICE_STATUS, default=PENDING)
 
+    # actually return 18 characters
+    stripe_id = models.CharField(max_length=20, null=True, default=None, blank=True)
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -287,6 +295,11 @@ REPUTATION_STATUS = [
 ]
 
 
+class PaymentContact(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='payment_contact')
+    stripe_id = models.CharField(max_length=20)  # actually return 18 characters
+
+
 class FinancialReputation(models.Model):
     """
     The purpose of this model is to store the reputation of a user, if the user has a bad reputation, the
@@ -316,3 +329,40 @@ class FinancialReputation(models.Model):
             return GOOD
 
         return UNKNOWN
+
+
+CHECKING = 'CHECKING'
+PAID = 'PAID'
+BAG_STATUS = [
+    (CHECKING, 'Checking'),
+    (PAID, 'Paid'),
+]
+
+
+class Bag(models.Model):
+    """
+    Represents a credit that can be used by a user to use a service.
+    """
+
+    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    services = models.ManyToManyField(ServiceItem)
+    plans = models.ManyToManyField(Plan)
+    is_recurrent = models.BooleanField(default=False)
+    was_delivered = models.BooleanField(default=False)
+
+    amount = models.FloatField()
+    token = models.CharField(max_length=40, db_index=True, default=None, null=True, blank=True)
+    expires_at = models.DateTimeField(default=None, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        created = not self.id
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        if created:
+            signals.grant_service_permissions.send(instance=self, sender=self.__class__)

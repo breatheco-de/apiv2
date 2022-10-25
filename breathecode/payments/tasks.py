@@ -3,12 +3,10 @@ from celery import shared_task, Task
 from datetime import datetime
 from breathecode.payments import actions
 
-from breathecode.payments.actions import payWithStripe
+from breathecode.payments.services.stripe import Stripe
 
-from .models import Consumable, Invoice, Subscription, Credit
+from .models import Bag, Consumable, Invoice, Subscription, Credit
 from breathecode.notify import actions as notify_actions
-
-from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +72,8 @@ def renew_subscription(self, subscription_id: int, from_datetime: datetime):
 
     try:
         #FIXME: check what happens if the payment fails
-        invoice: Invoice = payWithStripe()
+        s = Stripe()
+        invoice: Invoice = s.pay(subscription.user)
 
     except Exception:
         value = invoice.currency.format_price(invoice.amount)
@@ -132,3 +131,35 @@ def renew_subscription(self, subscription_id: int, from_datetime: datetime):
             'BUTTON': f'See the invoice',
             # 'LINK': f'{APP_URL}/invoice/{instance.id}',
         })
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def build_subscription(self, bag_id: int, invoice_id: int):
+    logger.info(f'Starting build_subscription for bag {bag_id}')
+
+    if not (bag := Bag.objects.filter(id=bag_id, status='PAID').first()):
+        logger.error(f'Bag with id {bag_id} not found')
+        return
+
+    if not (invoice := Invoice.objects.filter(id=invoice_id, status='FULFILLED').first()):
+        logger.error(f'Invoice with id {invoice_id} not found')
+        return
+
+    #TODO: think about Subscription.valid_until
+    #FIXME: pay_every
+    #FIXME: renew_every
+    subscription = Subscription.objects.create(user=bag.user,
+                                               plans=bag.plans.all(),
+                                               services=bag.services.all(),
+                                               is_recurrent=bag.is_recurrent,
+                                               paid_at=invoice.paid_at,
+                                               status='ACTIVE',
+                                               last_renew=invoice.paid_at)
+
+    subscription.save()
+    subscription.invoices.add(invoice)
+
+    bag.was_delivered = True
+    bag.save()
+
+    logger.info(f'Subscription was created with id {subscription.id}')

@@ -2,7 +2,6 @@ import os
 import logging
 from typing import Optional
 from rest_framework.exceptions import APIException
-from django.db.models import QuerySet
 
 __all__ = ['ValidationException', 'APIException']
 
