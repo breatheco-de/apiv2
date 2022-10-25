@@ -1,9 +1,7 @@
 """
 Test cases for /academy/:id/member/:id
 """
-import os
-import urllib.parse
-import breathecode.notify.actions as actions
+
 from unittest.mock import MagicMock, patch
 from breathecode.services import datetime_to_iso_format
 from django.urls.base import reverse_lazy
@@ -678,6 +676,41 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
 
         data = {'role': role}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {
+            'academy': model.academy.id,
+            'address': model.profile_academy.address,
+            'first_name': model.profile_academy.first_name,
+            'last_name': model.profile_academy.last_name,
+            'phone': model.profile_academy.phone,
+            'role': role,
+            'user': model.user.id,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__with_null_names(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     user={
+                                         'first_name': '',
+                                         'last_name': ''
+                                     },
+                                     role=role,
+                                     capability='crud_member',
+                                     profile_academy=True)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
+
+        data = {'role': role, 'first_name': None, 'last_name': None}
         response = self.client.put(url, data, format='json')
 
         json = response.json()

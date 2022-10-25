@@ -1,0 +1,63 @@
+[
+    {
+        "model": "assessment.assessment",
+        "pk": 1,
+        "fields": {
+            "slug": "html-quiz",
+            "title": "Learn about HTML",
+            "lang": "us",
+            "score_threshold": null,
+            "academy": null,
+            "author": null,
+            "private": false,
+            "original": null,
+            "comment": "<p>Have you read the HTML lesson? Lets see!</p>",
+            "created_at": "2022-10-12T22:13:32.421Z",
+            "updated_at": "2022-10-12T22:13:32.421Z"
+        }
+    },
+    {
+        "model": "assessment.assessment",
+        "pk": 2,
+        "fields": {
+            "slug": "html-quiz-es",
+            "title": "Aprende sobre HTML",
+            "lang": "es",
+            "score_threshold": null,
+            "academy": null,
+            "author": null,
+            "private": false,
+            "original": 1,
+            "comment": "<p>¿Has leído la lección de HTML? ¡Veamos!</p>",
+            "created_at": "2022-10-12T22:13:50.566Z",
+            "updated_at": "2022-10-12T22:13:50.566Z"
+        }
+    },
+    {
+        "model": "assessment.question",
+        "pk": 1,
+        "fields": {
+            "title": "What is our purpose as full-stack web developers?",
+            "help_text": null,
+            "lang": "us",
+            "assessment": 1,
+            "author": null,
+            "question_type": "SELECT",
+            "created_at": "2022-10-12T22:15:37.801Z",
+            "updated_at": "2022-10-12T22:15:37.801Z"
+        }
+    },
+    {
+        "model": "assessment.option",
+        "pk": 1,
+        "fields": {
+            "title": "We have to make sure the client computer works and has no virus.",
+            "help_text": null,
+            "lang": "en",
+            "question": 1,
+            "score": 0.0,
+            "created_at": "2022-10-12T22:16:07.316Z",
+            "updated_at": "2022-10-12T22:16:07.316Z"
+        }
+    }
+]

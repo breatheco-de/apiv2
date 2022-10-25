@@ -3,7 +3,7 @@ from .views import (create_lead, sync_tags_with_active_campaign, sync_automation
                     receive_facebook_lead, get_leads, get_leads_report, AcademyLeadView, AcademyWonLeadView,
                     AcademyTagView, AcademyAutomationView, activecampaign_webhook, googleads_enrollments,
                     googleads_csv, get_downloadable, ShortLinkView, create_lead_from_app, UTMView,
-                    AcademyProcessView, AcademyAppView, AcademyAliasView)
+                    AcademyProcessView, AcademyAppView, AcademyAliasView, ActiveCampaignView)
 
 app_name = 'marketing'
 urlpatterns = [
@@ -33,6 +33,8 @@ urlpatterns = [
     path('downloadable/<str:slug>', get_downloadable, name='single_downloadable'),
 
     # path('report/summary', get_summary, name="report_summary"),
+    path('activecampaign', ActiveCampaignView.as_view(), name='activecampaign'),
+    path('activecampaign/<int:ac_id>', ActiveCampaignView.as_view(), name='activecampaign_id'),
     path('activecampaign/webhook/<int:ac_academy_id>', activecampaign_webhook, name='activecampaign_webhook'),
     path('activecampaign/webhook/<str:academy_slug>', activecampaign_webhook, name='activecampaign_webhook'),
     path('googleads/enrollments/<str:academy_slugs>', googleads_enrollments, name='activecampaign_webhook'),

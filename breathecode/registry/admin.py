@@ -22,7 +22,7 @@ from .models import (
     AssetComment,
     SEOReport,
 )
-from .tasks import async_pull_from_github, async_test_asset, async_execute_seo_report
+from .tasks import async_pull_from_github, async_test_asset, async_execute_seo_report, async_regenerate_asset_readme
 from .actions import pull_from_github, get_user_from_github_username, test_asset
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,13 @@ def pull_content_from_github(modeladmin, request, queryset):
     for a in assets:
         async_pull_from_github.delay(a.slug, request.user.id)
         # pull_from_github(a.slug)  # uncomment for testing purposes
+
+
+def async_regenerate_readme(modeladmin, request, queryset):
+    queryset.update(cleaning_status='PENDING', cleaning_status_details='Starting to clean...')
+    assets = queryset.all()
+    for a in assets:
+        async_regenerate_asset_readme.delay(a.slug)
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -296,6 +303,7 @@ class AssetAdmin(admin.ModelAdmin):
         generate_spanish_translation,
         remove_dot_from_slug,
         load_readme_tasks,
+        async_regenerate_readme,
     ] + change_field(['DRAFT', 'UNASSIGNED', 'PUBLISHED'], name='status') + change_field(['us', 'es'],
                                                                                          name='lang')
 
