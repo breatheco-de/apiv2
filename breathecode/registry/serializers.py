@@ -145,6 +145,10 @@ class AcademyAssetSerializer(AssetSerializer):
     seo_json_status = serpy.Field()
     optimization_rating = serpy.Field()
 
+    cleaning_status = serpy.Field()
+    cleaning_status_details = serpy.Field()
+    last_cleaning_at = serpy.Field()
+
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
 

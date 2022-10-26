@@ -176,9 +176,6 @@ def get_cohorts(request, id=None):
         items = items.exclude(stage='DELETED')
 
     if coordinates := request.GET.get('coordinates', ''):
-        if request.user.id:
-            raise ValidationException('coordinates params must be use without auth',
-                                      slug='coordinates-with-auth')
         try:
             latitude, longitude = coordinates.split(',')
             latitude = float(latitude)

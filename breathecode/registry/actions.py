@@ -242,7 +242,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         return asset
     except Exception as e:
-        # raise e
+
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -417,7 +417,6 @@ def pull_github_lesson(github, asset, override_meta=False):
     logger.debug(f'Fetching readme: {file_path}')
 
     base64_readme = get_blob_content(repo, file_path, branch=branch_name).content
-    asset.readme = base64_readme
     asset.readme_raw = base64_readme
 
     # only the first time a lesson is synched it will override some of the properties
@@ -453,7 +452,8 @@ def clean_asset_readme(asset):
         asset = clean_readme_relative_paths(asset)
         asset = clean_readme_hide_comments(asset)
         readme = asset.get_readme(parse=True)
-        asset.html = readme['html']
+        if 'html' in readme:
+            asset.html = readme['html']
 
         asset.cleaning_status = 'OK'
         asset.save()
@@ -469,6 +469,7 @@ def clean_readme_relative_paths(asset):
     readme = asset.get_readme()
     base_url = os.path.dirname(asset.readme_url)
     relative_urls = list(re.finditer(r'((?:\.\.?\/)+[^)"\']+)', readme['decoded']))
+
     replaced = readme['decoded']
     while len(relative_urls) > 0:
         match = relative_urls.pop(0)
@@ -626,7 +627,6 @@ def pull_learnpack_asset(github, asset, override_meta):
                     raise Exception('No configuration learn.json or bc.json file was found')
 
     base64_readme = str(readme_file.content)
-    asset.readme = base64_readme
     asset.readme_raw = base64_readme
 
     if learn_file is not None and (asset.last_synch_at is None or override_meta):

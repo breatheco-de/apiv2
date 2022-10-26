@@ -26,7 +26,6 @@ from slugify import slugify
 #       # return a dictionary with a list of the fields and errors messages related to them
 #       return {}
 
-
 DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
 UNLISTED = 'UNLISTED'

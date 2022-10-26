@@ -6,7 +6,6 @@ import random
 import string
 from unittest.mock import MagicMock, patch, call
 from django.urls.base import reverse_lazy
-from importlib_metadata import SelectableGroups
 from rest_framework import status
 
 from breathecode.registry.actions import AssetThumbnailGenerator
