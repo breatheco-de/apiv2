@@ -13,7 +13,18 @@ from slugify import slugify
 #     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
 #     @staticmethod
 #     def get(pk):
-#       return AcademySettings.objects.filter(academy__id=pk).first()
+#       settings = AcademySettings.objects.filter(academy__id=pk).first()
+#       # lets create the settings if they dont exist for this academy
+#       if settings is None:
+#           settings = AcademySettings.objects.create(academy=pk)
+#       return settings
+#     def warnings(self):
+#       # return a dictionary with a list of the fields and warning messages related to them
+#       # for example: { "is_video_streaming_active": "Please settup a video streaming" }
+#       return {}
+#     def errors(self):
+#       # return a dictionary with a list of the fields and errors messages related to them
+#       return {}
 
 DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'

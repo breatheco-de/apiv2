@@ -536,13 +536,13 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         lookup = {}
 
-        if 'author' in self.request.GET:
+        if member.role.slug == 'content_writer':
+            items = items.filter(author__id=request.user.id)
+        elif 'author' in self.request.GET:
             param = self.request.GET.get('author')
             lookup['author__id'] = param
 
-        if member.role.slug == 'content_writer':
-            items = items.filter(owner__id=request.user.id)
-        elif 'owner' in self.request.GET:
+        if 'owner' in self.request.GET:
             param = self.request.GET.get('owner')
             lookup['owner__id'] = param
 

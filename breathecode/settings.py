@@ -179,7 +179,7 @@ if IS_TEST_ENV:
     LOGGING_HANDLERS = ['console']
 
 else:
-    LOGGING_HANDLERS = ['coralogix']
+    LOGGING_HANDLERS = ['coralogix', 'console']
 
 logging.config.dictConfig({
     'version': 1,

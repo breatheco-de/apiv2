@@ -178,6 +178,10 @@ class AssetBigSerializer(AssetMidSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
+    delivery_instructions = serpy.Field()
+    delivery_formats = serpy.Field()
+    delivery_regex_url = serpy.Field()
+
     academy = AcademySmallSerializer(required=False)
 
 
