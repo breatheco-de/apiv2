@@ -1,6 +1,6 @@
 from django.http import HttpResponseRedirect
 from breathecode.authenticate.models import ProfileAcademy
-import logging
+import logging, hashlib, os
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
@@ -15,17 +15,26 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils import APIException
-from .models import Task, FinalProject
+from .models import Task, FinalProject, UserAttachment
 from .actions import deliver_task
 from .caches import TaskCache
 from .forms import DeliverAssigntmentForm
+from slugify import slugify
 from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer, TaskGETDeliverSerializer,
-                          FinalProjectGETSerializer, PostFinalProjectSerializer, PUTFinalProjectSerializer)
+                          FinalProjectGETSerializer, PostFinalProjectSerializer, PUTFinalProjectSerializer,
+                          UserAttachmentSerializer, TaskAttachmentSerializer)
 from .actions import sync_cohort_tasks
 import breathecode.assignments.tasks as tasks
 from breathecode.utils.multi_status_response import MultiStatusResponse
 
 logger = logging.getLogger(__name__)
+
+MIME_ALLOW = [
+    'image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'video/quicktime', 'video/mp4', 'audio/mpeg',
+    'application/pdf', 'image/jpg'
+]
+
+USER_ASSIGNMENTS_BUCKET = os.getenv('USER_ASSIGNMENTS_BUCKET', None)
 
 
 class TaskTeacherView(APIView):
@@ -283,6 +292,136 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
 
         serializer = TaskGETSerializer(items, many=True)
         return handler.response(serializer.data)
+
+
+class TaskMeAttachmentView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    def get(self, request, task_id):
+
+        user_id = request.user.id
+
+        item = Task.objects.filter(id=task_id, user__id=user_id).first()
+        if item is None:
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        serializer = TaskAttachmentSerializer(item.attachments.all(), many=True)
+        return Response(serializer.data)
+
+    def upload(self, request, update=False, mime_allow=None):
+        from ..services.google_cloud import Storage
+
+        files = request.data.getlist('file')
+        names = request.data.getlist('name')
+        result = {
+            'data': [],
+            'instance': [],
+        }
+
+        file = request.data.get('file')
+        slugs = []
+
+        if not file:
+            raise ValidationException('Missing file in request', code=400)
+
+        if not len(files):
+            raise ValidationException('empty files in request')
+
+        if not len(names):
+            for file in files:
+                names.append(file.name)
+
+        elif len(files) != len(names):
+            raise ValidationException('numbers of files and names not match')
+
+        if mime_allow is None:
+            mime_allow = MIME_ALLOW
+
+        # files validation below
+        for index in range(0, len(files)):
+            file = files[index]
+            if file.content_type not in mime_allow:
+                raise ValidationException(
+                    f'You can upload only files on the following formats: {",".join(mime_allow)}')
+
+        for index in range(0, len(files)):
+            file = files[index]
+            name = names[index] if len(names) else file.name
+            file_bytes = file.read()
+            hash = hashlib.sha256(file_bytes).hexdigest()
+            slug = str(request.user.id) + '-' + slugify(name)
+
+            slug_number = UserAttachment.objects.filter(slug__startswith=slug).exclude(hash=hash).count() + 1
+            if slug_number > 1:
+                while True:
+                    roman_number = num_to_roman(slug_number, lower=True)
+                    slug = f'{slug}-{roman_number}'
+                    if not slug in slugs:
+                        break
+                    slug_number = slug_number + 1
+
+            slugs.append(slug)
+            data = {
+                'hash': hash,
+                'slug': slug,
+                'mime': file.content_type,
+                'name': name,
+                'categories': [],
+                'user': request.user.id,
+            }
+
+            media = UserAttachment.objects.filter(hash=hash, user__id=request.user.id).first()
+            if media:
+                data['id'] = media.id
+                data['url'] = media.url
+
+            else:
+                # upload file section
+                storage = Storage()
+                cloud_file = storage.file(USER_ASSIGNMENTS_BUCKET, hash)
+                cloud_file.upload(file, content_type=file.content_type)
+                data['url'] = cloud_file.url()
+
+            result['data'].append(data)
+
+        from django.db.models import Q
+        query = None
+        datas_with_id = [x for x in result['data'] if 'id' in x]
+        for x in datas_with_id:
+            if query:
+                query = query | Q(id=x['id'])
+            else:
+                query = Q(id=x['id'])
+
+        if query:
+            result['instance'] = UserAttachment.objects.filter(query)
+
+        return result
+
+    def put(self, request, task_id):
+
+        item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+        if item is None:
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        # TODO: mime types are not being validated on the backend
+        upload = self.upload(request, update=True, mime_allow=None)
+        serializer = UserAttachmentSerializer(upload['instance'],
+                                              data=upload['data'],
+                                              context=upload['data'],
+                                              many=True)
+
+        if serializer.is_valid():
+            serializer.save()
+
+            for att in serializer.instance:
+                item.attachments.add(att)
+                item.save()
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TaskMeView(APIView):

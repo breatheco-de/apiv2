@@ -373,6 +373,20 @@ class Asset(models.Model):
         blank=True,
         help_text='Internal state automatically set by the system based on cleanup')
 
+    delivery_instructions = models.TextField(null=True,
+                                             default=None,
+                                             blank=True,
+                                             help_text='Tell students how to deliver this project')
+    delivery_formats = models.CharField(
+        max_length=255,
+        default='url',
+        help_text='Comma separated list of supported formats. Eg: url, image/png, application/pdf')
+    delivery_regex_url = models.CharField(max_length=255,
+                                          default=None,
+                                          blank=True,
+                                          null=True,
+                                          help_text='Will only be used if "url" is the delivery format')
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
