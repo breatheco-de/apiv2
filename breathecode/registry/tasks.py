@@ -11,7 +11,7 @@ from breathecode.media.views import media_gallery_bucket
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
 from .models import Asset
-from .actions import pull_from_github, screenshots_bucket, test_asset
+from .actions import pull_from_github, screenshots_bucket, test_asset, clean_asset_readme
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class BaseTaskWithRetry(Task):
 def async_pull_from_github(asset_slug, user_id=None):
     logger.debug(f'Synching asset {asset_slug} with data found on github')
     asset = pull_from_github(asset_slug)
-    return asset != 'ERROR'
+    return asset.sync_status != 'ERROR'
 
 
 @shared_task
@@ -47,6 +47,18 @@ def async_test_asset(asset_slug):
         logger.exception(f'Error testing asset {a.slug}')
 
     return False
+
+
+@shared_task
+def async_regenerate_asset_readme(asset_slug):
+    a = Asset.objects.filter(slug=asset_slug).first()
+    if a is None:
+        logger.debug(f'Error: Error running SEO report for asset with slug {asset_slug}, does not exist.')
+
+    a.readme = a.readme_raw
+    a.save()
+    clean_asset_readme(a)
+    return a.cleaning_status == 'OK'
 
 
 @shared_task
@@ -84,7 +96,8 @@ def async_create_asset_thumbnail(asset_slug: str):
             'dimension': '1200x630',
             # this should be fixed if the screenshots is taken without load the content properly
             'delay': 1000,
-        })
+        },
+        timeout=5)
 
     if response.status_code >= 400:
         logger.error('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '

@@ -14,6 +14,7 @@ from breathecode.admissions.models import Academy, Cohort
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from django.db.models import Q
+from django.contrib.auth.models import Permission
 
 logger = logging.getLogger(__name__)
 
@@ -311,7 +312,10 @@ class GetProfileAcademyTinySerializer(serpy.Serializer):
     status = serpy.Field()
 
 
-# Create your models here.
+# this not include the content type
+class GetPermissionSmallSerializer(serpy.Serializer):
+    name = serpy.Field()
+    codename = serpy.Field()
 
 
 class UserSerializer(serpy.Serializer):
@@ -324,6 +328,15 @@ class UserSerializer(serpy.Serializer):
     github = serpy.MethodField()
     roles = serpy.MethodField()
     profile = serpy.MethodField()
+    permissions = serpy.MethodField()
+
+    def get_permissions(self, obj):
+        permissions = Permission.objects.none()
+
+        for group in obj.groups.all():
+            permissions |= group.permissions.all()
+
+        return GetPermissionSmallSerializer(permissions.distinct().order_by('-id'), many=True).data
 
     def get_profile(self, obj):
         if not hasattr(obj, 'profile'):
@@ -773,9 +786,9 @@ class MemberPUTSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
 
         if instance.user.first_name is None or instance.user.first_name == '':
-            instance.user.first_name = instance.first_name
+            instance.user.first_name = instance.first_name or ''
         if instance.user.last_name is None or instance.user.last_name == '':
-            instance.user.last_name = instance.last_name
+            instance.user.last_name = instance.last_name or ''
         instance.user.save()
 
         return super().update(instance, validated_data)

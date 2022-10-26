@@ -120,7 +120,8 @@ class AcademyTeacherView(APIView, GenerateLookupsMixin):
 @permission_classes([AllowAny])
 def handle_test_syllabus(request):
     try:
-        syllabus_log = test_syllabus(request.data, validate_assets=True)
+        ignore = request.GET.get('ignore', '')
+        syllabus_log = test_syllabus(request.data, validate_assets=True, ignore=ignore.lower().split(','))
         return Response(syllabus_log.serialize(), status=syllabus_log.http_status())
     except Exception as e:
         return Response({'details': str(e)}, status=400)
@@ -175,9 +176,6 @@ def get_cohorts(request, id=None):
         items = items.exclude(stage='DELETED')
 
     if coordinates := request.GET.get('coordinates', ''):
-        if request.user.id:
-            raise ValidationException('coordinates params must be use without auth',
-                                      slug='coordinates-with-auth')
         try:
             latitude, longitude = coordinates.split(',')
             latitude = float(latitude)
@@ -213,7 +211,8 @@ def get_cohorts(request, id=None):
     items = items.order_by(sort)
 
     serializer = PublicCohortSerializer(items, many=True)
-    data = sorted(serializer.data, key=lambda x: x['distance']) if coordinates else serializer.data
+    data = sorted(serializer.data,
+                  key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
 
     return Response(data)
 
@@ -1587,6 +1586,7 @@ class SyllabusVersionView(APIView):
 
         serializer = SyllabusVersionSerializer(data=request.data,
                                                context={
+                                                   'request': request,
                                                    'academy': academy,
                                                    'syllabus': syllabus
                                                })
@@ -1615,7 +1615,10 @@ class SyllabusVersionView(APIView):
                                       code=400,
                                       slug='syllabus-not-found')
 
-        serializer = SyllabusVersionPutSerializer(syllabus_version, data=request.data, many=False)
+        serializer = SyllabusVersionPutSerializer(syllabus_version,
+                                                  data=request.data,
+                                                  many=False,
+                                                  context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

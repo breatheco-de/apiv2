@@ -336,6 +336,13 @@ class PublicCohortSerializer(serpy.Serializer):
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
     distance = serpy.MethodField()
+    timezone = serpy.Field()
+    schedule = GetSmallSyllabusScheduleSerializer(required=False)
+    timeslots = serpy.MethodField()
+
+    def get_timeslots(self, obj):
+        timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
+        return SmallCohortTimeSlotSerializer(timeslots, many=True).data
 
     def get_distance(self, obj):
         if not obj.latitude or not obj.longitude or not obj.academy.latitude or not obj.academy.longitude:
@@ -753,6 +760,15 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             logger.debug(f'Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
+        prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
+
+        if is_post_method and 'cohort' in data and data['cohort'].stage in prohibited_stages:
+
+            stage = data['cohort'].stage
+
+            raise ValidationException(f'You cannot add a student to a cohort that is {stage}.',
+                                      slug='adding-student-to-a-closed-cohort')
+
         if cohort.stage == 'DELETED':
             raise ValidationException('cannot add or edit a user to a cohort that has been deleted',
                                       slug='cohort-with-stage-deleted',
@@ -826,7 +842,9 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 class CohortUserListSerializer(serializers.ListSerializer):
 
     def create(self, validated_data):
+
         books = [CohortUser(**item) for item in validated_data]
+
         items = CohortUser.objects.bulk_create(books)
 
         for key in range(0, len(items)):
@@ -965,6 +983,24 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
             },
         }
 
+    def validate(self, data):
+        request = self.context['request']
+
+        _data = super().validate(data)
+        if 'json' in data:
+            try:
+                ignore = request.GET.get('ignore', '')
+                _log = test_syllabus(data['json'], ignore=ignore.lower().split(','))
+                if _log.http_status() != 200:
+                    raise ValidationException(
+                        f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
+                        slug='syllabus-with-errors')
+            except Exception as e:
+                raise ValidationException(f'Error when testing the syllabus: {str(e)}',
+                                          slug='syllabus-with-errors')
+
+        return _data
+
     def create(self, validated_data):
         syllabus = self.context['syllabus']
 
@@ -999,19 +1035,20 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
+        request = self.context['request']
 
         _data = super().validate(data)
         if 'json' in data:
             try:
-                _log = test_syllabus(data['json'])
-                if _log.http_status() == 200:
+                ignore = request.GET.get('ignore', '')
+                _log = test_syllabus(data['json'], ignore=ignore.lower().split(','))
+                if _log.http_status() != 200:
                     raise ValidationException(
-                        'There are some errors in your syllabus, please validate before submitting',
+                        f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
                         slug='syllabus-with-errors')
-            except:
-                raise ValidationException(
-                    'There are some errors in your syllabus, please validate before submitting',
-                    slug='syllabus-with-errors')
+            except Exception as e:
+                raise ValidationException(f'Error when testing the syllabus: {str(e)}',
+                                          slug='syllabus-with-errors')
 
         return _data
 

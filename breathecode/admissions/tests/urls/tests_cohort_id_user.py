@@ -70,7 +70,9 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
 
     model_kwargs = {
         'authenticate': True,
-        'cohort': True,
+        'cohort': {
+            'stage': 'STARTED'
+        },
         'user': True,
         'profile_academy': True,
         'role': role,
@@ -198,7 +200,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user__post__without_profile_academy(self):
         """Test /cohort/:id/user without auth"""
-        model = self.generate_models(authenticate=True, cohort=True, user=True)
+        model = self.generate_models(authenticate=True, user=True, cohort=1)
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'user': model['user'].id,
@@ -229,8 +231,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'cohort-with-stage-deleted', 'status_code': 400}
-
+        expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -246,7 +247,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post(self):
         """Test /cohort/:id/user without auth"""
-        model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     cohort={'stage': 'STARTED'},
+                                     user=True,
+                                     profile_academy=True)
         models_dict = self.bc.database.list_of('admissions.CohortUser')
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {
@@ -279,7 +283,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__status_in_upper_and_lower(self):
         """Test /cohort/:id/user without auth"""
-        model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     cohort={'stage': 'STARTED'},
+                                     user=True,
+                                     profile_academy=True)
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model.cohort.id})
 
         roles = ['TEACHER', 'ASSISTANT', 'STUDENT', 'REVIEWER']
@@ -324,20 +331,20 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
     def test_cohort_id_user__post__in_bulk__cohort_with_stage_deleted(self):
         """Test /cohort/:id/user without auth"""
-        cohort_kwargs = {'stage': 'DELETED'}
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     cohort_kwargs=cohort_kwargs)
+
+        model = self.generate_models(
+            authenticate=True,
+            cohort={'stage': 'DELETED'},
+            user=True,
+            profile_academy=True,
+        )
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = [{
             'user': model['user'].id,
         }]
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'cohort-with-stage-deleted', 'status_code': 400}
-
+        expected = {'detail': 'adding-student-to-a-closed-cohort', 'status_code': 400}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
@@ -364,7 +371,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__in_bulk__with_one_item(self):
         """Test /cohort/:id/user without auth"""
-        model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     cohort={'stage': 'STARTED'},
+                                     user=True,
+                                     profile_academy=True)
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = [{
             'user': model['user'].id,
@@ -395,7 +405,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_cohort_id_user__post__in_bulk__with_two_items(self):
         """Test /cohort/:id/user without auth"""
-        base = self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        base = self.generate_models(authenticate=True, cohort={'stage': 'STARTED'}, profile_academy=True)
         del base['user']
 
         models = [self.generate_models(user=True, models=base) for _ in range(0, 2)]
@@ -405,6 +415,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         } for model in models]
         response = self.client.post(url, data, format='json')
         json = response.json()
+
         expected = [
             post_serializer(self,
                             model.cohort,
@@ -448,7 +459,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         models = [
             self.generate_models(authenticate=True,
-                                 cohort=True,
+                                 cohort={'stage': 'STARTED'},
                                  user=True,
                                  profile_academy=True,
                                  cohort_user=True,
@@ -461,7 +472,9 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         del base['cohort']
         del base['cohort_user']
 
-        models = models + [self.generate_models(cohort=True, user=True, cohort_user=True, models=base)]
+        models = models + [
+            self.generate_models(cohort={'stage': 'STARTED'}, user=True, cohort_user=True, models=base)
+        ]
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': models[1]['cohort'].id})
         data = {
             'user': models[0]['user'].id,
@@ -469,11 +482,11 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
-            'status_code':
-            400,
             'detail': ('This student is already in another cohort for the same '
                        'certificate, please mark him/her hi educational status on '
-                       'this prior cohort different than ACTIVE before cotinuing')
+                       'this prior cohort different than ACTIVE before cotinuing'),
+            'status_code':
+            400
         }
 
         self.assertEqual(json, expected)
@@ -489,7 +502,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     def test_cohort_id_user__post__twice(self):
         """Test /cohort/:id/user without auth"""
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      cohort_user=True)
@@ -515,7 +528,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     def test_cohort_id_user__post__one_teacher__role_student(self):
         """Test /cohort/:id/user without auth"""
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      role='student')
@@ -654,7 +667,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user__post__two_teacher(self):
         """Test /cohort/:id/user without auth"""
-        models = [self.generate_models(authenticate=True, cohort=True, profile_academy=True, role='staff')]
+        models = [
+            self.generate_models(authenticate=True,
+                                 cohort={'stage': 'STARTED'},
+                                 profile_academy=True,
+                                 role='staff')
+        ]
 
         base = models[0].copy()
         del base['user']
@@ -669,11 +687,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
 
-        expected = {
-            'status_code': 400,
-            'detail': 'There can only be one main instructor in a cohort',
-        }
-
+        expected = {'detail': 'There can only be one main instructor in a cohort', 'status_code': 400}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -688,7 +702,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         task = {'task_status': 'PENDING', 'task_type': 'PROJECT', 'associated_slug': 'testing-slug'}
         model = self.generate_models(authenticate=True,
-                                     cohort=True,
+                                     cohort={'stage': 'STARTED'},
                                      user=True,
                                      profile_academy=True,
                                      task=task,
@@ -710,8 +724,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
-            'status_code': 400,
             'detail': 'User has tasks with status pending the educational status cannot be GRADUATED',
+            'status_code': 400
         }
 
         self.assertEqual(json, expected)
@@ -726,7 +740,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user__post__with_unsuccess_finantial_status(self):
         """Test /cohort/:id/user without auth"""
-        model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     cohort={'stage': 'STARTED'},
+                                     user=True,
+                                     profile_academy=True)
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'user': model['user'].id,
@@ -736,8 +753,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
-            'status_code': 400,
             'detail': 'Cannot be marked as `GRADUATED` if its financial status is `LATE`',
+            'status_code': 400
         }
 
         self.assertEqual(json, expected)

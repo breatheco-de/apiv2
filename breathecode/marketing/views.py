@@ -1,4 +1,4 @@
-import os, re, datetime, logging, csv, pytz, secrets, json
+import os, re, datetime, logging, csv, pytz, json
 from urllib import parse
 from django.utils import timezone
 from datetime import timedelta
@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination, validate_captcha)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
@@ -29,6 +29,8 @@ from .serializers import (
     UTMSmallSerializer,
     LeadgenAppSmallSerializer,
     AcademyAliasSmallSerializer,
+    ActiveCampaignAcademyBigSerializer,
+    ActiveCampaignAcademySerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import sync_tags, sync_automations
@@ -38,7 +40,6 @@ from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
-from breathecode.services.google_cloud import Recaptcha
 
 logger = logging.getLogger(__name__)
 
@@ -81,15 +82,11 @@ def get_downloadable(request, slug=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):
-
     data = request.data.copy()
 
     # remove spaces from phone
     if 'phone' in data:
         data['phone'] = data['phone'].replace(' ', '')
-
-    if 'referral_code' in data and 'referral_key' not in data:
-        data['referral_key'] = data['referral_code']
 
     if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
         print('Ignoring lead because its coming from development team')
@@ -390,6 +387,13 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
         if like is not None:
             items = items.filter(slug__icontains=like)
 
+        status = request.GET.get('status', None)
+        if status is not None:
+            aproved = True
+            if status == 'DISPUTED':
+                aproved = False
+            items = items.filter(disputed_at__isnull=aproved)
+
         types = request.GET.get('type', None)
         if types is not None:
             _types = types.split(',')
@@ -604,6 +608,22 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('location')
             lookup['location'] = param
 
+        if 'utm_medium' in self.request.GET:
+            param = self.request.GET.get('utm_medium')
+            items = items.filter(utm_medium__icontains=param)
+
+        if 'utm_url' in self.request.GET:
+            param = self.request.GET.get('utm_url')
+            items = items.filter(utm_url__icontains=param)
+
+        if 'utm_campaign' in self.request.GET:
+            param = self.request.GET.get('utm_campaign')
+            items = items.filter(utm_campaign__icontains=param)
+
+        if 'tags' in self.request.GET:
+            lookups = self.generate_lookups(request, many_fields=['tags'])
+            items = items.filter(tag_objects__slug__in=lookups['tags__in'])
+
         items = items.filter(**lookup)
 
         like = request.GET.get('like', None)
@@ -646,6 +666,54 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             item.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class ActiveCampaignView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_lead')
+    def get(self, request, academy_id=None):
+
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+        if ac_academy is None:
+            raise ValidationException('Active Campaign Academy not found', 404)
+
+        serializer = ActiveCampaignAcademyBigSerializer(ac_academy)
+        return Response(serializer.data, status=200)
+
+    @capable_of('crud_lead')
+    def post(self, request, academy_id=None):
+
+        serializer = ActiveCampaignAcademySerializer(data=request.data,
+                                                     context={
+                                                         'request': request,
+                                                         'academy': academy_id
+                                                     })
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_lead')
+    def put(self, request, ac_id, academy_id=None):
+
+        ac_academy = ActiveCampaignAcademy.objects.filter(id=ac_id, academy__id=academy_id).first()
+        if ac_academy is None:
+            raise ValidationException(f'Active Campaign {ac_id} not found', slug='active-campaign-not-found')
+        serializer = ActiveCampaignAcademySerializer(ac_academy,
+                                                     data=request.data,
+                                                     context={
+                                                         'request': request,
+                                                         'academy': academy_id
+                                                     })
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):

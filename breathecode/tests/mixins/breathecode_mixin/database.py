@@ -1,8 +1,11 @@
+from __future__ import annotations
 from typing import Any, Optional
 from rest_framework.test import APITestCase
 from django.apps import apps
 from channels.db import database_sync_to_async
 from django.db.models import Model
+from . import interfaces
+
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
 
@@ -14,9 +17,11 @@ class Database:
 
     _cache: dict[str, Model] = {}
     _parent: APITestCase
+    _bc: interfaces.BreathecodeInterface
 
-    def __init__(self, parent) -> None:
+    def __init__(self, parent, bc: interfaces.BreathecodeInterface) -> None:
         self._parent = parent
+        self._bc = bc
 
     @classmethod
     def get_model(cls, path: str) -> Model:
