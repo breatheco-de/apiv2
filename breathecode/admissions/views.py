@@ -360,7 +360,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
             if not User.objects.filter(id=int(data['user'])).exists():
                 raise ValidationException("User not found", code=400)
 
-            if not Cohort.objects.filter(id=int(data['cohort'])).exists()):
+            if not Cohort.objects.filter(id=int(data['cohort'])).exists():
                 raise ValidationException('Cohort not found', code=400)
 
             return data
