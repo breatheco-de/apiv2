@@ -880,12 +880,13 @@ class UploadView(APIView):
         print('csvUpload: ', csv_upload)
         csv_upload.save()
 
-        # for num in range(len(df)):
-        #     value = df.iloc[num]
-        #     print('Value: ', value)
-        #     print('Dict Value: ', dict(value))
-        #     tasks.create_form_entry.delay(dict(value), csv_upload.id)
-        #     print('Dict After Value: ', dict(value))
+        for num in range(len(df)):
+            value = df.iloc[num]
+            print('Value: ', value)
+            print('Dict Value: ', dict(value))
+            logger.info(dict(value))
+            tasks.create_form_entry.delay(dict(value), csv_upload.id)
+            print('Dict After Value: ', dict(value))
 
         return data
 
