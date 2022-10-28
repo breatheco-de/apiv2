@@ -885,7 +885,7 @@ class UploadView(APIView):
             print('Value: ', value)
             print('Dict Value: ', dict(value))
             logger.info(dict(value))
-            tasks.create_form_entry.delay(dict(value), csv_upload.id)
+            tasks.create_form_entry.delay(csv_upload.id, **dict(value))
             print('Dict After Value: ', dict(value))
 
         return data

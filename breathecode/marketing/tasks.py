@@ -368,7 +368,7 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def create_form_entry(self, item, csv_upload_id):
+def create_form_entry(self, csv_upload_id, **item):
 
     logger.info('Create form entry started')
 
