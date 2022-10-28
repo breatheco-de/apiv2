@@ -854,25 +854,64 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
+    access_token = serializers.SerializerMethodField()
 
     class Meta:
         model = UserInvite
 
-        fields = ('id', 'email', 'first_name', 'last_name', 'phone')
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'access_token')
 
     def validate(self, data: dict[str, str]):
         if 'email' not in data:
             raise ValidationException('Email is required', slug='without-email')
 
-        if UserInvite.objects.filter(email=data['email'], status='WAITING_LIST').exists():
+        if not self.instance and UserInvite.objects.filter(email=data['email'],
+                                                           status='WAITING_LIST').exists():
             raise ValidationException('User already exists in the waiting list', slug='user-invite-exists')
 
-        if User.objects.filter(email=data['email']).exists():
+        user = User.objects.filter(email=data['email']).first()
+
+        if not self.instance and user:
             raise ValidationException('User already exists, go ahead and log in instead.', slug='user-exists')
+
+        self.user = user
 
         now = str(timezone.now())
 
-        data['status'] = 'WAITING_LIST'
-        data['token'] = hashlib.sha1((now + data['email']).encode('UTF-8')).hexdigest()
+        cohort = data.get('cohort')
+        if cohort and cohort.academy and cohort.academy.available_as_saas == True:
+            data['academy'] = cohort.academy
+            data['cohort'] = cohort
+            data['status'] = 'ACCEPTED'
+
+        else:
+            data['status'] = 'WAITING_LIST'
+
+        self.cohort = cohort
+
+        if not self.instance:
+            data['token'] = hashlib.sha1((now + data['email']).encode('UTF-8')).hexdigest()
 
         return data
+
+    def get_access_token(self, obj: UserInvite):
+        if not self.cohort or not self.cohort.academy or self.cohort.academy.available_as_saas != True:
+            return None
+
+        if not self.user:
+            self.user = User(email=obj.email,
+                             username=obj.email,
+                             first_name=obj.first_name,
+                             last_name=obj.last_name,
+                             is_staff=False,
+                             is_active=True)
+            self.user.save()
+
+            notify_actions.send_email_message(
+                'pick_password', self.user.email, {
+                    'SUBJECT': 'Set your password at 4Geeks',
+                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
+                })
+
+        token, _ = Token.get_or_create(user=self.user, token_type='login')
+        return token.key
