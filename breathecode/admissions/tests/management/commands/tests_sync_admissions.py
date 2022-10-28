@@ -1,20 +1,22 @@
 """
 Test /academy/cohort
 """
-import os, json, datetime
+import datetime
+import json
+import os
 from unittest.mock import patch
+
 from mixer.backend.django import mixer
+
 # from random import randint
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
-from ...mixins import AdmissionsTestCase
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_blob_mock,
+                                     apply_google_cloud_bucket_mock, apply_google_cloud_client_mock)
+
 from ....management.commands.sync_admissions import Command
-from ....models import Cohort, User, CohortUser
-from ...mocks import (LEGACY_API_PATH, apply_screenshotmachine_requests_get_mock)
+from ....models import Cohort, CohortUser, User
+from ...mixins import AdmissionsTestCase
+from ...mocks import LEGACY_API_PATH, apply_screenshotmachine_requests_get_mock
+
 # from ...utils import GenerateModels
 
 HOST = os.environ.get('OLD_BREATHECODE_API')
