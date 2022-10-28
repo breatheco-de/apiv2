@@ -12,6 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         utc_now = timezone.now()
+        #TODO: is_auto_renew
         subscriptions = Subscription.objects.filter(
             valid_until__lte=utc_now, renew_credits_at__lte=utc_now +
             timedelta(hours=2)).exclude(status='CANCELLED').exclude(status='DEPRECATED')

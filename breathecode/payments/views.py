@@ -521,6 +521,7 @@ class CheckingView(APIView):
         bag.token = Token.generate_key()
         bag.expires_at = utc_now + timedelta(minutes=10)
 
+        #FIXME:
         handler = self.extensions(request)
 
         items = Bag.objects.filter(user=request.user)

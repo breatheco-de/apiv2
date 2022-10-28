@@ -162,4 +162,6 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     bag.was_delivered = True
     bag.save()
 
+    #TODO: remove the bag
+
     logger.info(f'Subscription was created with id {subscription.id}')

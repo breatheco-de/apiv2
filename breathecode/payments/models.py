@@ -97,7 +97,7 @@ SERVICE_UNITS = [
 ]
 
 
-class CommonServiceItem:
+class ICommonServiceItem:
     """
     Common fields for ServiceItem and Consumable.
     """
@@ -113,10 +113,13 @@ class CommonServiceItem:
 
 
 # this class is used as referenced of units of a service can be used
-class ServiceItem(models.Model, CommonServiceItem):
+class ServiceItem(models.Model, ICommonServiceItem):
     """
     This model is used as referenced of units of a service can be used.
     """
+
+    renew_every = models.IntegerField(default=1)
+    renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     pass
 
@@ -140,6 +143,7 @@ PLAN_STATUS = [
     (DRAFT, 'Draft'),
     (VISIBLE, 'Visible'),
     (HIDDEN, 'Hidden'),
+    #TODO: inactive
     (DELETED, 'Deleted'),
 ]
 
@@ -154,6 +158,7 @@ class Plan(models.Model):
     description = models.CharField(max_length=255)
     status = models.CharField(max_length=7, choices=PLAN_STATUS, default=DRAFT)
     prices = models.ManyToManyField(Price)
+    #TODO: visible enum, private, unlisted, visible
 
     renew_every = models.IntegerField(default=1)
     renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
@@ -180,7 +185,7 @@ SUBSCRIPTION_STATUS = [
 
 
 # this class can be consumed by the api
-class Consumable(models.Model, CommonServiceItem):
+class Consumable(models.Model, ICommonServiceItem):
     """
     This model is used to represent the units of a service that can be consumed.
     """
@@ -236,7 +241,7 @@ class Subscription(models.Model):
 
     is_cancellable = models.BooleanField(default=True)
     is_refundable = models.BooleanField(default=True)
-    is_recurrent = models.BooleanField(default=True)
+    is_auto_renew = models.BooleanField(default=True)
     invoices = models.ManyToManyField(Invoice)
 
     # if null, this is valid until resources are exhausted
@@ -251,6 +256,7 @@ class Subscription(models.Model):
     renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    #TODO: the services and plans needs to be renew to a different timedelta
     services = models.ManyToManyField(ServiceItem)
     plans = models.ManyToManyField(Plan)
 
@@ -345,9 +351,11 @@ class Bag(models.Model):
     """
 
     status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     services = models.ManyToManyField(ServiceItem)
     plans = models.ManyToManyField(Plan)
+
     is_recurrent = models.BooleanField(default=False)
     was_delivered = models.BooleanField(default=False)
 

@@ -6,6 +6,8 @@ from .views import (AcademyPlanView, AcademySubscriptionView, BagView, CardView,
 
 app_name = 'payments'
 urlpatterns = [
+    #TODO generate plans and services from yml
+    # create and renew, never delete
     path('plan', PlanView.as_view()),
     path('plan/<slug:plan_slug>', PlanView.as_view()),
     path('academy/plan', AcademyPlanView.as_view()),
