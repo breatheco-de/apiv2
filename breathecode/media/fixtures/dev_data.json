@@ -1,0 +1,31 @@
+[
+    {
+        "model": "media.category",
+        "pk": 1,
+        "fields": {
+            "slug": "blog",
+            "name": "Used in Blog",
+            "created_at": "2022-10-13T13:53:19.446Z",
+            "updated_at": "2022-10-13T13:53:19.446Z"
+        }
+    },
+    {
+        "model": "media.media",
+        "pk": 1,
+        "fields": {
+            "slug": "eventbrite-software-architecture-jpg",
+            "name": "Eventbrite-Software-Architecture.jpg",
+            "mime": "image/jpeg",
+            "url": "https://storage.googleapis.com/media-breathecode/25b6f62e793735da78108fd303ba951d7c99780f9f28a8d20f7de190604abfdf",
+            "thumbnail": "https://storage.googleapis.com/media-breathecode/25b6f62e793735da78108fd303ba951d7c99780f9f28a8d20f7de190604abfdf-thumbnail",
+            "hash": "25b6f62e793735da78108fd303ba951d7c99780f9f28a8d20f7de190604abfdf",
+            "hits": 0,
+            "academy": 1,
+            "created_at": "2022-10-13T13:54:21.586Z",
+            "updated_at": "2022-10-13T13:54:21.586Z",
+            "categories": [
+                1
+            ]
+        }
+    }
+]
