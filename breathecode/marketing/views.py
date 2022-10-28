@@ -890,7 +890,9 @@ class UploadView(APIView):
         result = []
         for file in files:
             upload = self.upload(file, academy_id, update=True)
+            print('This is the upload', upload)
             result.append(upload)
+        print('This is the result', result)
         return Response(result, status=status.HTTP_200_OK)
 
 
