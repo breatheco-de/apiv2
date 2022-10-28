@@ -28,6 +28,7 @@ def get_serializer(asset_technology, assets=[], asset_technologies=[]):
         } if asset_technology.parent else None,
         'slug': asset_technology.slug,
         'title': asset_technology.title,
+        'sort_priority': asset_technology.sort_priority,
     }
 
 
@@ -152,12 +153,12 @@ class RegistryTestSuite(RegistryTestCase):
     def test_with_two_asset_technologies__passing_include_children_as_true(self):
         self.headers(academy=1)
         asset_technologies = [{'parent_id': n} for n in range(1, 3)]
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     role=1,
-                                     asset=1,
-                                     asset_technology=asset_technologies,
-                                     capability='read_technology')
+        model = self.bc.database.create(authenticate=True,
+                                        profile_academy=True,
+                                        role=1,
+                                        asset=1,
+                                        asset_technology=asset_technologies,
+                                        capability='read_technology')
         url = reverse_lazy('registry:academy_technology') + '?include_children=true'
         response = self.client.get(url)
         json = response.json()
