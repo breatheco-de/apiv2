@@ -10,6 +10,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from breathecode.notify import actions as notify_actions
+from breathecode.authenticate.models import Token
 
 from ..mixins.new_auth_test_case import AuthTestCase
 
@@ -187,6 +188,7 @@ class SubscribeTestSuite(AuthTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
     @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
     def test_task__put__without_email(self):
         url = reverse_lazy('authenticate:subscribe')
         response = self.client.put(url)
@@ -199,6 +201,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.assertEqual(Token.get_or_create.call_args_list, [])
 
     """
     🔽🔽🔽 Put with UserInvite, passing Cohort as None
@@ -206,6 +209,7 @@ class SubscribeTestSuite(AuthTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
     @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
     def test_task__put__with_user_invite__cohort_as_none(self):
         token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
         user_invite = {
@@ -254,6 +258,7 @@ class SubscribeTestSuite(AuthTestCase):
                          }])
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.assertEqual(Token.get_or_create.call_args_list, [])
 
     """
     🔽🔽🔽 Put with UserInvite, passing Cohort not found
@@ -261,6 +266,7 @@ class SubscribeTestSuite(AuthTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
     @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
     def test_task__put__with_user_invite__cohort_not_found(self):
         token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
         user_invite = {
@@ -308,6 +314,7 @@ class SubscribeTestSuite(AuthTestCase):
                          }])
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.assertEqual(Token.get_or_create.call_args_list, [])
 
     """
     🔽🔽🔽 Put with UserInvite, passing Cohort and it found
@@ -315,6 +322,7 @@ class SubscribeTestSuite(AuthTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
     @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
     def test_task__put__with_user_invite__cohort_found(self):
         token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
         user_invite = {
@@ -366,6 +374,7 @@ class SubscribeTestSuite(AuthTestCase):
                          }])
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.assertEqual(Token.get_or_create.call_args_list, [])
 
     """
     🔽🔽🔽 Put with UserInvite, passing Cohort and it found, Academy available as saas, User does not exists
@@ -373,6 +382,7 @@ class SubscribeTestSuite(AuthTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
     @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
     def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__user_does_not_exists(self):
         token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
         user_invite = {
@@ -451,12 +461,18 @@ class SubscribeTestSuite(AuthTestCase):
                 })
         ])
 
+        user = self.bc.database.get('auth.User', 1, dict=False)
+        self.assertEqual(Token.get_or_create.call_args_list, [
+            call(user=user, token_type='login', hours_length=0.25),
+        ])
+
     """
     🔽🔽🔽 Put with UserInvite, passing Cohort and it found, Academy available as saas, User exists
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
     @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
     def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__user_exists(self):
         token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
         user_invite = {
@@ -513,3 +529,6 @@ class SubscribeTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.assertEqual(Token.get_or_create.call_args_list, [
+            call(user=model.user, token_type='login', hours_length=0.25),
+        ])

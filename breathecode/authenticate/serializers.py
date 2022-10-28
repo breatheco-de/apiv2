@@ -913,5 +913,5 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
                 })
 
-        token, _ = Token.get_or_create(user=self.user, token_type='login')
+        token, _ = Token.get_or_create(user=self.user, token_type='login', hours_length=1 / 4)
         return token.key
