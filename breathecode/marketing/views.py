@@ -38,7 +38,7 @@ from .serializers import (
     ActiveCampaignAcademySerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
-from .actions import sync_tags, sync_automations
+from .actions import convert_data_frame, sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField, AcademyAlias
 from breathecode.admissions.models import Academy
@@ -885,7 +885,8 @@ class UploadView(APIView):
             print('Value: ', value)
             print('Dict Value: ', dict(value))
             logger.info(dict(value))
-            tasks.create_form_entry.delay(csv_upload.id, **dict(value))
+            parsed = convert_data_frame(dict(value))
+            tasks.create_form_entry.delay(csv_upload.id, **parsed)
             print('Dict After Value: ', dict(value))
 
         return data
