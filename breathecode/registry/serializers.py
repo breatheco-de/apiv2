@@ -1,4 +1,5 @@
 import serpy, base64
+from slugify import slugify
 from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
@@ -406,10 +407,26 @@ class TechnologyPUTSerializer(serializers.ModelSerializer):
 
 
 class PostAssetCommentSerializer(serializers.ModelSerializer):
+    asset = serializers.CharField(required=True)
 
     class Meta:
         model = AssetComment
         exclude = ()
+
+    def validate(self, data):
+
+        academy_id = self.context.get('academy')
+        asset = None
+        if 'asset' in data:
+            if data['asset'].isnumeric():
+                asset = Asset.objects.filter(id=data['asset'], academy__id=academy_id).first()
+            elif data['asset'] != '':
+                asset = Asset.objects.filter(slug=data['asset'], academy__id=academy_id).first()
+
+        if asset is None:
+            raise ValidationException(f'Asset {data["asset"]} not found for academy {academy_id}')
+
+        return super().validate({**data, 'asset': asset})
 
 
 class PutAssetCommentSerializer(serializers.ModelSerializer):
@@ -470,6 +487,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
             if self.instance.test_status != 'OK':
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
+
+        if 'slug' in data:
+            data['slug'] = slugify(data['slug']).lower()
 
         validated_data = super().validate(data)
         return validated_data

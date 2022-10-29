@@ -228,6 +228,7 @@ ASSET_SYNC_STATUS = (
     ('ERROR', 'Error'),
     ('OK', 'Ok'),
     ('WARNING', 'Warning'),
+    ('NEEDS_RESYNC', 'Needs Resync'),
 )
 
 
@@ -679,3 +680,29 @@ class SEOReport(models.Model):
 
     def to_json(self, rating, msg):
         return {'rating': self.get_rating(), 'log': self.__log}
+
+
+class AssetImage(models.Model):
+    name = models.CharField(max_length=150)
+    mime = models.CharField(max_length=60)
+    bucket_url = models.URLField(max_length=255)
+    original_url = models.URLField(max_length=255)
+    hash = models.CharField(max_length=64)
+
+    assets = models.ManyToManyField(Asset, blank=True, related_name='images')
+
+    last_download_at = models.DateTimeField(null=True, blank=True, default=None)
+    download_details = models.TextField(null=True, blank=True, default=None)
+    download_status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default='PENDING',
+        null=True,
+        blank=True,
+        help_text='Internal state automatically set by the system based on download')
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.id})'

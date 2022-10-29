@@ -1,7 +1,8 @@
 import logging, json
 from django.dispatch import receiver
-from .models import Asset, AssetAlias
-from .tasks import async_regenerate_asset_readme
+from django.db.models.signals import post_delete
+from .models import Asset, AssetAlias, AssetImage
+from .tasks import (async_regenerate_asset_readme, async_delete_asset_images, async_remove_img_from_cloud)
 from .signals import asset_slug_modified, asset_readme_modified
 from breathecode.assignments.signals import assignment_created
 from breathecode.assignments.models import Task
@@ -28,6 +29,18 @@ def post_asset_slug_modified(sender, instance: Asset, **kwargs):
 def post_asset_readme_modified(sender, instance: Asset, **kwargs):
     logger.debug('Cleaning asset raw readme')
     async_regenerate_asset_readme.delay(instance.slug)
+
+
+@receiver(post_delete, sender=Asset)
+def post_asset_deleted(sender, instance: Asset, **kwargs):
+    logger.debug('Asset deleted, removing images from bucket and other cleanup steps')
+    async_delete_asset_images.delay(instance.slug)
+
+
+@receiver(post_delete, sender=AssetImage)
+def post_assetimage_deleted(sender, instance: Asset, **kwargs):
+    logger.debug('AssetImage deleted, removing image from buckets')
+    async_remove_img_from_cloud.delay(instance.id)
 
 
 @receiver(assignment_created, sender=Task)

@@ -1,4 +1,4 @@
-import logging
+import logging, os
 from io import StringIO
 from google.cloud.storage import Bucket, Blob
 
@@ -27,9 +27,8 @@ class File:
         """Upload Blob from Bucket"""
         self.blob = self.bucket.blob(self.file_name)
 
-        if isinstance(content, str) or isinstance(content, bytes):
+        if (isinstance(content, str) or isinstance(content, bytes)):
             self.blob.upload_from_string(content, content_type=content_type)
-
         else:
             content.seek(0)
             self.blob.upload_from_file(content, content_type=content_type)
