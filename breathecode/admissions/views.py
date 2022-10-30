@@ -1,10 +1,10 @@
 import logging
-from django.http import HttpResponseRedirect
 
 import pytz
 from django.contrib.auth.models import AnonymousUser, User
-from django.db.models import FloatField, Max, Q, Value
+from django.db.models import ExpressionWrapper, F, FloatField, Max, Q, Value
 from django.forms import FloatField
+from django.http import HttpResponseRedirect
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -142,13 +142,35 @@ def get_public_syllabus(request, id=None):
     return Response(serializer.data)
 
 
+# class FField(FloatField):
+
+#     def get_internal_type(self):
+#         return ''
+
+#     def get_db_prep_value(self, n1, connection):
+#         return 0.0
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_cohorts(request, id=None):
 
     items = Cohort.objects.filter(private=False)
 
-    items = items.annotate(longitude=Value(None, FloatField()), latitude=Value(None, FloatField()))
+    # items = items.annotate(longitude=Value(None, FloatField()), output_field=FloatField())
+    # items = items.annotate(latitude=Value(None, FloatField()), output_field=FloatField())
+
+    # items = items.annotate(longitude=ExpressionWrapper(Value(None), output_field=FloatField()))
+    # items = items.annotate(latitude=ExpressionWrapper(Value(None), output_field=FloatField()))
+    items = items.annotate(longitude=Value(None, output_field=FloatField()),
+                           latitude=Value(None, output_field=FloatField()))
+
+    # items = items.annotate(longitude=Value(None, FField()), latitude=Value(None, FField()))
+    # items = items.annotate(longitude=Value(None), latitude=Value(None))
+    # items = items.annotate(longitude=Value(1.2, FloatField()), latitude=Value(1.2, FloatField()))
+
+    # items = items.annotate(longitude=Value(None, FloatField()))
+    # items = items.annotate(latitude=Value(None, FloatField()))
 
     if isinstance(request.user, AnonymousUser) == False:
         # filter only to the local academy
@@ -190,6 +212,9 @@ def get_cohorts(request, id=None):
 
         items = items.annotate(longitude=Value(longitude, FloatField()),
                                latitude=Value(latitude, FloatField()))
+        # items = items.annotate(longitude=ExpressionWrapper(Value(longitude), output_field=FloatField()))
+        # items = items.annotate(latitude=ExpressionWrapper(Value(latitude), output_field=FloatField()))
+        # items = items.annotate(longitude=Value(longitude, FField()), latitude=Value(latitude, FField()))
 
     saas = request.GET.get('saas', '').lower()
     if saas == 'true':
@@ -208,12 +233,15 @@ def get_cohorts(request, id=None):
 
     items = items.order_by(sort)
 
+    # print('=================', len(items))
+    # print('=================', type(items))
+    # print('=================', items)
     serializer = PublicCohortSerializer(items, many=True)
-    print('=================')
-    print(serializer.data)
-    print('-----------------')
-    print(coordinates)
-    print('=================')
+    # print('=================')
+    # print(serializer.data)
+    # print('-----------------')
+    # print(coordinates)
+    # print('=================')
     data = sorted(serializer.data,
                   key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
 
