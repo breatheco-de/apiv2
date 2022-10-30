@@ -562,7 +562,6 @@ class ViewTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        assert 0
 
     """
     🔽🔽🔽 View get id

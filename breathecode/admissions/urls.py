@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserView, AcademyCohortView,
-                    SyllabusVersionView, SyllabusView, get_timezones, UserView, UserMeView,
+from .views import (AcademyActivateView, AcademyView, CohortClassRoomView, CohortMeView, CohortUserView,
+                    AcademyCohortView, SyllabusVersionView, SyllabusView, get_timezones, UserView, UserMeView,
                     AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView, SyllabusScheduleView,
                     get_all_academies, get_cohorts, AcademyCohortTimeSlotView, handle_test_syllabus,
                     AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
@@ -20,10 +20,10 @@ urlpatterns = [
 
     # new endpoints (replacing above)
     path('academy/cohort/user', AcademyCohortUserView.as_view(), name='academy_cohort_user'),
-    path('academy/cohort/<str:cohort_id>/log',
+    path('academy/cohort/<int:cohort_id>/log',
          AcademyCohortHistoryView.as_view(),
          name='academy_cohort_id_history'),
-    path('academy/cohort/<str:cohort_id>', AcademyCohortView.as_view(), name='academy_cohort_id'),
+    path('academy/cohort/<int:cohort_id>', AcademyCohortView.as_view(), name='academy_cohort_id'),
     path('academy/cohort/<int:cohort_id>/user/<int:user_id>',
          AcademyCohortUserView.as_view(),
          name='academy_cohort_id_user_id'),
@@ -106,4 +106,7 @@ urlpatterns = [
 
     # Public Endpoints anyone can call
     path('public/cohort/user', PublicCohortUserView.as_view(), name='public_cohort_user'),
+    path('public/cohort/<str:cohort_slug>/classroom',
+         CohortClassRoomView.as_view(),
+         name='public_cohort_slug'),
 ]

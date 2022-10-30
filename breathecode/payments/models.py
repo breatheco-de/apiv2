@@ -112,6 +112,18 @@ class ICommonServiceItem:
         return f'{self.service.slug} {self.how_many}'
 
 
+DAY = 'DAY'
+WEEK = 'WEEK'
+MONTH = 'MONTH'
+YEAR = 'YEAR'
+PAY_EVERY_UNIT = [
+    (DAY, 'Day'),
+    (WEEK, 'Week'),
+    (MONTH, 'Month'),
+    (YEAR, 'Year'),
+]
+
+
 # this class is used as referenced of units of a service can be used
 class ServiceItem(models.Model, ICommonServiceItem):
     """
@@ -123,17 +135,6 @@ class ServiceItem(models.Model, ICommonServiceItem):
 
     pass
 
-
-DAY = 'DAY'
-WEEK = 'WEEK'
-MONTH = 'MONTH'
-YEAR = 'YEAR'
-PAY_EVERY_UNIT = [
-    (DAY, 'Day'),
-    (WEEK, 'Week'),
-    (MONTH, 'Month'),
-    (YEAR, 'Year'),
-]
 
 DRAFT = 'DRAFT'
 VISIBLE = 'VISIBLE'
@@ -219,7 +220,7 @@ class Invoice(models.Model):
     amount = models.FloatField(default=0)
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
     paid_at = models.DateTimeField()
-    status = models.CharField(max_length=10, choices=INVOICE_STATUS, default=PENDING)
+    status = models.CharField(max_length=17, choices=INVOICE_STATUS, default=PENDING)
 
     # actually return 18 characters
     stripe_id = models.CharField(max_length=20, null=True, default=None, blank=True)
@@ -237,7 +238,7 @@ class Subscription(models.Model):
     """
 
     paid_at = models.DateTimeField()
-    status = models.CharField(max_length=9, choices=SUBSCRIPTION_STATUS, default=ACTIVE)
+    status = models.CharField(max_length=13, choices=SUBSCRIPTION_STATUS, default=ACTIVE)
 
     is_cancellable = models.BooleanField(default=True)
     is_refundable = models.BooleanField(default=True)
@@ -314,8 +315,8 @@ class FinancialReputation(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='reputation')
 
-    in_4geeks = models.CharField(max_length=10, choices=INVOICE_STATUS, default=GOOD)
-    in_stripe = models.CharField(max_length=10, choices=INVOICE_STATUS, default=GOOD)
+    in_4geeks = models.CharField(max_length=17, choices=INVOICE_STATUS, default=GOOD)
+    in_stripe = models.CharField(max_length=17, choices=INVOICE_STATUS, default=GOOD)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

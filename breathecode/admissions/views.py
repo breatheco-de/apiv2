@@ -1,41 +1,39 @@
-from django.forms import FloatField
-from breathecode.admissions.caches import CohortCache
 import logging
-import pytz
-from breathecode.utils import APIViewExtensions
-from django.utils import timezone
-from django.contrib.auth.models import AnonymousUser
-from breathecode.utils import HeaderLimitOffsetPagination
-from rest_framework.views import APIView
-from django.db.models import Max
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.contrib.auth.models import User
-from .utils import CohortLog
-from .serializers import (
-    AcademySerializer, GetSyllabusSerializer, SyllabusSchedulePUTSerializer, SyllabusScheduleSerializer,
-    SyllabusScheduleTimeSlotSerializer, CohortSerializer, CohortTimeSlotSerializer,
-    GETSyllabusScheduleTimeSlotSerializer, GETCohortTimeSlotSerializer, GetCohortSerializer,
-    GetSyllabusVersionSerializer, SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer,
-    CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
-    UserDJangoRestSerializer, UserMeSerializer, GetSyllabusScheduleSerializer, GetSyllabusVersionSerializer,
-    SyllabusVersionSerializer, GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer,
-    GetSyllabusSmallSerializer, GetAcademyWithStatusSerializer, GetPublicCohortUserSerializer,
-    GetTeacherAcademySmallSerializer)
-from .models import (ACTIVE, Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule,
-                     Cohort, STUDENT, DELETED, Syllabus, SyllabusVersion)
-from django.db.models import Value, FloatField, Q
+from django.http import HttpResponseRedirect
 
-from .actions import update_asset_on_json, find_asset_on_json, test_syllabus
-from breathecode.authenticate.models import ProfileAcademy
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
+import pytz
+from django.contrib.auth.models import AnonymousUser, User
+from django.db.models import FloatField, Max, Q, Value
+from django.forms import FloatField
+from django.utils import timezone
 from rest_framework import status
-from breathecode.utils import (localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination,
-                               GenerateLookupsMixin)
-from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
-from breathecode.utils import DatetimeInteger
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import (ParseError, PermissionDenied, ValidationError)
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from breathecode.admissions.caches import (CohortCache, CohortUserCache, TeacherCache)
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.payments.consumers import cohort_consumer
+from breathecode.utils import (APIViewExtensions, DatetimeInteger, GenerateLookupsMixin,
+                               HeaderLimitOffsetPagination, ValidationException, capable_of, localize_query)
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.admissions.caches import CohortUserCache, TeacherCache
+
+from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
+from .models import (ACTIVE, DELETED, STUDENT, Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus,
+                     SyllabusSchedule, SyllabusScheduleTimeSlot, SyllabusVersion)
+from .serializers import (
+    AcademyReportSerializer, AcademySerializer, CohortPUTSerializer, CohortSerializer,
+    CohortTimeSlotSerializer, CohortUserPUTSerializer, CohortUserSerializer, GetAcademyWithStatusSerializer,
+    GetBigAcademySerializer, GetCohortSerializer, GETCohortTimeSlotSerializer, GetCohortUserSerializer,
+    GetPublicCohortUserSerializer, GetSyllabusScheduleSerializer, GETSyllabusScheduleTimeSlotSerializer,
+    GetSyllabusSerializer, GetSyllabusSmallSerializer, GetSyllabusVersionSerializer,
+    GetTeacherAcademySmallSerializer, PublicCohortSerializer, SyllabusSchedulePUTSerializer,
+    SyllabusScheduleSerializer, SyllabusScheduleTimeSlotSerializer, SyllabusSerializer,
+    SyllabusVersionPutSerializer, SyllabusVersionSerializer, UserDJangoRestSerializer, UserMeSerializer)
+from .utils import CohortLog
 
 logger = logging.getLogger(__name__)
 
@@ -211,6 +209,11 @@ def get_cohorts(request, id=None):
     items = items.order_by(sort)
 
     serializer = PublicCohortSerializer(items, many=True)
+    print('=================')
+    print(serializer.data)
+    print('-----------------')
+    print(coordinates)
+    print('=================')
     data = sorted(serializer.data,
                   key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
 
@@ -1708,3 +1711,19 @@ class AcademyCohortHistoryView(APIView):
             raise ValidationException(str(e))
 
         return Response(cohort_log.serialize())
+
+
+class CohortClassRoomView(APIView, HeaderLimitOffsetPagination):
+
+    @has_permission('cohort_classroom', consumer=cohort_consumer)
+    def get(self, request, cohort_slug=None):
+        cohort = Cohort.objects.filter(slug=cohort_slug).first()
+        if not cohort:
+            raise ValidationException('Cohort not found', code=404, slug='not-found')
+
+        if not cohort.online_meeting_url:
+            raise ValidationException('Cohort does not have a meeting url',
+                                      code=400,
+                                      slug='meeting-url-not-found')
+
+        return HttpResponseRedirect(redirect_to=cohort.online_meeting_url, status=status.HTTP_302_FOUND)
