@@ -42,6 +42,7 @@ def put_serializer(self, task, data={}):
         'task_status': task.task_status,
         'associated_slug': task.associated_slug,
         'task_type': task.task_type,
+        'attachments': [],
         'subtasks': task.subtasks,
         'title': task.title,
         **data,

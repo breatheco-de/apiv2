@@ -228,6 +228,7 @@ ASSET_SYNC_STATUS = (
     ('ERROR', 'Error'),
     ('OK', 'Ok'),
     ('WARNING', 'Warning'),
+    ('NEEDS_RESYNC', 'Needs Resync'),
 )
 
 
@@ -373,6 +374,20 @@ class Asset(models.Model):
         blank=True,
         help_text='Internal state automatically set by the system based on cleanup')
 
+    delivery_instructions = models.TextField(null=True,
+                                             default=None,
+                                             blank=True,
+                                             help_text='Tell students how to deliver this project')
+    delivery_formats = models.CharField(
+        max_length=255,
+        default='url',
+        help_text='Comma separated list of supported formats. Eg: url, image/png, application/pdf')
+    delivery_regex_url = models.CharField(max_length=255,
+                                          default=None,
+                                          blank=True,
+                                          null=True,
+                                          help_text='Will only be used if "url" is the delivery format')
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -386,7 +401,7 @@ class Asset(models.Model):
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
-            self.sync_status = 'PENDING'
+            self.cleaning_status = 'PENDING'
 
         # only validate this on creation
         if self.pk is None or self.__old_slug != self.slug:
@@ -665,3 +680,29 @@ class SEOReport(models.Model):
 
     def to_json(self, rating, msg):
         return {'rating': self.get_rating(), 'log': self.__log}
+
+
+class AssetImage(models.Model):
+    name = models.CharField(max_length=150)
+    mime = models.CharField(max_length=60)
+    bucket_url = models.URLField(max_length=255)
+    original_url = models.URLField(max_length=255)
+    hash = models.CharField(max_length=64)
+
+    assets = models.ManyToManyField(Asset, blank=True, related_name='images')
+
+    last_download_at = models.DateTimeField(null=True, blank=True, default=None)
+    download_details = models.TextField(null=True, blank=True, default=None)
+    download_status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default='PENDING',
+        null=True,
+        blank=True,
+        help_text='Internal state automatically set by the system based on download')
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.id})'

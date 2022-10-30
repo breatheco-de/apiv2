@@ -10,7 +10,7 @@ from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment)
 
-from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github
+from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github, clean_asset_readme
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
@@ -472,12 +472,14 @@ class AcademyAssetActionView(APIView):
         if asset is None:
             raise ValidationException('This asset does not exist for this academy', 404)
 
-        possible_actions = ['test', 'pull', 'push', 'analyze_seo']
+        possible_actions = ['test', 'pull', 'push', 'analyze_seo', 'clean']
         if action_slug not in possible_actions:
             raise ValidationException(f'Invalid action {action_slug}')
         try:
             if action_slug == 'test':
                 test_asset(asset)
+            elif action_slug == 'clean':
+                clean_asset_readme(asset)
             elif action_slug == 'pull':
                 override_meta = False
                 if request.data and 'override_meta' in request.data:
@@ -534,13 +536,13 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         lookup = {}
 
-        if 'author' in self.request.GET:
+        if member.role.slug == 'content_writer':
+            items = items.filter(author__id=request.user.id)
+        elif 'author' in self.request.GET:
             param = self.request.GET.get('author')
             lookup['author__id'] = param
 
-        if member.role.slug == 'content_writer':
-            items = items.filter(owner__id=request.user.id)
-        elif 'owner' in self.request.GET:
+        if 'owner' in self.request.GET:
             param = self.request.GET.get('owner')
             lookup['owner__id'] = param
 
@@ -583,6 +585,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('technologies')
             lookup['technologies__slug__in'] = [p.lower() for p in param.split(',')]
 
+        if 'keywords' in self.request.GET:
+            param = self.request.GET.get('keywords')
+            lookup['seo_keywords__slug__in'] = [p.lower() for p in param.split(',')]
+
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
             lookup['status__in'] = [p.upper() for p in param.split(',')]
@@ -624,7 +630,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
 
-        items = items.filter(**lookup)
+        items = items.filter(**lookup).distinct()
         items = handler.queryset(items)
 
         serializer = AcademyAssetSerializer(items, many=True)

@@ -682,16 +682,11 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
 
         token = hashlib.sha1((str(request.data['slug']) + str(utc_now)).encode('UTF-8')).hexdigest()
 
-        serializer = MentorSerializer(
-            data={
-                **request.data,
-                'token': token,
-            },
-            context={
-                'request': request,
-                'academy_id': academy_id,
-            },
-        )
+        serializer = MentorSerializer(data={
+            **request.data,
+            'token': token,
+            'academy': academy_id,
+        })
 
         if serializer.is_valid():
             mentor = serializer.save()

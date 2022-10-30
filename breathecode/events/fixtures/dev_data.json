@@ -1,0 +1,113 @@
+[
+    {
+        "model": "events.organization",
+        "pk": 1,
+        "fields": {
+            "eventbrite_id": "154764716258",
+            "academy": 2,
+            "eventbrite_key": "QPLBDVNWT2BU7URXQIBD",
+            "name": "4Geeks Core (no real academy)",
+            "sync_status": "PERSISTED",
+            "sync_desc": "Success with 5 events...",
+            "created_at": "2022-10-13T13:11:44.238Z",
+            "updated_at": "2022-10-13T13:11:44.238Z"
+        }
+    },
+    {
+        "model": "events.organizer",
+        "pk": 1,
+        "fields": {
+            "eventbrite_id": "15891101459",
+            "academy": 1,
+            "name": "4Geeks Academy Miami",
+            "description": "Click here to subscribe to our text messages.\r\n\r\nAward-winning coding school specialized in part-time and full-time \r\naccelerated coding programs with the purpose of teaching you the skills to change and upgrade your career in just a few weeks.\r\n\r\nThanks to our specialized teaching methods, hundreds of hours of excellent content and a solid network of companies willing to offer job positions to graduates, \r\n4Geeks Academy was named one of the top coding schools in the US by Newsweek in 2017.",
+            "organization": 1,
+            "created_at": "2022-10-13T13:14:47.464Z",
+            "updated_at": "2022-10-13T13:14:47.464Z"
+        }
+    },
+    {
+        "model": "events.venue",
+        "pk": 1,
+        "fields": {
+            "title": "Centro Financiero Madrid",
+            "street_address": "Calle Madrid",
+            "country": "VE",
+            "city": "Caracas",
+            "latitude": "10.483932900000000",
+            "longitude": "-66.860928800000000",
+            "state": "Miranda",
+            "zip_code": 1080,
+            "status": "DRAFT",
+            "academy": 1,
+            "organization": null,
+            "eventbrite_id": "118482819",
+            "eventbrite_url": "https://www.eventbriteapi.com/v3/venues/118482819/",
+            "created_at": "2022-10-13T13:12:59.844Z",
+            "updated_at": "2022-10-13T13:12:59.844Z"
+        }
+    },
+    {
+        "model": "events.eventtype",
+        "pk": 1,
+        "fields": {
+            "slug": "standard-talk",
+            "name": "Stardard Talk about any topic",
+            "academy": 1,
+            "created_at": "2022-10-13T13:13:23.435Z",
+            "updated_at": "2022-10-13T13:13:23.435Z"
+        }
+    },
+    {
+        "model": "events.event",
+        "pk": 1,
+        "fields": {
+            "slug": "como-vender-tu-perfil-como-programador",
+            "description": "¡Con este workshop aprenderás a cómo triunfar laboralmente en el mundo de la programación!",
+            "excerpt": "¡Con este workshop aprenderás a cómo triunfar laboralmente en el mundo de la programación!",
+            "title": "Cómo vender tu perfil como programador",
+            "lang": "es",
+            "currency": "USD",
+            "tags": "career-support-attendee,openhouse-attendee",
+            "url": "https://www.eventbrite.com/e/como-vender-tu-perfil-como-programador-tickets-439835839837",
+            "banner": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F371521629%2F187450375408%2F1%2Foriginal.20221011-194454?h=200&w=450&auto=format%2Ccompress&q=75&sharp=10&rect=0%2C0%2C2160%2C1080&s=6999ff313f11c3018cf01925cb690aa4",
+            "capacity": 100,
+            "starting_at": "2022-10-26T13:11:04Z",
+            "ending_at": "2022-10-26T15:11:11Z",
+            "host": "Valentina Ancieta",
+            "academy": 2,
+            "organization": 1,
+            "author": 1,
+            "online_event": true,
+            "venue": 1,
+            "event_type": 1,
+            "eventbrite_id": "439835839837",
+            "eventbrite_url": "https://www.eventbrite.com/e/entradas-como-vender-tu-perfil-como-programador-439835839837",
+            "eventbrite_organizer_id": null,
+            "status": "ACTIVE",
+            "eventbrite_status": "live",
+            "sync_with_eventbrite": false,
+            "eventbrite_sync_status": "PERSISTED",
+            "eventbrite_sync_description": "2022-10-13 07:30:36.156086+00:00",
+            "published_at": "2022-10-13T13:13:53Z",
+            "created_at": "2022-10-13T13:13:54.384Z",
+            "updated_at": "2022-10-13T13:13:54.384Z"
+        }
+    },
+    {
+        "model": "events.eventbritewebhook",
+        "pk": 1,
+        "fields": {
+            "api_url": "https://www.eventbriteapi.com/v3/orders/4841602779/",
+            "user_id": "154764716258",
+            "action": "order.placed",
+            "webhook_id": "6228652",
+            "organization_id": "4",
+            "endpoint_url": "https://breathecode.herokuapp.com/v1/events/eventbrite/webhook/4",
+            "status": "DONE",
+            "status_text": "OK",
+            "created_at": "2022-10-13T13:15:20.858Z",
+            "updated_at": "2022-10-13T13:15:20.858Z"
+        }
+    }
+]

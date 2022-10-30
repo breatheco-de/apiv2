@@ -2,17 +2,15 @@
 Test /cohort/:id/user
 """
 import random
-import re
-from django.utils import timezone
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
+
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_blob_mock,
+                                     apply_google_cloud_bucket_mock, apply_google_cloud_client_mock)
+
 from ..mixins import AdmissionsTestCase
 
 UTC_NOW = timezone.now()
@@ -144,7 +142,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'Missing cohort_id or user_id', 'status_code': 400}
+        expected = {'detail': 'Missing cohort or user in the request', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -163,7 +161,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {'user': 999}
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'invalid user_id', 'status_code': 400}
+        expected = {'detail': 'User not found', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -186,7 +184,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'Missing cohort_id or user_id', 'status_code': 400}
+        expected = {'detail': 'Missing cohort or user in the request', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

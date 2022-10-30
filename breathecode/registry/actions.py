@@ -1,4 +1,4 @@
-import logging, json, os, re, pathlib, base64
+import logging, json, os, re, pathlib, base64, hashlib, requests
 from typing import Optional
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
@@ -13,7 +13,7 @@ from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage
 from .serializers import AssetBigSerializer
 from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator, ArticleValidator
 from github import Github, GithubException
@@ -22,6 +22,14 @@ from breathecode.registry import tasks
 logger = logging.getLogger(__name__)
 
 ASSET_STATUS_DICT = [x for x, y in ASSET_STATUS]
+
+
+def allowed_mimes():
+    return ['image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'image/jpg']
+
+
+def asset_images_bucket():
+    return os.getenv('ASSET_IMAGES_BUCKET', None)
 
 
 def generate_external_readme(a):
@@ -242,7 +250,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         return asset
     except Exception as e:
-        # raise e
+
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -417,7 +425,6 @@ def pull_github_lesson(github, asset, override_meta=False):
     logger.debug(f'Fetching readme: {file_path}')
 
     base64_readme = get_blob_content(repo, file_path, branch=branch_name).content
-    asset.readme = base64_readme
     asset.readme_raw = base64_readme
 
     # only the first time a lesson is synched it will override some of the properties
@@ -453,7 +460,8 @@ def clean_asset_readme(asset):
         asset = clean_readme_relative_paths(asset)
         asset = clean_readme_hide_comments(asset)
         readme = asset.get_readme(parse=True)
-        asset.html = readme['html']
+        if 'html' in readme:
+            asset.html = readme['html']
 
         asset.cleaning_status = 'OK'
         asset.save()
@@ -627,7 +635,6 @@ def pull_learnpack_asset(github, asset, override_meta):
                     raise Exception('No configuration learn.json or bc.json file was found')
 
     base64_readme = str(readme_file.content)
-    asset.readme = base64_readme
     asset.readme_raw = base64_readme
 
     if learn_file is not None and (asset.last_synch_at is None or override_meta):
@@ -698,3 +705,43 @@ def test_asset(asset):
         asset.last_test_at = timezone.now()
         asset.save()
         raise e
+
+
+def upload_image_to_bucket(img, asset):
+
+    from ..services.google_cloud import Storage
+
+    link = img.original_url
+    if 'github.com' in link and not 'raw=true' in link:
+        if '?' in link:
+            link = link + '&raw=true'
+        else:
+            link = link + '?raw=true'
+
+    r = requests.get(link, stream=True, timeout=2)
+    if r.status_code != 200:
+        raise Exception(f'Error downloading image from asset {asset.slug}: {link}')
+
+    found_mime = [mime for mime in allowed_mimes() if r.headers['content-type'] in mime]
+    if len(found_mime) == 0:
+        raise Exception(
+            f"Skipping image download for {link} in asset {asset.slug}, invalid mime {r.headers['content-type']}"
+        )
+
+    img.hash = hashlib.sha256(r.content).hexdigest()
+
+    storage = Storage()
+
+    extension = pathlib.Path(img.name).suffix
+    cloud_file = storage.file(asset_images_bucket(), img.hash + extension)
+    cloud_file.upload(r.content)
+
+    img.hash = img.hash
+    img.mime = found_mime[0]
+    img.bucket_url = cloud_file.url()
+    img.download_status = 'OK'
+    img.save()
+
+    img.assets.add(asset)
+
+    return img
