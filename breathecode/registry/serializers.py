@@ -124,7 +124,9 @@ class AssetSerializer(serpy.Serializer):
         return result
 
     def get_technologies(self, obj):
-        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True)))
+        _s = list(
+            map(lambda t: t.slug,
+                obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
         return _s
 
     def get_seo_keywords(self, obj):
@@ -201,6 +203,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
 
     assets = serpy.MethodField()
     alias = serpy.MethodField()
+    sort_priority = serpy.Field()
 
     def get_assets(self, obj):
         assets = Asset.objects.filter(technologies__id=obj.id)

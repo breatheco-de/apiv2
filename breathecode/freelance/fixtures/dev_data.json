@@ -3,7 +3,7 @@
         "model": "freelance.freelancer",
         "pk": 1,
         "fields": {
-            "user": 16,
+            "user": 1,
             "github_user": 80004528,
             "price_per_hour": 8.0
         }

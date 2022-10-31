@@ -21,6 +21,11 @@ VISIBILITY = (
     (UNLISTED, 'Unlisted'),
     (PRIVATE, 'Private'),
 )
+SORT_PRIORITY = (
+    (1, 1),
+    (2, 2),
+    (3, 3),
+)
 
 
 class AssetTechnology(models.Model):
@@ -43,6 +48,11 @@ class AssetTechnology(models.Model):
 
     description = models.TextField(null=True, blank=True, default=None)
     icon_url = models.URLField(null=True, blank=True, default=None, help_text='Image icon to show on website')
+    sort_priority = models.IntegerField(null=False,
+                                        choices=SORT_PRIORITY,
+                                        blank=False,
+                                        default=3,
+                                        help_text='Priority to sort technology (1, 2, or 3)')
 
     def __str__(self):
         return self.title
