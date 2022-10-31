@@ -2,14 +2,17 @@
 Test /cohort
 """
 from datetime import timedelta
-from django.utils import timezone
-from breathecode.admissions.caches import CohortCache
 from unittest.mock import MagicMock, call, patch
-from django.urls.base import reverse_lazy
-from rest_framework import status
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
+from django.urls.base import reverse_lazy
+from django.utils import timezone
+from rest_framework import status
+
+from breathecode.admissions.caches import CohortCache
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import \
+    APIViewExtensionHandlers
 from breathecode.utils.datetime_interger import DatetimeInteger
+
 from ..mixins import AdmissionsTestCase
 
 

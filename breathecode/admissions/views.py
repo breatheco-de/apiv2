@@ -157,20 +157,8 @@ def get_cohorts(request, id=None):
 
     items = Cohort.objects.filter(private=False)
 
-    # items = items.annotate(longitude=Value(None, FloatField()), output_field=FloatField())
-    # items = items.annotate(latitude=Value(None, FloatField()), output_field=FloatField())
-
-    # items = items.annotate(longitude=ExpressionWrapper(Value(None), output_field=FloatField()))
-    # items = items.annotate(latitude=ExpressionWrapper(Value(None), output_field=FloatField()))
     items = items.annotate(longitude=Value(None, output_field=FloatField()),
                            latitude=Value(None, output_field=FloatField()))
-
-    # items = items.annotate(longitude=Value(None, FField()), latitude=Value(None, FField()))
-    # items = items.annotate(longitude=Value(None), latitude=Value(None))
-    # items = items.annotate(longitude=Value(1.2, FloatField()), latitude=Value(1.2, FloatField()))
-
-    # items = items.annotate(longitude=Value(None, FloatField()))
-    # items = items.annotate(latitude=Value(None, FloatField()))
 
     if isinstance(request.user, AnonymousUser) == False:
         # filter only to the local academy
@@ -212,9 +200,6 @@ def get_cohorts(request, id=None):
 
         items = items.annotate(longitude=Value(longitude, FloatField()),
                                latitude=Value(latitude, FloatField()))
-        # items = items.annotate(longitude=ExpressionWrapper(Value(longitude), output_field=FloatField()))
-        # items = items.annotate(latitude=ExpressionWrapper(Value(latitude), output_field=FloatField()))
-        # items = items.annotate(longitude=Value(longitude, FField()), latitude=Value(latitude, FField()))
 
     saas = request.GET.get('saas', '').lower()
     if saas == 'true':

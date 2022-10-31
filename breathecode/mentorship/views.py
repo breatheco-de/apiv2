@@ -385,7 +385,7 @@ def forward_meet_url(request, mentor_slug, service_slug, token):
 
 #FIXME: create a endpoint to consume the service, split the function in two
 @private_view()
-@has_permission('get_mentorship_session', consumer=mentorship_service_consumer)
+# @has_permission('get_mentorship_session', consumer=mentorship_service_consumer)
 def end_mentoring_session(request, session_id, token):
     now = timezone.now()
     if request.method == 'POST':

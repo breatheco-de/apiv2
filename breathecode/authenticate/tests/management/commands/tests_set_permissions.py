@@ -61,10 +61,11 @@ class TokenTestSuite(AuthTestCase):
         content_type = ContentType.objects.filter().order_by('-id').first()
         permission = Permission.objects.filter().order_by('-id').first()
 
+        # the behavior of permissions is not exact, this changes every time you add a model
         self.latest_content_type_id = content_type.id
         self.latest_permission_id = permission.id
-        self.job_content_type_id = self.latest_content_type_id - 2
-        self.can_delete_job_permission_id = self.latest_permission_id - 9
+        self.job_content_type_id = self.latest_content_type_id - 14
+        self.can_delete_job_permission_id = self.latest_permission_id - 57
 
     """
     🔽🔽🔽 format of PERMISSIONS
