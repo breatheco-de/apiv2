@@ -2,8 +2,7 @@ import logging
 
 import pytz
 from django.contrib.auth.models import AnonymousUser, User
-from django.db.models import ExpressionWrapper, F, FloatField, Max, Q, Value
-from django.forms import FloatField
+from django.db.models import FloatField, Max, Q, Value
 from django.http import HttpResponseRedirect
 from django.utils import timezone
 from rest_framework import status
@@ -142,19 +141,9 @@ def get_public_syllabus(request, id=None):
     return Response(serializer.data)
 
 
-# class FField(FloatField):
-
-#     def get_internal_type(self):
-#         return ''
-
-#     def get_db_prep_value(self, n1, connection):
-#         return 0.0
-
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_cohorts(request, id=None):
-
     items = Cohort.objects.filter(private=False)
 
     items = items.annotate(longitude=Value(None, output_field=FloatField()),
