@@ -3,10 +3,10 @@ Collections of mixins used to login in authorize microservice
 """
 from random import choice, randint
 
-from breathecode.tests.mixins.models_mixin import ModelsMixin
 from breathecode.admissions.models import Cohort
-from mixer.backend.django import mixer
-from .utils import is_valid, create_models, just_one
+from breathecode.tests.mixins.models_mixin import ModelsMixin
+
+from .utils import create_models, is_valid, just_one
 
 TIMEZONES = [
     'America/New_York', 'America/Bogota', 'America/Santiago', 'America/Buenos_Aires', 'Europe/Madrid',

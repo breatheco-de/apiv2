@@ -28,10 +28,12 @@ class PermissionContextType(TypedDict):
 
 HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple,
                                                                              dict]]
-# default_callback = lambda context, args, kwargs: (context, args, kwargs)
 
 
-def validate_permission(user: User, permission: str) -> bool:
+def validate_permission(user: User, permission: str, consumer: bool | HasPermissionCallback = False) -> bool:
+    if consumer:
+        return User.objects.filter(id=user.id, groups__permissions__codename=permission).exists()
+
     found = Permission.objects.filter(codename=permission).first()
     if not found:
         return False
@@ -62,7 +64,7 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
             except IndexError:
                 raise ProgramingError('Missing request information, use this decorator with DRF View')
 
-            if validate_permission(request.user, permission):
+            if validate_permission(request.user, permission, consumer):
                 utc_now = timezone.now()
                 context = {
                     'utc_now': utc_now,
@@ -76,14 +78,14 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     items = Consumable.objects.filter(
                         Q(valid_until__lte=utc_now) | Q(valid_until=None),
                         user=request.user,
-                        service__groups__permissions__slug=permission).exclude(how_many=0).order_by('id')
+                        service__groups__permissions__codename=permission).exclude(how_many=0).order_by('id')
 
                     context['consumables'] = items
 
-                if not isinstance(consumer, bool):
+                if callable(consumer):
                     context, args, kwargs = consumer(context, args, kwargs)
 
-                if consumer and not not context['consumables']:
+                if consumer and not context['consumables']:
                     raise PaymentException('You do not have enough credits to access this service',
                                            slug='not-enough-consumables')
 
@@ -108,8 +110,13 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                                           code=403,
                                           slug='without-permission')
 
+            elif consumer and isinstance(request.user, AnonymousUser):
+                raise PaymentException(
+                    f'Anonymous user do not have enough credits to access this service: {permission}',
+                    slug='anonymous-user-not-enough-consumables')
+
             else:
-                raise PaymentException('You do not have enough credits to access this service',
+                raise PaymentException(f'You do not have enough credits to access this service: {permission}',
                                        slug='not-enough-consumables')
 
         return wrapper

@@ -49,7 +49,7 @@ class Price(models.Model):
         return self.currency.format_price(self.price)
 
 
-class Asset(models.Model):
+class AbstractAsset(models.Model):
     """
     This model represents a product or a service that can be sold.
     """
@@ -69,7 +69,7 @@ class Asset(models.Model):
         abstract = True
 
 
-class Service(Asset):
+class Service(AbstractAsset):
     """
     Represents the service that can be purchased by the customer.
     """
@@ -77,10 +77,6 @@ class Service(Asset):
     groups = models.ManyToManyField(Group)
     cohorts = models.ManyToManyField(Cohort)
     mentorship_services = models.ManyToManyField(MentorshipService)
-
-    def clean(self):
-        if self.unit_type:
-            self.unit_type = self.unit_type.upper()
 
     def __str__(self):
         return self.slug
@@ -97,7 +93,7 @@ SERVICE_UNITS = [
 ]
 
 
-class ICommonServiceItem:
+class AbstractServiceItem(models.Model):
     """
     Common fields for ServiceItem and Consumable.
     """
@@ -110,6 +106,9 @@ class ICommonServiceItem:
 
     def __str__(self):
         return f'{self.service.slug} {self.how_many}'
+
+    class Meta:
+        abstract = True
 
 
 DAY = 'DAY'
@@ -125,7 +124,7 @@ PAY_EVERY_UNIT = [
 
 
 # this class is used as referenced of units of a service can be used
-class ServiceItem(models.Model, ICommonServiceItem):
+class ServiceItem(AbstractServiceItem):
     """
     This model is used as referenced of units of a service can be used.
     """
@@ -186,7 +185,7 @@ SUBSCRIPTION_STATUS = [
 
 
 # this class can be consumed by the api
-class Consumable(models.Model, ICommonServiceItem):
+class Consumable(AbstractServiceItem):
     """
     This model is used to represent the units of a service that can be consumed.
     """
@@ -359,6 +358,7 @@ class Bag(models.Model):
 
     is_recurrent = models.BooleanField(default=False)
     was_delivered = models.BooleanField(default=False)
+    #TODO: this maybe needs a relation with invoice
 
     amount = models.FloatField()
     token = models.CharField(max_length=40, db_index=True, default=None, null=True, blank=True)
