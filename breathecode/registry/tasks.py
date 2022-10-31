@@ -199,6 +199,13 @@ def async_download_readme_images(asset_slug):
     readme = asset.get_readme(parse=True)
     images = BeautifulSoup(readme['html'], features='html.parser').find_all('img', attrs={'srcset': True})
 
+    # check if old images are stil in the new markdown file
+    old_images = asset.images.all()
+    no_longer_used = {}
+    for img in old_images:
+        # we will assume they are not by default
+        no_longer_used[img.original_url] = img
+
     image_links = []
     for image in images:
         image_links.append(image['src'])
@@ -224,7 +231,20 @@ def async_download_readme_images(asset_slug):
         return False
 
     for link in image_links:
+        if link in no_longer_used:
+            del no_longer_used[link]
         async_download_single_readme_image.delay(asset_slug, link)
+
+    # delete asset from this image
+    logger.debug(f'Found {len(no_longer_used)} images no longer used on asset {asset_slug}')
+    for old_img in no_longer_used:
+        no_longer_used[old_img].assets.remove(asset)
+
+        # if its not being sed on any other asset, we delete it from cloud
+        if no_longer_used[old_img].assets.count() == 0:
+            async_remove_img_from_cloud(no_longer_used[old_img].id)
+
+    return True
 
 
 @shared_task
@@ -246,6 +266,8 @@ def async_delete_asset_images(asset_slug):
 
         logger.info(f'Image {img.name} was deleted')
 
+    return True
+
 
 @shared_task
 def async_remove_img_from_cloud(id):
@@ -264,7 +286,8 @@ def async_remove_img_from_cloud(id):
     cloud_file.delete()
     img.delete()
 
-    logger.info(f'Image id ({name}) was deleted from the cloud')
+    logger.info(f'Image id ({img_name}) was deleted from the cloud')
+    return True
 
 
 @shared_task

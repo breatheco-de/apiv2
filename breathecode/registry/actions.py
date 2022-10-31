@@ -734,7 +734,8 @@ def upload_image_to_bucket(img, asset):
 
     extension = pathlib.Path(img.name).suffix
     cloud_file = storage.file(asset_images_bucket(), img.hash + extension)
-    cloud_file.upload(r.content)
+    if not cloud_file.exists():
+        cloud_file.upload(r.content)
 
     img.hash = img.hash
     img.mime = found_mime[0]
