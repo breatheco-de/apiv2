@@ -1,5 +1,6 @@
 import json
-from unittest.mock import MagicMock, patch
+import random
+from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
 from rest_framework import status
@@ -14,6 +15,7 @@ import breathecode.utils.decorators as decorators
 from breathecode.utils.decorators import PermissionContextType
 
 from ..mixins import UtilsTestCase
+from breathecode.payments import signals as payments_signals
 
 PERMISSION = 'can_kill_kenny'
 GET_RESPONSE = {'a': 1}
@@ -25,18 +27,42 @@ UTC_NOW = timezone.now()
 
 
 def consumer(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
+    # remember the objects are passed by reference, so you need to clone them to avoid modify the object
+    # receive by the mock causing side effects
+    args = (*args, PERMISSION)
+    kwargs = {
+        **kwargs,
+        'permission': PERMISSION,
+    }
+    context = {
+        **context,
+        'consumables': context['consumables'].exclude(service__groups__name='secret'),
+    }
     return (context, args, kwargs)
 
 
 CONSUMER_MOCK = MagicMock(wraps=consumer)
 
 
-def build_view_function(methods, data, decorator, decorator_args=(), decorator_kwargs={}):
+def build_view_function(methods,
+                        data,
+                        decorator,
+                        decorator_args=(),
+                        decorator_kwargs={},
+                        with_permission=False,
+                        with_id=False):
 
     @api_view(methods)
     @permission_classes([AllowAny])
     @decorator(*decorator_args, **decorator_kwargs)
-    def view_function(request, id=None):
+    def view_function(request, *args, **kwargs):
+        if with_permission:
+            assert kwargs['permission'] == PERMISSION
+            assert args[0] == PERMISSION
+
+        if with_id:
+            assert kwargs['id'] == 1
+
         return Response(data)
 
     return view_function
@@ -53,24 +79,29 @@ get_consumer_callback = build_view_function(['GET'],
                                             GET_RESPONSE,
                                             decorators.has_permission,
                                             decorator_args=(PERMISSION, ),
-                                            decorator_kwargs={'consumer': CONSUMER_MOCK})
+                                            decorator_kwargs={'consumer': CONSUMER_MOCK},
+                                            with_permission=True)
 
 get_id = build_view_function(['GET'],
                              GET_ID_RESPONSE,
                              decorators.has_permission,
-                             decorator_args=(PERMISSION, ))
+                             decorator_args=(PERMISSION, ),
+                             with_id=True)
 
 get_id_consumer = build_view_function(['GET'],
                                       GET_ID_RESPONSE,
                                       decorators.has_permission,
                                       decorator_args=(PERMISSION, ),
-                                      decorator_kwargs={'consumer': True})
+                                      decorator_kwargs={'consumer': True},
+                                      with_id=True)
 
 get_id_consumer_callback = build_view_function(['GET'],
                                                GET_ID_RESPONSE,
                                                decorators.has_permission,
                                                decorator_args=(PERMISSION, ),
-                                               decorator_kwargs={'consumer': CONSUMER_MOCK})
+                                               decorator_kwargs={'consumer': CONSUMER_MOCK},
+                                               with_id=True,
+                                               with_permission=True)
 
 post = build_view_function(['POST'], POST_RESPONSE, decorators.has_permission, decorator_args=(PERMISSION, ))
 post_consumer = build_view_function(['POST'],
@@ -83,44 +114,53 @@ post_consumer_callback = build_view_function(['POST'],
                                              POST_RESPONSE,
                                              decorators.has_permission,
                                              decorator_args=(PERMISSION, ),
-                                             decorator_kwargs={'consumer': CONSUMER_MOCK})
+                                             decorator_kwargs={'consumer': CONSUMER_MOCK},
+                                             with_permission=True)
 
 put_id = build_view_function(['PUT'],
                              PUT_ID_RESPONSE,
                              decorators.has_permission,
-                             decorator_args=(PERMISSION, ))
+                             decorator_args=(PERMISSION, ),
+                             with_id=True)
 
 put_id_consumer = build_view_function(['PUT'],
                                       PUT_ID_RESPONSE,
                                       decorators.has_permission,
                                       decorator_args=(PERMISSION, ),
-                                      decorator_kwargs={'consumer': True})
+                                      decorator_kwargs={'consumer': True},
+                                      with_id=True)
 
 put_id_consumer_callback = build_view_function(['PUT'],
                                                PUT_ID_RESPONSE,
                                                decorators.has_permission,
                                                decorator_args=(PERMISSION, ),
-                                               decorator_kwargs={'consumer': CONSUMER_MOCK})
+                                               decorator_kwargs={'consumer': CONSUMER_MOCK},
+                                               with_id=True,
+                                               with_permission=True)
 
 delete_id = build_view_function(['DELETE'],
                                 DELETE_ID_RESPONSE,
                                 decorators.has_permission,
-                                decorator_args=(PERMISSION, ))
+                                decorator_args=(PERMISSION, ),
+                                with_id=True)
 
 delete_id_consumer = build_view_function(['DELETE'],
                                          DELETE_ID_RESPONSE,
                                          decorators.has_permission,
                                          decorator_args=(PERMISSION, ),
-                                         decorator_kwargs={'consumer': True})
+                                         decorator_kwargs={'consumer': True},
+                                         with_id=True)
 
 delete_id_consumer_callback = build_view_function(['DELETE'],
                                                   DELETE_ID_RESPONSE,
                                                   decorators.has_permission,
                                                   decorator_args=(PERMISSION, ),
-                                                  decorator_kwargs={'consumer': CONSUMER_MOCK})
+                                                  decorator_kwargs={'consumer': CONSUMER_MOCK},
+                                                  with_id=True,
+                                                  with_permission=True)
 
 
-def build_view_class(decorator, decorator_args=(), decorator_kwargs={}):
+def build_view_class(decorator, decorator_args=(), decorator_kwargs={}, with_permission=False):
 
     class TestView(APIView):
         """
@@ -129,22 +169,47 @@ def build_view_class(decorator, decorator_args=(), decorator_kwargs={}):
         permission_classes = [AllowAny]
 
         @decorator(*decorator_args, **decorator_kwargs)
-        def get(self, request, id=None):
-            if id:
+        def get(self, request, *args, **kwargs):
+            if with_permission:
+                assert kwargs['permission'] == PERMISSION
+                assert args[0] == PERMISSION
+
+            if 'id' in kwargs:
+                assert kwargs['id'] == 1
                 return Response(GET_ID_RESPONSE)
 
             return Response(GET_RESPONSE)
 
         @decorator(*decorator_args, **decorator_kwargs)
-        def post(self, request):
+        def post(self, request, *args, **kwargs):
+            if with_permission:
+                assert kwargs['permission'] == PERMISSION
+                assert args[0] == PERMISSION
+
             return Response(POST_RESPONSE)
 
         @decorator(*decorator_args, **decorator_kwargs)
-        def put(self, request, id):
+        def put(self, request, *args, **kwargs):
+            if with_permission:
+                assert kwargs['permission'] == PERMISSION
+                assert args[0] == PERMISSION
+
+            if 'id' not in kwargs:
+                assert 0
+
+            assert kwargs['id'] == 1
             return Response(PUT_ID_RESPONSE)
 
         @decorator(*decorator_args, **decorator_kwargs)
-        def delete(self, request, id=None):
+        def delete(self, request, *args, **kwargs):
+            if with_permission:
+                assert kwargs['permission'] == PERMISSION
+                assert args[0] == PERMISSION
+
+            if 'id' not in kwargs:
+                assert 0
+
+            assert kwargs['id'] == 1
             return Response(DELETE_ID_RESPONSE)
 
     return TestView
@@ -170,6 +235,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function get
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -182,7 +248,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -198,7 +266,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -214,7 +284,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -231,7 +303,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -250,11 +324,13 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 Function get id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -267,7 +343,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -283,7 +361,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -299,7 +379,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -316,7 +398,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -335,11 +419,13 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 Function post
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -352,7 +438,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -368,7 +456,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -384,7 +474,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -401,7 +493,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -420,11 +514,13 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 Function put id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -437,7 +533,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -453,7 +551,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -469,7 +569,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -486,7 +588,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -505,11 +609,13 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 Function delete id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -522,7 +628,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -538,7 +646,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -554,7 +664,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -571,7 +683,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -590,6 +704,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
 
 class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
@@ -602,6 +717,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function get
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -614,7 +730,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -630,7 +748,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -646,7 +766,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -665,7 +787,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -685,7 +809,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -705,11 +833,37 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
+        consumable = {'how_many': random.randint(1, 100)}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.get('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = get_consumer
+
+        response = view(request).render()
+        expected = GET_RESPONSE
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__get__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
@@ -725,11 +879,15 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 Function get id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -742,7 +900,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -758,7 +918,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -774,7 +936,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -793,7 +957,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
             self):
         user = {'user_permissions': []}
@@ -814,7 +980,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -834,11 +1004,38 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
+        consumable = {'how_many': random.randint(1, 100)}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.get('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = get_id_consumer
+
+        response = view(request, id=1).render()
+        expected = GET_ID_RESPONSE
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
+            self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
@@ -854,11 +1051,15 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 Function post
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -871,7 +1072,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -887,7 +1090,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -903,7 +1108,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -922,7 +1129,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -942,7 +1151,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -962,11 +1175,37 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
+        consumable = {'how_many': random.randint(1, 100)}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.post('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = post_consumer
+
+        response = view(request).render()
+        expected = POST_RESPONSE
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__post__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
@@ -982,11 +1221,15 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 Function put id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -999,7 +1242,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -1015,7 +1260,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -1031,7 +1278,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1050,7 +1299,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
             self):
         user = {'user_permissions': []}
@@ -1071,7 +1322,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1091,11 +1346,38 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
+        consumable = {'how_many': random.randint(1, 100)}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.put('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = put_id_consumer
+
+        response = view(request, id=1).render()
+        expected = PUT_ID_RESPONSE
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
+            self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
@@ -1111,11 +1393,15 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 Function delete id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -1128,7 +1414,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -1144,7 +1432,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -1160,7 +1450,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1179,7 +1471,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
             self):
         user = {'user_permissions': []}
@@ -1200,7 +1494,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1220,11 +1518,39 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(
+            self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
+        consumable = {'how_many': random.randint(1, 100)}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.delete('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = delete_id_consumer
+
+        response = view(request, id=1).render()
+        expected = DELETE_ID_RESPONSE
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
+            self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
@@ -1240,6 +1566,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
 
 class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
@@ -1252,6 +1581,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function get
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1264,7 +1594,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -1280,7 +1612,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -1296,7 +1630,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1334,7 +1670,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1373,7 +1711,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1412,12 +1754,14 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
-        consumable = {'how_many': 1}
+        consumable = {'how_many': random.randint(1, 100)}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
         factory = APIRequestFactory()
@@ -1451,11 +1795,56 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__get__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
+        consumable = {'how_many': 1}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.get('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = get_consumer_callback
+
+        response = view(request).render()
+        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+
+        Consumable = self.bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
+
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        self.assertTrue(isinstance(context['request'], Request))
+        self.bc.check.partial_equality(context, {
+            'utc_now': UTC_NOW,
+            'consumer': CONSUMER_MOCK,
+            'permission': PERMISSION,
+            'consumables': consumables,
+        })
+
+        self.assertEqual(len(args), 1)
+        self.assertTrue(isinstance(args[0], Request))
+
+        self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 Function get id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1468,7 +1857,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -1484,7 +1875,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -1500,7 +1893,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1538,7 +1933,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
             self):
         user = {'user_permissions': []}
@@ -1578,7 +1975,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1617,12 +2018,14 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
-        consumable = {'how_many': 1}
+        consumable = {'how_many': random.randint(1, 100)}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
         factory = APIRequestFactory()
@@ -1656,11 +2059,57 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
+            self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
+        consumable = {'how_many': 1}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.get('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = get_id_consumer_callback
+
+        response = view(request, id=1).render()
+        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+
+        Consumable = self.bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
+
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        self.assertTrue(isinstance(context['request'], Request))
+        self.bc.check.partial_equality(context, {
+            'utc_now': UTC_NOW,
+            'consumer': CONSUMER_MOCK,
+            'permission': PERMISSION,
+            'consumables': consumables,
+        })
+
+        self.assertEqual(len(args), 1)
+        self.assertTrue(isinstance(args[0], Request))
+
+        self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 Function post
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -1673,7 +2122,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -1689,7 +2140,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -1705,7 +2158,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1743,7 +2198,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1782,7 +2239,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1821,12 +2282,14 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
-        consumable = {'how_many': 1}
+        consumable = {'how_many': random.randint(1, 100)}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
         factory = APIRequestFactory()
@@ -1860,11 +2323,56 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__post__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
+        consumable = {'how_many': 1}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.post('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = post_consumer_callback
+
+        response = view(request).render()
+        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+
+        Consumable = self.bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
+
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        self.assertTrue(isinstance(context['request'], Request))
+        self.bc.check.partial_equality(context, {
+            'utc_now': UTC_NOW,
+            'consumer': CONSUMER_MOCK,
+            'permission': PERMISSION,
+            'consumables': consumables,
+        })
+
+        self.assertEqual(len(args), 1)
+        self.assertTrue(isinstance(args[0], Request))
+
+        self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 Function put id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -1877,7 +2385,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -1893,7 +2403,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -1909,7 +2421,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -1947,7 +2461,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
             self):
         user = {'user_permissions': []}
@@ -1987,7 +2503,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2026,12 +2546,14 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
-        consumable = {'how_many': 1}
+        consumable = {'how_many': random.randint(1, 100)}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
         factory = APIRequestFactory()
@@ -2065,11 +2587,57 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
+            self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
+        consumable = {'how_many': 1}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.put('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = put_id_consumer_callback
+
+        response = view(request, id=1).render()
+        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+
+        Consumable = self.bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
+
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        self.assertTrue(isinstance(context['request'], Request))
+        self.bc.check.partial_equality(context, {
+            'utc_now': UTC_NOW,
+            'consumer': CONSUMER_MOCK,
+            'permission': PERMISSION,
+            'consumables': consumables,
+        })
+
+        self.assertEqual(len(args), 1)
+        self.assertTrue(isinstance(args[0], Request))
+
+        self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 Function delete id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__anonymous_user(self):
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -2082,7 +2650,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -2098,7 +2668,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -2114,7 +2686,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_group_related_to_permission__without_consumable(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2152,7 +2726,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
             self):
         user = {'user_permissions': []}
@@ -2192,7 +2768,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2231,12 +2811,15 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_1(self):
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(
+            self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
-        consumable = {'how_many': 1}
+        consumable = {'how_many': random.randint(1, 100)}
         model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
 
         factory = APIRequestFactory()
@@ -2270,6 +2853,51 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[0], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
+
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
+            self):
+        user = {'user_permissions': []}
+        permissions = [{}, {'codename': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
+        consumable = {'how_many': 1}
+        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+
+        factory = APIRequestFactory()
+        request = factory.delete('/they-killed-kenny')
+        force_authenticate(request, user=model.user)
+
+        view = delete_id_consumer_callback
+
+        response = view(request, id=1).render()
+        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+
+        Consumable = self.bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
+
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        self.assertTrue(isinstance(context['request'], Request))
+        self.bc.check.partial_equality(context, {
+            'utc_now': UTC_NOW,
+            'consumer': CONSUMER_MOCK,
+            'permission': PERMISSION,
+            'consumables': consumables,
+        })
+
+        self.assertEqual(len(args), 1)
+        self.assertTrue(isinstance(args[0], Request))
+
+        self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
 
 class ViewTestSuite(UtilsTestCase):
@@ -2282,6 +2910,7 @@ class ViewTestSuite(UtilsTestCase):
     🔽🔽🔽 View get
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__anonymous_user(self):
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -2294,7 +2923,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -2310,7 +2941,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -2326,7 +2959,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -2343,7 +2978,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2362,11 +2999,13 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 View get id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__anonymous_user(self):
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -2379,7 +3018,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -2395,7 +3036,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -2411,7 +3054,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -2428,7 +3073,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2447,11 +3094,13 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 View post
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__anonymous_user(self):
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -2464,7 +3113,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -2480,7 +3131,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -2496,7 +3149,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -2513,7 +3168,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2532,11 +3189,13 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 View put id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__anonymous_user(self):
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -2549,7 +3208,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -2565,7 +3226,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -2581,7 +3244,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -2598,7 +3263,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2617,11 +3284,13 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     """
     🔽🔽🔽 View delete id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__anonymous_user(self):
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -2634,7 +3303,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -2650,7 +3321,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -2666,7 +3339,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_permission(self):
         permission = {'codename': PERMISSION}
         model = self.bc.database.create(user=1, permission=permission)
@@ -2683,7 +3358,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_group_related_to_permission(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2702,6 +3379,7 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
 
 class ConsumerViewTestSuite(UtilsTestCase):
@@ -2714,6 +3392,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
     🔽🔽🔽 View get
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__anonymous_user(self):
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -2726,7 +3405,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -2742,7 +3423,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -2758,7 +3441,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2777,7 +3462,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2797,7 +3484,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2817,7 +3508,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2837,11 +3530,15 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 View get id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__anonymous_user(self):
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -2854,7 +3551,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -2870,7 +3569,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -2886,7 +3587,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2905,7 +3608,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2925,7 +3630,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2945,7 +3654,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -2965,11 +3676,15 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 View post
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__anonymous_user(self):
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -2982,7 +3697,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -2998,7 +3715,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -3014,7 +3733,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3033,7 +3754,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3053,7 +3776,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3073,7 +3800,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3093,11 +3822,15 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 View put id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__anonymous_user(self):
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -3110,7 +3843,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -3126,7 +3861,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -3142,7 +3879,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3161,7 +3900,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3181,7 +3922,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3201,7 +3946,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3221,11 +3968,15 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 View delete id
     """
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__anonymous_user(self):
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -3238,7 +3989,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -3254,7 +4007,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -3270,7 +4025,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3289,7 +4046,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3309,7 +4068,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3329,7 +4092,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3349,6 +4114,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
 
 class ConsumerCallbackViewTestSuite(UtilsTestCase):
@@ -3362,6 +4130,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__anonymous_user(self):
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -3375,8 +4144,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -3393,8 +4164,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -3411,8 +4184,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3451,8 +4226,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3492,8 +4269,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3533,8 +4314,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3574,12 +4357,16 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 View get id
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__anonymous_user(self):
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -3593,8 +4380,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -3611,8 +4400,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -3629,8 +4420,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3669,8 +4462,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3710,8 +4505,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3751,8 +4550,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3792,12 +4593,16 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 View post
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__anonymous_user(self):
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -3811,8 +4616,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -3829,8 +4636,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -3847,8 +4656,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3887,8 +4698,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3928,8 +4741,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -3969,8 +4786,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -4010,12 +4829,16 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 View put id
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__anonymous_user(self):
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -4029,8 +4852,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -4047,8 +4872,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -4065,8 +4892,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -4105,8 +4934,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -4146,8 +4977,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -4187,8 +5022,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -4228,12 +5065,16 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     """
     🔽🔽🔽 View delete id
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__anonymous_user(self):
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -4247,8 +5088,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user(self):
         model = self.bc.database.create(user=1)
 
@@ -4265,8 +5108,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_permission__dont_match(self):
         model = self.bc.database.create(user=1, permission=1)
 
@@ -4283,8 +5128,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
         self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_group_related_to_permission__without_consumer(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -4323,8 +5170,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -4364,8 +5213,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -4405,8 +5258,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
@@ -4446,3 +5301,6 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertTrue(isinstance(args[1], Request))
 
         self.assertEqual(kwargs, {'id': 1})
+        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        ])
