@@ -83,6 +83,14 @@ class AssetCategory(models.Model):
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
     description = models.TextField(null=True, blank=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    # Ideal for generating blog post thumbnails
+    auto_generate_previews = models.BooleanField(default=False)
+    preview_generation_url = models.URLField(null=True,
+                                             blank=True,
+                                             default=None,
+                                             help_text='Will be POSTed to get preview image')
+
     visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -259,7 +267,7 @@ class Asset(models.Model):
     lang = models.CharField(max_length=2, blank=True, null=True, default=None, help_text='E.g: en, es, it')
 
     all_translations = models.ManyToManyField('self', blank=True)
-    technologies = models.ManyToManyField(AssetTechnology)
+    technologies = models.ManyToManyField(AssetTechnology, blank=True)
 
     category = models.ForeignKey(AssetCategory,
                                  on_delete=models.SET_NULL,
@@ -418,7 +426,9 @@ class Asset(models.Model):
             slug_modified = True
             alias = AssetAlias.objects.filter(slug=self.slug).first()
             if alias is not None:
-                raise Exception(f'New slug {self.slug} for {self.__old_slug} is already taken by alias')
+                raise Exception(
+                    f'New slug {self.slug} for {self.__old_slug} is already taken by alias for asset {alias.asset.slug}'
+                )
 
         super().save(*args, **kwargs)
         self.__old_slug = self.slug
