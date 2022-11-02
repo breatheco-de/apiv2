@@ -416,7 +416,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         if 'keywords' in self.request.GET:
             param = self.request.GET.get('keywords')
-            lookup['seo_keywords__slug__in'] = [p.lower() for p in param.split(',')]
+            items = items.filter(seo_keywords__slug__in=[p.lower() for p in param.split(',')])
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
@@ -591,7 +591,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         if 'keywords' in self.request.GET:
             param = self.request.GET.get('keywords')
-            items.filter(seo_keywords__slug__in=[p.lower() for p in param.split(',')])
+            items = items.filter(seo_keywords__slug__in=[p.lower() for p in param.split(',')])
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
