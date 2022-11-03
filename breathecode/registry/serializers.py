@@ -193,6 +193,8 @@ class AssetBigSerializer(AssetMidSerializer):
 
     academy = AcademySmallSerializer(required=False)
 
+    cluster = KeywordClusterSmallSerializer(required=False)
+
 
 class ParentAssetTechnologySerializer(serpy.Serializer):
     slug = serpy.Field()
