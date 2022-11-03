@@ -575,8 +575,16 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_lead')
-    def get(self, request, academy_id=None):
+    def get(self, request, academy_id=None, lead_id=None):
         handler = self.extensions(request)
+
+        if lead_id is not None:
+            single_lead = FormEntry.objects.filter(id=lead_id, academy__id=academy_id).first()
+            if lead_id is None:
+                raise ValidationException('Lead not found', 404)
+
+            serializer = FormEntrySmallSerializer(single_lead, many=False)
+            return handler.response(serializer.data)
 
         academy = Academy.objects.get(id=academy_id)
         items = FormEntry.objects.filter(academy__id=academy.id)
