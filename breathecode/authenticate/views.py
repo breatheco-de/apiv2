@@ -1,83 +1,61 @@
+import base64
 import hashlib
-import os, requests, base64, logging
+import logging
+import os
 import re
 import urllib.parse
-import breathecode.notify.actions as notify_actions
-from datetime import timezone, timedelta
-from rest_framework.decorators import api_view, permission_classes
-from django.contrib.auth import update_session_auth_hash
-from rest_framework.response import Response
-from django.db.models import Q
-from django.http import HttpResponseRedirect, HttpResponse
+from datetime import timedelta, timezone
+from urllib.parse import parse_qs, urlencode
+
+import requests
 from django.conf import settings
-from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework import status, serializers
-from django.contrib.auth.models import User, AnonymousUser
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.models import AnonymousUser, User
+from django.db.models import Q
+from django.db.models.functions import Now
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import redirect, render
+from django.utils import timezone
+from rest_framework import serializers, status
 from rest_framework.authtoken.views import ObtainAuthToken
-from urllib.parse import urlencode, parse_qs
-from django.shortcuts import render, redirect
-from django.http import HttpResponseRedirect
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import (APIException, PermissionDenied, ValidationError)
+from rest_framework.parsers import FileUploadParser, MultiPartParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
-from django.utils import timezone
-from django.db.models.functions import Now
-from rest_framework.parsers import FileUploadParser, MultiPartParser
 
+import breathecode.notify.actions as notify_actions
+from breathecode.admissions.models import Academy, CohortUser
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
-from breathecode.services.google_cloud import FunctionV1, FunctionV2
-from breathecode.utils.multi_status_response import MultiStatusResponse
-from breathecode.utils import response_207
-from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import has_permission
-from .authentication import ExpiringTokenAuthentication
-
-from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, SyncGithubUsersForm, LoginForm, InviteForm
-from .models import (
-    Profile,
-    CredentialsGithub,
-    CredentialsGoogle,
-    Token,
-    CredentialsSlack,
-    CredentialsFacebook,
-    UserInvite,
-    Role,
-    ProfileAcademy,
-    GitpodUser,
-)
-from .actions import reset_password, resend_invite, generate_academy_token, update_gitpod_users, set_gitpod_user_expiration
-from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
-                               GenerateLookupsMixin)
-from breathecode.utils.views import private_view, render_message, set_query_parameter
+from breathecode.services.google_cloud import FunctionV1, FunctionV2
+from breathecode.utils import (GenerateLookupsMixin, HeaderLimitOffsetPagination, ValidationException,
+                               capable_of, response_207)
+from breathecode.utils.api_view_extensions.api_view_extensions import \
+    APIViewExtensions
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.views import set_query_parameter
-from .serializers import (
-    GetProfileAcademySmallSerializer,
-    GetProfileSerializer,
-    ProfileSerializer,
-    UserInviteSmallSerializer,
-    UserInviteWaitingListSerializer,
-    UserSerializer,
-    AuthSerializer,
-    UserSmallSerializer,
-    GetProfileAcademySerializer,
-    MemberPOSTSerializer,
-    MemberPUTSerializer,
-    StudentPOSTSerializer,
-    RoleSmallSerializer,
-    UserMeSerializer,
-    UserInviteSerializer,
-    TokenSmallSerializer,
-    RoleBigSerializer,
-    ProfileAcademySmallSerializer,
-    UserTinySerializer,
-    GitpodUserSmallSerializer,
-    GetGitpodUserSerializer,
-)
+from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils.views import (private_view, render_message, set_query_parameter)
+
+from .actions import (generate_academy_token, resend_invite, reset_password, set_gitpod_user_expiration,
+                      update_gitpod_users)
+from .authentication import ExpiringTokenAuthentication
+from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
+                    SyncGithubUsersForm)
+from .models import (CredentialsFacebook, CredentialsGithub, CredentialsGoogle, CredentialsSlack, GitpodUser,
+                     Profile, ProfileAcademy, Role, Token, UserInvite)
+from .serializers import (AuthSerializer, GetGitpodUserSerializer, GetProfileAcademySerializer,
+                          GetProfileAcademySmallSerializer, GetProfileSerializer, GitpodUserSmallSerializer,
+                          MemberPOSTSerializer, MemberPUTSerializer, ProfileAcademySmallSerializer,
+                          ProfileSerializer, RoleBigSerializer, RoleSmallSerializer, StudentPOSTSerializer,
+                          TokenSmallSerializer, UserInviteSerializer, UserInviteSmallSerializer,
+                          UserInviteWaitingListSerializer, UserMeSerializer, UserSerializer,
+                          UserSmallSerializer, UserTinySerializer)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -177,6 +155,21 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
     def post(self, request):
         serializer = UserInviteWaitingListSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        invite = UserInvite.objects.filter(email=request.data.get('email'),
+                                           status='WAITING_LIST',
+                                           token=request.data.get('token', 'empty')).first()
+        if not invite:
+            raise ValidationException('The email does not exist in the waiting list',
+                                      code=404,
+                                      slug='not-found')
+
+        serializer = UserInviteWaitingListSerializer(invite, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
