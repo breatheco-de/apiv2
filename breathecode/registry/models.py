@@ -1,4 +1,5 @@
 import base64, frontmatter, markdown, pathlib, logging, re, hashlib, json
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
@@ -20,6 +21,11 @@ VISIBILITY = (
     (PUBLIC, 'Public'),
     (UNLISTED, 'Unlisted'),
     (PRIVATE, 'Private'),
+)
+SORT_PRIORITY = (
+    (1, 1),
+    (2, 2),
+    (3, 3),
 )
 
 
@@ -43,6 +49,11 @@ class AssetTechnology(models.Model):
 
     description = models.TextField(null=True, blank=True, default=None)
     icon_url = models.URLField(null=True, blank=True, default=None, help_text='Image icon to show on website')
+    sort_priority = models.IntegerField(null=False,
+                                        choices=SORT_PRIORITY,
+                                        blank=False,
+                                        default=3,
+                                        help_text='Priority to sort technology (1, 2, or 3)')
 
     def __str__(self):
         return self.title
@@ -73,6 +84,14 @@ class AssetCategory(models.Model):
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
     description = models.TextField(null=True, blank=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    # Ideal for generating blog post thumbnails
+    auto_generate_previews = models.BooleanField(default=False)
+    preview_generation_url = models.URLField(null=True,
+                                             blank=True,
+                                             default=None,
+                                             help_text='Will be POSTed to get preview image')
+
     visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -228,6 +247,7 @@ ASSET_SYNC_STATUS = (
     ('ERROR', 'Error'),
     ('OK', 'Ok'),
     ('WARNING', 'Warning'),
+    ('NEEDS_RESYNC', 'Needs Resync'),
 )
 
 
@@ -248,7 +268,7 @@ class Asset(models.Model):
     lang = models.CharField(max_length=2, blank=True, null=True, default=None, help_text='E.g: en, es, it')
 
     all_translations = models.ManyToManyField('self', blank=True)
-    technologies = models.ManyToManyField(AssetTechnology)
+    technologies = models.ManyToManyField(AssetTechnology, blank=True)
 
     category = models.ForeignKey(AssetCategory,
                                  on_delete=models.SET_NULL,
@@ -373,6 +393,20 @@ class Asset(models.Model):
         blank=True,
         help_text='Internal state automatically set by the system based on cleanup')
 
+    delivery_instructions = models.TextField(null=True,
+                                             default=None,
+                                             blank=True,
+                                             help_text='Tell students how to deliver this project')
+    delivery_formats = models.CharField(
+        max_length=255,
+        default='url',
+        help_text='Comma separated list of supported formats. Eg: url, image/png, application/pdf')
+    delivery_regex_url = models.CharField(max_length=255,
+                                          default=None,
+                                          blank=True,
+                                          null=True,
+                                          help_text='Will only be used if "url" is the delivery format')
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -393,7 +427,9 @@ class Asset(models.Model):
             slug_modified = True
             alias = AssetAlias.objects.filter(slug=self.slug).first()
             if alias is not None:
-                raise Exception(f'New slug {self.slug} for {self.__old_slug} is already taken by alias')
+                raise Exception(
+                    f'New slug {self.slug} for {self.__old_slug} is already taken by alias for asset {alias.asset.slug}'
+                )
 
         super().save(*args, **kwargs)
         self.__old_slug = self.slug
@@ -403,6 +439,9 @@ class Asset(models.Model):
         if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
 
     def get_readme(self, parse=None, remove_frontmatter=False):
+
+        if self.readme is None:
+            self.readme = self.readme_raw
 
         if self.readme is None or self.readme == '':
             if self.asset_type != 'QUIZ':
@@ -433,7 +472,8 @@ class Asset(models.Model):
             # external assets will have a default markdown readme generated internally
             extension = '.md'
             if self.readme_url and self.readme_url != '':
-                extension = pathlib.Path(self.readme_url).suffix if not self.external else '.md'
+                u = urlparse(self.readme_url)
+                extension = pathlib.Path(u[2]).suffix if not self.external else '.md'
 
             if extension in ['.md', '.mdx', '.txt']:
                 readme = self.parse(readme, format='markdown', remove_frontmatter=remove_frontmatter)
@@ -665,3 +705,29 @@ class SEOReport(models.Model):
 
     def to_json(self, rating, msg):
         return {'rating': self.get_rating(), 'log': self.__log}
+
+
+class AssetImage(models.Model):
+    name = models.CharField(max_length=150)
+    mime = models.CharField(max_length=60)
+    bucket_url = models.URLField(max_length=255)
+    original_url = models.URLField(max_length=255)
+    hash = models.CharField(max_length=64)
+
+    assets = models.ManyToManyField(Asset, blank=True, related_name='images')
+
+    last_download_at = models.DateTimeField(null=True, blank=True, default=None)
+    download_details = models.TextField(null=True, blank=True, default=None)
+    download_status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default='PENDING',
+        null=True,
+        blank=True,
+        help_text='Internal state automatically set by the system based on download')
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.id})'

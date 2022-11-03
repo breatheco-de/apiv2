@@ -1,4 +1,5 @@
 import serpy, base64
+from slugify import slugify
 from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
@@ -123,7 +124,9 @@ class AssetSerializer(serpy.Serializer):
         return result
 
     def get_technologies(self, obj):
-        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True)))
+        _s = list(
+            map(lambda t: t.slug,
+                obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
         return _s
 
     def get_seo_keywords(self, obj):
@@ -138,6 +141,7 @@ class AcademyAssetSerializer(AssetSerializer):
     last_synch_at = serpy.Field()
     status_text = serpy.Field()
     published_at = serpy.Field()
+    authors_username = serpy.Field()
 
     requirements = serpy.Field()
 
@@ -151,6 +155,15 @@ class AcademyAssetSerializer(AssetSerializer):
 
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
+
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    published_at = serpy.Field()
+
+    clusters = serpy.MethodField()
+
+    def get_clusters(self, obj):
+        return [k.cluster.slug for k in obj.seo_keywords.all() if k.cluster is not None]
 
     def get_seo_keywords(self, obj):
         return list(map(lambda t: AssetKeywordSerializer(t).data, obj.seo_keywords.all()))
@@ -178,7 +191,13 @@ class AssetBigSerializer(AssetMidSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
+    delivery_instructions = serpy.Field()
+    delivery_formats = serpy.Field()
+    delivery_regex_url = serpy.Field()
+
     academy = AcademySmallSerializer(required=False)
+
+    cluster = KeywordClusterSmallSerializer(required=False)
 
 
 class ParentAssetTechnologySerializer(serpy.Serializer):
@@ -196,6 +215,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
 
     assets = serpy.MethodField()
     alias = serpy.MethodField()
+    sort_priority = serpy.Field()
 
     def get_assets(self, obj):
         assets = Asset.objects.filter(technologies__id=obj.id)
@@ -402,10 +422,26 @@ class TechnologyPUTSerializer(serializers.ModelSerializer):
 
 
 class PostAssetCommentSerializer(serializers.ModelSerializer):
+    asset = serializers.CharField(required=True)
 
     class Meta:
         model = AssetComment
         exclude = ()
+
+    def validate(self, data):
+
+        academy_id = self.context.get('academy')
+        asset = None
+        if 'asset' in data:
+            if data['asset'].isnumeric():
+                asset = Asset.objects.filter(id=data['asset'], academy__id=academy_id).first()
+            elif data['asset'] != '':
+                asset = Asset.objects.filter(slug=data['asset'], academy__id=academy_id).first()
+
+        if asset is None:
+            raise ValidationException(f'Asset {data["asset"]} not found for academy {academy_id}')
+
+        return super().validate({**data, 'asset': asset})
 
 
 class PutAssetCommentSerializer(serializers.ModelSerializer):
@@ -466,6 +502,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
             if self.instance.test_status != 'OK':
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
+
+        if 'slug' in data:
+            data['slug'] = slugify(data['slug']).lower()
 
         validated_data = super().validate(data)
         return validated_data

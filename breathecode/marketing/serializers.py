@@ -86,12 +86,14 @@ class DownloadableSerializer(serpy.Serializer):
 
 
 class TagSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     tag_type = serpy.Field()
     subscribers = serpy.Field()
     disputed_at = serpy.Field()
     disputed_reason = serpy.Field()
     automation = AutomationSmallSerializer(required=False)
+    created_at = serpy.Field()
 
 
 class FormEntrySerializer(serpy.Serializer):

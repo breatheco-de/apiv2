@@ -365,6 +365,7 @@ ROLES = [
             'read_shortlink',
             'read_nps_answers',
             'read_won_lead',
+            'read_asset',
             'read_cohort_log',
             'read_lead_gen_app',
             'read_mentorship_service',
@@ -477,7 +478,7 @@ def extend_roles(roles: list[RoleType]) -> None:
     These are additional roles that extend from the base roles above,
     you can extend from more than one role but also add additional capabilities at the end.
     """
-    
+
     roles.append({
         'slug':
         'content_writer',
@@ -489,7 +490,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_asset', 'crud_asset', 'read_category', 'crud_category'
         ]
     })
-    
+
     roles.append({
         'slug':
         'assistant',

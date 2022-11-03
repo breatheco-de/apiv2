@@ -558,7 +558,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         if 'category' in self.request.GET:
             param = self.request.GET.get('category')
-            lookup['category__slug__iexact'] = param
+            lookup['category__slug__in'] = [p.lower() for p in param.split(',')]
 
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)
@@ -584,6 +584,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if 'technologies' in self.request.GET:
             param = self.request.GET.get('technologies')
             lookup['technologies__slug__in'] = [p.lower() for p in param.split(',')]
+
+        if 'keywords' in self.request.GET:
+            param = self.request.GET.get('keywords')
+            lookup['seo_keywords__slug__in'] = [p.lower() for p in param.split(',')]
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
@@ -626,7 +630,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
 
-        items = items.filter(**lookup)
+        items = items.filter(**lookup).distinct()
         items = handler.queryset(items)
 
         serializer = AcademyAssetSerializer(items, many=True)

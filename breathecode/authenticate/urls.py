@@ -14,14 +14,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
-from .views import (ProfileMePictureView, TokenTemporalView, WaitingListView, get_users,
-                    get_user_by_id_or_email, UserMeView, LoginView, LogoutView, TemporalTokenView,
-                    get_github_token, render_user_invite, save_github_token, get_slack_token,
-                    save_slack_token, pick_password, get_token_info, get_facebook_token, save_facebook_token,
-                    MemberView, reset_password_view, login_html_view, StudentView, get_roles, render_invite,
-                    AcademyInviteView, MeInviteView, AcademyTokenView, PasswordResetView, get_google_token,
-                    save_google_token, render_academy_invite, ProfileInviteMeView, sync_gitpod_users_view,
-                    GitpodUserView, ProfileMeView, GithubMeView)
+
+from .views import (AcademyInviteView, AcademyTokenView, GithubMeView, GitpodUserView, LoginView, LogoutView,
+                    MeInviteView, MemberView, PasswordResetView, ProfileInviteMeView, ProfileMePictureView,
+                    ProfileMeView, StudentView, TemporalTokenView, TokenTemporalView, UserMeView,
+                    WaitingListView, get_facebook_token, get_github_token, get_google_token, get_roles,
+                    get_slack_token, get_token_info, get_user_by_id_or_email, get_users, login_html_view,
+                    pick_password, render_academy_invite, render_invite, render_user_invite,
+                    reset_password_view, save_facebook_token, save_github_token, save_google_token,
+                    save_slack_token, sync_gitpod_users_view)
 
 app_name = 'authenticate'
 urlpatterns = [

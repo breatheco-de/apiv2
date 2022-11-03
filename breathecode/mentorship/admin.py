@@ -116,6 +116,7 @@ class MentorAdmin(admin.ModelAdmin):
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email', 'slug']
     list_filter = ['services__academy__slug', 'status', 'services__slug']
     readonly_fields = ('token', )
+    filter_horizontal = ('syllabus', 'services')
     actions = [generate_bill, mark_as_active, generate_slug_based_on_calendly] + change_field(
         ['INNACTIVE', 'INVITED'], name='status')
 
