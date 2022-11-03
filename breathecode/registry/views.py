@@ -558,7 +558,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         if 'category' in self.request.GET:
             param = self.request.GET.get('category')
-            lookup['category__slug__iexact'] = param
+            lookup['category__slug__in'] = [p.lower() for p in param.split(',')]
 
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)

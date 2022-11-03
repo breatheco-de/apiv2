@@ -1,4 +1,5 @@
 import base64, frontmatter, markdown, pathlib, logging, re, hashlib, json
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
@@ -439,6 +440,9 @@ class Asset(models.Model):
 
     def get_readme(self, parse=None, remove_frontmatter=False):
 
+        if self.readme is None:
+            self.readme = self.readme_raw
+
         if self.readme is None or self.readme == '':
             if self.asset_type != 'QUIZ':
                 AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
@@ -468,7 +472,8 @@ class Asset(models.Model):
             # external assets will have a default markdown readme generated internally
             extension = '.md'
             if self.readme_url and self.readme_url != '':
-                extension = pathlib.Path(self.readme_url).suffix if not self.external else '.md'
+                u = urlparse(self.readme_url)
+                extension = pathlib.Path(u[2]).suffix if not self.external else '.md'
 
             if extension in ['.md', '.mdx', '.txt']:
                 readme = self.parse(readme, format='markdown', remove_frontmatter=remove_frontmatter)

@@ -106,13 +106,13 @@ def async_create_asset_thumbnail(asset_slug: str):
 
     slug1 = 'learn-to-code'
     slug2 = asset_slug
-    url = f'https://4geeksacademy.com/us/{slug1}/{slug2}/preview'
+
     func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
 
     name = f'{slug1}-{slug2}.png'
     response = func.call(
         params={
-            'url': url,
+            'url': asset.get_preview_generation_url(),
             'name': name,
             'dimension': '1200x630',
             # this should be fixed if the screenshots is taken without load the content properly
@@ -197,6 +197,10 @@ def async_download_readme_images(asset_slug):
         raise Exception(f'Asset with slug {asset_slug} not found')
 
     readme = asset.get_readme(parse=True)
+    if 'html' not in readme:
+        logger.error(f'Asset with {asset_slug} readme cannot be parse into an HTML')
+        return False
+
     images = BeautifulSoup(readme['html'], features='html.parser').find_all('img', attrs={'srcset': True})
 
     # check if old images are stil in the new markdown file

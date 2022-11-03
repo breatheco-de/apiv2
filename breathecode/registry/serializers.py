@@ -155,6 +155,11 @@ class AcademyAssetSerializer(AssetSerializer):
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
 
+    clusters = serpy.MethodField()
+
+    def get_clusters(self, obj):
+        return [k.cluster.slug for k in obj.seo_keywords.all() if k.cluster is not None]
+
     def get_seo_keywords(self, obj):
         return list(map(lambda t: AssetKeywordSerializer(t).data, obj.seo_keywords.all()))
 

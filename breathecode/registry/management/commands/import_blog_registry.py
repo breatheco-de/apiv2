@@ -2,7 +2,7 @@ import os, requests, logging, frontmatter
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 from ...actions import create_asset, pull_from_github
-from ...tasks import async_pull_from_github
+from ...tasks import async_pull_from_github, async_regenerate_asset_readme
 from ...models import Asset, AssetCategory
 from breathecode.admissions.models import Academy
 
@@ -61,20 +61,23 @@ class Command(BaseCommand):
         all_posts = []
         try:
             all_posts = resp.json()
+            logger.debug(f'Found {len(all_posts)} posts to import...')
         except requests.exceptions.JSONDecodeError as e:
             logger.error('Error decoding json: {}'.format(resp.text))
 
         owner = User.objects.filter(id=1).first()
 
         results = {'ignored': [], 'created': []}
+
         for post in all_posts:
             _a = Asset.objects.filter(slug=post['slug']).first()
             if _a is not None:
                 results['ignored'].append(_a)
+                print('I', end='')
                 continue
 
             readme = fetch_article(post['fileName'])
-            post = Asset(readme_raw=readme,
+            post = Asset(readme_raw=Asset.encode(readme),
                          title=post['title'],
                          slug=post['slug'],
                          lang=post['lang'],
@@ -95,6 +98,8 @@ class Command(BaseCommand):
                     post.authors_username = _frontmatter['author']
 
             post.save()
+            async_regenerate_asset_readme.delay(post.slug)
+            print('.', end='')
             results['created'].append(post)
 
         print(f"Done: {len(results['ignored'])} ignored and {len(results['created'])} created")
