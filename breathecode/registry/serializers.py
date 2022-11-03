@@ -156,6 +156,10 @@ class AcademyAssetSerializer(AssetSerializer):
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
 
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    published_at = serpy.Field()
+
     clusters = serpy.MethodField()
 
     def get_clusters(self, obj):
