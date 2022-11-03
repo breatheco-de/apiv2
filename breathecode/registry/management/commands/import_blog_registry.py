@@ -81,6 +81,7 @@ class Command(BaseCommand):
                          title=post['title'],
                          slug=post['slug'],
                          lang=post['lang'],
+                         description=post['excerpt'],
                          category=category[post['lang']],
                          academy=academy,
                          asset_type='ARTICLE',
