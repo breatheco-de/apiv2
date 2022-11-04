@@ -389,6 +389,14 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('category')
             lookup['category__slug__iexact'] = param
 
+        if 'test_status' in self.request.GET:
+            param = self.request.GET.get('test_status')
+            lookup['test_status__iexact'] = param
+
+        if 'sync_status' in self.request.GET:
+            param = self.request.GET.get('sync_status')
+            lookup['sync_status__iexact'] = param
+
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)
             param = self.request.GET.get('slug')
@@ -563,6 +571,14 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if 'category' in self.request.GET:
             param = self.request.GET.get('category')
             lookup['category__slug__iexact'] = param
+
+        if 'test_status' in self.request.GET:
+            param = self.request.GET.get('test_status')
+            lookup['test_status__iexact'] = param
+
+        if 'sync_status' in self.request.GET:
+            param = self.request.GET.get('sync_status')
+            lookup['sync_status__iexact'] = param
 
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)
