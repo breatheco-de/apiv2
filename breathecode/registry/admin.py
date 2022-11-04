@@ -73,7 +73,7 @@ def pull_content_from_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         async_pull_from_github.delay(a.slug, request.user.id)
-        # pull_from_github(a.slug)  # uncomment for testing purposes
+        # pull_from_github(a.slug, override_meta=True)  # uncomment for testing purposes
 
 
 def async_regenerate_readme(modeladmin, request, queryset):

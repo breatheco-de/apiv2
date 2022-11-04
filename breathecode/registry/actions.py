@@ -670,6 +670,24 @@ def pull_learnpack_asset(github, asset, override_meta):
                 technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
 
+        if 'delivery' in config:
+            if 'instructions' in config['delivery']:
+                if isinstance(config['delivery']['instructions'], str):
+                    asset.delivery_instructions = config['delivery']['instructions']
+                elif isinstance(config['delivery']['instructions'],
+                                dict) and asset.lang in config['delivery']['instructions']:
+                    asset.delivery_instructions = config['delivery']['instructions'][asset.lang]
+
+            if 'formats' in config['delivery']:
+                if isinstance(config['delivery']['formats'], list):
+                    asset.delivery_formats = ','.join(config['delivery']['formats'])
+                elif isinstance(config['delivery']['formats'], str):
+                    asset.delivery_formats = config['delivery']['formats']
+
+            if 'url' in asset.delivery_formats:
+                if 'regex' in config['delivery']:
+                    asset.delivery_regex_url = config['delivery']['regex']
+
     return asset
 
 
