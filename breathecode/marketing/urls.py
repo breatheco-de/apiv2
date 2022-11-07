@@ -13,6 +13,7 @@ urlpatterns = [
     path('app/lead', create_lead_from_app, name='app_lead'),
     path('lead/all', get_leads, name='lead_all'),  # TODO: HERE
     path('academy/lead', AcademyLeadView.as_view(), name='academy_lead'),
+    path('academy/lead/<int:lead_id>', AcademyLeadView.as_view(), name='academy_lead_id'),
     path('academy/lead/process', AcademyProcessView.as_view(), name='academy_process_lead'),
     path('academy/lead/won', AcademyWonLeadView.as_view(), name='academy_won_lead'),
     path('academy/app', AcademyAppView.as_view(), name='app'),
