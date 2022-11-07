@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import (AcademyPlanView, AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableView,
-                    InvoiceView, PayView, PlanView, CreditView, ServiceView, ServiceItemView,
+                    CreditView, InvoiceView, PayView, PlanView, ServiceItemView, ServiceView,
                     SubscriptionView)
 
 app_name = 'payments'
@@ -29,6 +29,7 @@ urlpatterns = [
     path('academy/invoice/<int:invoice_id>', InvoiceView.as_view()),
     path('card', CardView.as_view()),
     path('bag', BagView.as_view()),
+    #TODO: can pass a cohort and if is free trial or not
     path('checking', CheckingView.as_view()),
     path('pay', PayView.as_view()),
 ]
