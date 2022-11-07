@@ -1,7 +1,7 @@
 import os
 import stripe
 
-from breathecode.payments.models import Invoice, PaymentContact
+from breathecode.payments.models import FinancialReputation, Invoice, PaymentContact
 from breathecode.utils import getLogger
 from django.contrib.auth.models import User
 from breathecode.utils import PaymentException, ValidationException
@@ -83,6 +83,8 @@ class Stripe:
         response = stripe.Customer.create(email=user.email, name=name)
         contact.stripe_id = response.id
         contact.save()
+
+        FinancialReputation.objects.get_or_create(user=user)
 
         return contact
 

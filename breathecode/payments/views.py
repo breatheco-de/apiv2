@@ -1,7 +1,17 @@
 from datetime import timedelta
+
+from django.db.models.query_utils import Q
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from rest_framework.views import APIView
+from breathecode.authenticate.actions import get_user_settings
+
 from breathecode.payments import tasks
-from breathecode.payments.models import Bag, Consumable, Credit, Invoice, Plan, Service, ServiceItem, Subscription
+from breathecode.payments.models import (Bag, Consumable, Credit, Invoice, Plan, Service, ServiceItem,
+                                         Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetConsumableSerializer, GetCreditSerializer,
                                               GetInvoiceSerializer, GetInvoiceSmallSerializer,
                                               GetPlanSerializer, GetServiceItemSerializer,
@@ -10,15 +20,9 @@ from breathecode.payments.serializers import (GetBagSerializer, GetConsumableSer
 from breathecode.payments.services.stripe import Stripe
 # from rest_framework.response import Response
 from breathecode.utils import APIViewExtensions
-from rest_framework.permissions import AllowAny
-from django.db.models.query_utils import Q
-from django.utils import timezone
-from rest_framework.response import Response
 from breathecode.utils.decorators.capable_of import capable_of
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.authtoken.models import Token
-
+from breathecode.utils.i18n import translation
+from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
 
 
@@ -28,11 +32,16 @@ class PlanView(APIView):
 
     def get(self, request, plan_slug=None, service_slug=None):
         handler = self.extensions(request)
+        settings = get_user_settings(request.user.id)
 
         if plan_slug:
             item = Plan.objects.filter(slug=plan_slug).first()
             if not item:
-                raise ValidationException('Plan not found', code=404, slug='not-found')
+                raise ValidationException(translation(settings.lang,
+                                                      en='Plan not found',
+                                                      es='Plan no existe',
+                                                      slug='not-found'),
+                                          code=404)
 
             serializer = GetPlanSerializer(item, many=False)
             return handler.response(serializer.data)
@@ -54,12 +63,17 @@ class AcademyPlanView(APIView):
     @capable_of('read_plan')
     def get(self, request, plan_slug=None, service_slug=None, academy_id=None):
         handler = self.extensions(request)
+        settings = get_user_settings(request.user.id)
 
         if plan_slug:
             item = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None),
                                        slug=plan_slug).exclude(status='DELETED').first()
             if not item:
-                raise ValidationException('Plan not found', code=404, slug='not-found')
+                raise ValidationException(translation(settings.lang,
+                                                      en='Plan not found',
+                                                      es='Plan no existe',
+                                                      slug='not-found'),
+                                          code=404)
 
             serializer = GetPlanSerializer(item, many=False)
             return handler.response(serializer.data)
@@ -88,10 +102,16 @@ class AcademyPlanView(APIView):
 
     @capable_of('crud_plan')
     def put(self, request, plan_id=None, academy_id=None):
+        settings = get_user_settings(request.user.id)
+
         plan = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None),
                                    id=plan_id).exclude(status='DELETED').first()
         if not plan:
-            raise ValidationException('Plan not found', code=404, slug='not-found')
+            raise ValidationException(translation(settings.lang,
+                                                  en='Plan not found',
+                                                  es='Plan no existe',
+                                                  slug='not-found'),
+                                      code=404)
 
         data = request.data
         if not 'owner' in data or data['owner'] is not None:
@@ -105,10 +125,16 @@ class AcademyPlanView(APIView):
 
     @capable_of('crud_plan')
     def delete(self, request, plan_id=None, academy_id=None):
+        settings = get_user_settings(request.user.id)
+
         plan = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None),
                                    id=plan_id).exclude(status='DELETED').first()
         if not plan:
-            raise ValidationException('Plan not found', code=404, slug='not-found')
+            raise ValidationException(translation(settings.lang,
+                                                  en='Plan not found',
+                                                  es='Plan no existe',
+                                                  slug='not-found'),
+                                      code=404)
 
         plan.status = 'DELETED'
         plan.save()
@@ -122,12 +148,17 @@ class ServiceView(APIView):
 
     def get(self, request, service_slug=None):
         handler = self.extensions(request)
+        settings = get_user_settings(request.user.id)
 
         if service_slug:
             item = Service.objects.filter(slug=service_slug).first()
 
             if not item:
-                raise ValidationException('Service not found', code=404, slug='not-found')
+                raise ValidationException(translation(settings.lang,
+                                                      en='Service not found',
+                                                      es='No existe el Servicio',
+                                                      slug='not-found'),
+                                          code=404)
 
             serializer = GetServiceSerializer(item, many=False)
             return handler.response(serializer.data)
@@ -155,13 +186,18 @@ class AcademyServiceView(APIView):
     @capable_of('read_service')
     def get(self, request, service_slug=None, academy_id=None):
         handler = self.extensions(request)
+        settings = get_user_settings(request.user.id)
 
         if service_slug:
             item = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None) | Q(private=False),
                                           slug=service_slug).first()
 
             if not item:
-                raise ValidationException('Service not found', code=404, slug='not-found')
+                raise ValidationException(translation(settings.lang,
+                                                      en='Service not found',
+                                                      es='No existe el Servicio',
+                                                      slug='not-found'),
+                                          code=404)
 
             serializer = GetServiceSerializer(item, many=False)
             return handler.response(serializer.data)
@@ -198,9 +234,14 @@ class AcademyServiceView(APIView):
     @capable_of('crud_service')
     def put(self, request, service_slug=None, academy_id=None):
         service = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None), slug=service_slug).first()
+        settings = get_user_settings(request.user.id)
 
         if not service:
-            raise ValidationException('Service not found', code=404, slug='not-found')
+            raise ValidationException(translation(settings.lang,
+                                                  en='Service not found',
+                                                  es='No existe el Servicio',
+                                                  slug='not-found'),
+                                      code=404)
 
         data = request.data
         if not 'owner' in data or data['owner'] is not None:
@@ -262,6 +303,7 @@ class CreditView(APIView):
 
     def get(self, request, credit_id=None):
         handler = self.extensions(request)
+        settings = get_user_settings(request.user.id)
         now = timezone.now()
 
         if credit_id:
@@ -270,7 +312,11 @@ class CreditView(APIView):
                                          invoice__user=request.user).first()
 
             if not item:
-                raise ValidationException('Credit not found', code=404, slug='not-found')
+                raise ValidationException(translation(settings.lang,
+                                                      en='Credit not found',
+                                                      es='No existe el crédito',
+                                                      slug='not-found'),
+                                          code=404)
 
             serializer = GetCreditSerializer(items, many=True)
             return handler.response(serializer.data)
@@ -295,6 +341,7 @@ class SubscriptionView(APIView):
 
     def get(self, request, subscription_id=None):
         handler = self.extensions(request)
+        settings = get_user_settings(request.user.id)
         now = timezone.now()
 
         if subscription_id:
@@ -303,7 +350,11 @@ class SubscriptionView(APIView):
                     status='CANCELLED').exclude(status='DEPRECATED').exclude(status='PAYMENT_ISSUE').first()
 
             if not item:
-                raise ValidationException('Subscription not found', code=404, slug='not-found')
+                raise ValidationException(translation(settings.lang,
+                                                      en='Subscription not found',
+                                                      es='No existe el suscripción',
+                                                      slug='not-found'),
+                                          code=404)
 
             serializer = GetCreditSerializer(items, many=True)
             return handler.response(serializer.data)
@@ -342,6 +393,7 @@ class AcademySubscriptionView(APIView):
     @capable_of('read_subscription')
     def get(self, request, subscription_id=None):
         handler = self.extensions(request)
+        settings = get_user_settings(request.user.id)
         now = timezone.now()
 
         if subscription_id:
@@ -350,7 +402,11 @@ class AcademySubscriptionView(APIView):
                     status='CANCELLED').exclude(status='DEPRECATED').exclude(status='PAYMENT_ISSUE').first()
 
             if not item:
-                raise ValidationException('Subscription not found', code=404, slug='not-found')
+                raise ValidationException(translation(settings.lang,
+                                                      en='Subscription not found',
+                                                      es='No existe el suscripción',
+                                                      slug='not-found'),
+                                          code=404)
 
             serializer = GetSubscriptionSerializer(items, many=True)
             return handler.response(serializer.data)
@@ -383,13 +439,18 @@ class InvoiceView(APIView):
 
     def get(self, request, invoice_id=None):
         handler = self.extensions(request)
+        settings = get_user_settings(request.user.id)
         now = timezone.now()
 
         if invoice_id:
             item = Invoice.objects.filter(id=invoice_id, user=request.user).first()
 
             if not item:
-                raise ValidationException('Invoice not found', code=404, slug='not-found')
+                raise ValidationException(translation(settings.lang,
+                                                      en='Invoice not found',
+                                                      es='La factura no existe',
+                                                      slug='not-found'),
+                                          code=404)
 
             serializer = GetInvoiceSerializer(items, many=True)
             return handler.response(serializer.data)
@@ -411,13 +472,18 @@ class AcademyInvoiceView(APIView):
     @capable_of('read_invoice')
     def get(self, request, invoice_id=None, academy_id=None):
         handler = self.extensions(request)
+        settings = get_user_settings(request.user.id)
         now = timezone.now()
 
         if invoice_id:
             item = Invoice.objects.filter(id=invoice_id, user=request.user, academy__id=academy_id).first()
 
             if not item:
-                raise ValidationException('Invoice not found', code=404, slug='not-found')
+                raise ValidationException(translation(settings.lang,
+                                                      en='Invoice not found',
+                                                      es='La factura no existe',
+                                                      slug='not-found'),
+                                          code=404)
 
             serializer = GetInvoiceSerializer(items, many=True)
             return handler.response(serializer.data)
@@ -436,7 +502,7 @@ class AcademyInvoiceView(APIView):
 class CardView(APIView):
 
     def post(self, request):
-        request.data.get('')
+        settings = get_user_settings(request.user.id)
 
         s = Stripe()
         s.add_contact(request.user)
@@ -448,13 +514,41 @@ class CardView(APIView):
         cvc = request.data.get('cvc')
 
         if not ((card_number and exp_month and exp_year and cvc) or token):
-            raise ValidationException('Missing card information', slug='missing-card-information')
+            raise ValidationException(translation(settings.lang,
+                                                  en='Missing card information',
+                                                  es='Falta la información de la tarjeta',
+                                                  slug='missing-card-information'),
+                                      code=404)
 
         if not token:
+            #TODO: this throw a exception
             token = s.create_card_token(card_number, exp_month, exp_year, cvc)
 
+        #TODO: this throw a exception
         s.add_payment_method(request.user, token)
         return Response({'status': 'ok'})
+
+
+def add_items_to_bag(request, bag):
+    services = request.data.get('services')
+    plans = request.data.get('plans')
+
+    bag.services.clear()
+    bag.plans.clear()
+    bag.token = None
+    bag.expires_at = None
+
+    if isinstance(services, list):
+        for service in services:
+            bag.services.add(service)
+
+    if isinstance(plans, list):
+        for plan in plans:
+            bag.plans.add(plan)
+
+    bag.save()
+
+    return bag
 
 
 class BagView(APIView):
@@ -463,7 +557,8 @@ class BagView(APIView):
     def get(self, request):
         handler = self.extensions(request)
 
-        items = Bag.objects.filter(user=request.user)
+        # do no show the bags of type preview they are build
+        items = Bag.objects.filter(user=request.user, type='BAG')
 
         if status := request.GET.get('status'):
             items = items.filter(status__in=status.split(','))
@@ -481,30 +576,16 @@ class BagView(APIView):
         s = Stripe()
         s.add_contact(request.user)
 
-        bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING')
-        services = request.data.get('services')
-        plans = request.data.get('plans')
-
-        bag.services.clear()
-        bag.plans.clear()
-        bag.token = None
-        bag.expires_at = None
-
-        if isinstance(services, list):
-            for service in services:
-                bag.services.add(service)
-
-        if isinstance(plans, list):
-            for plan in plans:
-                bag.plans.add(plan)
-
-        bag.save()
+        # do no show the bags of type preview they are build
+        bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type='BAG')
+        add_items_to_bag(request, bag)
 
         serializer = GetBagSerializer(bag, many=False)
         return Response(serializer.data)
 
     def delete(self, request):
-        Bag.objects.filter(user=request.user, status='CHECKING').delete()
+        # do no show the bags of type preview they are build
+        Bag.objects.filter(user=request.user, status='CHECKING', type='BAG').delete()
         return Response(status=204)
 
 
@@ -512,9 +593,21 @@ class CheckingView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     def post(self, request):
-        bag = Bag.objects.filter(user=request.user, status='CHECKING').first()
-        if not bag:
-            raise ValidationException('Bag not found', code=404, slug='not-found')
+        type = request.data.get('type', 'bag').upper()
+
+        settings = get_user_settings(request.user.id)
+
+        if type == 'BAG' and not (bag := Bag.objects.filter(user=request.user, status='CHECKING',
+                                                            type=type).first()):
+            raise ValidationException(translation(settings.lang,
+                                                  en='Bag not found',
+                                                  es='Bolsa no encontrada',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if type == 'PREVIEW':
+            bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type=type)
+            add_items_to_bag(request, bag)
 
         utc_now = timezone.now()
 
@@ -542,14 +635,34 @@ class PayView(APIView):
 
     def post(self, request):
         utc_now = timezone.now()
+
+        settings = get_user_settings(request.user.id)
+
+        reputation = request.user.reputation.get_reputation()
+        if reputation == 'FRAUD' or reputation == 'BAD':
+            raise PaymentException(
+                translation(
+                    settings.lang,
+                    en='the payment could not be completed because you have a bad reputation on this platform',
+                    es='no se pudo completar el pago porque tienes mala reputación en esta plataforma',
+                    slug='fraud-or-bad-reputation'))
+
+        # do no show the bags of type preview they are build
+        type = request.data.get('type', 'bag').upper()
+
         token = request.data.get('token', 'empty')
         recurrent = request.data.get('recurrent', False)
-        bag = Bag.objects.filter(user=request.user, status='CHECKING', token=token,
-                                 expires_at__gte=utc_now).first()
+        bag = Bag.objects.filter(user=request.user,
+                                 status='CHECKING',
+                                 token=token,
+                                 expires_at__gte=utc_now,
+                                 type=type).first()
         if not bag:
-            raise ValidationException('Bag not found or not have checking',
-                                      code=404,
-                                      slug='not-found-or-without-checking')
+            raise ValidationException(translation(settings.lang,
+                                                  en='Bag not found or not have checking',
+                                                  es='Bolsa no encontrada o sin checking',
+                                                  slug='not-found-or-without-checking'),
+                                      code=404)
 
         s = Stripe()
         #TODO: think about ban a user if have bad reputation (FinancialReputation)

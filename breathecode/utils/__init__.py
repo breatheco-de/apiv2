@@ -23,5 +23,5 @@ from .io import *
 from .api_view_extensions import *
 from .multi_status_response import *
 from .payment_exception import *
-from .validators import *
+# from .validators import *
 from .i18n import *

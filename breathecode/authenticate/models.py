@@ -13,6 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
+# from breathecode.utils import validators
 from .signals import invite_accepted, profile_academy_saved
 from breathecode.admissions.models import Academy, Cohort
 
@@ -60,6 +61,15 @@ class Profile(models.Model):
 
     blog = models.CharField(max_length=150, blank=True, null=True)
 
+
+
+class UserSetting(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
+    # lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 class Capability(models.Model):
     slug = models.SlugField(max_length=40, primary_key=True)
