@@ -5,7 +5,7 @@ from faker import Faker
 from .garbage_collector import GarbageCollector
 from .cache import Cache
 from .datetime import Datetime
-from .request import Request
+# from .request import Request
 from .database import Database
 from .check import Check
 from .format import Format
@@ -17,7 +17,7 @@ class BreathecodeInterface(ABC):
     cache: Cache
     random: Random
     datetime: Datetime
-    request: Request
+    # request: Request
     database: Database
     check: Check
     format: Format

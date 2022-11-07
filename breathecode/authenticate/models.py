@@ -13,7 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
-# from breathecode.utils import validators
+from breathecode.utils import validators
 from .signals import invite_accepted, profile_academy_saved
 from breathecode.admissions.models import Academy, Cohort
 
