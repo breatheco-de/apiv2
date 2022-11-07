@@ -12,10 +12,10 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 from rest_framework.views import APIView
 
 import breathecode.utils.decorators as decorators
+from breathecode.payments import signals as payments_signals
 from breathecode.utils.decorators import PermissionContextType
 
 from ..mixins import UtilsTestCase
-from breathecode.payments import signals as payments_signals
 
 PERMISSION = 'can_kill_kenny'
 GET_RESPONSE = {'a': 1}

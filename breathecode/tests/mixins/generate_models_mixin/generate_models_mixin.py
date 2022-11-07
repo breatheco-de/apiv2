@@ -3,7 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from django.db.models import Model
 
-from breathecode.utils import AttrDict
+from breathecode.utils.attr_dict import AttrDict
 
 from .admissions_models_mixin import AdmissionsModelsMixin
 from .assessment_models_mixin import AssessmentModelsMixin

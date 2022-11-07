@@ -1,11 +1,11 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-from breathecode.tests.mixins.models_mixin import ModelsMixin
+from breathecode.tests.mixins.date_formatter_mixin import DateFormatterMixin
 from breathecode.tests.mixins.headers_mixin import HeadersMixin
-from breathecode.authenticate.models import Token
-from breathecode.tests.mixins import DateFormatterMixin
-from .utils import is_valid, create_models, get_list
+from breathecode.tests.mixins.models_mixin import ModelsMixin
+
+from .utils import create_models, get_list, is_valid
 
 
 class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
@@ -26,6 +26,7 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                              invoice=False,
                              subscription=False,
                              bag=False,
+                             user_setting=False,
                              profile_academy='',
                              user_kwargs={},
                              group_kwargs={},
@@ -53,7 +54,7 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      or is_valid(manual_authenticate) or is_valid(cohort_user)
                                      or is_valid(task) or is_valid(slack_team) or is_valid(mentor_profile)
                                      or is_valid(consumable) or is_valid(invoice) or is_valid(subscription)
-                                     or is_valid(bag)):
+                                     or is_valid(bag) or is_valid(user_setting)):
             kargs = {}
 
             if 'group' in models:
@@ -68,6 +69,8 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             self.client.force_authenticate(user=models['user'])
 
         if manual_authenticate:
+            from breathecode.authenticate.models import Token
+
             token = Token.objects.create(user=models['user'])
             self.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
 

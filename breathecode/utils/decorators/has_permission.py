@@ -86,8 +86,10 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     context, args, kwargs = consumer(context, args, kwargs)
 
                 if consumer and not context['consumables']:
-                    raise PaymentException('You do not have enough credits to access this service',
-                                           slug='not-enough-consumables')
+                    #TODO: send a url to recharge this service
+                    raise PaymentException(
+                        f'You do not have enough credits to access this service: {permission}',
+                        slug='not-enough-consumables')
 
                 response = function(*args, **kwargs)
 
@@ -95,6 +97,7 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     item = context['consumables'].first()
 
                     #TODO: can consume the resource per hours
+                    #TODO: pass it to celery
                     consume_service.send(instance=item, sender=item.__class__, how_many=1)
 
                 return response
