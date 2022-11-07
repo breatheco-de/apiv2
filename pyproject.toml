@@ -1,2 +1,5 @@
 [tool.yapf]
 column_limit = 110
+
+[tool.isort]
+line_length = 110
