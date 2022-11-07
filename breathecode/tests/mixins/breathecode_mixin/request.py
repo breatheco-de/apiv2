@@ -1,8 +1,5 @@
 from rest_framework.test import APITestCase
 
-# from . import interfaces
-from .interfaces import BreathecodeInterface
-
 __all__ = ['Request']
 
 
@@ -10,12 +7,8 @@ class Request:
     """Mixin with the purpose of cover all the related with the request"""
 
     _parent: APITestCase
-    _bc: BreathecodeInterface
-    # _bc
 
-    #FIXME
-    def __init__(self, parent, bc: BreathecodeInterface) -> None:
-    # def __init__(self, parent, bc) -> None:
+    def __init__(self, parent, bc) -> None:
         self._parent = parent
         self._bc = bc
 
