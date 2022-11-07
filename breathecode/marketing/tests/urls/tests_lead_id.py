@@ -65,6 +65,40 @@ def generate_form_entry_kwargs():
 class CohortLeadIdSuite(MarketingTestCase):
     """Test /academy/lead"""
     """
+    🔽🔽🔽 No auth
+    """
+
+    def test_lead_id_no_auth(self):
+        self.headers(academy=1)
+        url = reverse_lazy('marketing:academy_lead_id', kwargs={'lead_id': 1})
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 401)
+
+    """
+    🔽🔽🔽 No credentials
+    """
+
+    def test_lead_id_without_capability(self):
+        self.headers(academy=1)
+        url = reverse_lazy('marketing:academy_lead_id', kwargs={'lead_id': 1})
+        self.generate_models(authenticate=True)
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'detail': "You (user: 1) don't have this capability: read_lead for academy 1",
+            'status_code': 403
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 403)
+
+    """
     🔽🔽🔽 Single lead with data wrong id
     """
 
@@ -74,13 +108,12 @@ class CohortLeadIdSuite(MarketingTestCase):
     def test_lead_wrong_id(self):
         """Test /lead/:id/ with data wrong id"""
         self.headers(academy=1)
-        url = reverse_lazy('marketing:academy_lead_id', kwargs={'lead_id': 2})
+        url = reverse_lazy('marketing:academy_lead_id', kwargs={'lead_id': 1})
         model = self.generate_models(
             authenticate=True,
             profile_academy=True,
             capability='read_lead',
             role='potato',
-            form_entry=True,
         )
 
         response = self.client.get(url)
@@ -165,13 +198,12 @@ class CohortLeadIdSuite(MarketingTestCase):
     def test_update_lead_wrong_id(self):
         """Test /lead/:id/ with data wrong id"""
         self.headers(academy=1)
-        url = reverse_lazy('marketing:academy_lead_id', kwargs={'lead_id': 2})
+        url = reverse_lazy('marketing:academy_lead_id', kwargs={'lead_id': 1})
         model = self.generate_models(
             authenticate=True,
             profile_academy=True,
             capability='crud_lead',
             role='potato',
-            form_entry=True,
         )
 
         data = {'first_name': 'Juan'}
@@ -202,7 +234,17 @@ class CohortLeadIdSuite(MarketingTestCase):
             form_entry=True,
         )
 
-        data = {'id': 1, 'first_name': 'Juan Arango'}
+        data = {
+            'id': 1,
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email(),
+            'utm_url': self.bc.fake.url(),
+            'utm_medium': self.bc.fake.slug(),
+            'utm_campaign': self.bc.fake.slug(),
+            'utm_source': self.bc.fake.slug(),
+            'gclid': random_string(),
+        }
         response = self.client.put(url, data, format='json')
         json = response.json()
 
