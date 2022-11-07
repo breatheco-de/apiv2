@@ -1,7 +1,7 @@
 import logging
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
-from .models import Assessment, UserAssessment, UserProxy, Question, Option
+from .models import Assessment, UserAssessment, UserProxy, Question, Option, AssessmentThreshold
 from .actions import send_assestment
 
 logger = logging.getLogger(__name__)
@@ -59,3 +59,10 @@ class UserAssessmentAdmin(admin.ModelAdmin):
     search_fields = ['title', 'question__assessment__title']
     list_display = ['title', 'status', 'lang', 'owner', 'total_score', 'assessment']
     list_filter = ['lang']
+
+
+# Register your models here.
+@admin.register(AssessmentThreshold)
+class UserAssessmentThresholdAdmin(admin.ModelAdmin):
+    search_fields = ['assessment__slug', 'assessment__title']
+    list_display = ['id', 'score_threshold', 'assessment']
