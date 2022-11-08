@@ -438,6 +438,13 @@ class Asset(models.Model):
         if slug_modified: asset_slug_modified.send(instance=self, sender=Asset)
         if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
 
+    def get_preview_generation_url(self):
+
+        if asset.category is not None:
+            return asset.category.preview_generation_url
+
+        return None
+
     def get_readme(self, parse=None, remove_frontmatter=False):
 
         if self.readme is None:
