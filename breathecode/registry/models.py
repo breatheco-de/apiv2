@@ -440,8 +440,8 @@ class Asset(models.Model):
 
     def get_preview_generation_url(self):
 
-        if asset.category is not None:
-            return asset.category.preview_generation_url
+        if self.category is not None:
+            return self.category.preview_generation_url
 
         return None
 
