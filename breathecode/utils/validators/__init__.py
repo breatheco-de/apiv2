@@ -1,1 +1,1 @@
-from .validate_language_code import *
+from .language import *

@@ -34,6 +34,12 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['currency'] = create_models(currency, 'payments.Currency', **kargs)
 
+            if 'academy' in models:
+                for academy in (models['academy']
+                                if isinstance(models['academy'], list) else [models['academy']]):
+                    academy.currency = just_one(models['currency'])
+                    academy.save()
+
         if not 'price' in models and is_valid(price):
             kargs = {}
 

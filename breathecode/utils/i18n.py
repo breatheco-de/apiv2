@@ -21,15 +21,17 @@ def get_short_code(code: str) -> str:
 def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
     # do not remove the assertions
 
+    is_short = len(code) == 2
+
     # first two character only with lowercase
     assert code[:2].islower()
 
     # last two character only with lowercase
-    if from_kwargs:
+    if not is_short and from_kwargs:
         assert code[3:].islower()
 
     # last two character only with uppercase
-    else:
+    elif not is_short:
         assert code[2:].isupper()
 
     separator = '_' if from_kwargs else '-'

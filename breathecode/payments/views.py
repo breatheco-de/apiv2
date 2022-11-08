@@ -7,11 +7,14 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.models import UserSetting
 
 from breathecode.payments import tasks
-from breathecode.payments.models import (Bag, Consumable, Credit, Invoice, Plan, Service, ServiceItem,
-                                         Subscription)
+from breathecode.payments.actions import add_items_to_bag, get_amount
+from breathecode.payments.models import (Bag, Consumable, Credit, FinancialReputation, Invoice, Plan, Service,
+                                         ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetConsumableSerializer, GetCreditSerializer,
                                               GetInvoiceSerializer, GetInvoiceSmallSerializer,
                                               GetPlanSerializer, GetServiceItemSerializer,
@@ -24,6 +27,7 @@ from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
+from django.db import IntegrityError, transaction
 
 
 class PlanView(APIView):
@@ -529,28 +533,6 @@ class CardView(APIView):
         return Response({'status': 'ok'})
 
 
-def add_items_to_bag(request, bag):
-    services = request.data.get('services')
-    plans = request.data.get('plans')
-
-    bag.services.clear()
-    bag.plans.clear()
-    bag.token = None
-    bag.expires_at = None
-
-    if isinstance(services, list):
-        for service in services:
-            bag.services.add(service)
-
-    if isinstance(plans, list):
-        for plan in plans:
-            bag.plans.add(plan)
-
-    bag.save()
-
-    return bag
-
-
 class BagView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
@@ -573,12 +555,14 @@ class BagView(APIView):
     def put(self, request):
         request.data.get('')
 
+        settings = get_user_settings(request.user.id)
+
         s = Stripe()
         s.add_contact(request.user)
 
         # do no show the bags of type preview they are build
         bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type='BAG')
-        add_items_to_bag(request, bag)
+        add_items_to_bag(request, settings, bag)
 
         serializer = GetBagSerializer(bag, many=False)
         return Response(serializer.data)
@@ -592,42 +576,35 @@ class BagView(APIView):
 class CheckingView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
-    def post(self, request):
-        type = request.data.get('type', 'bag').upper()
+    def put(self, request):
+        type = request.data.get('type', 'BAG').upper()
 
         settings = get_user_settings(request.user.id)
 
-        if type == 'BAG' and not (bag := Bag.objects.filter(user=request.user, status='CHECKING',
-                                                            type=type).first()):
-            raise ValidationException(translation(settings.lang,
-                                                  en='Bag not found',
-                                                  es='Bolsa no encontrada',
-                                                  slug='not-found'),
-                                      code=404)
+        with transaction.atomic():
 
-        if type == 'PREVIEW':
-            bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type=type)
-            add_items_to_bag(request, bag)
+            if type == 'BAG' and not (bag := Bag.objects.filter(
+                    user=request.user, status='CHECKING', type=type).first()):
+                raise ValidationException(translation(settings.lang,
+                                                      en='Bag not found',
+                                                      es='Bolsa no encontrada',
+                                                      slug='not-found'),
+                                          code=404)
 
-        utc_now = timezone.now()
+            if type == 'PREVIEW':
+                bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type=type)
+                add_items_to_bag(request, settings, bag)
 
-        bag.token = Token.generate_key()
-        bag.expires_at = utc_now + timedelta(minutes=10)
+            utc_now = timezone.now()
 
-        #FIXME:
-        handler = self.extensions(request)
+            bag.token = Token.generate_key()
+            bag.expires_at = utc_now + timedelta(minutes=10)
+            bag.amount = get_amount(bag, bag.academy, settings)
 
-        items = Bag.objects.filter(user=request.user)
+            bag.save()
 
-        if status := request.GET.get('status'):
-            items = items.filter(status__in=status.split(','))
-        else:
-            items = items.filter(status='CHECKING')
-
-        items = handler.queryset(items)
-        serializer = GetBagSerializer(items, many=True)
-
-        return handler.response(serializer.data)
+            serializer = GetBagSerializer(bag, many=False)
+            return Response(serializer.data)
 
 
 class PayView(APIView):
@@ -638,8 +615,10 @@ class PayView(APIView):
 
         settings = get_user_settings(request.user.id)
 
-        reputation = request.user.reputation.get_reputation()
-        if reputation == 'FRAUD' or reputation == 'BAD':
+        reputation, _ = FinancialReputation.objects.get_or_create(user=request.user)
+
+        current_reputation = reputation.get_reputation()
+        if current_reputation == 'FRAUD' or current_reputation == 'BAD':
             raise PaymentException(
                 translation(
                     settings.lang,

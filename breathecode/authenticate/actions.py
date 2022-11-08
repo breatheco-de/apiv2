@@ -1,11 +1,24 @@
-import os, string, logging, urllib.parse, random, re, datetime
+import datetime
+import logging
+import os
+import random
+import re
+import string
+import urllib.parse
+from random import randint
+
 from django.contrib.auth.models import User
 from django.utils import timezone
-from .models import DeviceId, Token, Role, ProfileAcademy, GitpodUser, CredentialsGithub
+
+from breathecode.admissions.models import Academy, CohortUser
+from breathecode.assessment.models import Assessment, Question, UserAssessment
+from breathecode.events.models import Event
+from breathecode.feedback.models import Answer
+from breathecode.marketing.models import Contact, FormEntry
 from breathecode.notify.actions import send_email_message
 from breathecode.utils import ValidationException
-from breathecode.admissions.models import Academy
-from random import randint
+
+from .models import CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Role, Token, UserSetting
 
 logger = logging.getLogger(__name__)
 
@@ -233,3 +246,60 @@ def update_gitpod_users(html):
             )
 
     return {'active': all_active_users, 'inactive': all_inactive_users}
+
+
+def get_user_settings(user_id: int) -> UserSetting:
+    settings, created = UserSetting.objects.get_or_create(user_id=user_id)
+
+    if created and (cohort_user :=
+                    CohortUser.objects.filter(user__id=user_id).exclude(cohort__language='').first()):
+        created = False
+        settings.lang = cohort_user.cohort.language
+        settings.save()
+
+    if created and (lead := FormEntry.objects.filter(
+            email=user_id, browser_lang__isnull=False).exclude(browser_lang='').first()):
+        try:
+            settings.lang = lead.browser_lang
+            settings.save()
+            created = False
+        except:
+            ...
+
+    # if created and (contact := Contact.objects.filter(author__id=user_id,
+    #                                                   lang__isnull=False).exclude(lang='').first()):
+    #     created = False
+    #     settings.lang = contact.language
+    #     settings.save()
+
+    if created and (assessment := Assessment.objects.filter(author__id=user_id,
+                                                            lang__isnull=False).exclude(lang='').first()):
+        created = False
+        settings.lang = assessment.lang
+        settings.save()
+
+    if created and (answer := Answer.objects.filter(user__id=user_id,
+                                                    lang__isnull=False).exclude(lang='').first()):
+        created = False
+        settings.lang = answer.lang
+        settings.save()
+
+    if created and (event := Event.objects.filter(author__id=user_id,
+                                                  lang__isnull=False).exclude(lang='').first()):
+        created = False
+        settings.lang = event.lang
+        settings.save()
+
+    if created and (user_assessment := UserAssessment.objects.filter(
+            owner__id=user_id, lang__isnull=False).exclude(lang='').first()):
+        created = False
+        settings.lang = user_assessment.lang
+        settings.save()
+
+    if created and (question := Question.objects.filter(author__id=user_id,
+                                                        lang__isnull=False).exclude(lang='').first()):
+        created = False
+        settings.lang = question.lang
+        settings.save()
+
+    return settings

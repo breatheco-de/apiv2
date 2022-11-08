@@ -23,7 +23,7 @@ class GetCurrencySerializer(GetCurrencySmallSerializer):
 
 class GetPriceSerializer(serpy.Serializer):
     price = serpy.Field()
-    currency = GetCurrencySmallSerializer(many=False)
+    currency = GetCurrencySmallSerializer
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -67,9 +67,13 @@ class GetServiceSerializer(serpy.Serializer):
 
 
 class GetServiceItemSerializer(serpy.Serializer):
-    service = GetServiceSerializer(many=False)
     unit_type = serpy.Field()
     how_many = serpy.Field()
+    # service = serpy.MethodField()
+    service = GetServiceSerializer
+
+    # def get_service(self, obj):
+    #     return GetServiceSerializer(obj.service, many=False).data
 
 
 class GetUserSmallSerializer(serpy.Serializer):
@@ -88,17 +92,21 @@ class GetPlanSerializer(serpy.Serializer):
     slug = serpy.Field()
     description = serpy.Field()
     status = serpy.Field()
-    prices = GetPriceSerializer(many=True)
     renew_every = serpy.Field()
     renew_every_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
-    services = GetServiceItemSerializer(many=True)
-    owner = GetAcademySerializer(many=False)
-    # services = serpy.MethodField()
+    # services = GetServiceItemSerializer
+    owner = GetAcademySerializer
+    services = serpy.MethodField()
+    services = serpy.MethodField()
+    prices = serpy.MethodField()
 
-    # def get_services(self, obj):
-    #     return obj.role.slug
+    def get_services(self, obj):
+        return GetServiceItemSerializer(obj.services.all(), many=True).data
+
+    def get_prices(self, obj):
+        return GetPriceSerializer(obj.prices.all(), many=True).data
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
@@ -162,9 +170,22 @@ class GetCreditSerializer(serpy.Serializer):
     invoice = GetInvoiceSerializer(many=False)
 
 
-class GetBagSerializer(GetInvoiceSmallSerializer):
-    services = GetServiceItemSerializer(many=True)
-    plans = GetPlanSerializer(many=True)
+class GetBagSerializer(serpy.Serializer):
+    services = serpy.MethodField()
+    plans = serpy.MethodField()
+    status = serpy.Field()
+    type = serpy.Field()
+    is_recurrent = serpy.Field()
+    was_delivered = serpy.Field()
+    amount = serpy.Field()
+    token = serpy.Field()
+    expires_at = serpy.Field()
+
+    def get_services(self, obj):
+        return GetServiceItemSerializer(obj.services.filter(), many=True).data
+
+    def get_plans(self, obj):
+        return GetPlanSerializer(obj.plans.filter(), many=True).data
 
 
 class GetCheckingSerializer(GetInvoiceSmallSerializer):

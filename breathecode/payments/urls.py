@@ -30,6 +30,6 @@ urlpatterns = [
     path('card', CardView.as_view()),
     path('bag', BagView.as_view()),
     #TODO: can pass a cohort and if is free trial or not
-    path('checking', CheckingView.as_view()),
-    path('pay', PayView.as_view()),
+    path('checking', CheckingView.as_view(), name='checking'),
+    path('pay', PayView.as_view(), name='pay'),
 ]

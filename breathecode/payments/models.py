@@ -344,6 +344,13 @@ BAG_STATUS = [
     (PAID, 'Paid'),
 ]
 
+BAG = 'BAG'
+PREVIEW = 'PREVIEW'
+BAG_TYPE = [
+    (BAG, 'Bag'),
+    (PREVIEW, 'Preview'),
+]
+
 
 class Bag(models.Model):
     """
@@ -351,7 +358,9 @@ class Bag(models.Model):
     """
 
     status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
+    type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG)
 
+    academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     services = models.ManyToManyField(ServiceItem)
     plans = models.ManyToManyField(Plan)
