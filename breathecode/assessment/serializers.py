@@ -11,6 +11,20 @@ class UserSerializer(serpy.Serializer):
     last_name = serpy.Field()
 
 
+class AssessmentSmallSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
+
+
+class GetAssessmentThresholdSerializer(serpy.Serializer):
+    success_next = serpy.Field()
+    fail_next = serpy.Field()
+    success_message = serpy.Field()
+    fail_message = serpy.Field()
+    score_threshold = serpy.Field()
+    assessment = AssessmentSmallSerializer()
+
+
 class GetOptionSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
@@ -34,7 +48,6 @@ class GetAssessmentSerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
-    score_threshold = serpy.Field()
     private = serpy.Field()
     translations = serpy.MethodField()
 

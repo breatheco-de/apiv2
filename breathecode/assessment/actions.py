@@ -1,46 +1,47 @@
 from breathecode.authenticate.models import Token
 from breathecode.notify.actions import send_email_message
+from breathecode.utils.validation_exception import ValidationException
 from .models import Assessment, Question, Option
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def create_from_json(payload: str, slug=None):
-    quiz = payload
+def create_from_asset(asset):
 
-    if quiz['info']['lang'] == 'en':
-        quiz['info']['lang'] = 'us'
+    if asset.academy is None:
+        raise ValidationException(f'Asset {asset.slug} has not academy associated')
 
-    if 'slug' not in quiz['info']:
-        logger.log(f'Ignoring quiz because it does not have a slug')
-        return None
+    a = asset.assessment
 
-    if slug is not None:
-        quiz['info']['slug'] = slug
+    if asset.assessment is not None and asset.assessment.asset_set.count() > 1:
+        associated_assets = ','.join(asset.assessment.asset_set.all())
+        raise ValidationException(f'Assessment has more then one asset associated, please choose only one: ' +
+                                  associated_assets)
 
-    name = 'No name yet'
-    if 'name' not in quiz['info']:
-        logger.log(f"Quiz f{quiz['info']['slug']} needs a name")
-    else:
-        name = quiz['info']['name']
+    if asset.assessment is None:
+        a = Assessment.objects.filter(slug=asset.slug).first()
+        if a is not None:
+            raise ValidationException(f'There is already an assessment with slug {asset.slug}')
 
-    a = Assessment.objects.filter(slug=quiz['info']['slug']).first()
-    if a is not None:
-        return None
+        a = Assessment.objects.create(
+            title=asset.title,
+            lang=asset.lang,
+            slug=asset.slug,
+            academy=asset.academy,
+            author=asset.author,
+        )
 
-    a = Assessment(
-        slug=quiz['info']['slug'],
-        lang=quiz['info']['lang'],
-        title=name,
-        comment=quiz['info']['main'],
-    )
+    if a.question_set.count() > 0:
+        raise ValidationException(
+            f'Assessment already has questions, only empty assessments can by created from an asset')
+
     a.save()
-
+    quiz = asset.config
     for question in quiz['questions']:
         q = Question(
             title=question['q'],
-            lang=quiz['info']['lang'],
+            lang=asset.lang,
             assessment=a,
             question_type='SELECT',
         )
@@ -52,6 +53,7 @@ def create_from_json(payload: str, slug=None):
                 question=q,
             )
             o.save()
+
     return a
 
 
@@ -64,7 +66,7 @@ def send_assestment(user_assessment):
     }
     send_email_message('assessment', user_assessment.user.email, data)
 
-    logger.info(f'Survey was sent for user: {str(user_assessment.user.id)}')
+    logger.info(f'Assessment was sent for user: {str(user_assessment.user.id)}')
 
     user_assessment.status = 'SENT'
     user_assessment.save()
