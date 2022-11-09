@@ -136,6 +136,7 @@ def create_lead_from_app(request, app_slug=None):
         'utm_medium': app.utm_medium,
         'utm_campaign': app.utm_campaign,
         'utm_source': app.utm_source,
+        'utm_plan': app.utm_plan,
         'academy': app.academy.id,
         'lead_generation_app': app.id
     }

@@ -243,6 +243,11 @@ class LeadGenerationApp(models.Model):
     utm_medium = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_plan = models.CharField(max_length=50,
+                                blank=True,
+                                null=True,
+                                default=None,
+                                help_text='If its applying for a scholarship, upfront, isa, financing, etc.')
 
     # Status
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -335,6 +340,27 @@ class FormEntry(models.Model):
     utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_content = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_term = models.CharField(max_length=50,
+                                blank=True,
+                                null=True,
+                                default=None,
+                                help_text='Keyword used in cpc')
+    utm_placement = models.CharField(max_length=50,
+                                     blank=True,
+                                     null=True,
+                                     default=None,
+                                     help_text='User agent or device screen')
+    utm_plan = models.CharField(max_length=50,
+                                blank=True,
+                                null=True,
+                                default=None,
+                                help_text='If its applying for a scholarship, upfront, isa, financing, etc.')
+
+    custom_fields = models.JSONField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Other incoming values in the payload will be saved here as they come')
 
     current_download = models.CharField(max_length=255,
                                         blank=True,
@@ -363,6 +389,12 @@ class FormEntry(models.Model):
     state = models.CharField(max_length=30, null=True, default=None, blank=True)
     zip_code = models.IntegerField(null=True, default=None, blank=True)
     browser_lang = models.CharField(max_length=10, null=True, default=None, blank=True)
+
+    sex = models.CharField(max_length=15,
+                           null=True,
+                           default=None,
+                           blank=True,
+                           help_text='M=male,F=female,O=other')
 
     # is it saved into active campaign?
     storage_status = models.CharField(max_length=15, choices=STORAGE_SATUS, default=PENDING)
@@ -475,10 +507,42 @@ class ShortLink(models.Model):
     destination_status = models.CharField(max_length=15, choices=DESTINATION_STATUS, default=_ACTIVE)
     destination_status_text = models.CharField(max_length=250, default=None, blank=True, null=True)
 
-    utm_content = models.CharField(max_length=250, null=True, default=None, blank=True)
-    utm_medium = models.CharField(max_length=50, blank=True, null=True, default=None)
-    utm_campaign = models.CharField(max_length=50, blank=True, null=True, default=None)
-    utm_source = models.CharField(max_length=50, blank=True, null=True, default=None)
+    utm_content = models.CharField(max_length=250,
+                                   null=True,
+                                   default=None,
+                                   blank=True,
+                                   help_text='Can be de ad group id or ad id')
+    utm_medium = models.CharField(max_length=50,
+                                  blank=True,
+                                  null=True,
+                                  default=None,
+                                  help_text='social, organic, paid, email, referral, etc.')
+    utm_campaign = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Campaign ID when PPC but can be a string in more informal campaigns')
+    utm_source = models.CharField(max_length=50,
+                                  blank=True,
+                                  null=True,
+                                  default=None,
+                                  help_text='fb, ig, google, twitter, quora, etc.')
+    utm_term = models.CharField(max_length=50,
+                                blank=True,
+                                null=True,
+                                default=None,
+                                help_text='Keyword used in cpc')
+    utm_placement = models.CharField(max_length=50,
+                                     blank=True,
+                                     null=True,
+                                     default=None,
+                                     help_text='User agent or device screen')
+    utm_plan = models.CharField(max_length=50,
+                                blank=True,
+                                null=True,
+                                default=None,
+                                help_text='If its applying for a scholarship, upfront, isa, financing, etc.')
 
     # Status
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)

@@ -38,6 +38,11 @@ def generate_form_entry_kwargs():
         'utm_medium': random_string(),
         'utm_campaign': random_string(),
         'utm_source': random_string(),
+        'utm_placement': random_string(),
+        'utm_term': random_string(),
+        'utm_plan': random_string(),
+        'sex': random_string(),
+        'custom_fields': None,
         'referral_key': random_string(),
         'gclid': random_string(),
         'tags': random_string(),
@@ -75,6 +80,11 @@ def get_serializer(self, form_entry):
         'utm_medium': form_entry.utm_medium,
         'utm_source': form_entry.utm_source,
         'utm_content': form_entry.utm_content,
+        'utm_placement': form_entry.utm_placement,
+        'utm_term': form_entry.utm_term,
+        'utm_plan': form_entry.utm_plan,
+        'sex': form_entry.sex,
+        'custom_fields': form_entry.custom_fields,
         'utm_url': form_entry.utm_url,
         'ac_expected_cohort': form_entry.ac_expected_cohort,
         'user': None,
@@ -160,7 +170,9 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, model.form_entry)]
+        expected = get_serializer(self, model.form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -203,7 +215,10 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, model.form_entry)]
+
+        expected = get_serializer(self, model.form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -246,7 +261,9 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, model.form_entry)]
+        expected = get_serializer(self, model.form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -289,7 +306,9 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, model.form_entry)]
+        expected = get_serializer(self, model.form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -331,7 +350,9 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, model.form_entry)]
+        expected = get_serializer(self, model.form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -373,7 +394,9 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, model.form_entry)]
+        expected = get_serializer(self, model.form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -474,7 +497,9 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, models[0].form_entry)]
+        expected = get_serializer(self, models[0].form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -506,7 +531,9 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, models[0].form_entry)]
+        expected = get_serializer(self, models[0].form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -539,7 +566,9 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, models[0].form_entry)]
+        expected = get_serializer(self, models[0].form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -570,7 +599,9 @@ class CohortUserTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, models[0].form_entry)]
+        expected = get_serializer(self, models[0].form_entry)
+        del expected['custom_fields']
+        expected = [expected]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
