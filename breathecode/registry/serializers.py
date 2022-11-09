@@ -18,6 +18,17 @@ class ProfileSerializer(serpy.Serializer):
     github_username = serpy.Field()
 
 
+class SEOReportSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    report_type = serpy.Field()
+    status = serpy.Field()
+    log = serpy.Field()
+    rating = serpy.Field()
+    how_to_fix = serpy.Field()
+    created_at = serpy.Field()
+
+
 class KeywordSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -145,6 +156,7 @@ class AcademyAssetSerializer(AssetSerializer):
 
     requirements = serpy.Field()
 
+    is_seo_tracked = serpy.Field()
     last_seo_scan_at = serpy.Field()
     seo_json_status = serpy.Field()
     optimization_rating = serpy.Field()
@@ -242,12 +254,38 @@ class _Keyword(serpy.Serializer):
         return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
 
 
+class KeywordClusterMidSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    academy = AcademySmallSerializer()
+    lang = serpy.Field()
+    landing_page_url = serpy.Field()
+
+    total_articles = serpy.MethodField()
+    keywords = serpy.MethodField()
+
+    def get_keywords(self, obj):
+        kws = AssetKeyword.objects.filter(cluster__id=obj.id)
+        return _Keyword(kws, many=True).data
+
+    def get_total_articles(self, obj):
+        return Asset.objects.filter(seo_keywords__cluster__id=obj.id).count()
+
+
 class KeywordClusterBigSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     academy = AcademySmallSerializer()
     lang = serpy.Field()
+    landing_page_url = serpy.Field()
+    visibility = serpy.Field()
+    is_deprecated = serpy.Field()
+    is_important = serpy.Field()
+    is_urgent = serpy.Field()
+    internal_description = serpy.Field()
+    optimization_rating = serpy.Field()
 
     total_articles = serpy.MethodField()
     keywords = serpy.MethodField()
@@ -309,6 +347,18 @@ class PostKeywordClusterSerializer(serializers.ModelSerializer):
     class Meta:
         model = KeywordCluster
         exclude = ('academy', )
+
+    def validate(self, data):
+
+        validated_data = super().validate(data)
+
+        if 'landing_page_url' in validated_data:
+            if 'http' not in validated_data['landing_page_url']:
+                raise ValidationException(
+                    'Please make your topic cluster landing page url is an absolute url that points to your page, this is how we know your page domain'
+                )
+
+        return validated_data
 
     def create(self, validated_data):
         academy_id = self.context['academy']
