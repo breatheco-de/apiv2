@@ -390,6 +390,14 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('category')
             lookup['category__slug__iexact'] = param
 
+        if 'test_status' in self.request.GET:
+            param = self.request.GET.get('test_status')
+            lookup['test_status__iexact'] = param
+
+        if 'sync_status' in self.request.GET:
+            param = self.request.GET.get('sync_status')
+            lookup['sync_status__iexact'] = param
+
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)
             param = self.request.GET.get('slug')
@@ -414,6 +422,10 @@ class AssetView(APIView, GenerateLookupsMixin):
         if 'technologies' in self.request.GET:
             param = self.request.GET.get('technologies')
             lookup['technologies__in'] = [p.lower() for p in param.split(',')]
+
+        if 'keywords' in self.request.GET:
+            param = self.request.GET.get('keywords')
+            items = items.filter(seo_keywords__slug__in=param.split(','))
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
@@ -583,6 +595,14 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('category')
             lookup['category__slug__in'] = [p.lower() for p in param.split(',')]
 
+        if 'test_status' in self.request.GET:
+            param = self.request.GET.get('test_status')
+            lookup['test_status'] = param.upper()
+
+        if 'sync_status' in self.request.GET:
+            param = self.request.GET.get('sync_status')
+            lookup['sync_status'] = param.upper()
+
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)
             param = self.request.GET.get('slug')
@@ -610,7 +630,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         if 'keywords' in self.request.GET:
             param = self.request.GET.get('keywords')
-            lookup['seo_keywords__slug__in'] = [p.lower() for p in param.split(',')]
+            items = items.filter(seo_keywords__slug__in=[p.lower() for p in param.split(',')])
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
