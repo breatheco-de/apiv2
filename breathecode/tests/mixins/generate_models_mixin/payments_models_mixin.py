@@ -8,25 +8,28 @@ from .utils import create_models, get_list, is_valid, just_one
 
 class PaymentsModelsMixin(ModelsMixin):
 
-    def generate_payments_models(self,
-                                 currency=False,
-                                 price=False,
-                                 service=False,
-                                 service_item=False,
-                                 plan=False,
-                                 consumable=False,
-                                 invoice=False,
-                                 subscription=False,
-                                 credit=False,
-                                 payment_contact=False,
-                                 financial_reputation=False,
-                                 bag=False,
-                                 models={},
-                                 **kwargs):
+    def generate_payments_models(
+            self,
+            currency=False,
+            #  price=False,
+            service=False,
+            service_item=False,
+            plan=False,
+            consumable=False,
+            invoice=False,
+            subscription=False,
+            credit=False,
+            payment_contact=False,
+            financial_reputation=False,
+            bag=False,
+            models={},
+            **kwargs):
         """Generate models"""
         models = models.copy()
 
-        if not 'currency' in models and (is_valid(currency) or is_valid(price) or is_valid(invoice)):
+        # if not 'currency' in models and (is_valid(currency) or is_valid(price) or is_valid(invoice)):
+        if not 'currency' in models and (is_valid(currency) or is_valid(invoice) or is_valid(plan)
+                                         or is_valid(service) or is_valid(service_item)):
             kargs = {}
 
             if 'country' in models:
@@ -37,22 +40,14 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'academy' in models:
                 for academy in (models['academy']
                                 if isinstance(models['academy'], list) else [models['academy']]):
-                    academy.currency = just_one(models['currency'])
+                    academy.main_currency = just_one(models['currency'])
                     academy.save()
-
-        if not 'price' in models and is_valid(price):
-            kargs = {}
-
-            if 'currency' in models:
-                kargs['currency'] = just_one(models['currency'])
-
-            models['price'] = create_models(price, 'payments.Price', **kargs)
 
         if not 'service' in models and (is_valid(service) or is_valid(service_item) or is_valid(consumable)):
             kargs = {}
 
-            if 'price' in models:
-                kargs['prices'] = get_list(models['price'])
+            if 'currency' in models:
+                kargs['currency'] = just_one(models['currency'])
 
             if 'academy' in models:
                 kargs['owner'] = just_one(models['academy'])
@@ -79,8 +74,11 @@ class PaymentsModelsMixin(ModelsMixin):
         if not 'plan' in models and is_valid(plan):
             kargs = {}
 
-            if 'price' in models:
-                kargs['prices'] = get_list(models['price'])
+            # if 'price' in models:
+            #     kargs['price'] = just_one(models['price'])
+
+            if 'currency' in models:
+                kargs['currency'] = just_one(models['currency'])
 
             if 'service_item' in models:
                 kargs['services'] = get_list(models['service_item'])
@@ -125,10 +123,10 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['user'] = just_one(models['user'])
 
             if 'service_item' in models:
-                kargs['services'] = get_list(models['service_item'])
+                kargs['service'] = just_one(models['service_item'])
 
             if 'plan' in models:
-                kargs['plans'] = get_list(models['plan'])
+                kargs['plan'] = just_one(models['plan'])
 
             models['subscription'] = create_models(subscription, 'payments.Subscription', **kargs)
 
@@ -165,6 +163,12 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'currency' in models:
+                kargs['currency'] = just_one(models['currency'])
 
             if 'service_item' in models:
                 kargs['services'] = get_list(models['service_item'])

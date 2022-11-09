@@ -1,6 +1,6 @@
 import logging
 import serpy
-from breathecode.payments.models import Plan, Price, Service, ServiceItem, Subscription
+from breathecode.payments.models import Plan, Service, ServiceItem, Subscription
 
 from breathecode.utils import serializers
 
@@ -18,12 +18,15 @@ class GetCurrencySmallSerializer(serpy.Serializer):
 
 
 class GetCurrencySerializer(GetCurrencySmallSerializer):
-    countries = GetCountrySerializer(many=True)
+    countries = serpy.MethodField()
+
+    def get_countries(self, obj):
+        return GetCountrySerializer(obj.countries.all(), many=True).data
 
 
 class GetPriceSerializer(serpy.Serializer):
     price = serpy.Field()
-    currency = GetCurrencySmallSerializer
+    currency = GetCurrencySmallSerializer()
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -54,23 +57,58 @@ class GetGroupSerializer(serpy.Serializer):
     permissions = GetPermissionSerializer(many=True)
 
 
-class GetServiceSerializer(serpy.Serializer):
-    title = serpy.Field()
+class GetServiceSmallSerializer(serpy.Serializer):
+    # title = serpy.Field()
     slug = serpy.Field()
-    description = serpy.Field()
-    prices = GetPriceSerializer(many=True)
+    # description = serpy.Field()
+
+    price_per_unit = serpy.Field()
+
+    # owner = GetAcademySerializer(many=False)
+    private = serpy.Field()
+    groups = serpy.MethodField()
+    cohorts = serpy.MethodField()
+    mentorship_services = serpy.MethodField()
+
+    def get_groups(self, obj):
+        return GetGroupSerializer(obj.groups.all(), many=True).data
+
+    def get_cohorts(self, obj):
+        return GetCohortSerializer(obj.cohorts.all(), many=True).data
+
+    def get_mentorship_services(self, obj):
+        return GetMentorshipServiceSerializer(obj.mentorship_services.all(), many=True).data
+
+
+class GetServiceSerializer(serpy.Serializer):
+    # title = serpy.Field()
+    slug = serpy.Field()
+    # description = serpy.Field()
+
+    price_per_unit = serpy.Field()
+    currency = GetCurrencySmallSerializer(many=False)
+
     owner = GetAcademySerializer(many=False)
     private = serpy.Field()
-    groups = GetGroupSerializer(many=True)
-    cohorts = GetCohortSerializer(many=True)
-    mentorship_services = GetMentorshipServiceSerializer(many=True)
+    groups = serpy.MethodField()
+    cohorts = serpy.MethodField()
+    mentorship_services = serpy.MethodField()
+
+    def get_groups(self, obj):
+        return GetGroupSerializer(obj.groups.all(), many=True).data
+
+    def get_cohorts(self, obj):
+        return GetCohortSerializer(obj.cohorts.all(), many=True).data
+
+    def get_mentorship_services(self, obj):
+        return GetMentorshipServiceSerializer(obj.mentorship_services.all(), many=True).data
 
 
 class GetServiceItemSerializer(serpy.Serializer):
     unit_type = serpy.Field()
     how_many = serpy.Field()
     # service = serpy.MethodField()
-    service = GetServiceSerializer
+    service = GetServiceSmallSerializer()
 
     # def get_service(self, obj):
     #     return GetServiceSerializer(obj.service, many=False).data
@@ -87,26 +125,28 @@ class GetConsumableSerializer(GetServiceItemSerializer):
     valid_until = serpy.Field()
 
 
-class GetPlanSerializer(serpy.Serializer):
-    title = serpy.Field()
+class GetPlanSmallSerializer(serpy.Serializer):
+    # title = serpy.Field()
     slug = serpy.Field()
-    description = serpy.Field()
+    # description = serpy.Field()
     status = serpy.Field()
     renew_every = serpy.Field()
     renew_every_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
-    # services = GetServiceItemSerializer
-    owner = GetAcademySerializer
     services = serpy.MethodField()
-    services = serpy.MethodField()
-    prices = serpy.MethodField()
 
     def get_services(self, obj):
         return GetServiceItemSerializer(obj.services.all(), many=True).data
 
-    def get_prices(self, obj):
-        return GetPriceSerializer(obj.prices.all(), many=True).data
+
+class GetPlanSerializer(GetPlanSmallSerializer):
+    price_per_month = serpy.Field()
+    price_per_quarter = serpy.Field()
+    price_per_half = serpy.Field()
+    price_per_year = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    owner = GetAcademySerializer()
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
@@ -118,28 +158,10 @@ class GetInvoiceSmallSerializer(serpy.Serializer):
 
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
-    services = serpy.MethodField()
-    plans = serpy.MethodField()
-
-    def get_services(self, obj):
-        service_items = ServiceItem.objects.none()
-        for subscription in Subscription.objects.filter(invoice=obj):
-            for service_item in subscription.services.all():
-                service_items |= service_item
-
-            # for plan in subscription.plans.all():
-            #     for service_item in plan.services.all():
-            #         service_items |= service_item
-
-        return GetServiceItemSerializer(service_items.order_by('-created_at'), many=True).data
-
-    def get_plans(self, obj):
-        plans = Plan.objects.none()
-        for subscription in Subscription.objects.filter(invoice=obj):
-            for plan in subscription.plans.all():
-                plans |= plan
-
-        return GetPlanSerializer(plans.order_by('-created_at'), many=True).data
+    amount = serpy.Field()
+    paid_at = serpy.Field()
+    status = serpy.Field()
+    currency = GetCurrencySmallSerializer()
 
 
 class GetSubscriptionSerializer(serpy.Serializer):
@@ -177,15 +199,20 @@ class GetBagSerializer(serpy.Serializer):
     type = serpy.Field()
     is_recurrent = serpy.Field()
     was_delivered = serpy.Field()
-    amount = serpy.Field()
+    amount_per_month = serpy.Field()
+    amount_per_quarter = serpy.Field()
+    amount_per_half = serpy.Field()
+    amount_per_year = serpy.Field()
     token = serpy.Field()
     expires_at = serpy.Field()
 
     def get_services(self, obj):
+        # return []
         return GetServiceItemSerializer(obj.services.filter(), many=True).data
 
     def get_plans(self, obj):
-        return GetPlanSerializer(obj.plans.filter(), many=True).data
+        # return []
+        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
 
 
 class GetCheckingSerializer(GetInvoiceSmallSerializer):
@@ -223,17 +250,6 @@ class PlanSerializer(serializers.Serializer):
 
     class Meta:
         model = Plan
-        fields = '__all__'
-
-    def validate(self, attrs):
-        return attrs
-
-
-# do not use this serializer in a view
-class PriceSerializer(serializers.Serializer):
-
-    class Meta:
-        model = Price
         fields = '__all__'
 
     def validate(self, attrs):

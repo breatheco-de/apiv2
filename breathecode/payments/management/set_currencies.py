@@ -49,7 +49,6 @@ currencies = [
         'name': 'United States dollar',
         'countries': {
             'main': [usa, online],
-            'secondary': [venezuela],
         },
     },
     {
@@ -57,7 +56,6 @@ currencies = [
         'name': 'Bolívar',
         'countries': {
             'main': [venezuela],
-            'secondary': [],
         },
     },
     {
@@ -65,7 +63,6 @@ currencies = [
         'name': 'Peso uruguayo',
         'countries': {
             'main': [uruguay],
-            'secondary': [],
         },
     },
     {
@@ -73,7 +70,6 @@ currencies = [
         'name': 'Euro',
         'countries': {
             'main': [spain],
-            'secondary': [],
         },
     },
     {
@@ -81,7 +77,6 @@ currencies = [
         'name': 'colón costarricense',
         'countries': {
             'main': [costa_rica],
-            'secondary': [],
         },
     },
     {
@@ -89,7 +84,6 @@ currencies = [
         'name': 'peso chileno',
         'countries': {
             'main': [chile],
-            'secondary': [],
         },
     },
     {
@@ -97,7 +91,6 @@ currencies = [
         'name': 'Canadian dollar',
         'countries': {
             'main': [canada],
-            'secondary': [],
         },
     },
 ]
@@ -107,20 +100,8 @@ class Command(BaseCommand):
     help = 'Set currencies'
 
     def handle(self, *args, **options):
-        academies_cleaned = set()
         for currency in currencies:
             c, _ = Currency.objects.get_or_create(code=currency['code'], name=currency['name'])
             for country in currency['countries']['main']:
                 Academy.objects.filter(country__code=country['code'],
                                        country__name=country['name']).update(main_currency=c)
-
-            for country in currency['countries']['secondary']:
-                academies = Academy.objects.filter(country__code=country['code'],
-                                                   country__name=country['name'])
-
-                for academy in academies:
-                    if academy.id not in academies_cleaned:
-                        academy.allowed_currencies.clear()
-                        academies_cleaned.add(academy.id)
-
-                    academy.allowed_currencies.filter()

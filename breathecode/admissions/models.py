@@ -100,7 +100,6 @@ class Academy(models.Model):
         default=False, help_text='Academies available as SAAS will be sold thru 4Geeks.com')
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
-    allowed_currencies = models.ManyToManyField('payments.Currency', related_name='academies')
     main_currency = models.ForeignKey('payments.Currency',
                                       on_delete=models.CASCADE,
                                       null=True,

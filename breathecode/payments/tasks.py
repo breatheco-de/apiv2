@@ -74,6 +74,7 @@ def renew_subscription(self, subscription_id: int, from_datetime: datetime):
     try:
         #FIXME: check what happens if the payment fails
         s = Stripe()
+        #TODO: add language to the service
         invoice: Invoice = s.pay(subscription.user)
 
     except Exception:

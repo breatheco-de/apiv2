@@ -6,6 +6,8 @@ from django.db import models
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
 from breathecode.mentorship.models import APPROVED, MentorshipService
 from currencies import Currency as CurrencyFormatter
+
+from breathecode.utils.validators.language import validate_language_code
 from . import signals
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
@@ -37,19 +39,58 @@ class Currency(models.Model):
         return super().clean()
 
 
-class Price(models.Model):
+class AbstractPriceByUnit(models.Model):
     """
     This model is used to store the price of a Product or a Service.
     """
 
-    price = models.FloatField(default=0)
+    price_per_unit = models.FloatField(default=0)
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
 
     def format_price(self):
         return self.currency.format_price(self.price)
 
+    class Meta:
+        abstract = True
 
-class AbstractAsset(models.Model):
+
+class AbstractPriceByTime(models.Model):
+    """
+    This model is used to store the price of a Product or a Service.
+    """
+
+    price_per_month = models.FloatField(default=0)
+    price_per_quarter = models.FloatField(default=0)
+    price_per_half = models.FloatField(default=0)
+    price_per_year = models.FloatField(default=0)
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
+
+    def format_price(self):
+        return self.currency.format_price(self.price)
+
+    class Meta:
+        abstract = True
+
+
+class AbstractAmountByTime(models.Model):
+    """
+    This model is used to store the price of a Product or a Service.
+    """
+
+    amount_per_month = models.FloatField(default=0)
+    amount_per_quarter = models.FloatField(default=0)
+    amount_per_half = models.FloatField(default=0)
+    amount_per_year = models.FloatField(default=0)
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
+
+    def format_price(self):
+        return self.currency.format_price(self.price)
+
+    class Meta:
+        abstract = True
+
+
+class AbstractAsset(AbstractPriceByUnit):
     """
     This model represents a product or a service that can be sold.
     """
@@ -57,7 +98,6 @@ class AbstractAsset(models.Model):
     slug = models.CharField(max_length=60, unique=True)
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
-    prices = models.ManyToManyField(Price)
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     private = models.BooleanField(default=True)
@@ -148,16 +188,23 @@ PLAN_STATUS = [
 ]
 
 
-class Plan(models.Model):
+class PlanTranslation(models.Model):
+    #TODO: models.CharFieldTranslation
+    lang = models.CharField(max_length=5, validators=[validate_language_code])
+    title = models.CharField(max_length=60)
+    description = models.CharField(max_length=255)
+
+
+class Plan(AbstractPriceByTime):
     """
     A plan is a group of services that can be purchased by a user.
     """
 
     slug = models.CharField(max_length=60, unique=True)
-    title = models.CharField(max_length=60)
-    description = models.CharField(max_length=255)
+
+    # translations
+
     status = models.CharField(max_length=7, choices=PLAN_STATUS, default=DRAFT)
-    prices = models.ManyToManyField(Price)
     #TODO: visible enum, private, unlisted, visible
 
     renew_every = models.IntegerField(default=1)
@@ -351,14 +398,25 @@ BAG_TYPE = [
     (PREVIEW, 'Preview'),
 ]
 
+QUARTER = 'QUARTER'
+HALF = 'HALF'
+YEAR = 'YEAR'
+CHOSEN_PERIOD = [
+    (MONTH, 'Month'),
+    (QUARTER, 'Quarter'),
+    (HALF, 'Half'),
+    (YEAR, 'Year'),
+]
 
-class Bag(models.Model):
+
+class Bag(AbstractAmountByTime):
     """
     Represents a credit that can be used by a user to use a service.
     """
 
     status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
     type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG)
+    chosen_period = models.CharField(max_length=7, choices=CHOSEN_PERIOD, default=MONTH)
 
     academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -369,7 +427,6 @@ class Bag(models.Model):
     was_delivered = models.BooleanField(default=False)
     #TODO: this maybe needs a relation with invoice
 
-    amount = models.FloatField()
     token = models.CharField(max_length=40, db_index=True, default=None, null=True, blank=True)
     expires_at = models.DateTimeField(default=None, blank=True, null=True)
 

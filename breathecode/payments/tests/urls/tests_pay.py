@@ -24,48 +24,34 @@ def format_user_setting(data={}):
     }
 
 
-def price_serializer(price, data={}):
+def format_invoice_item(data={}):
     return {
-        'price': price.price,
+        'academy_id': None,
+        'amount': 0.0,
+        'currency_id': 1,
+        'id': 1,
+        'paid_at': UTC_NOW,
+        'status': 'FULFILLED',
+        'stripe_id': None,
+        'user_id': 1,
         **data,
     }
 
 
-def plan_serializer(plan, service_items, prices, data={}):
+def get_serializer(self, currency, user, data={}):
     return {
-        'description': plan.description,
-        'prices': [price_serializer(price) for price in prices],
-        'renew_every': plan.renew_every,
-        'renew_every_unit': plan.renew_every_unit,
-        'services': [service_item_serializer(service) for service in service_items],
-        'slug': plan.slug,
-        'status': plan.status,
-        'title': plan.title,
-        'trial_duration': plan.trial_duration,
-        'trial_duration_unit': plan.trial_duration_unit,
-        **data,
-    }
-
-
-def service_item_serializer(service_item, data={}):
-    return {
-        'how_many': service_item.how_many,
-        'unit_type': service_item.unit_type,
-        **data,
-    }
-
-
-def get_serializer(bag, plans=[], service_items=[], prices=[], data={}):
-    return {
-        'amount': bag.amount,
-        'expires_at': bag.expires_at,
-        'is_recurrent': bag.is_recurrent,
-        'plans': [plan_serializer(plan, service_items, prices) for plan in plans],
-        'services': [service_item_serializer(service) for service in service_items],
-        'status': bag.status,
-        'token': bag.token,
-        'type': bag.type,
-        'was_delivered': bag.was_delivered,
+        'amount': 0,
+        'currency': {
+            'code': currency.code,
+            'name': currency.name,
+        },
+        'paid_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        'status': 'FULFILLED',
+        'user': {
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        },
         **data,
     }
 
@@ -89,16 +75,42 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [])
 
     """
-    🔽🔽🔽 Get with zero Bag
+    🔽🔽🔽 Get with zero Bag, without passing token
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__without_bag(self):
+    def test__without_bag__without_passing_token(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
         response = self.client.post(url)
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {'detail': 'missing-token', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+    """
+    🔽🔽🔽 Get with zero Bag, passing token
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__without_bag__passing_token(self):
+        model = self.bc.database.create(user=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {'token': 'xdxdxdxdxdxdxdxdxdxd'}
+        response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
         json = response.json()
@@ -108,6 +120,157 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+
+    """
+    🔽🔽🔽 Get with zero Bag, passing token, without Plan and ServiceItem
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__without_bag__passing_token__empty_bag(self):
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+        }
+        model = self.bc.database.create(user=1, bag=bag, currency=1, academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {'token': 'xdxdxdxdxdxdxdxdxdxd'}
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {'detail': 'bag-is-empty', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.bc.check.queryset_with_pks(model.bag.services.all(), [])
+
+    """
+    🔽🔽🔽 Get with zero Bag, passing token, with Plan and ServiceItem
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__without_bag__passing_token__with_bag_filled(self):
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+        }
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {'token': 'xdxdxdxdxdxdxdxdxdxd'}
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {'detail': 'missing-chosen-period', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.services.all(), [1])
+
+    """
+    🔽🔽🔽 Get with zero Bag, passing token, with Plan and ServiceItem, passing chosen_period
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__without_bag__passing_token__passing_chosen_period__bad_value(self):
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+        }
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        # data = {'token': 'xdxdxdxdxdxdxdxdxdxd', 'chosen_period': 'MONTH'}
+        data = {'token': 'xdxdxdxdxdxdxdxdxdxd', 'chosen_period': self.bc.fake.slug()}
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {'detail': 'invalid-chosen-period', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.services.all(), [1])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    def test__without_bag__passing_token__passing_chosen_period__good_value(self):
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+        }
+        chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'chosen_period': chosen_period,
+        }
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = get_serializer(self, model.currency, model.user, data={})
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'),
+                         [{
+                             **self.bc.format.to_dict(model.bag),
+                             'token': None,
+                             'status': 'PAID',
+                             'expires_at': None,
+                             'chosen_period': chosen_period,
+                         }])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [format_invoice_item()])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.services.all(), [1])
+        # assert 0

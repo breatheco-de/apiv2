@@ -5,6 +5,7 @@ from typing import Any, Optional
 from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
+from breathecode.utils.api_view_extensions.extensions.language_extension import LanguageExtension
 from .extensions import CacheExtension
 
 __all__ = ['APIViewExtensionHandlers']
@@ -18,6 +19,7 @@ class APIViewExtensionHandlers:
 
     # the custom method we want to export go here
     cache: Optional[CacheExtension]
+    language: Optional[LanguageExtension]
 
     # internal attrs
     _request: WSGIRequest
@@ -86,7 +88,7 @@ class APIViewExtensionHandlers:
         """
         ...
 
-    def _spy_extension_arguments(self, **kwargs) -> None:
+    def _spy_extension_arguments(self, **_) -> None:
         """
         That is used for spy the extension arguments is being used.
         """

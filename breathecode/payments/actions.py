@@ -31,6 +31,7 @@ def calculate_renew_delta(subscription: Subscription):
 def add_items_to_bag(request, settings: UserSetting, bag: Bag):
     services = request.data.get('services')
     plans = request.data.get('plans')
+    cohorts = request.data.get('cohorts')
 
     bag.services.clear()
     bag.plans.clear()
@@ -39,6 +40,15 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
 
     services_not_found = set()
     plans_not_found = set()
+
+    # get the plans related to a cohort
+    if isinstance(cohorts, list):
+        plan_ids = Plan.objects.filter(services__service__cohorts__id__in=cohorts).values_list('id',
+                                                                                               flat=True)
+
+        for plan_id in plan_ids:
+            if not Plan.objects.filter(id=plan_id):
+                plans_not_found.add(plan_id)
 
     if isinstance(services, list):
         for service in services:
@@ -58,6 +68,10 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
             slug='some-items-not-found'),
                                   code=404)
 
+    if isinstance(cohorts, list):
+        for plan_id in plan_ids:
+            bag.plans.add(plan_id)
+
     if isinstance(services, list):
         for service in services:
             bag.services.add(service)
@@ -71,29 +85,35 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
     return bag
 
 
-def get_amount(bag: Bag, academy: Academy, settings: UserSetting):
-    amount = 0
+def get_amount(bag: Bag, academy: Academy, settings: UserSetting) -> tuple[float, float, float, float]:
+    price_per_month = 0
+    price_per_quarter = 0
+    price_per_half = 0
+    price_per_year = 0
 
-    currency = settings.main_currency if academy.allowed_currencies.filter(
-        code=settings.main_currency).exists() else academy.main_currency
+    currency = academy.main_currency
 
     if not currency:
         currency, _ = Currency.objects.get_or_create(code='USD', name='United States dollar')
 
-    for service in bag.services.all():
-        p = service.service.prices.filter(currency=currency).first()
-        if not p:
-            bag.services.remove(service)
+    for service_item in bag.services.all():
+        if service_item.service.currency != currency:
+            bag.services.remove(service_item)
             continue
 
-        amount += p.price
+        price_per_month += service_item.service.price_per_unit * service_item.how_many
+        price_per_quarter += service_item.service.price_per_unit * service_item.how_many * 3
+        price_per_half += service_item.service.price_per_unit * service_item.how_many * 6
+        price_per_year += service_item.service.price_per_unit * service_item.how_many * 12
 
     for plan in bag.plans.all():
-        p = plan.prices.filter(currency=currency).first()
-        if not p:
+        if plan.currency != currency:
             bag.plans.remove(plan)
             continue
 
-        amount += p.price
+        price_per_month += plan.price_per_month
+        price_per_quarter += plan.price_per_quarter
+        price_per_half += plan.price_per_half
+        price_per_year += plan.price_per_year
 
-    return amount
+    return price_per_month, price_per_quarter, price_per_half, price_per_year

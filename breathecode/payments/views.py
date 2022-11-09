@@ -504,11 +504,17 @@ class AcademyInvoiceView(APIView):
 
 
 class CardView(APIView):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     def post(self, request):
+        handler = self.extensions(request)
+        language = handler.language.get()
+
         settings = get_user_settings(request.user.id)
+        language = language or settings.lang
 
         s = Stripe()
+        s.set_language(language)
         s.add_contact(request.user)
 
         token = request.data.get('token')
@@ -553,11 +559,14 @@ class BagView(APIView):
         return handler.response(serializer.data)
 
     def put(self, request):
-        request.data.get('')
+        handler = self.extensions(request)
+        language = handler.language.get()
 
         settings = get_user_settings(request.user.id)
+        language = language or settings.lang
 
         s = Stripe()
+        s.set_language(language)
         s.add_contact(request.user)
 
         # do no show the bags of type preview they are build
@@ -578,6 +587,7 @@ class CheckingView(APIView):
 
     def put(self, request):
         type = request.data.get('type', 'BAG').upper()
+        created = False
 
         settings = get_user_settings(request.user.id)
 
@@ -592,68 +602,155 @@ class CheckingView(APIView):
                                           code=404)
 
             if type == 'PREVIEW':
-                bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type=type)
+                bag, created = Bag.objects.get_or_create(user=request.user, status='CHECKING', type=type)
                 add_items_to_bag(request, settings, bag)
 
             utc_now = timezone.now()
 
             bag.token = Token.generate_key()
             bag.expires_at = utc_now + timedelta(minutes=10)
-            bag.amount = get_amount(bag, bag.academy, settings)
+            bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
+                bag, bag.academy, settings)
 
             bag.save()
 
             serializer = GetBagSerializer(bag, many=False)
-            return Response(serializer.data)
+            return Response(serializer.data,
+                            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class PayView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     def post(self, request):
+        handler = self.extensions(request)
+        language = handler.language.get()
         utc_now = timezone.now()
 
         settings = get_user_settings(request.user.id)
+        language = language or settings.lang
 
-        reputation, _ = FinancialReputation.objects.get_or_create(user=request.user)
+        with transaction.atomic():
 
-        current_reputation = reputation.get_reputation()
-        if current_reputation == 'FRAUD' or current_reputation == 'BAD':
-            raise PaymentException(
-                translation(
+            reputation, _ = FinancialReputation.objects.get_or_create(user=request.user)
+
+            current_reputation = reputation.get_reputation()
+            if current_reputation == 'FRAUD' or current_reputation == 'BAD':
+                raise PaymentException(
+                    translation(
+                        language,
+                        en=
+                        'The payment could not be completed because you have a bad reputation on this platform',
+                        es='No se pudo completar el pago porque tienes mala reputación en esta plataforma',
+                        slug='fraud-or-bad-reputation'))
+
+            # do no show the bags of type preview they are build
+            type = request.data.get('type', 'BAG').upper()
+            token = request.data.get('token')
+            if not token:
+                raise ValidationException(translation(language,
+                                                      en='Invalid bag token',
+                                                      es='El token de la bolsa es inválido',
+                                                      slug='missing-token'),
+                                          code=404)
+
+            recurrent = request.data.get('recurrent', False)
+            bag = Bag.objects.filter(user=request.user,
+                                     status='CHECKING',
+                                     token=token,
+                                     academy__main_currency__isnull=False,
+                                     expires_at__gte=utc_now,
+                                     type=type).first()
+
+            if not bag:
+                raise ValidationException(translation(
                     settings.lang,
-                    en='the payment could not be completed because you have a bad reputation on this platform',
-                    es='no se pudo completar el pago porque tienes mala reputación en esta plataforma',
-                    slug='fraud-or-bad-reputation'))
+                    en='Bag not found, maybe you need to renew the checking',
+                    es='Bolsa no encontrada, quizás necesitas renovar el checking',
+                    slug='not-found-or-without-checking'),
+                                          code=404)
 
-        # do no show the bags of type preview they are build
-        type = request.data.get('type', 'bag').upper()
+            if bag.services.count() == 0 and bag.plans.count() == 0:
+                raise ValidationException(translation(settings.lang,
+                                                      en='Bag is empty',
+                                                      es='La bolsa esta vacía',
+                                                      slug='bag-is-empty'),
+                                          code=400)
 
-        token = request.data.get('token', 'empty')
-        recurrent = request.data.get('recurrent', False)
-        bag = Bag.objects.filter(user=request.user,
-                                 status='CHECKING',
-                                 token=token,
-                                 expires_at__gte=utc_now,
-                                 type=type).first()
-        if not bag:
-            raise ValidationException(translation(settings.lang,
-                                                  en='Bag not found or not have checking',
-                                                  es='Bolsa no encontrada o sin checking',
-                                                  slug='not-found-or-without-checking'),
-                                      code=404)
+            chosen_period = request.data.get('chosen_period', '').upper()
+            if not chosen_period:
+                raise ValidationException(translation(settings.lang,
+                                                      en='Missing chosen period',
+                                                      es='Falta el periodo elegido',
+                                                      slug='missing-chosen-period'),
+                                          code=400)
 
-        s = Stripe()
-        #TODO: think about ban a user if have bad reputation (FinancialReputation)
-        invoice = s.pay(request.user, bag.amount)
+            if chosen_period not in ['MONTH', 'QUARTER', 'HALF', 'YEAR']:
+                raise ValidationException(translation(settings.lang,
+                                                      en='Invalid chosen period',
+                                                      es='Periodo elegido inválido',
+                                                      slug='invalid-chosen-period'),
+                                          code=400)
 
-        bag.status = 'PAID'
-        bag.is_recurrent = recurrent
-        bag.token = None
-        bag.expires_at = None
-        bag.save()
+            if chosen_period == 'MONTH':
+                amount = bag.amount_per_month
 
-        tasks.build_subscription.delay(bag.id, invoice.id)
+            if chosen_period == 'QUARTER':
+                amount = bag.amount_per_quarter
 
-        serializer = GetInvoiceSerializer(invoice, many=False)
-        return Response(serializer.data)
+                if not amount:
+                    amount = bag.amount_per_month * 3
+
+            if chosen_period == 'HALF':
+                amount = bag.amount_per_half
+
+                if not amount:
+                    amount = bag.amount_per_quarter * 2
+
+                if not amount:
+                    amount = bag.amount_per_month * 6
+
+            if chosen_period == 'YEAR':
+                amount = bag.amount_per_year
+
+                if not amount:
+                    amount = bag.amount_per_half * 2
+
+                if not amount:
+                    amount = bag.amount_per_quarter * 4
+
+                if not amount:
+                    amount = bag.amount_per_month * 12
+
+            # if not bag.academy.main_currency:
+            #     raise ValidationException(translation(settings.lang,
+            #                                           en='Academy main currency not found',
+            #                                           es='Moneda principal de la academia no encontrada',
+            #                                           slug='academy-main-currency-not-found'),
+            #                               code=404)
+
+            if amount > 0:
+                s = Stripe()
+                s.set_language(language)
+                invoice = s.pay(request.user, amount, settings, currency=bag.academy.main_currency)
+
+            else:
+                invoice = Invoice(amount=0,
+                                  paid_at=utc_now,
+                                  user=request.user,
+                                  status='FULFILLED',
+                                  currency=bag.academy.main_currency)
+
+                invoice.save()
+
+            bag.chosen_period = chosen_period
+            bag.status = 'PAID'
+            bag.is_recurrent = recurrent
+            bag.token = None
+            bag.expires_at = None
+            bag.save()
+
+            tasks.build_subscription.delay(bag.id, invoice.id)
+
+            serializer = GetInvoiceSerializer(invoice, many=False)
+            return Response(serializer.data, status=201)

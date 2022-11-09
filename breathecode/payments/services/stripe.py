@@ -1,21 +1,33 @@
 import os
-import stripe
+from typing import Optional
 
-from breathecode.payments.models import FinancialReputation, Invoice, PaymentContact
-from breathecode.utils import getLogger
+import stripe
 from django.contrib.auth.models import User
-from breathecode.utils import PaymentException, ValidationException
+from django.utils import timezone
+
+from breathecode.authenticate.models import UserSetting
+from breathecode.payments.models import FinancialReputation, Invoice, PaymentContact
+from breathecode.utils import PaymentException, ValidationException, getLogger
+from breathecode.utils.i18n import translation
 
 logger = getLogger(__name__)
 
 
 class Stripe:
     api_key: str
+    language: str
 
-    def __init__(self, api_key=None):
+    def __init__(self, api_key=None) -> None:
         self.api_key = api_key or os.getenv('STRIPE_API_KEY')
+        self.language = 'en'
 
-    def create_card_token(self, card_number: str, exp_month: int, exp_year: int, cvc: str):
+    def set_language(self, lang: str) -> None:
+        self.language = lang
+
+    def set_language_from_settings(self, settings: UserSetting):
+        self.language = settings.lang
+
+    def create_card_token(self, card_number: str, exp_month: int, exp_year: int, cvc: str) -> None:
         stripe.api_key = self.api_key
 
         token = stripe.Token.create(card={
@@ -26,48 +38,18 @@ class Stripe:
         })
         return token.id
 
-    def add_payment_method(self, user: User, token: str, attempts=0):
+    def add_payment_method(self, user: User, token: str):
         stripe.api_key = self.api_key
 
         contact = PaymentContact.objects.filter(user=user).first()
         if not contact:
             contact = self.add_contact(user)
 
-        try:
+        def callback():
+            # return stripe.Customer.create_source(contact.stripe_id, source=token)
             stripe.Customer.modify(contact.stripe_id, source=token)
 
-        except stripe.error.CardError as e:
-            logger.error(str(e))
-            raise PaymentException('Card declined', slug='card-error')
-
-        except stripe.error.RateLimitError as e:
-            logger.error(str(e))
-            raise PaymentException('Too many requests', slug='rate-limit-error')
-
-        except stripe.error.InvalidRequestError as e:
-            logger.error(str(e))
-            raise ValidationException(str(e), code=400, slug='invalid-request')
-
-        except stripe.error.AuthenticationError as e:
-            logger.error(str(e))
-            raise ValidationException(str(e), code=400, slug='authentication-error')
-
-        except stripe.error.APIConnectionError as e:
-            attempts += 1
-            if attempts < 5:
-                return self.add_payment_method(user, token, attempts=attempts)
-
-            logger.error(str(e))
-            raise ValidationException(str(e), code=500, slug='payment-service-are-down')
-
-        except stripe.error.StripeError as e:
-            logger.error(str(e))
-            raise PaymentException(str(e), slug='error')
-
-        except Exception as e:
-            # Something else happened, completely unrelated to Stripe
-            logger.error(str(e))
-            raise PaymentException('A unexpected error occur in the server', slug='unexpected-exception')
+        return self._i18n_validations(callback)
 
     def add_contact(self, user: User):
         stripe.api_key = self.api_key
@@ -88,19 +70,88 @@ class Stripe:
 
         return contact
 
+    def _i18n_validations(self, callback: callable, attempts=0):
+        try:
+            return callback()
+
+        except stripe.error.CardError as e:
+            logger.error(str(e))
+            raise PaymentException(
+                translation(self.language, en='Card declined', es='Tarjeta rechazada', slug='card-error'))
+
+        except stripe.error.RateLimitError as e:
+            logger.error(str(e))
+            raise PaymentException(
+                translation(self.language,
+                            en='Too many requests',
+                            es='Demasiadas solicitudes',
+                            slug='rate-limit-error'))
+
+        except stripe.error.InvalidRequestError as e:
+            logger.error(str(e))
+            raise PaymentException(
+                translation(self.language,
+                            en='Invalid request',
+                            es='Solicitud invalida',
+                            slug='invalid-request'))
+
+        except stripe.error.AuthenticationError as e:
+            logger.error(str(e))
+            raise PaymentException(
+                translation(self.language,
+                            en='Authentication error',
+                            es='Error de autenticación',
+                            slug='authentication-error'))
+
+        except stripe.error.APIConnectionError as e:
+            attempts += 1
+            if attempts < 5:
+                return self._i18n_validations(callback, attempts=attempts)
+
+            logger.error(str(e))
+
+            raise PaymentException(
+                translation(self.language,
+                            en='Payment service are down, try again later',
+                            es='El servicio de pago está caído, inténtalo de nuevo más tarde',
+                            slug='payment-service-are-down'))
+
+        except stripe.error.StripeError as e:
+            logger.error(str(e))
+            raise PaymentException(
+                translation(self.language,
+                            en='We have problems with the payment provider, try again later',
+                            es='Tenemos problemas con el proveedor de pago, inténtalo de nuevo más tarde',
+                            slug='stripe-error'))
+
+        except Exception as e:
+            # Something else happened, completely unrelated to Stripe
+            logger.error(str(e))
+
+            raise PaymentException(
+                translation(
+                    self.language,
+                    en='A unexpected error occur during the payment process, please contact support',
+                    es='Ocurrió un error inesperado durante el proceso de pago, comuníquese con soporte',
+                    slug='unexpected-exception'))
+
     def pay(self, user: User, amount: float, description: str = '') -> Invoice:
+
         stripe.api_key = self.api_key
 
         customer = self.add_contact(user)
 
-        # create a charge in stripe using the customer and the amount
-        charge = stripe.Charge.create(customer=customer.id,
-                                      amount=amount,
-                                      currency='usd',
-                                      description=description)
+        def callback():
+            return stripe.Charge.create(customer=customer.id,
+                                        amount=amount,
+                                        currency='usd',
+                                        description=description)
 
+        charge = self._i18n_validations(callback)
+
+        utc_now = timezone.now()
         #TODO: think about ban a user if have bad reputation (FinancialReputation)
-        payment = Invoice(user=user, amount=amount, stripe_id=charge.id)
+        payment = Invoice(user=user, amount=amount, stripe_id=charge.id, paid_at=utc_now)
         payment.status = 'FULFILLED'
         #   status='FULFILLED' if successfully else 'REJECTED',
 

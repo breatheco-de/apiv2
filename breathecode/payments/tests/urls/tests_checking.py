@@ -1,15 +1,12 @@
-from datetime import timedelta
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
-from rest_framework.authtoken.models import Token
 
 from django.urls import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
-from breathecode.payments import signals
-
-from django.utils import timezone
-from ..mixins import PaymentsTestCase
+from breathecode.payments.tests.mixins.payments_test_case import PaymentsTestCase
 
 UTC_NOW = timezone.now()
 
@@ -24,44 +21,63 @@ def format_user_setting(data={}):
     }
 
 
-def price_serializer(price, data={}):
+def plan_serializer(plan, service_items, service, cohorts=[], data={}):
     return {
-        'price': price.price,
-        **data,
-    }
-
-
-def plan_serializer(plan, service_items, prices, data={}):
-    return {
-        'description': plan.description,
-        'prices': [price_serializer(price) for price in prices],
+        # 'description': plan.description,
         'renew_every': plan.renew_every,
         'renew_every_unit': plan.renew_every_unit,
-        'services': [service_item_serializer(service) for service in service_items],
+        'services':
+        [service_item_serializer(service_item, service, cohorts) for service_item in service_items],
         'slug': plan.slug,
         'status': plan.status,
-        'title': plan.title,
+        # 'title': plan.title,
         'trial_duration': plan.trial_duration,
         'trial_duration_unit': plan.trial_duration_unit,
         **data,
     }
 
 
-def service_item_serializer(service_item, data={}):
+def cohort_serializer(cohort, data={}):
     return {
-        'how_many': service_item.how_many,
-        'unit_type': service_item.unit_type,
+        'id': cohort.id,
+        'name': cohort.name,
+        'slug': cohort.slug,
         **data,
     }
 
 
-def get_serializer(bag, plans=[], service_items=[], prices=[], data={}):
+def service_serializer(service, cohorts=[], data={}):
     return {
-        'amount': bag.amount,
+        'cohorts': [cohort_serializer(cohort) for cohort in cohorts],
+        'groups': [],
+        'mentorship_services': [],
+        'price_per_unit': service.price_per_unit,
+        'private': service.private,
+        'slug': service.slug,
+        **data,
+    }
+
+
+def service_item_serializer(service_item, service, cohorts=[], data={}):
+    return {
+        'how_many': service_item.how_many,
+        'unit_type': service_item.unit_type,
+        'service': service_serializer(service, cohorts),
+        **data,
+    }
+
+
+def get_serializer(bag, plans=[], service_items=[], service=None, cohorts=[], data={}):
+    return {
+        'amount_per_month': bag.amount_per_month,
+        'amount_per_quarter': bag.amount_per_quarter,
+        'amount_per_half': bag.amount_per_half,
+        'amount_per_year': bag.amount_per_year,
         'expires_at': bag.expires_at,
         'is_recurrent': bag.is_recurrent,
-        'plans': [plan_serializer(plan, service_items, prices) for plan in plans],
-        'services': [service_item_serializer(service) for service in service_items],
+        'plans': [plan_serializer(plan, service_items, service, cohorts) for plan in plans],
+        'services':
+        [service_item_serializer(service_item, service, cohorts) for service_item in service_items],
         'status': bag.status,
         'token': bag.token,
         'type': bag.type,
@@ -138,7 +154,10 @@ class SignalTestSuite(PaymentsTestCase):
             expected = get_serializer(
                 model.bag,
                 data={
-                    'amount': 0.0,
+                    'amount_per_month': 0.0,
+                    'amount_per_quarter': 0.0,
+                    'amount_per_half': 0.0,
+                    'amount_per_year': 0.0,
                     'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
                     'token': token,
                 },
@@ -150,7 +169,10 @@ class SignalTestSuite(PaymentsTestCase):
             self.assertEqual(self.bc.database.list_of('payments.Bag'), [
                 {
                     **self.bc.format.to_dict(model.bag),
-                    'amount': 0.0,
+                    'amount_per_month': 0.0,
+                    'amount_per_quarter': 0.0,
+                    'amount_per_half': 0.0,
+                    'amount_per_year': 0.0,
                     'expires_at': UTC_NOW + timedelta(minutes=10),
                     'token': token,
                 },
@@ -225,7 +247,10 @@ class SignalTestSuite(PaymentsTestCase):
         expected = get_serializer(
             model.bag,
             data={
-                'amount': 0.0,
+                'amount_per_month': 0.0,
+                'amount_per_quarter': 0.0,
+                'amount_per_half': 0.0,
+                'amount_per_year': 0.0,
                 'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
                 'token': token,
             },
@@ -237,7 +262,10 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
             {
                 **self.bc.format.to_dict(model.bag),
-                'amount': 0.0,
+                'amount_per_month': 0.0,
+                'amount_per_quarter': 0.0,
+                'amount_per_half': 0.0,
+                'amount_per_year': 0.0,
                 'expires_at': UTC_NOW + timedelta(minutes=10),
                 'token': token,
             },
@@ -313,10 +341,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         expected = get_serializer(
             model.bag,
-            # [model.plan],
-            # [model.service_item],
             data={
-                'amount': 0.0,
                 'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
                 'token': token,
             },
@@ -328,7 +353,6 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
             {
                 **self.bc.format.to_dict(model.bag),
-                'amount': 0.0,
                 'expires_at': UTC_NOW + timedelta(minutes=10),
                 'token': token,
             },
@@ -358,13 +382,26 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         currency = {'code': 'USD', 'name': 'United States dollar'}
-        price = {'price': random.random() * 100}
+
+        plan = {
+            'price_per_month': random.random() * 100,
+            'price_per_quarter': random.random() * 100,
+            'price_per_half': random.random() * 100,
+            'price_per_year': random.random() * 100,
+        }
+
+        service = {
+            'price_per_unit': random.random() * 100,
+        }
+
+        service_item = {'how_many': random.randint(1, 5)}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        service_item=1,
-                                        plan=1,
-                                        price=price,
+                                        academy=1,
+                                        service_item=service_item,
+                                        service=service,
+                                        plan=plan,
                                         currency=currency)
         self.bc.request.authenticate(model.user)
 
@@ -381,11 +418,22 @@ class SignalTestSuite(PaymentsTestCase):
             model.bag,
             [model.plan],
             [model.service_item],
-            [model.price],
+            model.service,
+            [model.cohort],
             data={
-                'amount': model.price.price * 2,
-                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
-                'token': token,
+                'amount_per_month':
+                model.plan.price_per_month + (model.service.price_per_unit * model.service_item.how_many),
+                'amount_per_quarter':
+                model.plan.price_per_quarter +
+                (model.service.price_per_unit * model.service_item.how_many * 3),
+                'amount_per_half':
+                model.plan.price_per_half + (model.service.price_per_unit * model.service_item.how_many * 6),
+                'amount_per_year':
+                model.plan.price_per_year + (model.service.price_per_unit * model.service_item.how_many * 12),
+                'expires_at':
+                self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
+                'token':
+                token,
             },
         )
 
@@ -395,9 +443,121 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
             {
                 **self.bc.format.to_dict(model.bag),
-                'amount': model.price.price * 2,
-                'expires_at': UTC_NOW + timedelta(minutes=10),
-                'token': token,
+                'amount_per_month':
+                model.plan.price_per_month + (model.service.price_per_unit * model.service_item.how_many),
+                'amount_per_quarter':
+                model.plan.price_per_quarter +
+                (model.service.price_per_unit * model.service_item.how_many * 3),
+                'amount_per_half':
+                model.plan.price_per_half + (model.service.price_per_unit * model.service_item.how_many * 6),
+                'amount_per_year':
+                model.plan.price_per_year + (model.service.price_per_unit * model.service_item.how_many * 12),
+                'expires_at':
+                UTC_NOW + timedelta(minutes=10),
+                'token':
+                token,
+            },
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({
+                'lang': 'en',
+                'id': model.user.id,
+                'user_id': model.user.id,
+            }),
+        ])
+        self.bc.check.queryset_with_pks(model.bag.services.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+
+    """
+    🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
+    with the correct Currency and Price, passing Cohort
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__with_bag__type_bag__passing_type_preview__items_found__passing_cohorts(self):
+        bag = {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'services': [],
+        }
+
+        currency = {'code': 'USD', 'name': 'United States dollar'}
+
+        plan = {
+            'price_per_month': random.random() * 100,
+            'price_per_quarter': random.random() * 100,
+            'price_per_half': random.random() * 100,
+            'price_per_year': random.random() * 100,
+        }
+
+        service = {
+            'price_per_unit': random.random() * 100,
+        }
+
+        service_item = {'how_many': random.randint(1, 5)}
+
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        cohort=1,
+                                        service_item=service_item,
+                                        service=service,
+                                        plan=plan,
+                                        currency=currency)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:checking')
+        data = {'type': 'PREVIEW', 'cohorts': [1], 'services': [1]}
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+            response = self.client.put(url, data, format='json')
+
+        json = response.json()
+
+        expected = get_serializer(
+            model.bag,
+            [model.plan],
+            [model.service_item],
+            model.service,
+            [model.cohort],
+            data={
+                'amount_per_month':
+                model.plan.price_per_month + (model.service.price_per_unit * model.service_item.how_many),
+                'amount_per_quarter':
+                model.plan.price_per_quarter +
+                (model.service.price_per_unit * model.service_item.how_many * 3),
+                'amount_per_half':
+                model.plan.price_per_half + (model.service.price_per_unit * model.service_item.how_many * 6),
+                'amount_per_year':
+                model.plan.price_per_year + (model.service.price_per_unit * model.service_item.how_many * 12),
+                'expires_at':
+                self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
+                'token':
+                token,
+            },
+        )
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'amount_per_month':
+                model.plan.price_per_month + (model.service.price_per_unit * model.service_item.how_many),
+                'amount_per_quarter':
+                model.plan.price_per_quarter +
+                (model.service.price_per_unit * model.service_item.how_many * 3),
+                'amount_per_half':
+                model.plan.price_per_half + (model.service.price_per_unit * model.service_item.how_many * 6),
+                'amount_per_year':
+                model.plan.price_per_year + (model.service.price_per_unit * model.service_item.how_many * 12),
+                'expires_at':
+                UTC_NOW + timedelta(minutes=10),
+                'token':
+                token,
             },
         ])
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
