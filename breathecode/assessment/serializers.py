@@ -59,6 +59,7 @@ class GetAssessmentSerializer(serpy.Serializer):
 
 class GetAssessmentBigSerializer(GetAssessmentSerializer):
     questions = serpy.MethodField()
+    is_instant_feedback = serpy.Field()
 
     def get_questions(self, obj):
         return GetQuestionSerializer(obj.question_set.all(), many=True).data
