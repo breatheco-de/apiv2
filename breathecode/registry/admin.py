@@ -171,6 +171,14 @@ def seo_report(modeladmin, request, queryset):
             messages.error(request, a.slug + ': ' + str(e))
 
 
+def seo_optimization_off(modeladmin, request, queryset):
+    queryset.update(is_seo_tracked=False)
+
+
+def seo_optimization_on(modeladmin, request, queryset):
+    queryset.update(is_seo_tracked=True)
+
+
 def load_readme_tasks(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
@@ -288,6 +296,8 @@ class AssetAdmin(admin.ModelAdmin):
         add_gitpod,
         remove_gitpod,
         pull_content_from_github,
+        seo_optimization_off,
+        seo_optimization_on,
         seo_report,
         make_me_author,
         make_me_owner,

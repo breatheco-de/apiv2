@@ -1,4 +1,4 @@
-import os, ast, requests, json, logging
+import os, ast, requests, json, logging, re
 import breathecode.services.seo.actions as actions
 from breathecode.registry.models import SEOReport
 from breathecode.utils import APIException
@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 class SEOAnalyzer:
     asset = None
     excluded = []
-    influence = {'keyword_density': 1}
+    shared_state = {}
+    influence = {
+        'general_structure': 0.2,
+        'keyword_density': 0.4,
+        'internal_linking': 0.4,
+    }
 
     def __init__(self, asset, exclude=[]):
         if asset is None:
@@ -35,17 +40,29 @@ class SEOAnalyzer:
             if '.py' not in file_name:
                 continue
             actions.append(file_name[0:-3])
-        return actions
+        return sorted(actions, key=str.lower)
 
     def start(self):
         rating = 0
         log = []
         actions = self._get_actions()
+
+        self.asset.last_seo_scan_at = timezone.now()
+        self.asset.save()
+
+        # Start reports fro scratch
+        SEOReport.objects.filter(asset__slug=self.asset.slug).delete()
+
         for act in actions:
             if act in self.excluded:
                 continue
             else:
                 report = self.execute_report(act)
+
+                if report.report_type not in self.influence:
+                    logger.error(f'Influence for report {report.report_type} its not specified')
+                    self.influence[report.report_type] = 0
+
                 rating += report.get_rating() * self.influence[report.report_type]
                 log += report.get_log()
 
@@ -57,32 +74,51 @@ class SEOAnalyzer:
 
     def execute_report(self, script_slug):
 
+        action_name = re.sub(r'_[0-9]+_', '', script_slug)
+
         logger.debug(f'Executing SEP Report => {script_slug}')
         report = SEOReport(
-            report_type=script_slug,
+            report_type=action_name,
             asset=self.asset,
             rating=0,
         )
-        if hasattr(actions, script_slug):
+        report.__shared_state = self.shared_state
 
-            fn = getattr(actions, script_slug)
+        if hasattr(actions, action_name):
+
+            fn = getattr(actions, action_name)
 
             try:
+
+                if self.asset.seo_keywords is None or self.asset.seo_keywords.count() == 0:
+                    raise Exception('Asset has not keywords associated')
+
+                if self.asset.readme is None:
+                    raise Exception('Asset has not content')
+
                 fn(self, report)
                 report.rating = report.get_rating()
+
+                try:
+                    report.how_to_fix = fn.description.strip()
+                except AttributeError as e:
+                    pass
+
                 report.log = report.get_log()
                 report.status = 'OK'
                 report.save()
 
+                self.shared_state = report.__shared_state
+
             except Exception as e:
-                logger.exception('Error report error')
+                logger.exception('Report error')
                 report.rating = None
                 report.log = str(e)
                 report.status = 'ERROR'
                 report.save()
 
         else:
-            message = f'SEO Report `{script_slug}` is not implemented'
+            message = f'SEO Report `{action_name}` is not implemented'
             logger.debug(message)
             report.rating = None
             report.status = 'ERROR'

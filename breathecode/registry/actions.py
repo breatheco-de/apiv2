@@ -326,6 +326,7 @@ def clean_asset_readme(asset):
     try:
         asset = clean_readme_relative_paths(asset)
         asset = clean_readme_hide_comments(asset)
+        asset = clean_h1s(asset)
         readme = asset.get_readme(parse=True)
         if 'html' in readme:
             asset.html = readme['html']
@@ -333,6 +334,7 @@ def clean_asset_readme(asset):
         asset.cleaning_status = 'OK'
         asset.save()
     except Exception as e:
+        raise e
         asset.cleaning_status = 'ERROR'
         asset.cleaning_status_details = str(e)
         asset.save()
@@ -387,6 +389,30 @@ def clean_readme_hide_comments(asset):
 
     replaced += content[startIndex:]
     asset.set_readme(replaced)
+    return asset
+
+
+def clean_h1s(asset):
+    logger.debug(f'Clearning first heading 1 for {asset.slug}')
+    readme = asset.get_readme()
+    content = readme['decoded'].strip()
+
+    end = r'.*\n'
+    lines = list(re.finditer(end, content))
+    if len(lines) == 0:
+        logger.debug('no jump of lines found')
+        return asset
+
+    first_line_end = lines.pop(0).end()
+    logger.debug('first line ends at')
+    logger.debug(first_line_end)
+
+    regex = r'\s?#\s[`\-_\w]+[`\-_\w\s]*\n'
+    findings = list(re.finditer(regex, content[:first_line_end]))
+    if len(findings) > 0:
+        replaced = content[first_line_end:].strip()
+        asset.set_readme(replaced)
+
     return asset
 
 
