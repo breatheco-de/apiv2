@@ -578,8 +578,8 @@ def pull_learnpack_asset(github, asset, override_meta):
                     asset.delivery_formats = config['delivery']['formats']
 
             if 'url' in asset.delivery_formats:
-                if 'regex' in config['delivery']:
-                    asset.delivery_regex_url = config['delivery']['regex']
+                if 'regex' in config['delivery'] and isinstance(config['delivery']['regex'], str):
+                    asset.delivery_regex_url = config['delivery']['regex'].replace("\\\\", "\\")
 
     return asset
 
