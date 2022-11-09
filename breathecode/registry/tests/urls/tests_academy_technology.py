@@ -28,6 +28,7 @@ def get_serializer(asset_technology, assets=[], asset_technologies=[]):
         } if asset_technology.parent else None,
         'slug': asset_technology.slug,
         'title': asset_technology.title,
+        'sort_priority': asset_technology.sort_priority,
     }
 
 

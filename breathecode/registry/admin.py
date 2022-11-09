@@ -8,7 +8,6 @@ from django import forms
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from breathecode.assessment.models import Assessment
-from breathecode.assessment.actions import create_from_json
 from breathecode.utils.admin import change_field
 from breathecode.services.seo import SEOAnalyzer
 from .models import (
@@ -73,7 +72,7 @@ def pull_content_from_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         async_pull_from_github.delay(a.slug, request.user.id)
-        # pull_from_github(a.slug)  # uncomment for testing purposes
+        # pull_from_github(a.slug, override_meta=True)  # uncomment for testing purposes
 
 
 def async_regenerate_readme(modeladmin, request, queryset):
@@ -172,24 +171,12 @@ def seo_report(modeladmin, request, queryset):
             messages.error(request, a.slug + ': ' + str(e))
 
 
-def create_assessment_from_asset(modeladmin, request, queryset):
-    queryset.update(test_status='PENDING')
-    assets = queryset.all()
+def seo_optimization_off(modeladmin, request, queryset):
+    queryset.update(is_seo_tracked=False)
 
-    for a in assets:
-        try:
-            if a.asset_type != 'QUIZ':
-                raise Exception(f'Can\'t create assessment from {a.asset_type.lower()}, only quiz.')
-            ass = Assessment.objects.filter(slug=a.slug).first()
-            if ass is not None:
-                raise Exception(f'Assessment with slug {a.slug} already exists, try a different slug?')
 
-            if a.config is None or a.config == '':
-                raise Exception(f'Assessment with slug {a.slug} has no config')
-
-            create_from_json(a.config, slug=a.slug)
-        except Exception as e:
-            messages.error(request, a.slug + ': ' + str(e))
+def seo_optimization_on(modeladmin, request, queryset):
+    queryset.update(is_seo_tracked=True)
 
 
 def load_readme_tasks(modeladmin, request, queryset):
@@ -297,6 +284,7 @@ class WithKeywordFilter(admin.SimpleListFilter):
 class AssetAdmin(admin.ModelAdmin):
     form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
+    filter_horizontal = ('technologies', 'all_translations', 'seo_keywords')
     list_display = ('main', 'current_status', 'alias', 'techs', 'url_path')
     list_filter = [
         'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter,
@@ -308,10 +296,11 @@ class AssetAdmin(admin.ModelAdmin):
         add_gitpod,
         remove_gitpod,
         pull_content_from_github,
+        seo_optimization_off,
+        seo_optimization_on,
         seo_report,
         make_me_author,
         make_me_owner,
-        create_assessment_from_asset,
         get_author_grom_github_usernames,
         generate_spanish_translation,
         remove_dot_from_slug,

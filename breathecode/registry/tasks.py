@@ -48,8 +48,8 @@ class BaseTaskWithRetry(Task):
 @shared_task
 def async_pull_from_github(asset_slug, user_id=None):
     logger.debug(f'Synching asset {asset_slug} with data found on github')
-    asset = pull_from_github(asset_slug)
-    return asset.sync_status != 'ERROR'
+    sync_status = pull_from_github(asset_slug)
+    return sync_status != 'ERROR'
 
 
 @shared_task
@@ -106,13 +106,18 @@ def async_create_asset_thumbnail(asset_slug: str):
 
     slug1 = 'learn-to-code'
     slug2 = asset_slug
-    url = f'https://4geeksacademy.com/us/{slug1}/{slug2}/preview'
+
     func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
+
+    preview_url = asset.get_preview_generation_url()
+    if preview_url is None:
+        logger.warn(f'Not able to retrieve a preview generation')
+        return False
 
     name = f'{slug1}-{slug2}.png'
     response = func.call(
         params={
-            'url': url,
+            'url': preview_url,
             'name': name,
             'dimension': '1200x630',
             # this should be fixed if the screenshots is taken without load the content properly
@@ -197,7 +202,18 @@ def async_download_readme_images(asset_slug):
         raise Exception(f'Asset with slug {asset_slug} not found')
 
     readme = asset.get_readme(parse=True)
+    if 'html' not in readme:
+        logger.error(f'Asset with {asset_slug} readme cannot be parse into an HTML')
+        return False
+
     images = BeautifulSoup(readme['html'], features='html.parser').find_all('img', attrs={'srcset': True})
+
+    # check if old images are stil in the new markdown file
+    old_images = asset.images.all()
+    no_longer_used = {}
+    for img in old_images:
+        # we will assume they are not by default
+        no_longer_used[img.original_url] = img
 
     image_links = []
     for image in images:
@@ -224,7 +240,20 @@ def async_download_readme_images(asset_slug):
         return False
 
     for link in image_links:
+        if link in no_longer_used:
+            del no_longer_used[link]
         async_download_single_readme_image.delay(asset_slug, link)
+
+    # delete asset from this image
+    logger.debug(f'Found {len(no_longer_used)} images no longer used on asset {asset_slug}')
+    for old_img in no_longer_used:
+        no_longer_used[old_img].assets.remove(asset)
+
+        # if its not being sed on any other asset, we delete it from cloud
+        if no_longer_used[old_img].assets.count() == 0:
+            async_remove_img_from_cloud(no_longer_used[old_img].id)
+
+    return True
 
 
 @shared_task
@@ -246,6 +275,8 @@ def async_delete_asset_images(asset_slug):
 
         logger.info(f'Image {img.name} was deleted')
 
+    return True
+
 
 @shared_task
 def async_remove_img_from_cloud(id):
@@ -264,7 +295,8 @@ def async_remove_img_from_cloud(id):
     cloud_file.delete()
     img.delete()
 
-    logger.info(f'Image id ({name}) was deleted from the cloud')
+    logger.info(f'Image id ({img_name}) was deleted from the cloud')
+    return True
 
 
 @shared_task

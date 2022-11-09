@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @receiver(asset_slug_modified, sender=Asset)
 def post_asset_slug_modified(sender, instance: Asset, **kwargs):
-    logger.debug('Procesing asset slug creation')
+    logger.debug(f'Procesing asset slug creation for {instance.slug}')
     if instance.lang == 'en':
         instance.lang = 'us'
 
