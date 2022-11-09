@@ -248,6 +248,11 @@ class AuthenticateTestSuite(AuthTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'sex': model.form_entry.sex,
+            'custom_fields': model.form_entry.custom_fields,
+            'utm_placement': model.form_entry.utm_placement,
+            'utm_plan': model.form_entry.utm_plan,
+            'utm_term': model.form_entry.utm_term,
         }]
 
         self.assertEqual(json, expected)

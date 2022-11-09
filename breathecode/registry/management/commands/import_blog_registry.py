@@ -1,7 +1,7 @@
 import os, requests, logging, frontmatter
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
-from ...actions import create_asset, pull_from_github
+from ...actions import pull_from_github
 from ...tasks import async_pull_from_github, async_regenerate_asset_readme
 from ...models import Asset, AssetCategory
 from breathecode.admissions.models import Academy

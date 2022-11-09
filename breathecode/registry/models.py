@@ -371,6 +371,7 @@ class Asset(models.Model):
                               null=True,
                               help_text='The owner has the github premissions to update the lesson')
 
+    is_seo_tracked = models.BooleanField(default=True)
     seo_keywords = models.ManyToManyField(AssetKeyword,
                                           blank=True,
                                           help_text='Optimize for a max of two keywords per asset')
@@ -437,6 +438,13 @@ class Asset(models.Model):
 
         if slug_modified: asset_slug_modified.send(instance=self, sender=Asset)
         if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
+
+    def get_preview_generation_url(self):
+
+        if self.category is not None:
+            return self.category.preview_generation_url
+
+        return None
 
     def get_readme(self, parse=None, remove_frontmatter=False):
 
@@ -661,13 +669,18 @@ class AssetErrorLog(models.Model):
 
 class SEOReport(models.Model):
 
+    def __init__(self, *args, **kwargs):
+        super(SEOReport, self).__init__(*args, **kwargs)
+        self.__shared_state = {}
+
     report_type = models.CharField(max_length=40,
                                    help_text='Must be one of the services.seo.action script names')
     status = models.CharField(max_length=20,
                               choices=ASSET_SYNC_STATUS,
                               default='PENDING',
                               help_text='Internal state automatically set by the system')
-    log = models.TextField(default=None, null=True, blank=True)
+    log = models.JSONField(default=None, null=True, blank=True)
+    how_to_fix = models.TextField(default=None, null=True, blank=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     rating = models.FloatField(default=None,
                                null=True,
@@ -687,6 +700,18 @@ class SEOReport(models.Model):
 
     def bad(self, rating, msg):
         self.__log.append({'rating': rating, 'msg': msg})
+
+    # this data will be shared among all reports as they are
+    # being calculated in real time
+    def get_state():
+        return self.__shared_data
+
+    def set_state(key, value):
+        attrs = ['words']
+        if key in attrs:
+            self.__shared_state[key]: value
+        else:
+            raise Exception(f'Trying to set invalid property {key} on SEO report shared state')
 
     def get_rating(self):
         total_rating = 100

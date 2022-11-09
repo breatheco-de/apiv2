@@ -48,8 +48,8 @@ class BaseTaskWithRetry(Task):
 @shared_task
 def async_pull_from_github(asset_slug, user_id=None):
     logger.debug(f'Synching asset {asset_slug} with data found on github')
-    asset = pull_from_github(asset_slug)
-    return asset.sync_status != 'ERROR'
+    sync_status = pull_from_github(asset_slug)
+    return sync_status != 'ERROR'
 
 
 @shared_task
@@ -109,10 +109,15 @@ def async_create_asset_thumbnail(asset_slug: str):
 
     func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
 
+    preview_url = asset.get_preview_generation_url()
+    if preview_url is None:
+        logger.warn(f'Not able to retrieve a preview generation')
+        return False
+
     name = f'{slug1}-{slug2}.png'
     response = func.call(
         params={
-            'url': asset.get_preview_generation_url(),
+            'url': preview_url,
             'name': name,
             'dimension': '1200x630',
             # this should be fixed if the screenshots is taken without load the content properly
