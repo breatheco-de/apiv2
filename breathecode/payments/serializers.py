@@ -54,7 +54,10 @@ class GetPermissionSerializer(serpy.Serializer):
 
 class GetGroupSerializer(serpy.Serializer):
     name = serpy.Field()
-    permissions = GetPermissionSerializer(many=True)
+    permissions = serpy.MethodField()
+
+    def get_permissions(self, obj):
+        return GetPermissionSerializer(obj.permissions.all(), many=True).data
 
 
 class GetServiceSmallSerializer(serpy.Serializer):
