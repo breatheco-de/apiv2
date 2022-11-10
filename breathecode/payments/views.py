@@ -602,7 +602,22 @@ class CheckingView(APIView):
                                           code=404)
 
             if type == 'PREVIEW':
-                bag, created = Bag.objects.get_or_create(user=request.user, status='CHECKING', type=type)
+                type = request.data.get('academy')
+                try:
+                    academy = Academy.objects.get(id=int(type), main_currency__isnull=False)
+                except:
+                    raise ValidationException(translation(
+                        settings.lang,
+                        en='Academy not found or not configured properly',
+                        es='Academia no encontrada o no configurada correctamente',
+                        slug='not-found'),
+                                              code=404)
+
+                bag, created = Bag.objects.get_or_create(user=request.user,
+                                                         status='CHECKING',
+                                                         type=type,
+                                                         academy=academy,
+                                                         currency=academy.main_currency)
                 add_items_to_bag(request, settings, bag)
 
             utc_now = timezone.now()
