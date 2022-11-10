@@ -20,6 +20,7 @@ from .serializers import (
     PostFormEntrySerializer,
     FormEntrySerializer,
     FormEntrySmallSerializer,
+    FormEntryBigSerializer,
     ShortlinkSmallSerializer,
     TagSmallSerializer,
     AutomationSmallSerializer,
@@ -575,8 +576,16 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_lead')
-    def get(self, request, academy_id=None):
+    def get(self, request, academy_id=None, lead_id=None):
         handler = self.extensions(request)
+
+        if lead_id is not None:
+            single_lead = FormEntry.objects.filter(id=lead_id, academy__id=academy_id).first()
+            if single_lead is None:
+                raise ValidationException(f'Lead {lead_id} not found', 404, slug='lead-not-found')
+
+            serializer = FormEntryBigSerializer(single_lead, many=False)
+            return handler.response(serializer.data)
 
         academy = Academy.objects.get(id=academy_id)
         items = FormEntry.objects.filter(academy__id=academy.id)
@@ -649,6 +658,29 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_lead')
+    def put(self, request, academy_id=None, lead_id=None):
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(f'Academy {academy_id} not found', slug='academy-not-found')
+
+        lead = FormEntry.objects.filter(id=lead_id, academy__id=academy_id).first()
+        if lead is None:
+            raise ValidationException(f'Lead {lead_id} not found', slug='lead-not-found')
+
+        data = {**request.data}
+
+        serializer = PostFormEntrySerializer(lead,
+                                             data=data,
+                                             context={
+                                                 'request': request,
+                                                 'academy': academy_id
+                                             })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_lead')

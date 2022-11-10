@@ -13,6 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
+from breathecode.utils.validators import validate_language_code
 from .signals import invite_accepted, profile_academy_saved
 from breathecode.admissions.models import Academy, Cohort
 
@@ -59,6 +60,16 @@ class Profile(models.Model):
     linkedin_url = models.CharField(max_length=50, blank=True, null=True)
 
     blog = models.CharField(max_length=150, blank=True, null=True)
+
+
+class UserSetting(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
+    lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
+    main_currency = models.ForeignKey('payments.Currency', on_delete=models.SET_NULL, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class Capability(models.Model):

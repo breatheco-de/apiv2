@@ -1,7 +1,6 @@
 import os, requests, logging
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
-from ...actions import create_asset
 from ...models import Asset
 from breathecode.admissions.models import Academy
 from ...tasks import async_pull_from_github

@@ -1,5 +1,4 @@
 import logging
-from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import AnonymousUser
 
 logger = logging.getLogger(__name__)
@@ -8,6 +7,8 @@ __all__ = ['localize_query']
 
 
 def localize_query(query, request, matcher=None):
+    from breathecode.authenticate.models import ProfileAcademy
+
 
     # not a part of the staff, cannot access all info
     if isinstance(request.user, AnonymousUser):

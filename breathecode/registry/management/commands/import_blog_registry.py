@@ -1,8 +1,8 @@
 import os, requests, logging, frontmatter
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
-from ...actions import create_asset, pull_from_github
-from ...tasks import async_pull_from_github
+from ...actions import pull_from_github
+from ...tasks import async_pull_from_github, async_regenerate_asset_readme
 from ...models import Asset, AssetCategory
 from breathecode.admissions.models import Academy
 
@@ -61,43 +61,56 @@ class Command(BaseCommand):
         all_posts = []
         try:
             all_posts = resp.json()
+            logger.debug(f'Found {len(all_posts)} posts to import...')
         except requests.exceptions.JSONDecodeError as e:
             logger.error('Error decoding json: {}'.format(resp.text))
 
         owner = User.objects.filter(id=1).first()
 
-        results = {'ignored': [], 'created': []}
-        for post in all_posts:
-            _a = Asset.objects.filter(slug=post['slug']).first()
-            if _a is not None:
-                results['ignored'].append(_a)
-                continue
+        results = {'ignored': [], 'created': [], 'replaced': []}
 
+        for post in all_posts:
+            asset = Asset.objects.filter(slug=post['slug']).first()
+            if asset is None:
+                asset = Asset(slug=post['slug'],
+                              lang=post['lang'],
+                              category=category[post['lang']],
+                              academy=academy,
+                              asset_type='ARTICLE',
+                              status='PUBLISHED',
+                              owner=owner,
+                              readme_url=f"{HOST}/blog/{post['fileName']}?raw=true")
+                results['created'].append(asset)
+                print('C', end='')
+            else:
+                results['replaced'].append(asset)
+                print('R', end='')
+
+            # replace title and description only
             readme = fetch_article(post['fileName'])
-            post = Asset(readme_raw=readme,
-                         title=post['title'],
-                         slug=post['slug'],
-                         lang=post['lang'],
-                         category=category[post['lang']],
-                         academy=academy,
-                         asset_type='ARTICLE',
-                         status='PUBLISHED',
-                         owner=owner,
-                         readme_url=f"{HOST}/blog/{post['fileName']}?raw=true")
+            asset.title = post['title']
+            asset.description = post['excerpt']
+            asset.readme_raw = Asset.encode(readme)
 
             _data = frontmatter.loads(readme)
             _frontmatter = _data.metadata
 
             if 'author' in _frontmatter:
                 if isinstance(_frontmatter['author'], list):
-                    post.authors_username = ','.join(_frontmatter['author'])
+                    asset.authors_username = ','.join(_frontmatter['author'])
                 else:
-                    post.authors_username = _frontmatter['author']
+                    asset.authors_username = _frontmatter['author']
 
-            post.save()
-            results['created'].append(post)
+            asset.save()
+            async_regenerate_asset_readme.delay(asset.slug)
 
-        print(f"Done: {len(results['ignored'])} ignored and {len(results['created'])} created")
+        print(
+            f"Done: {len(results['ignored'])} ignored, {len(results['replaced'])} replaced and {len(results['created'])} created"
+        )
 
-        for ignored in results['ignored']:
-            print('Ignored: {}'.format(ignored.slug))
+        for _a in results['ignored']:
+            print('Ignored: {}'.format(_a.slug))
+
+        print('Following posts replaced the description, title and authors_username')
+        for _a in results['replaced']:
+            print('Replaced: {}'.format(_a.slug))

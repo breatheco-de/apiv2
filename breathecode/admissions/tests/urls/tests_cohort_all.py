@@ -1,12 +1,14 @@
 """
 Test /cohort/all
 """
-from datetime import timedelta
 import random
 import re
+from datetime import timedelta
+
 from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
+
 from ..mixins import AdmissionsTestCase
 
 

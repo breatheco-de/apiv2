@@ -2,15 +2,16 @@
 Test /answer
 """
 import logging
-from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
+from django.utils import timezone
+
+from breathecode.activity.tasks import get_attendancy_log
 from breathecode.utils import NDB
 
 from ...models import Activity
 from ..mixins import MediaTestCase
-from breathecode.activity.tasks import get_attendancy_log
 
 
 def get_datastore_seed(slug, day, data={}):
