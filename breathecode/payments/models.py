@@ -22,8 +22,8 @@ class Currency(models.Model):
     Represents a currency.
     """
 
-    code = models.CharField(max_length=3)
-    name = models.CharField(max_length=20)
+    code = models.CharField(max_length=3, unique=True)
+    name = models.CharField(max_length=20, unique=True)
 
     countries = models.ManyToManyField(Country,
                                        related_name='currencies',
@@ -171,8 +171,6 @@ class ServiceItem(AbstractServiceItem):
 
     renew_every = models.IntegerField(default=1)
     renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
-
-    pass
 
 
 DRAFT = 'DRAFT'
