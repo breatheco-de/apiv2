@@ -602,9 +602,9 @@ class CheckingView(APIView):
                                           code=404)
 
             if type == 'PREVIEW':
-                type = request.data.get('academy')
+                academy = request.data.get('academy')
                 try:
-                    academy = Academy.objects.get(id=int(type), main_currency__isnull=False)
+                    academy = Academy.objects.get(id=int(academy), main_currency__isnull=False)
                 except:
                     raise ValidationException(translation(
                         settings.lang,
