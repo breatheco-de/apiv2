@@ -216,7 +216,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
 @api_view(['GET'])
 def get_categories(request):
-    items = AssetCategory.objects.filer(visibility='PUBLIC')
+    items = AssetCategory.objects.filter(visibility='PUBLIC')
     serializer = AssetCategorySerializer(items, many=True)
     return Response(serializer.data)
 
