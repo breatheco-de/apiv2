@@ -1,4 +1,4 @@
-import logging, json, os, re, pathlib, base64
+import logging, json, os, re, pathlib, base64, hashlib, requests
 from typing import Optional
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
@@ -11,9 +11,9 @@ from urllib.parse import urlparse
 from slugify import slugify
 from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
-from breathecode.assessment.actions import create_from_json
+from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage
 from .serializers import AssetBigSerializer
 from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator, ArticleValidator
 from github import Github, GithubException
@@ -22,6 +22,14 @@ from breathecode.registry import tasks
 logger = logging.getLogger(__name__)
 
 ASSET_STATUS_DICT = [x for x, y in ASSET_STATUS]
+
+
+def allowed_mimes():
+    return ['image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'image/jpg']
+
+
+def asset_images_bucket():
+    return os.getenv('ASSET_IMAGES_BUCKET', None)
 
 
 def generate_external_readme(a):
@@ -43,141 +51,6 @@ def get_video_url(video_id):
         for regex, replacement in patterns:
             video_id = re.sub(regex, replacement, video_id)
         return video_id
-
-
-def create_asset(data, asset_type, force=False):
-    slug = data['slug']
-    created = False
-
-    aa = AssetAlias.objects.filter(slug=slug).first()
-    if aa is not None and not force:
-        raise APIException(f'Asset {asset_type} with this alias ' + slug + ' alrady exists')
-    elif aa is not None and asset_type != aa.asset.asset_type:
-        raise APIException(
-            f'Cannot override asset {slug} because it already exists as a different type {aa.asset.asset_type}'
-        )
-
-    a = Asset.objects.filter(slug=slug).first()
-    if a is None:
-        a = Asset(slug=slug, asset_type=asset_type)
-        created = True
-        logger.debug(f'Adding asset {asset_type} {a.slug}')
-    else:
-        logger.debug(f'Updating asset {asset_type} {slug}')
-
-    a.title = data['title']
-    a.owner = User.objects.get(id=1)
-    if a.asset_type in ['QUIZ', 'EXERCISE']:
-        a.interactive = True
-    if a.asset_type == 'EXERCISE':
-        a.gitpod = True
-
-    if 'tags' not in data:
-        data['tags'] = []
-
-    if 'repository' in data:
-        a.url = data['repository']
-
-    if 'readme' in data:
-        a.readme_url = data['readme']
-
-    if 'intro' in data:
-        a.intro_video_url = data['intro']
-
-    if 'language' in data:
-        a.lang = data['language']
-    elif 'lang' in data:
-        a.lang = data['lang']
-
-    if a.lang == 'en':
-        a.lang = 'us'  # english is really USA
-    logger.debug(f'in language: {a.lang}')
-
-    if 'technologies' in data:
-        data['tags'] += data['technologies']
-
-    if 'description' in data:
-        a.description = data['description']
-
-    if 'status' in data:
-        a.status = data['status'].upper()
-
-    if 'duration' in data:
-        a.duration = data['duration']
-    if 'solution_url' in data:
-        a.duration = data['solution']
-    if 'difficulty' in data:
-        a.difficulty = data['difficulty'].upper()
-    if 'graded' in data:
-        a.graded = (data['graded'] == True or (isinstance(data['graded'], str)
-                                               and data['graded'].upper() in ['ISOLATED', 'INCREMENTAL']))
-    if 'video-id' in data:
-        a.solution_video_url = get_video_url(str(data['video-id']))
-        a.with_video = True
-
-    if 'preview' in data:
-        a.preview = data['preview']
-    if 'video-solutions' in data:
-        a.with_solutions = data['video-solutions']
-
-    if 'config' in data:
-        a.config = data['config']
-
-    if 'authors_username' in data:
-        authors = get_user_from_github_username(data['authors_username'])
-        if len(authors) > 0:
-            a.author = authors.pop()
-
-    _assessment = None
-    if a.asset_type == 'QUIZ':
-        _assessment = Assessment.objects.filter(slug=a.slug).first()
-        if _assessment is None:
-            _assessment = create_from_json(a.config)
-
-        if _assessment.lang != a.lang:
-            raise ValueError(
-                f'Assessment found and quiz "{a.slug}" language don\'t share the same language {_assessment.lang} vs {a.lang}'
-            )
-        a.assessment = _assessment
-        print(f'Assigned assessment {_assessment.slug} to asset {a.slug}')
-
-    a.save()
-
-    a.all_translations.add(a)  # add youself as a translation
-    if 'translations' in data:
-        for lan in data['translations']:
-            if lan == 'en':
-                lan = 'us'  # english is really USA
-
-            is_translation = len(a.slug.split('.')) > 1
-            original = Asset.objects.filter(slug=a.slug.split('.')[0]).first()
-
-            # there is an original asset, it means "a" is a translation
-            if original is not None and original.slug != a.slug:
-
-                if _assessment is not None:
-                    _assessment.original = original.assessment
-                    _assessment.save()
-
-                if original.all_translations.filter(slug=lan).first() is None:
-                    logger.debug(
-                        f'Adding translation {a.slug} for {lan} on previous original {original.slug}')
-                    a.all_translations.add(original)
-                else:
-                    logger.debug(f'Ignoring language {lan} because the lesson already have a translation')
-
-                a.slug.replace('.es', '-es')
-                a.save()
-
-    if 'tags' in data:
-
-        a.technologies.clear()
-        for tech in data['tags']:
-            technology = AssetTechnology.get_or_create(tech)
-            if a.technologies.filter(slug=tech).first() is None:
-                a.technologies.add(t)
-
-    return a, created
 
 
 def get_user_from_github_username(username):
@@ -231,6 +104,8 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
         g = Github(credentials.token)
         if asset.asset_type in ['LESSON', 'ARTICLE']:
             asset = pull_github_lesson(g, asset, override_meta=override_meta)
+        elif asset.asset_type in ['QUIZ']:
+            asset = pull_quiz_asset(g, asset)
         else:
             asset = pull_learnpack_asset(g, asset, override_meta=override_meta)
 
@@ -242,7 +117,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         return asset
     except Exception as e:
-
+        raise e
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -433,9 +308,6 @@ def pull_github_lesson(github, asset, override_meta=False):
         if 'authors' in fm and fm['authors'] != '':
             asset.authors_username = ','.join(fm['authors'])
 
-        if 'status' in fm and fm['status'] in ASSET_STATUS_DICT:
-            asset.status = fm['status']
-
         if 'tags' in fm and isinstance(fm['tags'], list):
             asset.technologies.clear()
             for tech_slug in fm['tags']:
@@ -451,6 +323,7 @@ def clean_asset_readme(asset):
     try:
         asset = clean_readme_relative_paths(asset)
         asset = clean_readme_hide_comments(asset)
+        asset = clean_h1s(asset)
         readme = asset.get_readme(parse=True)
         if 'html' in readme:
             asset.html = readme['html']
@@ -458,6 +331,7 @@ def clean_asset_readme(asset):
         asset.cleaning_status = 'OK'
         asset.save()
     except Exception as e:
+        raise e
         asset.cleaning_status = 'ERROR'
         asset.cleaning_status_details = str(e)
         asset.save()
@@ -512,6 +386,30 @@ def clean_readme_hide_comments(asset):
 
     replaced += content[startIndex:]
     asset.set_readme(replaced)
+    return asset
+
+
+def clean_h1s(asset):
+    logger.debug(f'Clearning first heading 1 for {asset.slug}')
+    readme = asset.get_readme()
+    content = readme['decoded'].strip()
+
+    end = r'.*\n'
+    lines = list(re.finditer(end, content))
+    if len(lines) == 0:
+        logger.debug('no jump of lines found')
+        return asset
+
+    first_line_end = lines.pop(0).end()
+    logger.debug('first line ends at')
+    logger.debug(first_line_end)
+
+    regex = r'\s?#\s[`\-_\w]+[`\-_\w\s]*\n'
+    findings = list(re.finditer(regex, content[:first_line_end]))
+    if len(findings) > 0:
+        replaced = content[first_line_end:].strip()
+        asset.set_readme(replaced)
+
     return asset
 
 
@@ -662,6 +560,52 @@ def pull_learnpack_asset(github, asset, override_meta):
                 technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
 
+        if 'delivery' in config:
+            if 'instructions' in config['delivery']:
+                if isinstance(config['delivery']['instructions'], str):
+                    asset.delivery_instructions = config['delivery']['instructions']
+                elif isinstance(config['delivery']['instructions'],
+                                dict) and asset.lang in config['delivery']['instructions']:
+                    asset.delivery_instructions = config['delivery']['instructions'][asset.lang]
+
+            if 'formats' in config['delivery']:
+                if isinstance(config['delivery']['formats'], list):
+                    asset.delivery_formats = ','.join(config['delivery']['formats'])
+                elif isinstance(config['delivery']['formats'], str):
+                    asset.delivery_formats = config['delivery']['formats']
+
+            if 'url' in asset.delivery_formats:
+                if 'regex' in config['delivery'] and isinstance(config['delivery']['regex'], str):
+                    asset.delivery_regex_url = config['delivery']['regex'].replace("\\\\", "\\")
+
+    return asset
+
+
+def pull_quiz_asset(github, asset):
+
+    logger.debug(f'Sync pull_quiz_asset {asset.slug}')
+
+    if asset.readme_url is None:
+        raise Exception('Missing Readme URL for quiz ' + asset.slug + '.')
+
+    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    repo = github.get_repo(f'{org_name}/{repo_name}')
+
+    file_name = os.path.basename(asset.readme_url)
+
+    if branch_name is None:
+        raise Exception('Quiz URL must include branch name after blob')
+
+    result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
+    branch, file_path = result.groups()
+    logger.debug(f'Fetching quiz json: {file_path}')
+
+    encoded_config = get_blob_content(repo, file_path, branch=branch_name).content
+    decoded_config = Asset.decode(encoded_config)
+    asset.config = json.loads(decoded_config)
+    asset.save()
+
+    asset = create_from_asset(asset)
     return asset
 
 
@@ -697,3 +641,44 @@ def test_asset(asset):
         asset.last_test_at = timezone.now()
         asset.save()
         raise e
+
+
+def upload_image_to_bucket(img, asset):
+
+    from ..services.google_cloud import Storage
+
+    link = img.original_url
+    if 'github.com' in link and not 'raw=true' in link:
+        if '?' in link:
+            link = link + '&raw=true'
+        else:
+            link = link + '?raw=true'
+
+    r = requests.get(link, stream=True, timeout=2)
+    if r.status_code != 200:
+        raise Exception(f'Error downloading image from asset {asset.slug}: {link}')
+
+    found_mime = [mime for mime in allowed_mimes() if r.headers['content-type'] in mime]
+    if len(found_mime) == 0:
+        raise Exception(
+            f"Skipping image download for {link} in asset {asset.slug}, invalid mime {r.headers['content-type']}"
+        )
+
+    img.hash = hashlib.sha256(r.content).hexdigest()
+
+    storage = Storage()
+
+    extension = pathlib.Path(img.name).suffix
+    cloud_file = storage.file(asset_images_bucket(), img.hash + extension)
+    if not cloud_file.exists():
+        cloud_file.upload(r.content)
+
+    img.hash = img.hash
+    img.mime = found_mime[0]
+    img.bucket_url = cloud_file.url()
+    img.download_status = 'OK'
+    img.save()
+
+    img.assets.add(asset)
+
+    return img

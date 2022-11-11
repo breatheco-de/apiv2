@@ -3,6 +3,7 @@ from celery import shared_task, Task
 from breathecode.admissions.models import Cohort
 from .models import Activity
 from breathecode.utils import NDB
+from breathecode.admissions.utils import CohortLog
 
 API_URL = os.getenv('API_URL', '')
 
@@ -50,7 +51,7 @@ def get_attendancy_log(self, cohort_id: int):
     attendance = client.fetch([Activity.cohort == cohort.slug, Activity.slug == 'classroom_attendance'])
     unattendance = client.fetch([Activity.cohort == cohort.slug, Activity.slug == 'classroom_unattendance'])
 
-    result = []
+    result = {}
 
     offset = 0
     current_day = 0
@@ -67,17 +68,18 @@ def get_attendancy_log(self, cohort_id: int):
             unattendance_ids = list([x['user_id'] for x in unattendance if int(x['day']) == current_day])
             has_attendance = bool(attendance_ids or unattendance_ids)
 
-            result.append({
-                'current_module': day['label'],
+            days[day['label']] = CohortLog(*{
+                'current_module': 'unknown',
                 'teacher_comments': None,
                 'attendance_ids': attendance_ids if has_attendance else None,
-                'unattendance_ids': unattendance_ids if has_attendance else None,
-            })
+                'unattendance_ids': unattendance_ids if has_attendance else None
+            },
+                                           allow_empty=True).serialize()
 
             if n:
                 offset += 1
 
-    cohort.history_log = result
+    cohort.history_log = days
     cohort.save()
 
     logger.info('History log saved')

@@ -1763,90 +1763,6 @@
         }
     },
     {
-        "model": "authenticate.profileacademy",
-        "pk": 14,
-        "fields": {
-            "user": 13,
-            "email": null,
-            "academy": 3,
-            "role": "academy_token",
-            "first_name": null,
-            "last_name": null,
-            "address": null,
-            "phone": "",
-            "status": "ACTIVE",
-            "created_at": "2022-10-12T22:23:09.821Z",
-            "updated_at": "2022-10-12T22:23:09.821Z"
-        }
-    },
-    {
-        "model": "authenticate.profileacademy",
-        "pk": 15,
-        "fields": {
-            "user": 14,
-            "email": null,
-            "academy": 2,
-            "role": "academy_token",
-            "first_name": null,
-            "last_name": null,
-            "address": null,
-            "phone": "",
-            "status": "ACTIVE",
-            "created_at": "2022-10-12T22:23:09.832Z",
-            "updated_at": "2022-10-12T22:23:09.832Z"
-        }
-    },
-    {
-        "model": "authenticate.profileacademy",
-        "pk": 16,
-        "fields": {
-            "user": 15,
-            "email": null,
-            "academy": 1,
-            "role": "academy_token",
-            "first_name": null,
-            "last_name": null,
-            "address": null,
-            "phone": "",
-            "status": "ACTIVE",
-            "created_at": "2022-10-12T22:23:09.841Z",
-            "updated_at": "2022-10-12T22:23:09.841Z"
-        }
-    },
-    {
-        "model": "authenticate.token",
-        "pk": 4,
-        "fields": {
-            "created": "2022-10-12T22:23:09.826Z",
-            "key": "03dc61dd4a2d294112f98364ab28846feac304d0",
-            "user": 13,
-            "token_type": "permanent",
-            "expires_at": null
-        }
-    },
-    {
-        "model": "authenticate.token",
-        "pk": 5,
-        "fields": {
-            "created": "2022-10-12T22:23:09.835Z",
-            "key": "b377438b2e4edec0b66822b8fc166c9f19948252",
-            "user": 14,
-            "token_type": "permanent",
-            "expires_at": null
-        }
-    },
-    {
-        "model": "authenticate.token",
-        "pk": 6,
-        "fields": {
-            "created": "2022-10-12T22:23:09.845Z",
-            "key": "3f3a72640af58e2d3e76118117dcb35280ea3d1d",
-            "user": 15,
-            "token_type": "permanent",
-            "expires_at": null
-        }
-    },
-    {
         "model": "authenticate.token",
         "pk": 7,
         "fields": {
@@ -1896,6 +1812,25 @@
         "fields": {
             "name": "server",
             "key": "27qc.91fd.19yg"
+        }
+    },
+    {
+        "model": "authenticate.credentialsgithub",
+        "pk": 1,
+        "fields": {
+            "user": 1,
+            "github_id": 80004528,
+            "token": 7,
+            "email": "aalejo@gmail.com",
+            "name": "aalejo",
+            "avatar_url": null,
+            "username": "alesanchezr",
+            "blog": null,
+            "bio": null,
+            "company": null,
+            "twitter_username": null,
+            "created_at": "2022-10-13T13:25:34.965Z",
+            "updated_at": "2022-10-13T13:25:34.965Z"
         }
     }
 ]

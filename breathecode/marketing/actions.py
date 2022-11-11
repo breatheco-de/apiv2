@@ -25,19 +25,23 @@ acp_ids = {
     # "strong": "49",
     # "soft": "48",
     # "newsletter_list": "3",
+    'utm_plan': '67',
+    'utm_placement': '66',
+    'utm_term': '65',
     'utm_source': '59',
-    'utm_url': '60',
-    'utm_location': '18',
-    'course': '2',
     'utm_medium': '36',
     'utm_content': '35',
+    'utm_url': '60',
+    'utm_location': '18',
+    'utm_campaign': '33',
+    'gender': '45',
+    'course': '2',
     'client_comments': '13',
     'current_download': '46',  # used in downloadables
     'utm_language': '16',
     'utm_country': '19',
     'gclid': '26',
     'referral_key': '27',
-    'utm_campaign': '33',
     'expected_cohort': '10'
 }
 
@@ -217,11 +221,15 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, 'course', form_entry)
     contact = set_optional(contact, 'utm_language', form_entry, 'language')
     contact = set_optional(contact, 'utm_country', form_entry, 'country')
-    contact = set_optional(contact, 'utm_campaign', form_entry, 'utm_campaign')
-    contact = set_optional(contact, 'utm_source', form_entry, 'utm_source')
-    contact = set_optional(contact, 'utm_content', form_entry, 'utm_content')
-    contact = set_optional(contact, 'utm_medium', form_entry, 'utm_medium')
-    contact = set_optional(contact, 'client_comments', form_entry, 'client_comments')
+    contact = set_optional(contact, 'utm_campaign', form_entry)
+    contact = set_optional(contact, 'utm_source', form_entry)
+    contact = set_optional(contact, 'utm_content', form_entry)
+    contact = set_optional(contact, 'utm_medium', form_entry)
+    contact = set_optional(contact, 'utm_plan', form_entry)
+    contact = set_optional(contact, 'utm_placement', form_entry)
+    contact = set_optional(contact, 'utm_term', form_entry)
+    contact = set_optional(contact, 'gender', form_entry, 'sex')
+    contact = set_optional(contact, 'client_comments', form_entry)
     contact = set_optional(contact, 'gclid', form_entry)
     contact = set_optional(contact, 'current_download', form_entry)
     contact = set_optional(contact, 'referral_key', form_entry)
