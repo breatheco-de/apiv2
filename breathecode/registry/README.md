@@ -10,7 +10,7 @@ You can retrieve the entire registry with: `GET /registry/asset`, [here is an ex
 
 ## Learn.json
 
-All the assets originally made by breathecode or its partners contain a learnp.json file that contains meta-information about the content like title, slug, translation languages, descripcion, difficulty, etc. Here is an example of learn.json file:
+All the assets originally made by breathecode or its partners contain a learn.json file that contains meta-information about the content like title, slug, translation languages, descripcion, difficulty, etc. Here is an example of learn.json file:
 
 ```json
 {
