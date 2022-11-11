@@ -10,8 +10,9 @@ from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.monitoring.actions import test_link
 from breathecode.utils import getLogger
 from breathecode.utils.validation_exception import ValidationException
-from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
+from .models import AcademyAlias, FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
 from breathecode.monitoring.models import CSVUpload
+from .serializers import (PostFormEntrySerializer)
 from .actions import register_new_lead, save_get_geolocal, acp_ids
 
 logger = getLogger(__name__)
@@ -389,10 +390,18 @@ def create_form_entry(self, csv_upload_id, **item):
     if 'email' in item:
         form_entry.email = item['email']
     if 'location' in item:
-        form_entry.location = item['location']
+        if AcademyAlias.objects.filter(active_campaign_slug=item['location']).exists():
+            form_entry.location = item['location']
+        elif Academy.objects.filter(active_campaign_slug=item['location']).exists():
+            form_entry.location = item['location']
+        else:
+            message = f'No academy exists with this academy active_campaign_slug: {item["academy"]}'
+            error_message += f'{message}, '
+            logger.error(message)
     if 'academy' in item:
-        if academy := Academy.objects.filter(slug=item['academy']).first():
-
+        if alias := AcademyAlias.objects.filter(slug=item['academy']).first():
+            form_entry.academy = alias.academy
+        elif academy := Academy.objects.filter(slug=item['academy']).first():
             form_entry.academy = academy
         else:
             message = f'No academy exists with this academy slug: {item["academy"]}'
@@ -455,5 +464,11 @@ def create_form_entry(self, csv_upload_id, **item):
     csv_upload.save()
 
     if not error_message:
-        logger.info('create_form_entry successfully created')
         form_entry.save()
+        serializer = PostFormEntrySerializer(form_entry, data={})
+        if serializer.is_valid():
+            persist_single_lead.delay(serializer.data)
+        logger.info('create_form_entry successfully created')
+
+    # state = vars(form_entry).copy()
+    # del state['_state']

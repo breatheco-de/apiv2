@@ -3,6 +3,7 @@ Test /answer/:id
 """
 from django.utils import timezone
 from breathecode.marketing.tasks import create_form_entry
+from breathecode.marketing import tasks
 import re, string, os
 import logging
 from datetime import datetime
@@ -132,6 +133,61 @@ def form_entry_field(data={}):
     }
 
 
+def form_entry_serializer(self, data={}):
+    return {
+        'id': 1,
+        'fb_leadgen_id': None,
+        'fb_page_id': None,
+        'fb_form_id': None,
+        'fb_adgroup_id': None,
+        'fb_ad_id': None,
+        'first_name': '',
+        'last_name': '',
+        'email': None,
+        'phone': None,
+        'course': None,
+        'client_comments': None,
+        'location': None,
+        'language': 'en',
+        'utm_url': None,
+        'utm_medium': None,
+        'utm_campaign': None,
+        'utm_content': None,
+        'utm_source': None,
+        'current_download': None,
+        'referral_key': None,
+        'gclid': None,
+        'tags': '',
+        'automations': '',
+        'street_address': None,
+        'country': None,
+        'city': None,
+        'latitude': None,
+        'longitude': None,
+        'state': None,
+        'zip_code': None,
+        'browser_lang': None,
+        'storage_status': 'PENDING',
+        'storage_status_text': '',
+        'lead_type': None,
+        'deal_status': None,
+        'sentiment': None,
+        'ac_expected_cohort': None,
+        'ac_contact_id': None,
+        'ac_deal_id': None,
+        'won_at': None,
+        'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        'contact': None,
+        'academy': None,
+        'lead_generation_app': None,
+        'user': None,
+        'tag_objects': [],
+        'automation_objects': [],
+        **data
+    }
+
+
 class CreateFormEntryTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
@@ -139,7 +195,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
     def test_create_form_entry_with_dict_empty_without_csv_upload_id(self):
         """Test create_form_entry task without data"""
 
-        create_form_entry({}, 1)
+        create_form_entry(1, **{})
 
         self.assertEqual(self.count_form_entry(), 0)
         self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'), [])
@@ -149,12 +205,13 @@ class CreateFormEntryTestSuite(MarketingTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.marketing.tasks.persist_single_lead.delay', MagicMock())
     def test_create_form_entry_with_dict_empty_with_csv_upload_id(self):
         """Test create_form_entry task without data"""
 
         model = self.bc.database.create(csv_upload={'log': ''})
         logging.Logger.info.call_args_list = []
-        create_form_entry({}, 1)
+        create_form_entry(1, **{})
 
         self.assertEqual(self.count_form_entry(), 0)
         self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
@@ -175,9 +232,12 @@ class CreateFormEntryTestSuite(MarketingTestCase):
             call({})
         ])
 
+        self.assertEqual(tasks.persist_single_lead.delay.call_args_list, [])
+
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.marketing.tasks.persist_single_lead.delay', MagicMock())
     def test_create_form_entry_with_dict_check_regex(self):
         """Test create_form_entry task without data"""
         cases = [('Brandon' + self.bc.random.string(number=True, size=1),
@@ -206,7 +266,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                 'location': 'Madrid',
                 'academy': slug
             }
-            create_form_entry(data, 1)
+            create_form_entry(1, **data)
 
             self.assertEqual(self.count_form_entry(), 0)
             self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
@@ -214,12 +274,14 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                                  **self.bc.format.to_dict(model.csv_upload),
                                  'status': 'ERROR',
                                  'finished_at': UTC_NOW,
-                                 'log': f'No academy exists with this academy slug: {slug}, first '\
+                                 'log': f'No academy exists with this academy active_campaign_slug: {slug}, '\
+                                        f'No academy exists with this academy slug: {slug}, first '\
                                         'name has incorrect characters, last name has incorrect characters, '\
                                         'email has incorrect format, No location or academy in form entry. '
                              }])
             self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
             self.assertEqual(logging.Logger.error.call_args_list, [
+                call(f'No academy exists with this academy active_campaign_slug: {data["academy"]}'),
                 call(f'No academy exists with this academy slug: {data["academy"]}'),
                 call('first name has incorrect characters'),
                 call('last name has incorrect characters'),
@@ -228,14 +290,17 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                 call('Missing field in received item'),
                 call(data)
             ])
+            self.assertEqual(tasks.persist_single_lead.delay.call_args_list, [])
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.marketing.tasks.persist_single_lead.delay', MagicMock())
     def test_create_form_entry_with_dict_with_correct_format(self):
         """Test create_form_entry task without data"""
 
-        model = self.bc.database.create(csv_upload={'log': ''}, academy=1)
+        model = self.bc.database.create(csv_upload={'log': ''},
+                                        academy={'active_campaign_slug': self.bc.fake.slug()})
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -244,10 +309,10 @@ class CreateFormEntryTestSuite(MarketingTestCase):
             'first_name': 'John',
             'last_name': 'Smith',
             'email': 'test@gmail.com',
-            'location': 'Madrid',
+            'location': model.academy.active_campaign_slug,
             'academy': model.academy.slug
         }
-        create_form_entry(data, 1)
+        create_form_entry(1, **data)
 
         del data['academy']
 
@@ -266,3 +331,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                          [call('Create form entry started'),
                           call('create_form_entry successfully created')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(tasks.persist_single_lead.delay.call_args_list,
+                         [call(form_entry_serializer(self, {
+                             **data, 'academy': 1
+                         }))])

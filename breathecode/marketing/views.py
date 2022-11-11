@@ -853,10 +853,8 @@ class UploadView(APIView):
 
         with open(file.name, 'w') as f:
             f.write(file_bytes)
-        print('Generic File: ', f)
         df = pd.read_csv(file.name)
         os.remove(file.name)
-        print('Data Frame: ', df)
         required_fields = ['first_name', 'last_name', 'email', 'location', 'phone', 'language']
 
         # Think about uploading correct files and leaving out incorrect ones
@@ -869,7 +867,6 @@ class UploadView(APIView):
         # upload file section
         storage = Storage()
         cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), file_name)
-        print('Cloud File: ', cloud_file)
         cloud_file.upload(file, content_type=file.content_type)
 
         csv_upload = CSVUpload()
@@ -877,17 +874,13 @@ class UploadView(APIView):
         csv_upload.name = file.name
         csv_upload.hash = file_name
         csv_upload.academy_id = academy_id
-        print('csvUpload: ', csv_upload)
         csv_upload.save()
 
         for num in range(len(df)):
             value = df.iloc[num]
-            print('Value: ', value)
-            print('Dict Value: ', dict(value))
             logger.info(dict(value))
             parsed = convert_data_frame(dict(value))
             tasks.create_form_entry.delay(csv_upload.id, **parsed)
-            print('Dict After Value: ', dict(value))
 
         return data
 
@@ -897,9 +890,7 @@ class UploadView(APIView):
         result = []
         for file in files:
             upload = self.upload(file, academy_id, update=True)
-            print('This is the upload', upload)
             result.append(upload)
-        print('This is the result', result)
         return Response(result, status=status.HTTP_200_OK)
 
 
