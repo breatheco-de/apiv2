@@ -137,6 +137,7 @@ class UserAdmin(UserAdmin):
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name')
+    filter_horizontal = ('capabilities', )
 
 
 @admin.register(Capability)

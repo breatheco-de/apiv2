@@ -1,4 +1,5 @@
 import serpy, base64
+from slugify import slugify
 from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
 from django.db.models import Count
 from breathecode.authenticate.models import ProfileAcademy
@@ -15,6 +16,17 @@ class ProfileSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     github_username = serpy.Field()
+
+
+class SEOReportSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    report_type = serpy.Field()
+    status = serpy.Field()
+    log = serpy.Field()
+    rating = serpy.Field()
+    how_to_fix = serpy.Field()
+    created_at = serpy.Field()
 
 
 class KeywordSmallSerializer(serpy.Serializer):
@@ -123,7 +135,9 @@ class AssetSerializer(serpy.Serializer):
         return result
 
     def get_technologies(self, obj):
-        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True)))
+        _s = list(
+            map(lambda t: t.slug,
+                obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
         return _s
 
     def get_seo_keywords(self, obj):
@@ -138,9 +152,11 @@ class AcademyAssetSerializer(AssetSerializer):
     last_synch_at = serpy.Field()
     status_text = serpy.Field()
     published_at = serpy.Field()
+    authors_username = serpy.Field()
 
     requirements = serpy.Field()
 
+    is_seo_tracked = serpy.Field()
     last_seo_scan_at = serpy.Field()
     seo_json_status = serpy.Field()
     optimization_rating = serpy.Field()
@@ -151,6 +167,15 @@ class AcademyAssetSerializer(AssetSerializer):
 
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
+
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    published_at = serpy.Field()
+
+    clusters = serpy.MethodField()
+
+    def get_clusters(self, obj):
+        return [k.cluster.slug for k in obj.seo_keywords.all() if k.cluster is not None]
 
     def get_seo_keywords(self, obj):
         return list(map(lambda t: AssetKeywordSerializer(t).data, obj.seo_keywords.all()))
@@ -178,7 +203,13 @@ class AssetBigSerializer(AssetMidSerializer):
     status_text = serpy.Field()
     published_at = serpy.Field()
 
+    delivery_instructions = serpy.Field()
+    delivery_formats = serpy.Field()
+    delivery_regex_url = serpy.Field()
+
     academy = AcademySmallSerializer(required=False)
+
+    cluster = KeywordClusterSmallSerializer(required=False)
 
 
 class ParentAssetTechnologySerializer(serpy.Serializer):
@@ -196,6 +227,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
 
     assets = serpy.MethodField()
     alias = serpy.MethodField()
+    sort_priority = serpy.Field()
 
     def get_assets(self, obj):
         assets = Asset.objects.filter(technologies__id=obj.id)
@@ -222,12 +254,38 @@ class _Keyword(serpy.Serializer):
         return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
 
 
+class KeywordClusterMidSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    academy = AcademySmallSerializer()
+    lang = serpy.Field()
+    landing_page_url = serpy.Field()
+
+    total_articles = serpy.MethodField()
+    keywords = serpy.MethodField()
+
+    def get_keywords(self, obj):
+        kws = AssetKeyword.objects.filter(cluster__id=obj.id)
+        return _Keyword(kws, many=True).data
+
+    def get_total_articles(self, obj):
+        return Asset.objects.filter(seo_keywords__cluster__id=obj.id).count()
+
+
 class KeywordClusterBigSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     academy = AcademySmallSerializer()
     lang = serpy.Field()
+    landing_page_url = serpy.Field()
+    visibility = serpy.Field()
+    is_deprecated = serpy.Field()
+    is_important = serpy.Field()
+    is_urgent = serpy.Field()
+    internal_description = serpy.Field()
+    optimization_rating = serpy.Field()
 
     total_articles = serpy.MethodField()
     keywords = serpy.MethodField()
@@ -289,6 +347,18 @@ class PostKeywordClusterSerializer(serializers.ModelSerializer):
     class Meta:
         model = KeywordCluster
         exclude = ('academy', )
+
+    def validate(self, data):
+
+        validated_data = super().validate(data)
+
+        if 'landing_page_url' in validated_data:
+            if 'http' not in validated_data['landing_page_url']:
+                raise ValidationException(
+                    'Please make your topic cluster landing page url is an absolute url that points to your page, this is how we know your page domain'
+                )
+
+        return validated_data
 
     def create(self, validated_data):
         academy_id = self.context['academy']
@@ -402,10 +472,26 @@ class TechnologyPUTSerializer(serializers.ModelSerializer):
 
 
 class PostAssetCommentSerializer(serializers.ModelSerializer):
+    asset = serializers.CharField(required=True)
 
     class Meta:
         model = AssetComment
         exclude = ()
+
+    def validate(self, data):
+
+        academy_id = self.context.get('academy')
+        asset = None
+        if 'asset' in data:
+            if data['asset'].isnumeric():
+                asset = Asset.objects.filter(id=data['asset'], academy__id=academy_id).first()
+            elif data['asset'] != '':
+                asset = Asset.objects.filter(slug=data['asset'], academy__id=academy_id).first()
+
+        if asset is None:
+            raise ValidationException(f'Asset {data["asset"]} not found for academy {academy_id}')
+
+        return super().validate({**data, 'asset': asset})
 
 
 class PutAssetCommentSerializer(serializers.ModelSerializer):
@@ -466,6 +552,9 @@ class AssetPUTSerializer(serializers.ModelSerializer):
             if self.instance.test_status != 'OK':
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
+
+        if 'slug' in data:
+            data['slug'] = slugify(data['slug']).lower()
 
         validated_data = super().validate(data)
         return validated_data

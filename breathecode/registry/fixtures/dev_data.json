@@ -1,0 +1,172 @@
+[
+    {
+        "model": "registry.assettechnology",
+        "pk": 1,
+        "fields": {
+            "slug": "python",
+            "title": "Python",
+            "lang": "us",
+            "parent": null,
+            "featured_asset": null,
+            "visibility": "PUBLIC",
+            "description": "",
+            "icon_url": null
+        }
+    },
+    {
+        "model": "registry.assetcategory",
+        "pk": 1,
+        "fields": {
+            "slug": "how-to",
+            "title": "How To",
+            "lang": "us",
+            "description": "",
+            "academy": 1,
+            "visibility": "PUBLIC",
+            "created_at": "2022-10-13T23:13:37.766Z",
+            "updated_at": "2022-10-13T23:13:37.766Z"
+        }
+    },
+    {
+        "model": "registry.keywordcluster",
+        "pk": 1,
+        "fields": {
+            "slug": "python-strings",
+            "title": "Python Strings",
+            "lang": "us",
+            "academy": 1,
+            "visibility": "PUBLIC",
+            "landing_page_url": null,
+            "is_deprecated": false,
+            "is_important": true,
+            "is_urgent": true,
+            "internal_description": "",
+            "optimization_rating": null,
+            "created_at": "2022-10-13T23:17:54.721Z",
+            "updated_at": "2022-10-13T23:17:54.721Z"
+        }
+    },
+    {
+        "model": "registry.assetkeyword",
+        "pk": 1,
+        "fields": {
+            "slug": "how-to-concatenate-strings-in-python",
+            "title": "how to concatenate strings in python",
+            "lang": "us",
+            "cluster": 1,
+            "expected_monthly_traffic": 1100.0,
+            "difficulty": 18.0,
+            "is_important": true,
+            "is_urgent": true,
+            "academy": 1,
+            "created_at": "2022-10-13T23:18:10.295Z",
+            "updated_at": "2022-10-13T23:18:10.295Z"
+        }
+    },
+    {
+        "model": "registry.asset",
+        "pk": 1,
+        "fields": {
+            "slug": "working-with-strings-in-python",
+            "title": "Working with or manipulating strings with Python",
+            "lang": "us",
+            "category": null,
+            "url": "https://github.com/breatheco-de/content/blob/master/src/content/lesson/working-with-strings-in-python.md",
+            "solution_url": null,
+            "preview": null,
+            "description": "",
+            "requirements": "",
+            "readme_url": "https://github.com/breatheco-de/content/blob/master/src/content/lesson/working-with-strings-in-python.md",
+            "intro_video_url": null,
+            "solution_video_url": null,
+            "readme": "LS0tCnRpdGxlOiAiV29ya2luZyB3aXRoIG9yIG1hbmlwdWxhdGluZyBzdHJpbmdzIHdpdGggUHl0aG9uIgpzdGF0dXM6ICJwdWJsaXNoZWQiCnN1YnRpdGxlOiAiU3RyaW5nIGNvbmNhdGVuYXRpb24gaXMgdGhlIFdlYiBEZXZlbG9wZXIncyBicmVhZCBhbmQgYnV0dGVyLCBvdXIgam9iIGlzIHRvIGNvbmNhdGVuYXRlIHN0cmluZ3MgdG8gY3JlYXRlIEhUTUwvQ1NTIGRvY3VtZW50cyBwcm9ncmFtbWF0aWNhbGx5IgphdXRob3JzOiBbImFsZXNhbmNoZXpyIl0KY292ZXJfbG9jYWw6ICJodHRwczovL2dpdGh1Yi5jb20vYnJlYXRoZWNvLWRlL2NvbnRlbnQvYmxvYi9tYXN0ZXIvc3JjL2NvbnRlbnQvbGVzc29uLy4uLy4uL2Fzc2V0cy9pbWFnZXMvNGNjNmZhMGItMjUzMC00MDUyLWFhN2UtOGRhYzAzNzg4YWMzLnBuZz9yYXc9dHJ1ZSIKdGV4dENvbG9yOiAid2hpdGUiCmRhdGU6ICIyMDIwLTEwLTE5VDE2OjM2OjMxKzAwOjAwIgpzeW50YXhpczogWyJweXRob24iXQp0YWdzOiBbInB5dGhvbiIsInN0cmluZy1jb25jYXRlbmF0aW9uIl0KCi0tLQoKIyMgV2hhdCBpcyBhIHN0cmluZz8KCkEgYnVuY2ggb2YgbGV0dGVycyBhbmQgY2hhcmFjdGVycyBhbGwgdG9nZXRoZXIgaW4gYSBwYXJ0aWN1bGFyIG9yZGVyLCB0aGUgb25seSB3YXkgdG8gc3RvcmUgYW55IGNoYXJhY3RlcnMgdGhhdCBhcmUgbm90IGEgbnVtYmVyLCBhcmUgYSBmdW5kYW1lbnRhbCBwYXJ0IG9mIGV2ZXJ5IG1ham9yIHByb2dyYW0uCgpTdHJpbmdzIGFyZSBhbHNvIHBhcnQgb2YgdGhlIG1vc3QgcHJpbWl0aXZlIG9yIGJhc2ljIHNldCBvZiBkYXRhLXR5cGVzOiAKCnwgVHlwZSAgICAgIHwgRXhhbXBsZSAgICAgICAgICAgfCBSZXByZXNlbnRhdGlvbiAgICAgICAgICAgICAgICB8CnwgLS0tICAgICAgIHwgLS0tICAgICAgICAgICAgICAgfCAtLS0gICAgICAgICAgICAgICAgICAgICAgICAgICB8CnwgU3RyaW5nICAgIHwgYCJIZWxsbyBXb3JsZCJgICAgfCBzdHIgICAgICAgICAgICAgICAgICAgICAgICAgICB8IGp1c3QgY2hhcmFjdGVycyBpbiBhIHNlcXVlbmNlICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfAp8IE51bWJlciAgICB8IGAyMy4zNGAgICAgICAgICAgIHwgaW50LCBmbG9hdCwgY29tcGxleCAgICAgICAgICAgfCBqdXN0IG51bWJlcnMgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHwKfCBTZXF1ZW5jZSAgfCBgWzIsMywxLDU2LDQuMzRdYCB8IGxpc3QsIHR1cGxlLCByYW5nZSAgICAgICAgICAgIHwgSXRlcmFibGUgbGlzdCBvZiB2YWx1ZXMgd2l0aCBudW1lcmljYWwgaW5kZXhlcyBmb3IgcG9zaXRpb25zICB8CnwgU2V0ICAgICAgIHwgYHsnMSwnMicsJzQ1J31gICAgfCBzZXQsIGZyb3plbnNldCAgICAgICAgICAgICAgICB8IExpa2UgU2VxdWVuY2UgYnV0IHVub3JkZXJlZCBhbmQgd2l0aCBkdXBsaWNhdGUgZWxlbWVudHMgICAgICAgfAp8IE1hcHBpbmcgICB8IGB7Im5hbWUiOiAiQm9iIn1gIHwgZGljdCAgICAgICAgICAgICAgICAgICAgICAgICAgfCBMaWtlIFNlcXVlbmNlIGJ1dCBpbmRleGVzIGFyZSBjaGFyYWN0ZXJzIGludGVhZCBvZiBpbmNyZW1lbnRhbCBudW1iZXJzIHwKfCBCb29sZWFuICAgfCBgVHJ1ZWAgb3IgYEZhbHNlYCB8IGJvb2wgICAgICAgICAgICAgICAgICAgICAgICAgIHwganVzdCBUcnVlIG9yIEZhbHNlIHwKfCBCaW5hcnkgICAgfCBgMDEwMDEwMTAxMTFgICAgICB8IGJ5dGVzLCBieXRlYXJyYXksIG1lbW9yeXZpZXcgIHwgSWRlYWwgZm9yIGxvdyBsZXZlbCBvcGVyYXRpb25zICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB8CgojIyBIb3cgdG8gY3JlYXRlIGEgc3RyaW5nCgpUbyBjcmVhdGUgYSBzdHJpbmcgaW4gcHl0aG9uIGp1c3QgcHV0IGEgYnVuY2ggb2YgY2hhcmFjdGVycyB3aXRoaW4gcXVvdGVzIGxpa2UgdGhpcyBgImhlbGxvImAgb3IgZXZlbiBsaWtlIHRoaXMgYCIyMzIzMiJgLgoKYGBgcHl0aG9uCm5hbWUgPSAiQm9iIgphZ2UgPSAiMjMiICMgPC0tLSB0aGlzIGlzIHN0aWxsIGEgc3RyaW5nIChpdCdzIHdpdGhpbiBxdW90ZXMpCmBgYAoKV2hlbiBjb2RpbmcgYSB3ZWIgYXBwbGljYXRpb24sIGV2ZXJ5dGhpbmcgdGhlIHVzZXIgdHlwZXMgaW4gZm9ybXMgaXQncyBjb25zaWRlcmVkIGEgYHN0cmluZ2AsIGV2ZW4gaWYgdGhlIHVzZXIgdHlwZXMgdGhlIG51bWJlciBgMmAgKHR3bykgaXQgd2lsbCBzdGlsbCBiZSBjb25zaWRlcmVkIHRoZSBzdHJpbmcgYCIyImAgIGFuZCBub3QgYSByZWFsIG51bWJlciwgdGhlIGRldmVsb3BlciB3aWxsIGhhdmUgdG8gZXhwbGljaXRlbHkgY29udmVydCBvciBwYXJzZSB0aGF0IHN0cmluZyBpbnRvIGEgbnVtYmVyIHVzaW5nIHRoZSBmdW5jdGlvbiBgaW50KClgICBvciBgZmxvYXQoKWAuCgo+IDpsaW5rOiBIb3cgdG8gW2NvbnZlcnQgc3RyaW5ncyBpbnRvIGludGVnZXJzIHdpdGggcHl0aG9uXShodHRwczovL2d1aWRlLmZyZWVjb2RlY2FtcC5vcmcvcHl0aG9uL2hvdy10by1jb252ZXJ0LXN0cmluZ3MtaW50by1pbnRlZ2Vycy1pbi1weXRob24vKSAoMyBtaW4gcmVhZCkuCgpUaGUgbW9zdCBjb21tb24gdXNlIGZvciBhIHN0cmluZyBpcyBwcmludGluZyBpdCB1c2luZyB0aGUgZnVuY3Rpb24gYHByaW50YAoKYGBgcHl0aG9uCnByaW50KCJIZWxsbyBXb3JsZCEiKQojIFRoZSBmdW5jdGlvbiBwcmludCgpIHJlY2VpdmVzIGEgc3RyaW5nIGFuZCBkaXNwbGF5cyBpdCBvbiB0aGUgY29tbWFuZCBsaW5lL3Rlcm1pbmFsLgogYGBgCgojIyBIb3cgZG8gd2UgdXNlIHN0cmluZ3M/CgojIyMgU3RyaW5nIGNvbmNhdGVuYXRpb24gKHN1bW1pbmcgc3RyaW5ncykKClB5dGhvbiBhbGxvd3MgdG8gc3VtIHRvZ2V0aGVyIHN0cmluZ3MgdXNpbmcgdGhlIHBsdXMgYCtgIG9wZXJhdG9yLiBUaGUgZm9sbG93aW5nIGZyYWdtZW50IGRlbW9uc3RyYXRlcyBob3cgdG8gYWRkIHR3byBzdHJpbmdzIHRvIGNyZWF0ZSBhICoqZnVsbCBuYW1lKiogZnJvbSAqKmZpcnN0KiogYW5kICoqbGFzdCBuYW1lcyoqLgoKYGBgcHl0aG9uCmZpcnN0X25hbWUgPSAiQWxlamFuZHJvIgpsYXN0X25hbWUgPSAiU2FuY2hleiIKZnVsbF9uYW1lID0gZmlyc3RfbmFtZSArICIgIiArIGxhc3RfbmFtZQpwcmludCgiTXkgbmFtZSBpcyAiK2Z1bGxfbmFtZSkKCiMgT3V0cHV0OiAiTXkgbmFtZSBpcyBBbGVqYW5kcm8gU2FuY2hleiIKIGBgYAoKSW4gdGhpcyBleGFtcGxlIGAiTXkgbmFtZSBpcyAiYCBpdCdzIGJlaW5nIGNvbmNhdGVuYXRlZCB3aXRoIHRoZSB2YWx1ZSBvbiB0aGUgdmFyaWFibGUgYGZ1bGxfbmFtZWAuCgojIyMgVGhlIGxlbmd0aCBvZiB0aGUgc3RyaW5nCgpZb3Ugb2Z0ZW4gd2FudCB0byBrbm93IHdoYXQgdGhlIGxlbmd0aCAoc2l6ZSkgb2YgYSBzdHJpbmcgaXMsIGZvciBleGFtcGxlOiBUd2l0dGVyIGRvZXMgbm90IGFsbG93IHR3ZWV0cyB3aXRoIG1vcmUgdGhhbiAyNDAgY2hhcmFjdGVycy4KCmBgYHB5dGhvbgp0d2VldCA9ICJHb29kIG1vcm5pbmchIgpwcmludCgiVGhlIHZhcmlhYmxlIHR3ZWV0IGNvbnRhaW5zICIrc3RyKGxlbih0d2VldCkpKyIgY2hhcmFjdGVycyIpCgojIE91dHB1dDogVGhlIHZhcmlhYmxlIHR3ZWV0IGNvbnRhaW5zIDEzIGNoYXJhY3RlcnMKYGBgCgoKIyMjIEV4dHJhY3RpbmcgY2hhcmFjdGVycwoKQWZ0ZXIgd2UgYWxzbyBuZWVkIHRvIGtub3cgdGhlIHZhbHVlIG9mIHRoZSBzdHJpbmcgaW4gYSBwYXJ0aWN1bGFyIHBvc2l0aW9uLCBmb3IgZXhhbXBsZTogSWYgYSBzdHJpbmcgZW5kcyB3aXRoIGEgcXVlc3Rpb24gbWFyayBpdCdzIHByb2JhYmx5IGEgcXVlc3Rpb246CgpgYGBweXRob24KcXVlc3Rpb24gPSAiSG93IGFyZSB5b3U/IgpzaXplID0gbGVuKHF1ZXN0aW9uKQpwcmludCgiVGhlIHN0cmluZ3Mgc3RhcnQgd2l0aCAiICsgcXVlc3Rpb25bMF0pCiMgT3V0cHV0OiBUaGUgc3RyaW5ncyBzdGFydCB3aXRoIEgKcHJpbnQoIlRoZSBzdHJpbmdzIGVuZHMgd2l0aCAiICsgcXVlc3Rpb25bc2l6ZSAtIDFdKQojIE91dHB1dDogVGhlIHN0cmluZ3MgZW5kcyB3aXRoID8KCmBgYAoKPiA6cG9pbnRfdXA6IFRoaXMgbWV0aG9kIG9mIGNoYXJhY3RlciBleHRyYWN0aW9uIG9uIHN0cmluZ3MgaXMgdmVyeSBzaW1pbGFyIHRvIHRoZSBvbmUgdXNlZCBvbiBsaXN0cyB0byBleHRyYWN0IGFuIGVsZW1lbnQgZnJvbSBhIHBhcnRpY3VsYXIgcG9zaXRpb24gaW4gdGhlIGxpc3QuICAgCgpZb3UgY2FuIGFsc28gZXh0cmFjdCBzZXZlcmFsIGNoYXJhY3RlcnMgYXQgb25jZS4gVGhlIHJhbmdlIG9mIHRoZSBtZXRob2Qgc3RhcnRzIHdpdGggdGhlIGluZGV4IG9mIHRoZSBmaXJzdCBjaGFyYWN0ZXIgdG8gYmUgZXh0cmFjdGVkIGFuZCBlbmRzIHdpdGggdGhlIGluZGV4IEFGVEVSIHRoZSBsYXN0IGNoYXJhY3RlciB0byBiZSBleHRyYWN0ZWQ6CgpgYGBweXRob24KbmFtZSA9ICJNeSBuYW1lIGlzIEFsZWphbmRybyBTYW5jaGV6IgpwcmludCgiRXh0cmFjdGVkICIgKyBuYW1lWzExOjIwXSkKIyBPdXRwdXQ6IEV4dHJhY3RlZCBBbGVqYW5kcm8KCnByaW50KCJFeHRyYWN0ZWQgIiArIG5hbWVbMTE6XSkKIyBPdXRwdXQ6IEV4dHJhY3RlZCBBbGVqYW5kcm8gU2FuY2hlegoKcHJpbnQoIkV4dHJhY3RlZCAiICsgbm9tYnJlWzoxMF0pCiMgT3V0cHV0OiBFeHRyYWN0ZWQgTXkgbmFtZSBpcyAKYGBgCgojIyMgQ29tcGFyaW5nIHN0cmluZ3MKCklmIHlvdSB3YW50IHRvIGNvbXBhcmUgdHdvIHN0cmluZ3MgeW91IGNhbiB1c2UgdGhlIGA9PWAgIChkb3VibGUgZXF1YWwpIGFuZCBpdCB3aWxsIHJldHVybiBgVHJ1ZWAgIGlmIHRoZSBzdHJpbmdzIGFyZSBFWEFDVExZIHRoZSBzYW1lLCBzdHJpbmcgY29tcGFyaXNvbiBpcyBjYXNlIHNlbnNpdGl2ZSwgIkJvYiIgaXMgbm90IGVxdWFsIHRvICJib2IiLgoKYGBgcHl0aG9uCm5hbWUxID0gInBlcGUiOwpuYW1lMiA9ICJqdWFuIjsKaWYgbmFtZTEgPT0gbmFtZTI6CiAgICBwcmludCgiVGhpcyBpcyBGYWxzZSwgSSB3aWxsIG5vdCBnZXQgcHJpbnRlZCIpCmlmIG5hbWUxID09ICJwZXBlIjoKICAgIHByaW50KCJUaGlzIGlzIFRydWUsIEkgd2lsbCBnZXQgcHJpbnRlZCIpCmlmIG5hbWUxICE9IG5hbWUyOgogICAgcHJpbnQoIlRoaXMgaXMgVHJ1ZSwgSSB3aWxsIGdldCBwcmludGVkIikKYGBgCgojIyMgQ29udmVydGluZyB0byBsb3dlciBvciB1cHBlciBjYXNlLgoKYGBgcHl0aG9uCmxvd2VyY2FzZWRfc3RyaW5nID0gbmFtZTEubG93ZXIoKSAjIHdpbGwgY29udmVydCB0byBsb3dlcmNhc2UKdXBwZXJjYXNlZF9zdHJpbmcgPSBuYW1lMi51cHBlcigpICMgd2lsbCBjb252ZXJ0IHRvIHVwcGVyY2FzZQpgYGAKCj4gOnBvaW50X3VwOiBpdCBpcyBnb29kIHByYWN0aWNlIHRvIGFsd2F5cyBsb3dlcmNhc2Ugc3RyaW5ncyBiZWZvcmUgY29tcGFyaW5nIHRoZW0gd2l0aCBvdGhlcnMsIHRoYXQgd2F5IHdlIHdpbGwgYXZvaWQgbWlzc2luZyBjYXNlIHNlbnNpdGl2ZSBkaWZmZXJlbmNlcy4KCiMjIyBDb252ZXJ0IHN0cmluZ3MgdG8gbnVtYmVycyAoYW5kIHZpY2UgdmVyc2EpCgpgYGBweXRob24KbnVtYmVyID0gMy40ICMgSSBhbSBhIG51bWJlcgpudW1iZXJfYXNfc3RyaW5nID0gc3RyKG51bWJlcikgIyBJIGFtIGEgc3RyaW5nIHdpdGggdmFsdWUgIjMuNCIKYGBgCgojIyMgTW9yZSBpbmZvcm1hdGlvbiBhYm91dCBzdHJpbmdzCgpJZiB5b3Ugd2FudCB0byBsZWFybiBtb3JlLCB3ZSBzdWdnZXN0IHlvdSBzdGFydCBwcmFjdGljaW5nIGluc3RlYWQgb2YgcmVhZGluZyBiZWNhdXNlIHRoZXJlIGlzIG5vdGhpbmcgbXVjaCB0byByZWFkIGFib3V0IHN0cmluZ3MsIGhlcmUgaXMgYSBzbWFsbCAzIG1pbiBbdmlkZW8gZXhwbGFpbmluZyBzdHJpbmdzXShodHRwczovL3d3dy55b3V0dWJlLmNvbS93YXRjaD92PWlBelNoa0t6cEpvKS4gCgpLZWVwIHByYWN0aWNpbmchCg==",
+            "readme_raw": "",
+            "html": "<h2>What is a string?</h2>\r\n<p>A bunch of letters and characters all together in a particular order, the only way to store any characters that are not a number, are a fundamental part of every major program.</p>\r\n<p>Strings are also part of the most primitive or basic set of data-types: </p>\r\n<p>| Type      | Example           | Representation                |\r\n| ---       | ---               | ---                           |\r\n| String    | <code>\"Hello World\"</code>   | str                           | just characters in a sequence                                 |\r\n| Number    | <code>23.34</code>           | int, float, complex           | just numbers                                                  |\r\n| Sequence  | <code>[2,3,1,56,4.34]</code> | list, tuple, range            | Iterable list of values with numerical indexes for positions  |\r\n| Set       | <code>{'1,'2','45'}</code>   | set, frozenset                | Like Sequence but unordered and with duplicate elements       |\r\n| Mapping   | <code>{\"name\": \"Bob\"}</code> | dict                          | Like Sequence but indexes are characters intead of incremental numbers |\r\n| Boolean   | <code>True</code> or <code>False</code> | bool                          | just True or False |\r\n| Binary    | <code>01001010111</code>     | bytes, bytearray, memoryview  | Ideal for low level operations                                |</p>\r\n<h2>How to create a string</h2>\r\n<p>To create a string in python just put a bunch of characters within quotes like this <code>\"hello\"</code> or even like this <code>\"23232\"</code>.</p>\r\n<pre><code class=\"language-python\">name = &quot;Bob&quot;\r\nage = &quot;23&quot; # &lt;--- this is still a string (it's within quotes)\r\n</code></pre>\r\n<p>When coding a web application, everything the user types in forms it's considered a <code>string</code>, even if the user types the number <code>2</code> (two) it will still be considered the string <code>\"2\"</code>  and not a real number, the developer will have to explicitely convert or parse that string into a number using the function <code>int()</code>  or <code>float()</code>.</p>\r\n<blockquote>\r\n<p>:link: How to <a href=\"https://guide.freecodecamp.org/python/how-to-convert-strings-into-integers-in-python/\">convert strings into integers with python</a> (3 min read).</p>\r\n</blockquote>\r\n<p>The most common use for a string is printing it using the function <code>print</code></p>\r\n<pre><code class=\"language-python\">print(&quot;Hello World!&quot;)\r\n# The function print() receives a string and displays it on the command line/terminal.\r\n ```\r\n\r\n## How do we use strings?\r\n\r\n### String concatenation (summing strings)\r\n\r\nPython allows to sum together strings using the plus `+` operator. The following fragment demonstrates how to add two strings to create a **full name** from **first** and **last names**.\r\n\r\n```python\r\nfirst_name = &quot;Alejandro&quot;\r\nlast_name = &quot;Sanchez&quot;\r\nfull_name = first_name + &quot; &quot; + last_name\r\nprint(&quot;My name is &quot;+full_name)\r\n\r\n# Output: &quot;My name is Alejandro Sanchez&quot;\r\n ```\r\n\r\nIn this example `&quot;My name is &quot;` it's being concatenated with the value on the variable `full_name`.\r\n\r\n### The length of the string\r\n\r\nYou often want to know what the length (size) of a string is, for example: Twitter does not allow tweets with more than 240 characters.\r\n\r\n```python\r\ntweet = &quot;Good morning!&quot;\r\nprint(&quot;The variable tweet contains &quot;+str(len(tweet))+&quot; characters&quot;)\r\n\r\n# Output: The variable tweet contains 13 characters\r\n</code></pre>\r\n<h3>Extracting characters</h3>\r\n<p>After we also need to know the value of the string in a particular position, for example: If a string ends with a question mark it's probably a question:</p>\r\n<pre><code class=\"language-python\">question = &quot;How are you?&quot;\r\nsize = len(question)\r\nprint(&quot;The strings start with &quot; + question[0])\r\n# Output: The strings start with H\r\nprint(&quot;The strings ends with &quot; + question[size - 1])\r\n# Output: The strings ends with ?\r\n\r\n</code></pre>\r\n<blockquote>\r\n<p>:point_up: This method of character extraction on strings is very similar to the one used on lists to extract an element from a particular position in the list.   </p>\r\n</blockquote>\r\n<p>You can also extract several characters at once. The range of the method starts with the index of the first character to be extracted and ends with the index AFTER the last character to be extracted:</p>\r\n<pre><code class=\"language-python\">name = &quot;My name is Alejandro Sanchez&quot;\r\nprint(&quot;Extracted &quot; + name[11:20])\r\n# Output: Extracted Alejandro\r\n\r\nprint(&quot;Extracted &quot; + name[11:])\r\n# Output: Extracted Alejandro Sanchez\r\n\r\nprint(&quot;Extracted &quot; + nombre[:10])\r\n# Output: Extracted My name is \r\n</code></pre>\r\n<h3>Comparing strings</h3>\r\n<p>If you want to compare two strings you can use the <code>==</code>  (double equal) and it will return <code>True</code>  if the strings are EXACTLY the same, string comparison is case sensitive, \"Bob\" is not equal to \"bob\".</p>\r\n<pre><code class=\"language-python\">name1 = &quot;pepe&quot;;\r\nname2 = &quot;juan&quot;;\r\nif name1 == name2:\r\n    print(&quot;This is False, I will not get printed&quot;)\r\nif name1 == &quot;pepe&quot;:\r\n    print(&quot;This is True, I will get printed&quot;)\r\nif name1 != name2:\r\n    print(&quot;This is True, I will get printed&quot;)\r\n</code></pre>\r\n<h3>Converting to lower or upper case.</h3>\r\n<pre><code class=\"language-python\">lowercased_string = name1.lower() # will convert to lowercase\r\nuppercased_string = name2.upper() # will convert to uppercase\r\n</code></pre>\r\n<blockquote>\r\n<p>:point_up: it is good practice to always lowercase strings before comparing them with others, that way we will avoid missing case sensitive differences.</p>\r\n</blockquote>\r\n<h3>Convert strings to numbers (and vice versa)</h3>\r\n<pre><code class=\"language-python\">number = 3.4 # I am a number\r\nnumber_as_string = str(number) # I am a string with value &quot;3.4&quot;\r\n</code></pre>\r\n<h3>More information about strings</h3>\r\n<p>If you want to learn more, we suggest you start practicing instead of reading because there is nothing much to read about strings, here is a small 3 min <a href=\"https://www.youtube.com/watch?v=iAzShkKzpJo\">video explaining strings</a>. </p>\r\n<p>Keep practicing!</p>",
+            "academy": 1,
+            "config": null,
+            "external": false,
+            "interactive": false,
+            "with_solutions": false,
+            "with_video": false,
+            "graded": false,
+            "gitpod": false,
+            "duration": null,
+            "difficulty": null,
+            "visibility": "PUBLIC",
+            "asset_type": "LESSON",
+            "status": "PUBLISHED",
+            "sync_status": "PENDING",
+            "last_synch_at": null,
+            "test_status": null,
+            "published_at": null,
+            "last_test_at": null,
+            "status_text": "",
+            "authors_username": null,
+            "assessment": null,
+            "author": 1,
+            "owner": 1,
+            "optimization_rating": null,
+            "last_seo_scan_at": null,
+            "seo_json_status": null,
+            "last_cleaning_at": null,
+            "cleaning_status_details": "",
+            "cleaning_status": "PENDING",
+            "created_at": "2022-10-13T20:00:44.432Z",
+            "updated_at": "2022-10-13T20:00:44.441Z",
+            "all_translations": [],
+            "technologies": [
+                1
+            ],
+            "seo_keywords": []
+        }
+    },
+    {
+        "model": "registry.assetalias",
+        "pk": "working-with-strings-in-python",
+        "fields": {
+            "asset": 1,
+            "created_at": "2022-10-13T20:00:44.434Z"
+        }
+    },
+    {
+        "model": "registry.assetcomment",
+        "pk": 1,
+        "fields": {
+            "text": "Falta Traducir a Ingles y el Source url apunta a la Raiz del repositorio en lugar del md",
+            "resolved": false,
+            "delivered": true,
+            "urgent": false,
+            "priority": 0,
+            "asset": 1,
+            "author": 1,
+            "owner": null,
+            "created_at": "2022-10-13T23:14:33.837Z"
+        }
+    },
+    {
+        "model": "registry.asseterrorlog",
+        "pk": 1,
+        "fields": {
+            "asset_type": "LESSON",
+            "slug": "missing-translation",
+            "status": "ERROR",
+            "path": "Working-with-strings-in-python",
+            "status_text": "",
+            "user": 1,
+            "asset": 1,
+            "created_at": "2022-10-13T23:16:53.982Z"
+        }
+    },
+    {
+        "model": "registry.seoreport",
+        "pk": 1,
+        "fields": {
+            "report_type": "keyword_density",
+            "status": "ERROR",
+            "log": "SEOReport.good() missing 1 required positional argument: 'msg'",
+            "asset": 1,
+            "rating": null,
+            "created_at": "2022-10-14T00:16:05.708Z"
+        }
+    }
+]

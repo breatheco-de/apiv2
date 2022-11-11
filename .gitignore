@@ -8,6 +8,8 @@ core.[0-9]*
 *.pot
 *.pyc
 .temp
+temp/*
+!temp/.gitkeep
 __pycache__/
 local_settings.py
 db.sqlite3

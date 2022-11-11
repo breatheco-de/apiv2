@@ -130,7 +130,7 @@ docker-compose logs -f bc-dev
 # open localhost:8000/admin to view the admin
 ```
 
-## Working in your local machine (recomended)
+## Working in your local machine (recommended)
 
 ### `Installation in your local machine`
 
