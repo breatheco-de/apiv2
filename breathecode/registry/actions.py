@@ -308,9 +308,6 @@ def pull_github_lesson(github, asset, override_meta=False):
         if 'authors' in fm and fm['authors'] != '':
             asset.authors_username = ','.join(fm['authors'])
 
-        if 'status' in fm and fm['status'] in ASSET_STATUS_DICT:
-            asset.status = fm['status']
-
         if 'tags' in fm and isinstance(fm['tags'], list):
             asset.technologies.clear()
             for tech_slug in fm['tags']:
