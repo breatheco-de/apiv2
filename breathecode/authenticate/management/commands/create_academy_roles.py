@@ -553,14 +553,9 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps': extend(roles, ['staff']) + ['crud_member', 'crud_media']
     })
     roles.append({
-        'slug':
-        'graphic_designer',
-        'name':
-        'Graphic Designer',
-        'caps':
-        extend(roles, ['staff']) + [
-            'read_event', 'crud_media', 'read_asset', 'read_media'
-        ]
+        'slug': 'graphic_designer',
+        'name': 'Graphic Designer',
+        'caps': extend(roles, ['staff']) + ['read_event', 'crud_media', 'read_asset', 'read_media']
     })
     roles.append({
         'slug':

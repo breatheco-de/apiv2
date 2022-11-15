@@ -177,35 +177,32 @@ class MarketingTestSuite(MarketingTestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(create_form_entry.delay.call_args_list, [
                 call(
-                    {
-                        'Unnamed: 0': 0,
+                    1, **{
                         'first_name': df.iloc[0]['first_name'],
                         'last_name': df.iloc[0]['last_name'],
                         'email': df.iloc[0]['email'],
                         'location': df.iloc[0]['location'],
                         'phone': df.iloc[0]['phone'],
                         'language': df.iloc[0]['language'],
-                    }, 1),
+                    }),
                 call(
-                    {
-                        'Unnamed: 0': 1,
+                    1, **{
                         'first_name': df.iloc[1]['first_name'],
                         'last_name': df.iloc[1]['last_name'],
                         'email': df.iloc[1]['email'],
                         'location': df.iloc[1]['location'],
                         'phone': df.iloc[1]['phone'],
                         'language': df.iloc[1]['language'],
-                    }, 1),
+                    }),
                 call(
-                    {
-                        'Unnamed: 0': 2,
+                    1, **{
                         'first_name': df.iloc[2]['first_name'],
                         'last_name': df.iloc[2]['last_name'],
                         'email': df.iloc[2]['email'],
                         'location': df.iloc[2]['location'],
                         'phone': df.iloc[2]['phone'],
                         'language': df.iloc[2]['language'],
-                    }, 1)
+                    })
             ])
 
             self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),

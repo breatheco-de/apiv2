@@ -540,6 +540,8 @@ def delete_tag(tag, include_other_academies=False):
 
 
 def convert_data_frame(item):
+    if 'Unnamed: 0' in item:
+        del item['Unnamed: 0']
     for key in item:
         if isinstance(item[key], np.integer):
             item[key] = int(item[key])
