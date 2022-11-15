@@ -16,7 +16,8 @@ class CohortDayLog(object):
     attendance_ids: []
     unattendance_ids: []
 
-    def __init__(self, current_module: str, teacher_comments: str, attendance_ids: list, unattendance_ids: list):
+    def __init__(self, current_module: str, teacher_comments: str, attendance_ids: list,
+                 unattendance_ids: list):
 
         if not isinstance(current_module, str):
             raise Exception(f'Invalid current module value {str(current_module)}')
@@ -29,7 +30,7 @@ class CohortDayLog(object):
 
         if has_duplicates(attendance_ids):
             raise Exception(f'Attendance list has duplicate user ids')
-            
+
         if has_duplicates(unattendance_ids):
             raise Exception(f'Unattendance list has duplicate user ids')
 
@@ -37,7 +38,7 @@ class CohortDayLog(object):
         self.teacher_comments = teacher_comments
         self.attendance_ids = attendance_ids
         self.unattendance_ids = unattendance_ids
-    
+
     @staticmethod
     def empty():
         return {
@@ -66,13 +67,15 @@ class CohortLog(object):
             raise Exception("Cohort log cannot be retrived because it's null")
 
         if cohort.history_log is None:
-            cohort.history_log = [CohortDayLog.empty() for i in range(0,self.cohort.current_day)]
-            
+            cohort.history_log = [CohortDayLog.empty() for i in range(0, self.cohort.current_day)]
+
         elif not isinstance(cohort.history_log, list):
             raise Exception('Cohort history json must be in list format')
-            
+
         if len(cohort.history_log) != self.cohort.current_day:
-            raise Exception(f'Cohort log must have exactly {self.cohort.current_day} days but it has {len(cohort.history_log)}')
+            raise Exception(
+                f'Cohort log must have exactly {self.cohort.current_day} days but it has {len(cohort.history_log)}'
+            )
 
         self.cohort = cohort
         if self.cohort.current_day == 0:
@@ -83,12 +86,14 @@ class CohortLog(object):
 
         if not isinstance(payload, dict):
             raise Exception('Entry log of cohort day must be a dictionary')
-            
+
         if day is None:
             day = self.cohort.current_day
-            
+
         elif day > self.cohort.current_day:
-            raise Exception(f'You cannot log activity for day {str(day)} because the cohort is currently at day {str(self.cohort.current_day)}')
+            raise Exception(
+                f'You cannot log activity for day {str(day)} because the cohort is currently at day {str(self.cohort.current_day)}'
+            )
 
         try:
             self.days[day - 1] = CohortDayLog(**payload)
