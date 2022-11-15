@@ -74,7 +74,7 @@ currencies = [
     },
     {
         'code': 'CRC',
-        'name': 'colón costarricense',
+        'name': 'Colón costarricense',
         'countries': {
             'main': [costa_rica],
         },

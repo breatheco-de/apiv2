@@ -139,7 +139,7 @@ def renew_subscription(self, subscription_id: int, from_datetime: datetime):
 def build_subscription(self, bag_id: int, invoice_id: int):
     logger.info(f'Starting build_subscription for bag {bag_id}')
 
-    if not (bag := Bag.objects.filter(id=bag_id, status='PAID').first()):
+    if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
         logger.error(f'Bag with id {bag_id} not found')
         return
 

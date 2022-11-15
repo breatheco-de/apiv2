@@ -29,6 +29,7 @@ def format_invoice_item(data={}):
         'academy_id': None,
         'amount': 0.0,
         'currency_id': 1,
+        'bag_id': None,
         'id': 1,
         'paid_at': UTC_NOW,
         'status': 'FULFILLED',
@@ -158,7 +159,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
-        self.bc.check.queryset_with_pks(model.bag.services.all(), [])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
 
     """
     🔽🔽🔽 Get with zero Bag, passing token, with Plan and ServiceItem
@@ -193,7 +194,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.services.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
 
     """
     🔽🔽🔽 Get with zero Bag, passing token, with Plan and ServiceItem, passing chosen_period
@@ -229,7 +230,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.services.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
@@ -272,5 +273,5 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.services.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         # assert 0

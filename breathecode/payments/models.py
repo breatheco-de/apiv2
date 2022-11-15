@@ -1,14 +1,15 @@
-from pyexpat import model
-import re
+import ast
 from django.contrib.auth.models import Group, User
 from django.db import models
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
-from breathecode.mentorship.models import APPROVED, MentorshipService
+from breathecode.authenticate.actions import get_user_settings
+from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
 
 from breathecode.utils.validators.language import validate_language_code
 from . import signals
+from breathecode.utils.i18n import translation
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
 
@@ -96,8 +97,6 @@ class AbstractAsset(AbstractPriceByUnit):
     """
 
     slug = models.CharField(max_length=60, unique=True)
-    title = models.CharField(max_length=60)
-    description = models.CharField(max_length=255)
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     private = models.BooleanField(default=True)
@@ -115,13 +114,89 @@ class Service(AbstractAsset):
     """
 
     groups = models.ManyToManyField(Group)
-    cohorts = models.ManyToManyField(Cohort)
-    mentorship_services = models.ManyToManyField(MentorshipService)
 
     def __str__(self):
         return self.slug
 
     def save(self):
+        self.full_clean()
+
+        super().save()
+
+
+class ServiceTranslation(models.Model):
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    lang = models.CharField(max_length=5, validators=[validate_language_code])
+    title = models.CharField(max_length=60)
+    description = models.CharField(max_length=255)
+
+
+DAY = 'DAY'
+WEEK = 'WEEK'
+MONTH = 'MONTH'
+YEAR = 'YEAR'
+PAY_EVERY_UNIT = [
+    (DAY, 'Day'),
+    (WEEK, 'Week'),
+    (MONTH, 'Month'),
+    (YEAR, 'Year'),
+]
+
+
+class Fixture(models.Model):
+    _lang = 'en'
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+
+    # patterns
+    cohort_pattern = models.CharField(max_length=80, default=None, blank=True, null=True)
+    # mentorship_service_pattern = models.CharField(max_length=80, default=None, blank=True, null=True)
+
+    # this is used for the renovations of credits
+    renew_every = models.IntegerField(default=1)
+    renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
+
+    # section of cache, is a nightmare solve this problem without it
+    cohorts = models.ManyToManyField(Cohort)
+    mentorship_services = models.ManyToManyField(MentorshipService)
+
+    def _how_many(self):
+        how_many = 0
+        if self.cohort_pattern:
+            how_many += 1
+
+        # if self.mentorship_service_pattern:
+        #     how_many += 1
+
+        return how_many
+
+    # def set_language(self, lang):
+    #     self._lang = lang
+
+    # def set_language_from_settings(self, settings):
+    #     self._lang = settings.lang
+
+    @property
+    def cohort_regex(self):
+        if not self.cohort_pattern:
+            return None
+
+        return ast.literal_eval(self.cohort_pattern)
+
+    # @property
+    # def mentorship_service_regex(self):
+    #     if not self.mentorship_service_pattern:
+    #         return None
+
+    #     return ast.literal_eval(self.mentorship_service_pattern)
+
+    def save(self):
+        # if self._how_many() > 1:
+        #     raise Exception(
+        #         translation(self._lang,
+        #                     en='You can only set one regex per fixture',
+        #                     es='Solo puede establecer una expresión regular por fixture'))
+
         self.full_clean()
 
         super().save()
@@ -138,11 +213,9 @@ class AbstractServiceItem(models.Model):
     Common fields for ServiceItem and Consumable.
     """
 
-    service = models.ForeignKey(Service, on_delete=models.CASCADE)
-
     # the unit between a service and a product are different
     unit_type = models.CharField(max_length=10, choices=SERVICE_UNITS, default=UNIT)
-    how_many = models.IntegerField(default=0)
+    how_many = models.IntegerField(default=-1)
 
     def __str__(self):
         return f'{self.service.slug} {self.how_many}'
@@ -151,26 +224,24 @@ class AbstractServiceItem(models.Model):
         abstract = True
 
 
-DAY = 'DAY'
-WEEK = 'WEEK'
-MONTH = 'MONTH'
-YEAR = 'YEAR'
-PAY_EVERY_UNIT = [
-    (DAY, 'Day'),
-    (WEEK, 'Week'),
-    (MONTH, 'Month'),
-    (YEAR, 'Year'),
-]
-
-
 # this class is used as referenced of units of a service can be used
 class ServiceItem(AbstractServiceItem):
     """
     This model is used as referenced of units of a service can be used.
     """
 
-    renew_every = models.IntegerField(default=1)
-    renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        if self.id:
+            raise Exception('You cannot update a service item')
+
+        self.full_clean()
+
+        super().save()
+
+    def delete(self):
+        raise Exception('You cannot delete a service item')
 
 
 DRAFT = 'DRAFT'
@@ -186,21 +257,12 @@ PLAN_STATUS = [
 ]
 
 
-class PlanTranslation(models.Model):
-    #TODO: models.CharFieldTranslation
-    lang = models.CharField(max_length=5, validators=[validate_language_code])
-    title = models.CharField(max_length=60)
-    description = models.CharField(max_length=255)
-
-
 class Plan(AbstractPriceByTime):
     """
     A plan is a group of services that can be purchased by a user.
     """
 
     slug = models.CharField(max_length=60, unique=True)
-
-    # translations
 
     status = models.CharField(max_length=7, choices=PLAN_STATUS, default=DRAFT)
     #TODO: visible enum, private, unlisted, visible
@@ -211,8 +273,25 @@ class Plan(AbstractPriceByTime):
     trial_duration = models.IntegerField(default=1)
     trial_duration_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
-    services = models.ManyToManyField(ServiceItem)
+    service_items = models.ManyToManyField(ServiceItem)
+    cohorts = models.ManyToManyField(Cohort)
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
+
+
+class PlanTranslation(models.Model):
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, default=None, blank=True, null=True)
+    lang = models.CharField(max_length=5, validators=[validate_language_code])
+    title = models.CharField(max_length=60)
+    description = models.CharField(max_length=255)
+
+    def clean(self):
+        if not self.plan:
+            raise Exception('Plan is required')
+
+    def save(self):
+        self.full_clean()
+
+        super().save()
 
 
 FREE_TRIAL = 'FREE_TRIAL'
@@ -229,17 +308,55 @@ SUBSCRIPTION_STATUS = [
 ]
 
 
-# this class can be consumed by the api
 class Consumable(AbstractServiceItem):
     """
     This model is used to represent the units of a service that can be consumed.
     """
 
+    service_item = models.ForeignKey(ServiceItem,
+                                     on_delete=models.CASCADE,
+                                     default=None,
+                                     blank=True,
+                                     null=True)
+
     # if null, this is valid until resources are exhausted
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, default=None, blank=True, null=True)
+    mentorship_service = models.ForeignKey(MentorshipService,
+                                           on_delete=models.CASCADE,
+                                           default=None,
+                                           blank=True,
+                                           null=True)
+
     # if null, this is valid until resources are exhausted
     valid_until = models.DateTimeField(null=True, blank=True, default=None)
+
+    def clean(self) -> None:
+        resources = [self.cohort, self.mentorship_service]
+        how_many_resources_are_set = len([r for r in resources if r is not None])
+
+        settings = get_user_settings(self.user.id)
+
+        if how_many_resources_are_set:
+            raise Exception(
+                translation(settings.lang,
+                            en='A consumable can only be associated with one resource',
+                            es='Un consumible solo se puede asociar con un recurso'))
+
+        if not self.service_item:
+            raise Exception(
+                translation(settings.lang,
+                            en='A consumable must be associated with a service item',
+                            es='Un consumible debe estar asociado con un artículo de un servicio'))
+
+        return super().clean()
+
+    def save(self):
+        self.full_clean()
+
+        super().save()
 
 
 FULFILLED = 'FULFILLED'
@@ -261,10 +378,14 @@ class Invoice(models.Model):
     Represents a payment made by a user
     """
 
-    amount = models.FloatField(default=0)
+    amount = models.FloatField(
+        default=0,
+        help_text='If amount is 0, transaction will not be sent to stripe or any other payment processor.')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
     paid_at = models.DateTimeField()
     status = models.CharField(max_length=17, choices=INVOICE_STATUS, default=PENDING)
+
+    bag = models.ForeignKey('Bag', on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     # actually return 18 characters
     stripe_id = models.CharField(max_length=20, null=True, default=None, blank=True)
@@ -274,6 +395,11 @@ class Invoice(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
 
 
 class Subscription(models.Model):
@@ -292,7 +418,7 @@ class Subscription(models.Model):
     # if null, this is valid until resources are exhausted
     valid_until = models.DateTimeField()
     last_renew = models.DateTimeField()
-    renew_credits_at = models.DateTimeField()
+    renew_credits_at = models.DateTimeField()  #TODO change this name
 
     pay_every = models.IntegerField(default=1)
     pay_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
@@ -302,13 +428,14 @@ class Subscription(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     #TODO: the services and plans needs to be renew to a different timedelta
-    services = models.ManyToManyField(ServiceItem)
+    service_items = models.ManyToManyField(ServiceItem)
     plans = models.ManyToManyField(Plan)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
+#TODO: maybe this needs be deleted
 class Credit(models.Model):
     """
     Represents a credit that can be used by a user to use a service.
@@ -418,12 +545,11 @@ class Bag(AbstractAmountByTime):
 
     academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    services = models.ManyToManyField(ServiceItem)
+    service_items = models.ManyToManyField(ServiceItem)
     plans = models.ManyToManyField(Plan)
 
     is_recurrent = models.BooleanField(default=False)
     was_delivered = models.BooleanField(default=False)
-    #TODO: this maybe needs a relation with invoice
 
     token = models.CharField(max_length=40, db_index=True, default=None, null=True, blank=True)
     expires_at = models.DateTimeField(default=None, blank=True, null=True)
@@ -432,10 +558,5 @@ class Bag(AbstractAmountByTime):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def save(self, *args, **kwargs):
-        created = not self.id
-
         self.full_clean()
         super().save(*args, **kwargs)
-
-        if created:
-            signals.grant_service_permissions.send(instance=self, sender=self.__class__)

@@ -8,7 +8,6 @@ from django.utils import timezone
 from rest_framework.views import APIView
 
 from breathecode.authenticate.models import Permission, User
-from breathecode.payments.models import Consumable, Invoice, Service
 from breathecode.payments.signals import consume_service
 
 from ..exceptions import ProgramingError
@@ -23,7 +22,7 @@ class PermissionContextType(TypedDict):
     consumer: bool
     permission: str
     request: WSGIRequest
-    consumables: QuerySet[Consumable]
+    consumables: QuerySet
 
 
 HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple,
@@ -44,6 +43,8 @@ def validate_permission(user: User, permission: str, consumer: bool | HasPermiss
 #TODO: check if required_payment is needed
 def has_permission(permission: str, consumer: bool | HasPermissionCallback = False) -> callable:
     """This decorator check if the current user can access to the resource through of permissions"""
+
+    from breathecode.payments.models import Consumable
 
     def decorator(function: callable) -> callable:
 
@@ -78,7 +79,8 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     items = Consumable.objects.filter(
                         Q(valid_until__lte=utc_now) | Q(valid_until=None),
                         user=request.user,
-                        service__groups__permissions__codename=permission).exclude(how_many=0).order_by('id')
+                        service_item__service__groups__permissions__codename=permission).exclude(
+                            how_many=0).order_by('id')
 
                     context['consumables'] = items
 

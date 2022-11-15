@@ -585,6 +585,7 @@ class BagView(APIView):
 class CheckingView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
+    # @transaction.atomic()
     def put(self, request):
         type = request.data.get('type', 'BAG').upper()
         created = False
@@ -592,46 +593,50 @@ class CheckingView(APIView):
         settings = get_user_settings(request.user.id)
 
         with transaction.atomic():
-
-            if type == 'BAG' and not (bag := Bag.objects.filter(
-                    user=request.user, status='CHECKING', type=type).first()):
-                raise ValidationException(translation(settings.lang,
-                                                      en='Bag not found',
-                                                      es='Bolsa no encontrada',
-                                                      slug='not-found'),
-                                          code=404)
-
-            if type == 'PREVIEW':
-                academy = request.data.get('academy')
-                try:
-                    academy = Academy.objects.get(id=int(academy), main_currency__isnull=False)
-                except:
-                    raise ValidationException(translation(
-                        settings.lang,
-                        en='Academy not found or not configured properly',
-                        es='Academia no encontrada o no configurada correctamente',
-                        slug='not-found'),
+            sid = transaction.savepoint()
+            try:
+                if type == 'BAG' and not (bag := Bag.objects.filter(
+                        user=request.user, status='CHECKING', type=type).first()):
+                    raise ValidationException(translation(settings.lang,
+                                                          en='Bag not found',
+                                                          es='Bolsa no encontrada',
+                                                          slug='not-found'),
                                               code=404)
+                if type == 'PREVIEW':
+                    academy = request.data.get('academy')
+                    try:
+                        academy = Academy.objects.get(id=int(academy), main_currency__isnull=False)
+                    except:
+                        raise ValidationException(translation(
+                            settings.lang,
+                            en='Academy not found or not configured properly',
+                            es='Academia no encontrada o no configurada correctamente',
+                            slug='not-found'),
+                                                  code=404)
 
-                bag, created = Bag.objects.get_or_create(user=request.user,
-                                                         status='CHECKING',
-                                                         type=type,
-                                                         academy=academy,
-                                                         currency=academy.main_currency)
-                add_items_to_bag(request, settings, bag)
+                    bag, created = Bag.objects.get_or_create(user=request.user,
+                                                             status='CHECKING',
+                                                             type=type,
+                                                             academy=academy,
+                                                             currency=academy.main_currency)
+                    add_items_to_bag(request, settings, bag)
 
-            utc_now = timezone.now()
+                utc_now = timezone.now()
 
-            bag.token = Token.generate_key()
-            bag.expires_at = utc_now + timedelta(minutes=10)
-            bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-                bag, bag.academy, settings)
+                bag.token = Token.generate_key()
+                bag.expires_at = utc_now + timedelta(minutes=10)
+                bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
+                    bag, bag.academy, settings)
 
-            bag.save()
+                bag.save()
+                transaction.savepoint_commit(sid)
 
-            serializer = GetBagSerializer(bag, many=False)
-            return Response(serializer.data,
-                            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+                serializer = GetBagSerializer(bag, many=False)
+                return Response(serializer.data,
+                                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+            except Exception as e:
+                transaction.savepoint_rollback(sid)
+                raise e
 
 
 class PayView(APIView):
@@ -674,8 +679,7 @@ class PayView(APIView):
                                      status='CHECKING',
                                      token=token,
                                      academy__main_currency__isnull=False,
-                                     expires_at__gte=utc_now,
-                                     type=type).first()
+                                     expires_at__gte=utc_now).first()
 
             if not bag:
                 raise ValidationException(translation(
@@ -685,7 +689,7 @@ class PayView(APIView):
                     slug='not-found-or-without-checking'),
                                           code=404)
 
-            if bag.services.count() == 0 and bag.plans.count() == 0:
+            if bag.service_items.count() == 0 and bag.plans.count() == 0:
                 raise ValidationException(translation(settings.lang,
                                                       en='Bag is empty',
                                                       es='La bolsa esta vacía',

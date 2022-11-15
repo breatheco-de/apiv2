@@ -225,12 +225,16 @@ class SignalTestSuite(PaymentsTestCase):
         length = random.randint(2, 5)
         consumables = [{
             'how_many': 0 if n == 0 else 0,
-            'service_id': 1 if n == 0 else 2,
+            'service_item_id': 1 if n == 0 else 2,
         } for n in range(length)]
         services = [{
             'groups': [1] if n == 0 else [2],
         } for n in range(length)]
-        model = self.bc.database.create(consumable=consumables, group=2, service=services)
+        service_items = [{'service_id': x} for x in range(1, 3)]
+        model = self.bc.database.create(consumable=consumables,
+                                        group=2,
+                                        service=services,
+                                        service_item=service_items)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
         signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
@@ -250,12 +254,16 @@ class SignalTestSuite(PaymentsTestCase):
         length = random.randint(2, 5)
         consumables = [{
             'how_many': 0 if n == 0 else -1,
-            'service_id': 1 if n == 0 else 2,
+            'service_item_id': 1 if n == 0 else 2,
         } for n in range(length)]
         services = [{
             'groups': [1] if n == 0 else [2],
         } for n in range(length)]
-        model = self.bc.database.create(consumable=consumables, group=2, service=services)
+        service_items = [{'service_id': x} for x in range(1, 3)]
+        model = self.bc.database.create(consumable=consumables,
+                                        group=2,
+                                        service=services,
+                                        service_item=service_items)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
         signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
@@ -275,12 +283,16 @@ class SignalTestSuite(PaymentsTestCase):
         length = random.randint(2, 5)
         consumables = [{
             'how_many': 0 if n == 0 else random.randint(1, 100),
-            'service_id': 1 if n == 0 else 2,
+            'service_item_id': 1 if n == 0 else 2,
         } for n in range(length)]
         services = [{
             'groups': [1] if n == 0 else [2],
         } for n in range(length)]
-        model = self.bc.database.create(consumable=consumables, group=2, service=services)
+        service_items = [{'service_id': x} for x in range(1, 3)]
+        model = self.bc.database.create(consumable=consumables,
+                                        group=2,
+                                        service=services,
+                                        service_item=service_items)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
         signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
