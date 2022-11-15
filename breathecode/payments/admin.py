@@ -39,8 +39,7 @@ class ServiceItemAdmin(admin.ModelAdmin):
 
 @admin.register(Fixture)
 class FixtureAdmin(admin.ModelAdmin):
-    list_display = ('id', 'academy', 'service', 'cohort_pattern', 'mentorship_service_pattern', 'renew_every',
-                    'renew_every_unit')
+    list_display = ('id', 'academy', 'service', 'cohort_pattern', 'renew_every', 'renew_every_unit')
     list_filter = ['renew_every_unit', 'academy']
     search_fields = [
         'service__slug', 'service__title', 'service__groups__name', 'service__cohorts__slug',
