@@ -1,8 +1,8 @@
 from django.contrib import admin
 
-from breathecode.payments.models import (Bag, Consumable, Credit, Currency, FinancialReputation, Invoice,
-                                         PaymentContact, Plan, PlanTranslation, Service, ServiceItem,
-                                         Subscription)
+from breathecode.payments.models import (Bag, Consumable, Credit, Currency, FinancialReputation, Fixture,
+                                         Invoice, PaymentContact, Plan, PlanTranslation, Service, ServiceItem,
+                                         ServiceTranslation, Subscription)
 
 # Register your models here.
 
@@ -10,41 +10,42 @@ from breathecode.payments.models import (Bag, Consumable, Credit, Currency, Fina
 @admin.register(Currency)
 class CurrencyAdmin(admin.ModelAdmin):
     list_display = ('id', 'code', 'name')
-    # list_filter = ['schedule__name', 'timezone', 'recurrent', 'recurrency_type']
     search_fields = ['code', 'code']
 
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('id', 'slug', 'title', 'description', 'owner', 'private')
+    list_display = ('id', 'slug', 'owner', 'private')
     list_filter = ['owner']
-    search_fields = ['slug', 'title', 'groups__name', 'cohorts__slug', 'mentorship_services__slug']
+    search_fields = ['slug', 'title', 'groups__name']
 
 
-# @admin.register(ServiceItem)
-# class ServiceItemAdmin(admin.ModelAdmin):
-#     list_display = ('id', 'unit_type', 'how_many')
-#     list_filter = ['service__academy']
-#     search_fields = [
-#         'service__slug', 'service__title', 'service__groups__name', 'service__cohorts__slug',
-#         'service__mentorship_services__slug'
-#     ]
+@admin.register(ServiceTranslation)
+class ServiceTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'lang', 'title', 'description', 'service')
+    list_filter = ['service__owner', 'lang']
+    search_fields = ['service__slug', 'title', 'service__groups__name']
 
 
 @admin.register(ServiceItem)
 class ServiceItemAdmin(admin.ModelAdmin):
-    list_display = ('id', 'unit_type', 'how_many', 'service', 'renew_every', 'renew_every_unit')
-    list_filter = ['renew_every_unit', 'service__owner']
+    list_display = ('id', 'unit_type', 'how_many', 'service')
+    list_filter = ['service__owner']
     search_fields = [
         'service__slug', 'service__title', 'service__groups__name', 'service__cohorts__slug',
         'service__mentorship_services__slug'
     ]
 
 
-@admin.register(PlanTranslation)
-class PlanTranslationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'lang', 'title', 'description')
-    search_fields = ['lang', 'title']
+@admin.register(Fixture)
+class FixtureAdmin(admin.ModelAdmin):
+    list_display = ('id', 'academy', 'service', 'cohort_pattern', 'mentorship_service_pattern', 'renew_every',
+                    'renew_every_unit')
+    list_filter = ['renew_every_unit', 'academy']
+    search_fields = [
+        'service__slug', 'service__title', 'service__groups__name', 'service__cohorts__slug',
+        'service__mentorship_services__slug'
+    ]
 
 
 @admin.register(Plan)
@@ -55,11 +56,18 @@ class PlanAdmin(admin.ModelAdmin):
     search_fields = ['lang', 'title']
 
 
+@admin.register(PlanTranslation)
+class PlanTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'lang', 'title', 'description', 'plan')
+    list_filter = ['plan__owner', 'lang']
+    search_fields = ['title', 'plan__slug']
+
+
 @admin.register(Consumable)
 class ConsumableAdmin(admin.ModelAdmin):
-    list_display = ('id', 'unit_type', 'how_many', 'service', 'user', 'valid_until')
+    list_display = ('id', 'unit_type', 'how_many', 'service_item', 'user', 'valid_until')
     list_filter = ['unit_type']
-    search_fields = ['service__slug']
+    search_fields = ['service_item__service__slug']
 
 
 @admin.register(Invoice)

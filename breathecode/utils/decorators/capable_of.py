@@ -48,7 +48,6 @@ def capable_of(capability=None):
 def get_academy_from_capability(kwargs, request, capability):
     from breathecode.authenticate.models import ProfileAcademy
 
-
     academy_id = None
 
     if ('academy_id' not in kwargs and 'Academy' not in request.headers and 'academy' not in request.headers

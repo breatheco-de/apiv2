@@ -6,7 +6,6 @@ from django.contrib.auth.models import User
 from django.template import Context
 from django.utils import timezone
 from pyfcm import FCMNotification
-from breathecode.authenticate.models import CredentialsSlack
 from breathecode.services.slack import client
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException
@@ -230,6 +229,7 @@ def get_template_content(slug, data={}, formats=None):
 
 
 def sync_slack_team_channel(team_id):
+    from breathecode.authenticate.models import CredentialsSlack
 
     logger.debug(f'Sync slack team {team_id}: looking for channels')
 
@@ -282,6 +282,7 @@ def sync_slack_team_channel(team_id):
 
 
 def sync_slack_team_users(team_id):
+    from breathecode.authenticate.models import CredentialsSlack
 
     logger.debug(f'Sync slack team {team_id}: looking for users')
 

@@ -9,7 +9,6 @@ __all__ = ['localize_query']
 def localize_query(query, request, matcher=None):
     from breathecode.authenticate.models import ProfileAcademy
 
-
     # not a part of the staff, cannot access all info
     if isinstance(request.user, AnonymousUser):
         return None

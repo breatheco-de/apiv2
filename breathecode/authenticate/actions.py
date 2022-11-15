@@ -10,11 +10,7 @@ from random import randint
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from breathecode.admissions.models import Academy, CohortUser
-from breathecode.assessment.models import Assessment, Question, UserAssessment
-from breathecode.events.models import Event
-from breathecode.feedback.models import Answer
-from breathecode.marketing.models import Contact, FormEntry
+from breathecode.admissions.models import Academy
 from breathecode.notify.actions import send_email_message
 from breathecode.utils import ValidationException
 
@@ -249,6 +245,12 @@ def update_gitpod_users(html):
 
 
 def get_user_settings(user_id: int) -> UserSetting:
+    from breathecode.admissions.models import CohortUser
+    from breathecode.assessment.models import Assessment, Question, UserAssessment
+    from breathecode.events.models import Event
+    from breathecode.marketing.models import FormEntry
+    from breathecode.feedback.models import Answer
+
     settings, created = UserSetting.objects.get_or_create(user_id=user_id)
 
     if created and (cohort_user :=

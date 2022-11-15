@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from breathecode.authenticate.models import UserSetting
-from breathecode.payments.models import FinancialReputation, Invoice, PaymentContact
+from breathecode.payments.models import Currency, FinancialReputation, Invoice, PaymentContact
 from breathecode.utils import PaymentException, ValidationException, getLogger
 from breathecode.utils.i18n import translation
 
@@ -63,7 +63,7 @@ class Stripe:
         name += f' {user.last_name}' if name and user.last_name else f'{user.last_name}'
 
         response = stripe.Customer.create(email=user.email, name=name)
-        contact.stripe_id = response.id
+        contact.stripe_id = response['id']
         contact.save()
 
         FinancialReputation.objects.get_or_create(user=user)
@@ -135,24 +135,39 @@ class Stripe:
                     es='Ocurrió un error inesperado durante el proceso de pago, comuníquese con soporte',
                     slug='unexpected-exception'))
 
-    def pay(self, user: User, amount: float, description: str = '') -> Invoice:
+    def pay(self,
+            user: User,
+            amount: float,
+            currency: str | Currency = 'usd',
+            description: str = '') -> Invoice:
 
         stripe.api_key = self.api_key
+
+        if isinstance(currency, str):
+            currency = Currency.objects.filter(code=currency).first()
+            if not currency:
+                raise ValidationException(translation(
+                    self.language,
+                    en='Cannot determine the currency during process of payment',
+                    es='No se puede determinar la moneda durante el proceso de pago',
+                    slug='currency'),
+                                          code=500)
 
         customer = self.add_contact(user)
 
         def callback():
             return stripe.Charge.create(customer=customer.id,
                                         amount=amount,
-                                        currency='usd',
+                                        currency=currency.code.lower(),
                                         description=description)
 
         charge = self._i18n_validations(callback)
 
         utc_now = timezone.now()
         #TODO: think about ban a user if have bad reputation (FinancialReputation)
-        payment = Invoice(user=user, amount=amount, stripe_id=charge.id, paid_at=utc_now)
+        payment = Invoice(user=user, amount=amount, stripe_id=charge['id'], paid_at=utc_now)
         payment.status = 'FULFILLED'
+        payment.currency = currency
         #   status='FULFILLED' if successfully else 'REJECTED',
 
         payment.save()

@@ -36,7 +36,7 @@ def consumer(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple
     }
     context = {
         **context,
-        'consumables': context['consumables'].exclude(service__groups__name='secret'),
+        'consumables': context['consumables'].exclude(service_item__service__groups__name='secret'),
     }
     return (context, args, kwargs)
 

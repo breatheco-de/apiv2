@@ -70,17 +70,9 @@ class GetServiceSmallSerializer(serpy.Serializer):
     # owner = GetAcademySerializer(many=False)
     private = serpy.Field()
     groups = serpy.MethodField()
-    cohorts = serpy.MethodField()
-    mentorship_services = serpy.MethodField()
 
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
-
-    def get_cohorts(self, obj):
-        return GetCohortSerializer(obj.cohorts.all(), many=True).data
-
-    def get_mentorship_services(self, obj):
-        return GetMentorshipServiceSerializer(obj.mentorship_services.all(), many=True).data
 
 
 class GetServiceSerializer(serpy.Serializer):
@@ -137,10 +129,10 @@ class GetPlanSmallSerializer(serpy.Serializer):
     renew_every_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
-    services = serpy.MethodField()
+    service_items = serpy.MethodField()
 
-    def get_services(self, obj):
-        return GetServiceItemSerializer(obj.services.all(), many=True).data
+    def get_service_items(self, obj):
+        return GetServiceItemSerializer(obj.service_items.all(), many=True).data
 
 
 class GetPlanSerializer(GetPlanSmallSerializer):
@@ -196,7 +188,7 @@ class GetCreditSerializer(serpy.Serializer):
 
 
 class GetBagSerializer(serpy.Serializer):
-    services = serpy.MethodField()
+    service_items = serpy.MethodField()
     plans = serpy.MethodField()
     status = serpy.Field()
     type = serpy.Field()
@@ -209,12 +201,10 @@ class GetBagSerializer(serpy.Serializer):
     token = serpy.Field()
     expires_at = serpy.Field()
 
-    def get_services(self, obj):
-        # return []
-        return GetServiceItemSerializer(obj.services.filter(), many=True).data
+    def get_service_items(self, obj):
+        return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
 
     def get_plans(self, obj):
-        # return []
         return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
 
 
