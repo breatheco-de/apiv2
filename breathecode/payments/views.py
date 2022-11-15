@@ -634,6 +634,7 @@ class CheckingView(APIView):
                 serializer = GetBagSerializer(bag, many=False)
                 return Response(serializer.data,
                                 status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
@@ -651,125 +652,133 @@ class PayView(APIView):
         language = language or settings.lang
 
         with transaction.atomic():
+            sid = transaction.savepoint()
+            try:
 
-            reputation, _ = FinancialReputation.objects.get_or_create(user=request.user)
+                reputation, _ = FinancialReputation.objects.get_or_create(user=request.user)
 
-            current_reputation = reputation.get_reputation()
-            if current_reputation == 'FRAUD' or current_reputation == 'BAD':
-                raise PaymentException(
-                    translation(
-                        language,
-                        en=
-                        'The payment could not be completed because you have a bad reputation on this platform',
-                        es='No se pudo completar el pago porque tienes mala reputación en esta plataforma',
-                        slug='fraud-or-bad-reputation'))
+                current_reputation = reputation.get_reputation()
+                if current_reputation == 'FRAUD' or current_reputation == 'BAD':
+                    raise PaymentException(
+                        translation(
+                            language,
+                            en=
+                            'The payment could not be completed because you have a bad reputation on this platform',
+                            es='No se pudo completar el pago porque tienes mala reputación en esta plataforma',
+                            slug='fraud-or-bad-reputation'))
 
-            # do no show the bags of type preview they are build
-            type = request.data.get('type', 'BAG').upper()
-            token = request.data.get('token')
-            if not token:
-                raise ValidationException(translation(language,
-                                                      en='Invalid bag token',
-                                                      es='El token de la bolsa es inválido',
-                                                      slug='missing-token'),
-                                          code=404)
+                # do no show the bags of type preview they are build
+                type = request.data.get('type', 'BAG').upper()
+                token = request.data.get('token')
+                if not token:
+                    raise ValidationException(translation(language,
+                                                          en='Invalid bag token',
+                                                          es='El token de la bolsa es inválido',
+                                                          slug='missing-token'),
+                                              code=404)
 
-            recurrent = request.data.get('recurrent', False)
-            bag = Bag.objects.filter(user=request.user,
-                                     status='CHECKING',
-                                     token=token,
-                                     academy__main_currency__isnull=False,
-                                     expires_at__gte=utc_now).first()
+                recurrent = request.data.get('recurrent', False)
+                bag = Bag.objects.filter(user=request.user,
+                                         status='CHECKING',
+                                         token=token,
+                                         academy__main_currency__isnull=False,
+                                         expires_at__gte=utc_now).first()
 
-            if not bag:
-                raise ValidationException(translation(
-                    settings.lang,
-                    en='Bag not found, maybe you need to renew the checking',
-                    es='Bolsa no encontrada, quizás necesitas renovar el checking',
-                    slug='not-found-or-without-checking'),
-                                          code=404)
+                if not bag:
+                    raise ValidationException(translation(
+                        settings.lang,
+                        en='Bag not found, maybe you need to renew the checking',
+                        es='Bolsa no encontrada, quizás necesitas renovar el checking',
+                        slug='not-found-or-without-checking'),
+                                              code=404)
 
-            if bag.service_items.count() == 0 and bag.plans.count() == 0:
-                raise ValidationException(translation(settings.lang,
-                                                      en='Bag is empty',
-                                                      es='La bolsa esta vacía',
-                                                      slug='bag-is-empty'),
-                                          code=400)
+                if bag.service_items.count() == 0 and bag.plans.count() == 0:
+                    raise ValidationException(translation(settings.lang,
+                                                          en='Bag is empty',
+                                                          es='La bolsa esta vacía',
+                                                          slug='bag-is-empty'),
+                                              code=400)
 
-            chosen_period = request.data.get('chosen_period', '').upper()
-            if not chosen_period:
-                raise ValidationException(translation(settings.lang,
-                                                      en='Missing chosen period',
-                                                      es='Falta el periodo elegido',
-                                                      slug='missing-chosen-period'),
-                                          code=400)
+                chosen_period = request.data.get('chosen_period', '').upper()
+                if not chosen_period:
+                    raise ValidationException(translation(settings.lang,
+                                                          en='Missing chosen period',
+                                                          es='Falta el periodo elegido',
+                                                          slug='missing-chosen-period'),
+                                              code=400)
 
-            if chosen_period not in ['MONTH', 'QUARTER', 'HALF', 'YEAR']:
-                raise ValidationException(translation(settings.lang,
-                                                      en='Invalid chosen period',
-                                                      es='Periodo elegido inválido',
-                                                      slug='invalid-chosen-period'),
-                                          code=400)
+                if chosen_period not in ['MONTH', 'QUARTER', 'HALF', 'YEAR']:
+                    raise ValidationException(translation(settings.lang,
+                                                          en='Invalid chosen period',
+                                                          es='Periodo elegido inválido',
+                                                          slug='invalid-chosen-period'),
+                                              code=400)
 
-            if chosen_period == 'MONTH':
-                amount = bag.amount_per_month
+                if chosen_period == 'MONTH':
+                    amount = bag.amount_per_month
 
-            if chosen_period == 'QUARTER':
-                amount = bag.amount_per_quarter
+                if chosen_period == 'QUARTER':
+                    amount = bag.amount_per_quarter
 
-                if not amount:
-                    amount = bag.amount_per_month * 3
+                    if not amount:
+                        amount = bag.amount_per_month * 3
 
-            if chosen_period == 'HALF':
-                amount = bag.amount_per_half
+                if chosen_period == 'HALF':
+                    amount = bag.amount_per_half
 
-                if not amount:
-                    amount = bag.amount_per_quarter * 2
+                    if not amount:
+                        amount = bag.amount_per_quarter * 2
 
-                if not amount:
-                    amount = bag.amount_per_month * 6
+                    if not amount:
+                        amount = bag.amount_per_month * 6
 
-            if chosen_period == 'YEAR':
-                amount = bag.amount_per_year
+                if chosen_period == 'YEAR':
+                    amount = bag.amount_per_year
 
-                if not amount:
-                    amount = bag.amount_per_half * 2
+                    if not amount:
+                        amount = bag.amount_per_half * 2
 
-                if not amount:
-                    amount = bag.amount_per_quarter * 4
+                    if not amount:
+                        amount = bag.amount_per_quarter * 4
 
-                if not amount:
-                    amount = bag.amount_per_month * 12
+                    if not amount:
+                        amount = bag.amount_per_month * 12
 
-            # if not bag.academy.main_currency:
-            #     raise ValidationException(translation(settings.lang,
-            #                                           en='Academy main currency not found',
-            #                                           es='Moneda principal de la academia no encontrada',
-            #                                           slug='academy-main-currency-not-found'),
-            #                               code=404)
+                # if not bag.academy.main_currency:
+                #     raise ValidationException(translation(settings.lang,
+                #                                           en='Academy main currency not found',
+                #                                           es='Moneda principal de la academia no encontrada',
+                #                                           slug='academy-main-currency-not-found'),
+                #                               code=404)
 
-            if amount > 0:
-                s = Stripe()
-                s.set_language(language)
-                invoice = s.pay(request.user, amount, settings, currency=bag.academy.main_currency)
+                if amount > 0:
+                    s = Stripe()
+                    s.set_language(language)
+                    invoice = s.pay(request.user, amount, currency=bag.currency.code)
 
-            else:
-                invoice = Invoice(amount=0,
-                                  paid_at=utc_now,
-                                  user=request.user,
-                                  status='FULFILLED',
-                                  currency=bag.academy.main_currency)
+                else:
+                    invoice = Invoice(amount=0,
+                                      paid_at=utc_now,
+                                      user=request.user,
+                                      status='FULFILLED',
+                                      currency=bag.academy.main_currency)
 
-                invoice.save()
+                    invoice.save()
 
-            bag.chosen_period = chosen_period
-            bag.status = 'PAID'
-            bag.is_recurrent = recurrent
-            bag.token = None
-            bag.expires_at = None
-            bag.save()
+                bag.chosen_period = chosen_period
+                bag.status = 'PAID'
+                bag.is_recurrent = recurrent
+                bag.token = None
+                bag.expires_at = None
+                bag.save()
 
-            tasks.build_subscription.delay(bag.id, invoice.id)
+                transaction.savepoint_commit(sid)
 
-            serializer = GetInvoiceSerializer(invoice, many=False)
-            return Response(serializer.data, status=201)
+                tasks.build_subscription.delay(bag.id, invoice.id)
+
+                serializer = GetInvoiceSerializer(invoice, many=False)
+                return Response(serializer.data, status=201)
+
+            except Exception as e:
+                transaction.savepoint_rollback(sid)
+                raise e

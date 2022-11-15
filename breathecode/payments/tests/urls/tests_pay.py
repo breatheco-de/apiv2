@@ -57,6 +57,57 @@ def get_serializer(self, currency, user, data={}):
     }
 
 
+def generate_amounts_by_time():
+    return {
+        'amount_per_month': random.random() * 100 + 1,
+        'amount_per_quarter': random.random() * 100 + 1,
+        'amount_per_half': random.random() * 100 + 1,
+        'amount_per_year': random.random() * 100 + 1,
+    }
+
+
+def generate_three_amounts_by_time():
+    l = random.shuffle([
+        0,
+        random.random() * 100 + 1,
+        random.random() * 100 + 1,
+        random.random() * 100 + 1,
+    ])
+    return {
+        'amount_per_month': l[0],
+        'amount_per_quarter': l[1],
+        'amount_per_half': l[2],
+        'amount_per_year': l[3],
+    }
+
+
+def which_amount_is_zero(data={}):
+    for key in data:
+        if key == 'amount_per_quarter':
+            return 'MONTH', 1
+
+
+CHOSEN_PERIOD = {
+    'MONTH': 'amount_per_month',
+    'QUARTER': 'amount_per_quarter',
+    'HALF': 'amount_per_half',
+    'YEAR': 'amount_per_year',
+}
+
+
+def get_amount_per_period(period, data):
+    return data[CHOSEN_PERIOD[period]]
+
+
+def invoice_mock():
+
+    class FakeInvoice():
+        id = 1
+        amount = 100
+
+    return FakeInvoice()
+
+
 class SignalTestSuite(PaymentsTestCase):
     """
     🔽🔽🔽 GET without auth
@@ -274,4 +325,56 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-        # assert 0
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    # @patch('breathecode.payments.services.stripe.Stripe.pay', MagicMock(return_value=invoice_mock()))
+    @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
+    @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
+    def test__without_bag__passing_token__passing_chosen_period__good_value__amount_set(self):
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+            **generate_amounts_by_time()
+        }
+        chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
+        amount = get_amount_per_period(chosen_period, bag)
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'chosen_period': chosen_period,
+        }
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = get_serializer(self, model.currency, model.user, data={'amount': amount})
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'),
+                         [{
+                             **self.bc.format.to_dict(model.bag),
+                             'token': None,
+                             'status': 'PAID',
+                             'expires_at': None,
+                             'chosen_period': chosen_period,
+                         }])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            format_invoice_item({
+                'amount': amount,
+                'stripe_id': '1',
+            }),
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])

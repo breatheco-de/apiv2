@@ -99,6 +99,7 @@ class AbstractAsset(AbstractPriceByUnit):
     slug = models.CharField(max_length=60, unique=True)
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
+    #TODO: visibility and the capacities of disable a asset
     private = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
