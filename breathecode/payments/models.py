@@ -388,8 +388,8 @@ class Invoice(models.Model):
 
     bag = models.ForeignKey('Bag', on_delete=models.CASCADE, null=True, default=None, blank=True)
 
-    # actually return 18 characters
-    stripe_id = models.CharField(max_length=20, null=True, default=None, blank=True)
+    # actually return 27 characters
+    stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True)
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
