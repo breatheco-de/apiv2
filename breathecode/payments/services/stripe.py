@@ -9,6 +9,7 @@ from breathecode.authenticate.models import UserSetting
 from breathecode.payments.models import Currency, FinancialReputation, Invoice, PaymentContact
 from breathecode.utils import PaymentException, ValidationException, getLogger
 from breathecode.utils.i18n import translation
+import math
 
 logger = getLogger(__name__)
 
@@ -137,7 +138,7 @@ class Stripe:
 
     def pay(self,
             user: User,
-            amount: float,
+            amount: int,
             currency: str | Currency = 'usd',
             description: str = '') -> Invoice:
 
@@ -157,7 +158,7 @@ class Stripe:
 
         def callback():
             return stripe.Charge.create(customer=customer.stripe_id,
-                                        amount=amount,
+                                        amount=math.ceil(amount),
                                         currency=currency.code.lower(),
                                         description=description)
 
