@@ -585,7 +585,6 @@ class BagView(APIView):
 class CheckingView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
-    # @transaction.atomic()
     def put(self, request):
         type = request.data.get('type', 'BAG').upper()
         created = False
@@ -638,6 +637,9 @@ class CheckingView(APIView):
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
+
+
+ttt = type
 
 
 class PayView(APIView):
@@ -780,5 +782,18 @@ class PayView(APIView):
                 return Response(serializer.data, status=201)
 
             except Exception as e:
+                print('==========================================')
+                print('==========================================')
+                print('==========================================')
+                print('==========================================')
+                print('==========================================')
+                print(e)
+                print(ttt(e))
+                print(e)
+                print('==========================================')
+                print('==========================================')
+                print('==========================================')
+                print('==========================================')
+                print('==========================================')
                 transaction.savepoint_rollback(sid)
                 raise e
