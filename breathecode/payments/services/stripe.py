@@ -156,7 +156,7 @@ class Stripe:
         customer = self.add_contact(user)
 
         def callback():
-            return stripe.Charge.create(customer=customer.id,
+            return stripe.Charge.create(customer=customer.stripe_id,
                                         amount=amount,
                                         currency=currency.code.lower(),
                                         description=description)
