@@ -102,7 +102,7 @@ def render_preview_html(request, asset_slug):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_technologies(request):
-    tech = AssetTechnology.objects.filter(parent__isnull=True)
+    tech = AssetTechnology.objects.filter(parent__isnull=True).order_by('sort_priority')
 
     serializer = AssetTechnologySerializer(tech, many=True)
     return Response(serializer.data)
@@ -162,7 +162,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         if asset_type := request.GET.get('asset_type'):
             lookup['featured_asset__asset_type__in'] = asset_type.split(',')
 
-        items = items.filter(**lookup)
+        items = items.filter(**lookup).order_by('sort_priority')
         items = handler.queryset(items)
 
         serializer = AssetBigTechnologySerializer(items, many=True)
@@ -185,7 +185,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         elif tech_slug is not None:
             lookups['slug__in'] = [tech_slug]
 
-        techs = AssetTechnology.objects.filter(**lookups)
+        techs = AssetTechnology.objects.filter(**lookups).order_by('sort_priority')
         _count = techs.count()
         if _count == 0:
             raise ValidationException('This technolog(ies) does not exist for this academy', 404)
@@ -747,7 +747,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
                 data['technologies'][0], str):
             technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
-                'pk', flat=True)
+                'pk', flat=True).order_by('sort_priority')
             delta = len(data['technologies']) - len(technology_ids)
             if delta != 0:
                 raise ValidationException(
