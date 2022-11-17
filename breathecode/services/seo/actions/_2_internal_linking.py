@@ -22,8 +22,8 @@ def internal_linking(client, report):
 
             url = urlparse(keyword.cluster.landing_page_url).path
             if url.netloc != '': main_domain = url.netloc
-            if url == '': url = keyword.cluster.landing_page_url
-            missing_cluster_paths.append(url)
+            if url.path == '': url = keyword.cluster.landing_page_url
+            missing_cluster_paths.append(url.path)
 
     if len(missing_cluster_paths) == 0:
         report.fatal('No valid clusters landing urls')
