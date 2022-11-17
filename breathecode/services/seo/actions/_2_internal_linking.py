@@ -20,7 +20,7 @@ def internal_linking(client, report):
                 report.fatal(f'Cluster {keyword.cluster.slug} its missing a landing page url')
                 continue
 
-            url = urlparse(keyword.cluster.landing_page_url).path
+            url = urlparse(keyword.cluster.landing_page_url)
             if url.netloc != '': main_domain = url.netloc
             if url.path == '': url = keyword.cluster.landing_page_url
             missing_cluster_paths.append(url.path)
