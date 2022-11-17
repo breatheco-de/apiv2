@@ -10,6 +10,7 @@ from breathecode.services.activecampaign import AC_Old_Client, ActiveCampaign, A
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.marketing.models import Tag
 from breathecode.utils import getLogger
+import numpy as np
 
 logger = getLogger(__name__)
 
@@ -536,3 +537,16 @@ def delete_tag(tag, include_other_academies=False):
     except:
         logger.exception(f'There was an error deleting tag for {tag.slug}')
         return False
+
+
+def convert_data_frame(item):
+    if 'Unnamed: 0' in item:
+        del item['Unnamed: 0']
+    for key in item:
+        if isinstance(item[key], np.integer):
+            item[key] = int(item[key])
+        if isinstance(item[key], np.floating):
+            item[key] = float(item[key])
+        if isinstance(item[key], np.ndarray):
+            item[key] = item[key].tolist()
+    return item

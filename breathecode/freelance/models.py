@@ -167,7 +167,7 @@ class Issue(models.Model):
         help_text='Important message like reasong why not included on bill, etc.')
 
     github_state = models.CharField(max_length=30, blank=True, null=True, default=None)
-    github_number = models.PositiveIntegerField()
+    github_number = models.PositiveIntegerField(blank=True, null=True, default=None)
     body = models.TextField(max_length=500)
 
     duration_in_minutes = models.FloatField(default=0)

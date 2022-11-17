@@ -4,7 +4,7 @@ import json, re, os, subprocess, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Academy
-from .models import Endpoint, CSVDownload
+from .models import CSVUpload, Endpoint, CSVDownload
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
 logger = logging.getLogger(__name__)
