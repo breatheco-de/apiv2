@@ -19,7 +19,7 @@ def keyword_density(client, report):
     all_h2s = []
     h2s = BeautifulSoup(readme['html'], features='html.parser').find_all('h2')
     for h in h2s:
-        all_h2s.append(h2s.contents[0])
+        all_h2s.append(h.contents[0])
 
     for keyword in asset.seo_keywords.all():
         h2s_with_keywords = []
