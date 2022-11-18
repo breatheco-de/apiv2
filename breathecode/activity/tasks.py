@@ -1,6 +1,7 @@
 import logging, os
 from celery import shared_task, Task
 from breathecode.admissions.models import Cohort
+from breathecode.admissions.utils.cohort_log import CohortDayLog
 from .models import Activity
 from breathecode.utils import NDB
 from breathecode.admissions.utils import CohortLog
@@ -51,7 +52,7 @@ def get_attendancy_log(self, cohort_id: int):
     attendance = client.fetch([Activity.cohort == cohort.slug, Activity.slug == 'classroom_attendance'])
     unattendance = client.fetch([Activity.cohort == cohort.slug, Activity.slug == 'classroom_unattendance'])
 
-    result = {}
+    days = {}
 
     offset = 0
     current_day = 0
@@ -68,13 +69,13 @@ def get_attendancy_log(self, cohort_id: int):
             unattendance_ids = list([x['user_id'] for x in unattendance if int(x['day']) == current_day])
             has_attendance = bool(attendance_ids or unattendance_ids)
 
-            days[day['label']] = CohortLog(*{
+            days[day['label']] = CohortDayLog(**{
                 'current_module': 'unknown',
                 'teacher_comments': None,
                 'attendance_ids': attendance_ids if has_attendance else None,
                 'unattendance_ids': unattendance_ids if has_attendance else None
             },
-                                           allow_empty=True).serialize()
+                                              allow_empty=True).serialize()
 
             if n:
                 offset += 1
