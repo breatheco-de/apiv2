@@ -639,9 +639,6 @@ class CheckingView(APIView):
                 raise e
 
 
-ttt = type
-
-
 class PayView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
