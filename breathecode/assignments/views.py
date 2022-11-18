@@ -310,7 +310,7 @@ class TaskMeAttachmentView(APIView):
         allowed = item.user.id == request.user.id
         if not allowed:
             # request user belongs to the same academy as the cohort
-            allowed = item.cohort.academy.id == academy_id
+            allowed = item.cohort.academy.id == int(academy_id)
         
         if not allowed:
             raise PermissionDenied('Attachments can only be reviewed by their authors or the academy staff with read_assignment capability')
