@@ -282,7 +282,6 @@ class Database:
 
         return values
 
-    # @cache
     def _sort_models_handlers(self, values=None, dependencies=None) -> list[Model]:
         values = values or []
         dependencies = dependencies or self._get_models_dependencies()
@@ -345,9 +344,6 @@ class Database:
             models = {}
             for generation_round in order:
                 for app_key in generation_round:
-                    # ...
-
-                    # for app_key in descriptors:
                     for descriptor_key in descriptors[app_key]:
                         descriptor = descriptors[app_key][descriptor_key]
                         attr = self.camel_case_to_snake_case(descriptor['meta']['model_name'])
