@@ -123,6 +123,8 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
                 raise Exception(
                     f'Assined github user: {assigne["id"]} is not a freelancer but is the main user asociated to this issue'
                 )
+        else:
+            raise Exception(f'There was no freelancer associated with this issue')
 
     _issue.freelancer = freelancer
     hours = get_hours(_issue.body)
