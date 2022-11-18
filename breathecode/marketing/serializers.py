@@ -44,6 +44,9 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     utm_medium = serpy.Field()
     utm_campaign = serpy.Field()
     utm_source = serpy.Field()
+    utm_placement = serpy.Field()
+    utm_term = serpy.Field()
+    utm_plan = serpy.Field()
 
 
 class UserSmallSerializer(serpy.Serializer):
@@ -109,6 +112,11 @@ class FormEntrySerializer(serpy.Serializer):
     utm_medium = serpy.Field()
     utm_campaign = serpy.Field()
     utm_source = serpy.Field()
+    utm_placement = serpy.Field()
+    utm_term = serpy.Field()
+    utm_plan = serpy.Field()
+    sex = serpy.Field()
+    custom_fields = serpy.Field()
     tags = serpy.Field()
     storage_status = serpy.Field()
     country = serpy.Field()
@@ -122,6 +130,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    sex = serpy.Field()
     email = serpy.Field()
     course = serpy.Field()
     phone = serpy.Field()
@@ -133,6 +142,9 @@ class FormEntrySmallSerializer(serpy.Serializer):
     utm_campaign = serpy.Field()
     utm_source = serpy.Field()
     utm_content = serpy.Field()
+    utm_placement = serpy.Field()
+    utm_term = serpy.Field()
+    utm_plan = serpy.Field()
     tags = serpy.Field()
     storage_status = serpy.Field()
     storage_status_text = serpy.Field()
@@ -147,6 +159,7 @@ class FormEntryBigSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    sex = serpy.Field()
     email = serpy.Field()
     course = serpy.Field()
     phone = serpy.Field()
@@ -159,6 +172,10 @@ class FormEntryBigSerializer(serpy.Serializer):
     utm_campaign = serpy.Field()
     utm_source = serpy.Field()
     utm_content = serpy.Field()
+    utm_placement = serpy.Field()
+    utm_term = serpy.Field()
+    utm_plan = serpy.Field()
+    custom_fields = serpy.Field()
     referral_key = serpy.Field()
     tags = serpy.Field()
     automations = serpy.Field()
@@ -210,6 +227,20 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
             data['language'] = 'en'
 
         result = super().create({**data, 'academy': academy})
+        return result
+
+
+class PutFormEntrySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FormEntry
+        exclude = ()
+
+    def validate(self, data):
+
+        if 'location' in data and 'academy' in data:
+            result = FormEntry.objects.filter(id=data['id'])
+
         return result
 
 

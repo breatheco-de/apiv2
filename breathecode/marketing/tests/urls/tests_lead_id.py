@@ -174,6 +174,11 @@ class CohortLeadIdSuite(MarketingTestCase):
             'utm_content': model.form_entry[0].utm_content,
             'utm_source': model.form_entry[0].utm_source,
             'utm_url': model.form_entry[0].utm_url,
+            'utm_placement': model.form_entry[0].utm_placement,
+            'utm_term': model.form_entry[0].utm_term,
+            'utm_plan': model.form_entry[0].utm_plan,
+            'custom_fields': model.form_entry[0].custom_fields,
+            'sex': model.form_entry[0].sex,
             'latitude': model.form_entry[0].latitude,
             'longitude': model.form_entry[0].longitude,
             'phone': model.form_entry[0].phone,
@@ -252,6 +257,7 @@ class CohortLeadIdSuite(MarketingTestCase):
         del json['created_at']
         self.assertDatetime(json['updated_at'])
         del json['updated_at']
+        del json['custom_fields']
 
         expected = {
             'ac_contact_id': model.form_entry.ac_contact_id,
@@ -288,6 +294,10 @@ class CohortLeadIdSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_content': model.form_entry.utm_content,
             'utm_source': model.form_entry.utm_source,
+            'utm_placement': model.form_entry.utm_placement,
+            'utm_term': model.form_entry.utm_term,
+            'utm_plan': model.form_entry.utm_plan,
+            'sex': model.form_entry.sex,
             'utm_url': model.form_entry.utm_url,
             'latitude': model.form_entry.latitude,
             'longitude': model.form_entry.longitude,

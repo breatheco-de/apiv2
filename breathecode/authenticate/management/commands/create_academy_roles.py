@@ -519,6 +519,8 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_service',
             'read_mentorship_session',
             'crud_mentorship_session',
+            'read_assignment',
+            'crud_assignment',
             'crud_mentorship_bill',
             'read_mentorship_bill',
             'classroom_activity',
@@ -551,14 +553,19 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps': extend(roles, ['staff']) + ['crud_member', 'crud_media']
     })
     roles.append({
+        'slug': 'graphic_designer',
+        'name': 'Graphic Designer',
+        'caps': extend(roles, ['staff']) + ['read_event', 'crud_media', 'read_asset', 'read_media']
+    })
+    roles.append({
         'slug':
         'community_manager',
         'name':
         'Manage Syllabus, Exercises and all academy content',
         'caps':
-        extend(roles, ['staff']) + [
-            'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset', 'read_keywordcluster', 'read_keyword'
+        extend(roles, ['staff', 'graphic_designer']) + [
+            'crud_lead', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
+            'read_all_cohort', 'crud_asset', 'read_keywordcluster', 'read_keyword'
         ]
     })
     roles.append({
