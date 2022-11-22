@@ -789,6 +789,19 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
             if param == 'true':
                 lookup['resolved'] = True
 
+        if 'delivered' in self.request.GET:
+            param = self.request.GET.get('delivered')
+            if param == 'true':
+                lookup['delivered'] = True
+
+        if 'owner' in self.request.GET:
+            param = self.request.GET.get('owner')
+            lookup['owner__email'] = param
+
+        if 'author' in self.request.GET:
+            param = self.request.GET.get('author')
+            lookup['author__email'] = param
+
         items = items.filter(**lookup)
         items = handler.queryset(items)
 
