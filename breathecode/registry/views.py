@@ -796,7 +796,7 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
 
         if 'owner' in self.request.GET:
             param = self.request.GET.get('owner')
-            lookup['owner__email'] = param
+            lookup['owner__email'] = param  
 
         if 'author' in self.request.GET:
             param = self.request.GET.get('author')
