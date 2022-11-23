@@ -1,13 +1,17 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Optional
+from django.utils import timezone
 
 from celery import Task, shared_task
+from breathecode.authenticate.actions import get_user_settings
 
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
+from dateutil.relativedelta import relativedelta
 
-from .models import Bag, Consumable, Credit, Invoice, Subscription
+from .models import Bag, Consumable, Invoice, Subscription
 
 logger = logging.getLogger(__name__)
 
@@ -20,61 +24,62 @@ class BaseTaskWithRetry(Task):
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_credit(self, subscription_id: int, from_datetime: datetime):
-    logger.info(f'Starting renew_credit for subscription {subscription_id}')
+def renew_consumables(self, subscription_id: int):
+    """
+    The purpose of this function is renew every service items belongs to a subscription.
+    """
+
+    logger.info(f'Starting renew_consumables for subscription {subscription_id}')
 
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         logger.error(f'Subscription with id {subscription_id} not found')
         return
 
-    subscription.last_renew = from_datetime
-    subscription.renew_credits_at = from_datetime + actions.calculate_renew_delta(subscription)
+    utc_now = timezone.now()
+    if subscription.valid_until < utc_now:
+        logger.error(f'This subscription needs to be paid to renew the consumables')
+        return
 
-    invoice = subscription.invoices.all().order_by('-created_at').first()
+    for scheduler in subscription.service_stock_schedulers.filter():
+        unit = scheduler.service_item.renew_at
+        unit_type = scheduler.service_item.renew_at_unit
+        delta = actions.calculate_relative_delta(unit, unit_type)
 
-    credit = Credit()
-    for service_item in subscription.services.all():
-        new_service_credit = Consumable(service=service_item.service,
-                                        unit_type=service_item.unit_type,
-                                        how_many=service_item.how_many)
+        if scheduler.last_renew + delta - timedelta(hours=2) <= utc_now:
+            scheduler.last_renew = scheduler.last_renew + delta
+            scheduler.save()
 
-        credit.services.add(new_service_credit)
+            consumable = Consumable(service_item=scheduler.service_item,
+                                    user=subscription.user,
+                                    valid_until=scheduler.last_renew + delta,
+                                    unit_type=scheduler.service_item.unit_type,
+                                    how_many=scheduler.service_item.how_many)
 
-    for plan in subscription.plans.all():
-        for service_item in plan.services.all():
-            new_service_credit = Consumable(service=service_item.service,
-                                            unit_type=service_item.unit_type,
-                                            how_many=service_item.how_many)
+            consumable.save()
 
-            credit.services.add(new_service_credit)
-
-    credit.invoice = invoice
-    credit.valid_until = subscription.renew_credits_at
-    credit.is_free_trial = False
-    credit.save()
-
-    subscription.save()
-
-    data = {
-        'SUBJECT': 'Your credits has been renewed',
-        # 'LINK': f'https://assessment.breatheco.de/{user_assessment.id}?token={token.key}'
-    }
-
-    notify_actions.send_email_message('payment', invoice.user.email, data)
+            scheduler.consumables.add(consumable)
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_subscription(self, subscription_id: int, from_datetime: datetime):
+def renew_subscription(self, subscription_id: int, from_datetime: Optional[datetime] = None):
+    """
+    The purpose of this function is just to renew a subscription, not more than this.
+    """
+
     logger.info(f'Starting renew_subscription for subscription {subscription_id}')
 
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         logger.error(f'Subscription with id {subscription_id} not found')
         return
 
+    if not from_datetime:
+        from_datetime = timezone.now()
+
+    settings = get_user_settings(subscription.user.id)
+
     try:
-        #FIXME: check what happens if the payment fails
         s = Stripe()
-        #TODO: add language to the service
+        s.set_language_from_settings(settings)
         invoice: Invoice = s.pay(subscription.user)
 
     except Exception:
@@ -94,32 +99,11 @@ def renew_subscription(self, subscription_id: int, from_datetime: datetime):
         subscription.save()
         return
 
-    subscription.last_renew = from_datetime
-    subscription.renew_credits_at = from_datetime + actions.calculate_renew_delta(subscription)
+    subscription.paid_at = from_datetime
+    subscription.valid_until = from_datetime + actions.calculate_relative_delta(
+        subscription.pay_every_unit, subscription.pay_every_unit)
 
     subscription.invoices.add(invoice)
-
-    # for service in subscription.plan.services.all():
-    credit = Credit()
-    for service_item in subscription.services.all():
-        new_service_credit = Consumable(service=service_item.service,
-                                        unit_type=service_item.unit_type,
-                                        how_many=service_item.how_many)
-
-        credit.services.add(new_service_credit)
-
-    for plan in subscription.plans.all():
-        for service_item in plan.services.all():
-            new_service_credit = Consumable(service=service_item.service,
-                                            unit_type=service_item.unit_type,
-                                            how_many=service_item.how_many)
-
-            credit.services.add(new_service_credit)
-
-    credit.invoice = invoice
-    credit.valid_until = subscription.renew_credits_at
-    credit.is_free_trial = False
-    credit.save()
 
     subscription.save()
     value = invoice.currency.format_price(invoice.amount)
@@ -134,6 +118,55 @@ def renew_subscription(self, subscription_id: int, from_datetime: datetime):
             # 'LINK': f'{APP_URL}/invoice/{instance.id}',
         })
 
+    renew_consumables.delay(subscription.id)
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def build_service_stock_scheduler(self, subscription_id: int):
+    logger.info(f'Starting build_service_stock_scheduler for subscription {subscription_id}')
+
+    if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+        logger.error(f'Subscription with id {subscription_id} not found')
+        return
+
+    schedulers = subscription.service_stock_schedulers.all()
+    service_items = subscription.service_items.all()
+    plans = subscription.plans.all()
+    utc_now = timezone.now()
+
+    not_found = [(x.service_item.service.id, x.service_item.service.how_many, x.is_belongs_to_plan)
+                 for x in schedulers]
+
+    for service_item in service_items:
+        query = (service_item.service.id, service_item.service.how_many, False)
+        if query in not_found:
+            not_found.remove(query)
+            continue
+
+        subscription.service_stock_schedulers.create(service_item=service_item,
+                                                     is_belongs_to_plan=False,
+                                                     last_renew=utc_now)
+
+    for plan in plans:
+        for service_item in plan.service_items:
+            query = (service_item.service.id, service_item.service.how_many, True)
+            if query in not_found:
+                not_found.remove(query)
+                continue
+
+            subscription.service_stock_schedulers.create(service_item=service_item,
+                                                         is_belongs_to_plan=True,
+                                                         last_renew=utc_now)
+
+    for scheduler in schedulers:
+        query = (scheduler.service_item.service.id, scheduler.service_item.service.how_many,
+                 scheduler.is_belongs_to_plan)
+
+        if query in not_found:
+            scheduler.delete()
+
+    renew_consumables.delay(subscription.id)
+
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def build_subscription(self, bag_id: int, invoice_id: int):
@@ -147,16 +180,24 @@ def build_subscription(self, bag_id: int, invoice_id: int):
         logger.error(f'Invoice with id {invoice_id} not found')
         return
 
-    #TODO: think about Subscription.valid_until
-    #FIXME: pay_every
-    #FIXME: renew_every
+    months = 1
+
+    if bag.chosen_period == 'QUARTER':
+        months = 3
+
+    elif bag.chosen_period == 'HALF':
+        months = 6
+
+    elif bag.chosen_period == 'YEAR':
+        months = 12
+
     subscription = Subscription.objects.create(user=bag.user,
-                                               plans=bag.plans.all(),
-                                               services=bag.services.all(),
-                                               is_recurrent=bag.is_recurrent,
                                                paid_at=invoice.paid_at,
-                                               status='ACTIVE',
-                                               last_renew=invoice.paid_at)
+                                               valid_until=invoice.paid_at + relativedelta(months=months),
+                                               status='ACTIVE')
+
+    subscription.plans.set(bag.plans.all())
+    subscription.service_items.set(bag.service_items.all())
 
     subscription.save()
     subscription.invoices.add(invoice)
@@ -165,5 +206,7 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     bag.save()
 
     #TODO: remove the bag
+
+    build_service_stock_scheduler.delay(subscription.id)
 
     logger.info(f'Subscription was created with id {subscription.id}')

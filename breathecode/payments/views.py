@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.models import UserSetting
+# from breathecode.authenticate.models import UserSetting
 
 from breathecode.payments import tasks
 from breathecode.payments.actions import add_items_to_bag, get_amount
@@ -667,7 +667,7 @@ class PayView(APIView):
                             slug='fraud-or-bad-reputation'))
 
                 # do no show the bags of type preview they are build
-                type = request.data.get('type', 'BAG').upper()
+                # type = request.data.get('type', 'BAG').upper()
                 token = request.data.get('token')
                 if not token:
                     raise ValidationException(translation(language,
