@@ -179,10 +179,10 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['user'] = just_one(models['user'])
 
             if 'service_item' in models:
-                kargs['service_items'] = just_one(models['service_item'])
+                kargs['service_items'] = get_list(models['service_item'])
 
             if 'plan' in models:
-                kargs['plans'] = just_one(models['plan'])
+                kargs['plans'] = get_list(models['plan'])
 
             models['subscription'] = create_models(subscription, 'payments.Subscription', **kargs)
 

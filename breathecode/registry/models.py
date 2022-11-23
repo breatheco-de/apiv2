@@ -104,7 +104,8 @@ class AssetCategory(models.Model):
 
         if self.__old_slug != self.slug:
             # Prevent multiple keywords with same slug
-            cat = AssetCategory.objects.filter(slug=self.slug, academy=self.academy).first()
+            cat = AssetCategory.objects.filter(slug=self.slug,
+                                               academy=self.academy).exclude(id=self.id).first()
             if cat is not None:
                 raise Exception(f'Category with slug {self.slug} already exists on this academy')
 

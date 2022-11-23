@@ -1,6 +1,8 @@
 import ast
 from functools import cache
 from dateutil.relativedelta import relativedelta
+from django.utils import timezone
+from django.db.models.query_utils import Q
 
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.models import UserSetting
@@ -13,25 +15,21 @@ from breathecode.utils import getLogger
 logger = getLogger(__name__)
 
 
-def calculate_renew_delta(subscription: Subscription):
+def calculate_relative_delta(unit: float, unit_type: str):
     delta_args = {}
-    if subscription.renew_every_unit == 'DAY':
-        delta_args['days'] = subscription.renew_every
+    if unit_type == 'DAY':
+        delta_args['days'] = unit
 
-    elif subscription.renew_every_unit == 'WEEK':
-        delta_args['weeks'] = subscription.renew_every
+    elif unit_type == 'WEEK':
+        delta_args['weeks'] = unit
 
-    elif subscription.renew_every_unit == 'MONTH':
-        delta_args['months'] = subscription.renew_every
+    elif unit_type == 'MONTH':
+        delta_args['months'] = unit
 
-    elif subscription.renew_every_unit == 'YEAR':
-        delta_args['years'] = subscription.renew_every
+    elif unit_type == 'YEAR':
+        delta_args['years'] = unit
 
     return relativedelta(**delta_args)
-
-
-from django.utils import timezone
-from django.db.models.query_utils import Q
 
 
 @cache

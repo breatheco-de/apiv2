@@ -91,6 +91,18 @@ class AbstractAmountByTime(models.Model):
         abstract = True
 
 
+DAY = 'DAY'
+WEEK = 'WEEK'
+MONTH = 'MONTH'
+YEAR = 'YEAR'
+PAY_EVERY_UNIT = [
+    (DAY, 'Day'),
+    (WEEK, 'Week'),
+    (MONTH, 'Month'),
+    (YEAR, 'Year'),
+]
+
+
 class AbstractAsset(AbstractPriceByUnit):
     """
     This model represents a product or a service that can be sold.
@@ -101,6 +113,9 @@ class AbstractAsset(AbstractPriceByUnit):
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     #TODO: visibility and the capacities of disable a asset
     private = models.BooleanField(default=True)
+
+    trial_duration = models.IntegerField(default=1)
+    trial_duration_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -130,18 +145,6 @@ class ServiceTranslation(models.Model):
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
-
-
-DAY = 'DAY'
-WEEK = 'WEEK'
-MONTH = 'MONTH'
-YEAR = 'YEAR'
-PAY_EVERY_UNIT = [
-    (DAY, 'Day'),
-    (WEEK, 'Week'),
-    (MONTH, 'Month'),
-    (YEAR, 'Year'),
-]
 
 
 class Fixture(models.Model):
@@ -232,6 +235,11 @@ class ServiceItem(AbstractServiceItem):
     """
 
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    is_renewable = models.BooleanField(default=False)
+
+    # the below fields are useless when is_renewable=False
+    renew_at = models.IntegerField(default=1)
+    renew_at_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     def save(self, *args, **kwargs):
         if self.id:
@@ -246,15 +254,16 @@ class ServiceItem(AbstractServiceItem):
 
 
 DRAFT = 'DRAFT'
-VISIBLE = 'VISIBLE'
-HIDDEN = 'HIDDEN'
+ACTIVE = 'ACTIVE'
+UNLISTED = 'UNLISTED'
 DELETED = 'DELETED'
+DISCONTINUED = 'DISCONTINUED'
 PLAN_STATUS = [
     (DRAFT, 'Draft'),
-    (VISIBLE, 'Visible'),
-    (HIDDEN, 'Hidden'),
-    #TODO: inactive
+    (ACTIVE, 'Active'),
+    (UNLISTED, 'Unlisted'),
     (DELETED, 'Deleted'),
+    (DISCONTINUED, 'Discontinued'),
 ]
 
 
@@ -268,14 +277,14 @@ class Plan(AbstractPriceByTime):
     status = models.CharField(max_length=7, choices=PLAN_STATUS, default=DRAFT)
     #TODO: visible enum, private, unlisted, visible
 
-    renew_every = models.IntegerField(default=1)
-    renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
+    pay_every = models.IntegerField(default=1)
+    pay_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     trial_duration = models.IntegerField(default=1)
     trial_duration_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     service_items = models.ManyToManyField(ServiceItem)
-    cohorts = models.ManyToManyField(Cohort)
+    # cohorts = models.ManyToManyField(Cohort)
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
 
 
@@ -408,32 +417,53 @@ class Subscription(models.Model):
     Allows to create a subscription to a plan and services.
     """
 
+    # last time the subscription was paid
     paid_at = models.DateTimeField()
     status = models.CharField(max_length=13, choices=SUBSCRIPTION_STATUS, default=ACTIVE)
 
-    is_cancellable = models.BooleanField(default=True)
     is_refundable = models.BooleanField(default=True)
-    is_auto_renew = models.BooleanField(default=True)
     invoices = models.ManyToManyField(Invoice)
 
-    # if null, this is valid until resources are exhausted
+    # in this day the subscription needs being paid again
     valid_until = models.DateTimeField()
-    last_renew = models.DateTimeField()
-    renew_credits_at = models.DateTimeField()  #TODO change this name
 
+    # remember the chosen period to pay again
     pay_every = models.IntegerField(default=1)
     pay_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
-    renew_every = models.IntegerField(default=1)
-    renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
-
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    #TODO: the services and plans needs to be renew to a different timedelta
+
+    # this reminds the service items to change the stock scheduler on change
     service_items = models.ManyToManyField(ServiceItem)
+
+    # this reminds the plans to change the stock scheduler on change
     plans = models.ManyToManyField(Plan)
+
+    # this reminds the stock scheduler of consumables
+    service_stock_schedulers = models.ManyToManyField(
+        ServiceItem,
+        through='ServiceStockScheduler',
+        through_fields=('subscription', 'service_item'),
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class ServiceStockScheduler(models.Model):
+    """
+    This model is used to represent the units of a service that can be consumed.
+    """
+
+    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
+
+    # this reminds which scheduler generated the consumable
+    consumables = models.ManyToManyField(Consumable)
+
+    last_renew = models.DateTimeField(null=True, blank=False, default=None)
+    # valid_until = models.DateTimeField(null=True, blank=False, default=None)
+    is_belongs_to_plan = models.BooleanField(default=False)
 
 
 #TODO: maybe this needs be deleted

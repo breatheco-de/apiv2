@@ -10,7 +10,7 @@ from django.db.models.signals import post_delete, post_save
 from breathecode.admissions.models import Cohort
 from breathecode.payments.actions import get_fixture_patterns
 
-from .models import Consumable, Fixture
+from .models import Consumable, Fixture, Subscription, ServiceStockScheduler
 from .signals import (consume_service, grant_service_permissions, lose_service_permissions,
                       reimburse_service_units)
 
@@ -123,3 +123,17 @@ def seed_fixture_on_save(sender: Type[Fixture], instance: Fixture, created: bool
                 continue
 
             instance.cohorts.add(cohort)
+
+
+@receiver(post_save, sender=Subscription)
+def build_consumables_for_service_item_on_save(sender: Type[Fixture], instance: Subscription, created: bool,
+                                               **kwargs):
+    if created:
+        ...
+
+
+@receiver(post_save, sender=ServiceStockScheduler)
+def build_consumables_for_service_item_on_save(sender: Type[Fixture], instance: ServiceStockScheduler,
+                                               created: bool, **kwargs):
+    if created:
+        ...

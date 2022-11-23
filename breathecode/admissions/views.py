@@ -1713,12 +1713,25 @@ class AcademyCohortHistoryView(APIView):
         if item is None:
             raise ValidationException('Cohort not found on this academy', code=404, slug='cohort-not-found')
 
+        day = None
         try:
+            payload = {**request.data}
+
+            if 'day' in payload:
+                day = payload['day']
+                del payload['day']
+
             cohort_log = CohortLog(item)
-            cohort_log.logCurrentDay(request.data)
+            print('2222', cohort_log.days)
+            cohort_log.logDay(payload, day)
             cohort_log.save()
         except Exception as e:
-            logger.exception('Error logging the current day into the cohort')
+            if day is None:
+                day = 'current day'
+            else:
+                day = 'day ' + str(day)
+
+            logger.exception(f'Error logging {day} into the cohort')
             raise ValidationException(str(e))
 
         return Response(cohort_log.serialize())
