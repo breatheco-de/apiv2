@@ -318,23 +318,22 @@ def pull_github_lesson(github, asset, override_meta=False):
 
 
 def clean_asset_readme(asset):
+    if asset.readme_raw is not None and asset.readme_raw != '':
+        asset.last_cleaning_at = timezone.now()
+        try:
+            asset = clean_readme_relative_paths(asset)
+            asset = clean_readme_hide_comments(asset)
+            asset = clean_h1s(asset)
+            readme = asset.get_readme(parse=True)
+            if 'html' in readme:
+                asset.html = readme['html']
 
-    asset.last_cleaning_at = timezone.now()
-    try:
-        asset = clean_readme_relative_paths(asset)
-        asset = clean_readme_hide_comments(asset)
-        asset = clean_h1s(asset)
-        readme = asset.get_readme(parse=True)
-        if 'html' in readme:
-            asset.html = readme['html']
-
-        asset.cleaning_status = 'OK'
-        asset.save()
-    except Exception as e:
-        raise e
-        asset.cleaning_status = 'ERROR'
-        asset.cleaning_status_details = str(e)
-        asset.save()
+            asset.cleaning_status = 'OK'
+            asset.save()
+        except Exception as e:
+            asset.cleaning_status = 'ERROR'
+            asset.cleaning_status_details = str(e)
+            asset.save()
 
     return asset
 

@@ -492,7 +492,7 @@ class AcademyAssetActionView(APIView):
         try:
             if action_slug == 'test':
                 test_asset(asset)
-            elif action_slug == 'clean' and asset.readme_raw is not None and asset.readme_raw != '':
+            elif action_slug == 'clean':
                 clean_asset_readme(asset)
             elif action_slug == 'pull':
                 override_meta = False
