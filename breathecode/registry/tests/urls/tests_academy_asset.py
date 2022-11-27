@@ -60,6 +60,3 @@ class RegistryTestAsset(RegistryTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
-
-
-#class RegistryTestAsset2(TestCase)
