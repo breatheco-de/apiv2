@@ -621,8 +621,9 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('course')
             lookup['course'] = param
 
-        if 'location' in self.request.GET:
-            param = self.request.GET.get('location')
+        if 'location' in self.request.GET or 'location_alias' in self.request.GET:
+            param = self.request.GET.get('location') if self.request.GET.get(
+                'location') is not None else self.request.GET.get('location_alias')
             lookup['location'] = param
 
         if 'utm_medium' in self.request.GET:
@@ -636,6 +637,14 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
         if 'utm_campaign' in self.request.GET:
             param = self.request.GET.get('utm_campaign')
             items = items.filter(utm_campaign__icontains=param)
+
+        if 'utm_source' in self.request.GET:
+            param = self.request.GET.get('utm_source')
+            items = items.filter(utm_source__icontains=param)
+
+        if 'utm_term' in self.request.GET:
+            param = self.request.GET.get('utm_term')
+            items = items.filter(utm_term__icontains=param)
 
         if 'tags' in self.request.GET:
             lookups = self.generate_lookups(request, many_fields=['tags'])

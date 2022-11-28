@@ -107,6 +107,7 @@ def generate_certificate(user, cohort=None, layout=None):
                                             cohort__id=cohort.id,
                                             task_type='PROJECT',
                                             revision_status='PENDING')
+
         mandatory_slugs = []
         for task in tasks_pending:
             if 'days' in task.cohort.syllabus_version.__dict__['json']:
