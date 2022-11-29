@@ -4,7 +4,7 @@ Test /academy/cohort
 import datetime
 import json
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from mixer.backend.django import mixer
 
@@ -47,10 +47,8 @@ educational_status = {
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_students(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -113,10 +111,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_students_twice(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -180,10 +176,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_teachers(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -246,10 +240,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_teachers_twice(self):
         """Test /academy/cohort without auth"""
         cohorts = set()

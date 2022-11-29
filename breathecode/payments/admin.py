@@ -49,9 +49,8 @@ class FixtureAdmin(admin.ModelAdmin):
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
-    list_display = ('id', 'slug', 'status', 'renew_every', 'renew_every_unit', 'trial_duration',
-                    'trial_duration_unit', 'owner')
-    list_filter = ['renew_every_unit', 'trial_duration_unit', 'owner']
+    list_display = ('id', 'slug', 'status', 'trial_duration', 'trial_duration_unit', 'owner')
+    list_filter = ['trial_duration_unit', 'owner']
     search_fields = ['lang', 'title']
 
 
@@ -77,12 +76,9 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'paid_at', 'status', 'is_cancellable', 'is_refundable', 'is_auto_renew',
-                    'valid_until', 'last_renew', 'renew_credits_at', 'pay_every', 'pay_every_unit',
-                    'renew_every', 'renew_every_unit', 'user')
-    list_filter = [
-        'status', 'is_cancellable', 'is_refundable', 'is_auto_renew', 'pay_every_unit', 'renew_every_unit'
-    ]
+    list_display = ('id', 'paid_at', 'status', 'is_refundable', 'valid_until', 'pay_every', 'pay_every_unit',
+                    'user')
+    list_filter = ['status', 'is_refundable', 'pay_every_unit']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
 
 

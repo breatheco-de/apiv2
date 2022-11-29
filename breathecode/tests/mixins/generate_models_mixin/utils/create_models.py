@@ -18,8 +18,7 @@ def cycle(how_many):
     return mixer.cycle(how_many) if how_many > 1 else mixer
 
 
-def create_models(attr, path, **kwargs):
-    # does not remove this line are use very often
+def debug_mixer(attr, path, **kwargs):
     for how_many, arguments in argument_parser(attr):
         sentence = ''
         if how_many > 1:
@@ -35,10 +34,18 @@ def create_models(attr, path, **kwargs):
         for key in values:
             if isinstance(values[key], str):
                 sentence += f"{key}='{values[key]}', "
-            else:
+            elif isinstance(values[key], int) or isinstance(values[key], list):
                 sentence += f'{key}={values[key]}, '
+            else:
+                sentence += f'{key}=<{values[key]}>, '
 
         sentence = sentence[:-2] + ')'
+        print(sentence)
+
+
+def create_models(attr, path, **kwargs):
+    # does not remove this line are use very often
+    # debug_mixer(attr, path, **kwargs)
 
     result = [
         cycle(how_many).blend(path, **{
