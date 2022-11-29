@@ -13,7 +13,7 @@ from breathecode.authenticate.actions import get_user_settings
 
 from breathecode.payments import tasks
 from breathecode.payments.actions import add_items_to_bag, get_amount, get_amount_by_chosen_period
-from breathecode.payments.models import (Bag, Consumable, Credit, FinancialReputation, Invoice, Plan, Service,
+from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, Service,
                                          ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetConsumableSerializer, GetCreditSerializer,
                                               GetInvoiceSerializer, GetInvoiceSmallSerializer,
@@ -302,42 +302,42 @@ class ConsumableView(APIView):
         return handler.response(serializer.data)
 
 
-class CreditView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+# class CreditView(APIView):
+#     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
-    def get(self, request, credit_id=None):
-        handler = self.extensions(request)
-        settings = get_user_settings(request.user.id)
-        now = timezone.now()
+#     def get(self, request, credit_id=None):
+#         handler = self.extensions(request)
+#         settings = get_user_settings(request.user.id)
+#         now = timezone.now()
 
-        if credit_id:
-            item = Credit.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
-                                         id=credit_id,
-                                         invoice__user=request.user).first()
+#         if credit_id:
+#             item = Credit.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
+#                                          id=credit_id,
+#                                          invoice__user=request.user).first()
 
-            if not item:
-                raise ValidationException(translation(settings.lang,
-                                                      en='Credit not found',
-                                                      es='No existe el crédito',
-                                                      slug='not-found'),
-                                          code=404)
+#             if not item:
+#                 raise ValidationException(translation(settings.lang,
+#                                                       en='Credit not found',
+#                                                       es='No existe el crédito',
+#                                                       slug='not-found'),
+#                                           code=404)
 
-            serializer = GetCreditSerializer(items, many=True)
-            return handler.response(serializer.data)
+#             serializer = GetCreditSerializer(items, many=True)
+#             return handler.response(serializer.data)
 
-        items = Credit.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
-                                      invoice__user=request.user)
+#         items = Credit.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
+#                                       invoice__user=request.user)
 
-        if invoice_id := request.GET.get('invoice_id'):
-            items = items.filter(invoice__id=invoice_id)
+#         if invoice_id := request.GET.get('invoice_id'):
+#             items = items.filter(invoice__id=invoice_id)
 
-        if service_slug := request.GET.get('service_slug'):
-            items = items.filter(services_slug=service_slug)
+#         if service_slug := request.GET.get('service_slug'):
+#             items = items.filter(services_slug=service_slug)
 
-        items = handler.queryset(items)
-        serializer = GetCreditSerializer(items, many=True)
+#         items = handler.queryset(items)
+#         serializer = GetCreditSerializer(items, many=True)
 
-        return handler.response(serializer.data)
+#         return handler.response(serializer.data)
 
 
 class SubscriptionView(APIView):

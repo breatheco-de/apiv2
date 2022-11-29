@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from breathecode.payments.models import (Bag, Consumable, Credit, Currency, FinancialReputation, Fixture,
-                                         Invoice, PaymentContact, Plan, PlanTranslation, Service, ServiceItem,
+from breathecode.payments.models import (Bag, Consumable, Currency, FinancialReputation, Fixture, Invoice,
+                                         PaymentContact, Plan, PlanTranslation, Service, ServiceItem,
                                          ServiceTranslation, Subscription)
 
 # Register your models here.
@@ -82,10 +82,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
 
 
-@admin.register(Credit)
-class CreditAdmin(admin.ModelAdmin):
-    list_display = ('id', 'valid_until', 'is_free_trial', 'invoice')
-    list_filter = ['is_free_trial']
+# @admin.register(Credit)
+# class CreditAdmin(admin.ModelAdmin):
+#     list_display = ('id', 'valid_until', 'is_free_trial', 'invoice')
+#     list_filter = ['is_free_trial']
 
 
 @admin.register(PaymentContact)

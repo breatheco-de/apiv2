@@ -1,8 +1,7 @@
 from django.urls import path
 
 from .views import (AcademyPlanView, AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableView,
-                    CreditView, InvoiceView, PayView, PlanView, ServiceItemView, ServiceView,
-                    SubscriptionView)
+                    InvoiceView, PayView, PlanView, ServiceItemView, ServiceView, SubscriptionView)
 
 app_name = 'payments'
 urlpatterns = [
@@ -21,8 +20,8 @@ urlpatterns = [
     path('subscription/<int:subscription_id>', SubscriptionView.as_view()),
     path('academy/subscription', AcademySubscriptionView.as_view()),
     path('academy/subscription/<int:subscription_id>', AcademySubscriptionView.as_view()),
-    path('credit', CreditView.as_view()),
-    path('credit/<int:credit_id>', CreditView.as_view()),
+    # path('credit', CreditView.as_view()),
+    # path('credit/<int:credit_id>', CreditView.as_view()),
     path('invoice', InvoiceView.as_view()),
     path('invoice/<int:invoice_id>', InvoiceView.as_view()),
     path('academy/invoice', InvoiceView.as_view()),
