@@ -2,7 +2,7 @@ import os, ast
 from django.contrib import admin
 from django import forms
 from django.utils import timezone
-from .models import Endpoint, Application, MonitorScript, CSVDownload
+from .models import Endpoint, Application, MonitorScript, CSVDownload, CSVUpload
 from breathecode.notify.models import SlackChannel
 from django.utils.html import format_html
 
@@ -169,3 +169,10 @@ class CSVDownloadAdmin(admin.ModelAdmin):
             return format_html(
                 f"<a href='/v1/monitoring/download/{obj.id}?raw=true' target='_blank'>download</span>")
         return format_html('nothing to download')
+
+
+@admin.register(CSVUpload)
+class CSVUploadAdmin(admin.ModelAdmin):
+    list_display = ('name', 'url', 'status', 'academy', 'hash')
+    list_filter = ['academy', 'status']
+    search_fields = ['name', 'url', 'hash']

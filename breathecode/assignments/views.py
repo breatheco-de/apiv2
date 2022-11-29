@@ -11,6 +11,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils import ValidationException, capable_of, localize_query, GenerateLookupsMixin, response_207
 from breathecode.admissions.models import Academy, CohortUser, Cohort
 from breathecode.authenticate.models import Token
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -299,14 +300,21 @@ class TaskMeAttachmentView(APIView):
     List all snippets, or create a new snippet.
     """
 
-    def get(self, request, task_id):
+    @capable_of('read_assignment')
+    def get(self, request, task_id, academy_id):
 
-        user_id = request.user.id
-
-        item = Task.objects.filter(id=task_id, user__id=user_id).first()
+        item = Task.objects.filter(id=task_id).first()
         if item is None:
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
+        allowed = item.user.id == request.user.id
+        if not allowed:
+            # request user belongs to the same academy as the cohort
+            allowed = item.cohort.academy.id == int(academy_id)
+        
+        if not allowed:
+            raise PermissionDenied('Attachments can only be reviewed by their authors or the academy staff with read_assignment capability')
+            
         serializer = TaskAttachmentSerializer(item.attachments.all(), many=True)
         return Response(serializer.data)
 

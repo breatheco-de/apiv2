@@ -1,8 +1,9 @@
-import os, re, datetime, logging, csv, pytz, json
+import os, re, datetime, logging, csv, pytz, secrets, json, hashlib
 from urllib import parse
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
+from breathecode.monitoring.models import CSVUpload
 from breathecode.renderers import PlainTextRenderer
 from rest_framework.decorators import renderer_classes
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
@@ -11,10 +12,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny
+from rest_framework.parsers import FileUploadParser, MultiPartParser
+from slugify import slugify
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination, validate_captcha,
+                               num_to_roman)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
@@ -34,15 +38,18 @@ from .serializers import (
     ActiveCampaignAcademySerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
-from .actions import sync_tags, sync_automations
+from .actions import convert_data_frame, sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField, AcademyAlias
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
+import pandas as pd
+from breathecode.services.google_cloud import Recaptcha
 
 logger = logging.getLogger(__name__)
+MIME_ALLOW = 'text/csv'
 
 # Create your views here.
 
@@ -614,8 +621,9 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('course')
             lookup['course'] = param
 
-        if 'location' in self.request.GET:
-            param = self.request.GET.get('location')
+        if 'location' in self.request.GET or 'location_alias' in self.request.GET:
+            param = self.request.GET.get('location') if self.request.GET.get(
+                'location') is not None else self.request.GET.get('location_alias')
             lookup['location'] = param
 
         if 'utm_medium' in self.request.GET:
@@ -629,6 +637,14 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
         if 'utm_campaign' in self.request.GET:
             param = self.request.GET.get('utm_campaign')
             items = items.filter(utm_campaign__icontains=param)
+
+        if 'utm_source' in self.request.GET:
+            param = self.request.GET.get('utm_source')
+            items = items.filter(utm_source__icontains=param)
+
+        if 'utm_term' in self.request.GET:
+            param = self.request.GET.get('utm_term')
+            items = items.filter(utm_term__icontains=param)
 
         if 'tags' in self.request.GET:
             lookups = self.generate_lookups(request, many_fields=['tags'])
@@ -842,6 +858,81 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         items.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class UploadView(APIView):
+    """
+    put:
+        Upload a file to Google Cloud.
+    """
+    parser_classes = [MultiPartParser, FileUploadParser]
+
+    # permission_classes = [AllowAny]
+
+    # upload was separated because in one moment I think that the serializer
+    # not should get many create and update operations together
+    def upload(self, file, academy_id=None, update=False):
+        from ..services.google_cloud import Storage
+
+        result = {
+            'data': [],
+            'instance': [],
+        }
+
+        if not file:
+            raise ValidationException('Missing file in request', code=400)
+
+        # files validation below
+        if file.content_type != MIME_ALLOW:
+            raise ValidationException(f'You can upload only files on the following formats: {MIME_ALLOW}')
+
+        file_bytes = file.read()
+
+        file_name = hashlib.sha256(file_bytes).hexdigest()
+
+        file_bytes = file_bytes.decode('utf-8')
+
+        with open(file.name, 'w') as f:
+            f.write(file_bytes)
+        df = pd.read_csv(file.name)
+        os.remove(file.name)
+        required_fields = ['first_name', 'last_name', 'email', 'location', 'phone', 'language']
+
+        # Think about uploading correct files and leaving out incorrect ones
+        for item in required_fields:
+            if item not in df.keys():
+                return ValidationException(f'{item} field missing inside of csv')
+
+        data = {'file_name': file.name, 'status': 'PENDING', 'message': 'Despues'}
+
+        # upload file section
+        storage = Storage()
+        cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), file_name)
+        cloud_file.upload(file, content_type=file.content_type)
+
+        csv_upload = CSVUpload()
+        csv_upload.url = cloud_file.url()
+        csv_upload.name = file.name
+        csv_upload.hash = file_name
+        csv_upload.academy_id = academy_id
+        csv_upload.save()
+
+        for num in range(len(df)):
+            value = df.iloc[num]
+            logger.info(dict(value))
+            parsed = convert_data_frame(dict(value))
+            tasks.create_form_entry.delay(csv_upload.id, **parsed)
+
+        return data
+
+    @capable_of('crud_media')
+    def put(self, request, academy_id=None):
+        files = request.data.getlist('file')
+        result = []
+        for file in files:
+            upload = self.upload(file, academy_id, update=True)
+            result.append(upload)
+        return Response(result, status=status.HTTP_200_OK)
 
 
 def get_real_conversion_name(slug):

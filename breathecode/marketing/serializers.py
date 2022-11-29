@@ -230,6 +230,20 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
         return result
 
 
+class PutFormEntrySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FormEntry
+        exclude = ()
+
+    def validate(self, data):
+
+        if 'location' in data and 'academy' in data:
+            result = FormEntry.objects.filter(id=data['id'])
+
+        return result
+
+
 class ShortLinkSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False, default=None)
 
