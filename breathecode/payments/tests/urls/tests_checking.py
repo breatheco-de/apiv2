@@ -23,11 +23,10 @@ def format_user_setting(data={}):
 
 def plan_serializer(plan, service_items, service, cohorts=[], data={}):
     return {
-        # 'description': plan.description,
-        'renew_every':
-        plan.renew_every,
-        'renew_every_unit':
-        plan.renew_every_unit,
+        'pay_every':
+        plan.pay_every,
+        'pay_every_unit':
+        plan.pay_every_unit,
         'service_items':
         [service_item_serializer(service_item, service, cohorts) for service_item in service_items],
         'slug':

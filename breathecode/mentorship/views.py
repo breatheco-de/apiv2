@@ -10,7 +10,7 @@ from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.authenticate.models import Token
 from breathecode.mentorship.exceptions import ExtendSessionException
-from breathecode.payments.consumers import mentorship_service_consumer
+from breathecode.payments.consumers import mentorship_service_by_url_param
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
@@ -385,7 +385,7 @@ def forward_meet_url(request, mentor_slug, service_slug, token):
 
 #FIXME: create a endpoint to consume the service, split the function in two
 @private_view()
-# @has_permission('get_mentorship_session', consumer=mentorship_service_consumer)
+# @has_permission('get_mentorship_session', consumer=mentorship_service_by_url_param)
 def end_mentoring_session(request, session_id, token):
     now = timezone.now()
     if request.method == 'POST':

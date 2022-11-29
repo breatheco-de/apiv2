@@ -1,14 +1,17 @@
 """
 Test /academy/cohort
 """
+from unittest.mock import MagicMock, patch
 import urllib
 from datetime import timedelta
 from dateutil.tz import gettz
 from django.utils import timezone
 from datetime import datetime
 from django.urls.base import reverse_lazy
+import pytz
 from rest_framework import status
 from breathecode.events.actions import fix_datetime_weekday
+from django.utils import timezone
 
 from breathecode.utils import DatetimeInteger
 from ..mixins.new_events_tests_case import EventTestCase
@@ -17,6 +20,7 @@ from ..mixins.new_events_tests_case import EventTestCase
 class AcademyCohortTestSuite(EventTestCase):
     """Test /academy/cohort"""
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__without_academy(self):
         """Test /academy/cohort without auth"""
         url = reverse_lazy('events:ical_cohorts')
@@ -29,6 +33,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__without_events(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -58,6 +63,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__dont_get_status_deleted(self):
         """Test /academy/cohort without auth"""
         cohort_kwargs = {'stage': 'DELETED'}
@@ -90,6 +96,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -132,6 +139,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__ending_date_is_none(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -158,6 +166,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__never_ends_true(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -185,6 +194,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__with_incoming_true__return_zero_cohorts(self):
         """Test /academy/cohort without auth"""
         cohort_kwargs = {'kickoff_date': timezone.now() - timedelta(days=1)}
@@ -216,6 +226,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__with_incoming_true(self):
         """Test /academy/cohort without auth"""
         cohort_kwargs = {
@@ -263,10 +274,11 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__with_teacher__with_ending_date(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
-        cohort_kwargs = {'ending_date': datetime.now()}
+        cohort_kwargs = {'ending_date': timezone.now()}
         device_id_kwargs = {'name': 'server'}
         model = self.generate_models(academy=True,
                                      cohort=True,
@@ -313,6 +325,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_two(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -374,10 +387,11 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_two__with_teacher__with_ending_date(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
-        cohort_kwargs = {'ending_date': datetime.now()}
+        cohort_kwargs = {'ending_date': timezone.now()}
         device_id_kwargs = {'name': 'server'}
         base = self.generate_models(academy=True,
                                     device_id=True,
@@ -453,10 +467,11 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_id(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
-        cohort_kwargs = {'ending_date': datetime.now()}
+        cohort_kwargs = {'ending_date': timezone.now()}
         device_id_kwargs = {'name': 'server'}
         base = self.generate_models(device_id=True, device_id_kwargs=device_id_kwargs)
         base1 = self.generate_models(academy=True, skip_cohort=True, models=base)
@@ -581,10 +596,11 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_slug(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
-        cohort_kwargs = {'ending_date': datetime.now()}
+        cohort_kwargs = {'ending_date': timezone.now()}
 
         device_id_kwargs = {'name': 'server'}
         base = self.generate_models(device_id=True, device_id_kwargs=device_id_kwargs)
@@ -716,12 +732,13 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 With first cohort day and last cohort day
     """
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__first_day__last_day(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'kickoff_date': datetime(year=2029, month=1, day=10),
-            'ending_date': datetime(year=2030, month=10, day=10),
+            'kickoff_date': datetime(year=2029, month=1, day=10, tzinfo=pytz.timezone('UTC')),
+            'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         }
 
         starting_datetime_interger = 202810080030
@@ -824,12 +841,13 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__first_day__last_day__timeslot_not_recurrent(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'kickoff_date': datetime(year=2020, month=10, day=10),
-            'ending_date': datetime(year=2030, month=10, day=10),
+            'kickoff_date': datetime(year=2020, month=10, day=10, tzinfo=pytz.timezone('UTC')),
+            'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         }
 
         starting_datetime_interger = 202510080030
@@ -915,12 +933,13 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_two__first_day__last_day__two_timeslots(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'kickoff_date': datetime(year=2020, month=10, day=10),
-            'ending_date': datetime(year=2030, month=10, day=10),
+            'kickoff_date': datetime(year=2020, month=10, day=10, tzinfo=pytz.timezone('UTC')),
+            'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         }
 
         first_cohort_time_slot_kwargs = {
@@ -1085,13 +1104,14 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_two__first_day__last_day__two_timeslots__cohort_with_meeting_url(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = [{
             'online_meeting_url': self.bc.fake.url(),
-            'kickoff_date': datetime(year=2020, month=10, day=10),
-            'ending_date': datetime(year=2030, month=10, day=10),
+            'kickoff_date': datetime(year=2020, month=10, day=10, tzinfo=pytz.timezone('UTC')),
+            'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         } for _ in range(0, 2)]
 
         first_cohort_time_slot_kwargs = {

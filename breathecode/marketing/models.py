@@ -193,7 +193,7 @@ class Contact(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.first_name + ' ' + self.last_name
+        return self.first_name + ' ' + (self.last_name or '')
 
 
 OK = 'OK'

@@ -1,7 +1,7 @@
 from asyncio import tasks
 from datetime import timedelta
 from django.core.management.base import BaseCommand
-from ...models import Subscription
+from ...models import ServiceStockScheduler, Subscription
 from django.utils import timezone
 
 from ... import tasks
@@ -17,9 +17,10 @@ class Command(BaseCommand):
 
         subscription_ids = list(subscriptions.values_list('id', flat=True))
 
-        no_need_to_renew = Subscription.objects.filter(
-            service_stock_schedulers__consumables__valid_until__gte=utc_now + timedelta(hours=2)).exclude(
-                status='CANCELLED').exclude(status='DEPRECATED').exclude(status='PAYMENT_ISSUE')
+        no_need_to_renew = ServiceStockScheduler.objects.filter(
+            consumables__valid_until__gte=utc_now +
+            timedelta(hours=2)).exclude(subscription__status='CANCELLED').exclude(
+                subscription__status='DEPRECATED').exclude(subscription__status='PAYMENT_ISSUE')
 
         for subscription in no_need_to_renew:
             subscription_ids.remove(subscription.id)

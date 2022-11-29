@@ -12,7 +12,7 @@ from breathecode.authenticate.actions import get_user_settings
 # from breathecode.authenticate.models import UserSetting
 
 from breathecode.payments import tasks
-from breathecode.payments.actions import add_items_to_bag, get_amount
+from breathecode.payments.actions import add_items_to_bag, get_amount, get_amount_by_chosen_period
 from breathecode.payments.models import (Bag, Consumable, Credit, FinancialReputation, Invoice, Plan, Service,
                                          ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetConsumableSerializer, GetCreditSerializer,
@@ -586,7 +586,7 @@ class CheckingView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     def put(self, request):
-        type = request.data.get('type', 'BAG').upper()
+        bag_type = request.data.get('type', 'BAG').upper()
         created = False
 
         settings = get_user_settings(request.user.id)
@@ -594,14 +594,14 @@ class CheckingView(APIView):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                if type == 'BAG' and not (bag := Bag.objects.filter(
-                        user=request.user, status='CHECKING', type=type).first()):
+                if bag_type == 'BAG' and not (bag := Bag.objects.filter(
+                        user=request.user, status='CHECKING', type=bag_type).first()):
                     raise ValidationException(translation(settings.lang,
                                                           en='Bag not found',
                                                           es='Bolsa no encontrada',
                                                           slug='not-found'),
                                               code=404)
-                if type == 'PREVIEW':
+                if bag_type == 'PREVIEW':
                     academy = request.data.get('academy')
                     try:
                         academy = Academy.objects.get(id=int(academy), main_currency__isnull=False)
@@ -615,7 +615,7 @@ class CheckingView(APIView):
 
                     bag, created = Bag.objects.get_or_create(user=request.user,
                                                              status='CHECKING',
-                                                             type=type,
+                                                             type=bag_type,
                                                              academy=academy,
                                                              currency=academy.main_currency)
                     add_items_to_bag(request, settings, bag)
@@ -625,7 +625,7 @@ class CheckingView(APIView):
                 bag.token = Token.generate_key()
                 bag.expires_at = utc_now + timedelta(minutes=10)
                 bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-                    bag, bag.academy, settings)
+                    bag, bag.academy.main_currency)
 
                 bag.save()
                 transaction.savepoint_commit(sid)
@@ -713,35 +713,7 @@ class PayView(APIView):
                                                           slug='invalid-chosen-period'),
                                               code=400)
 
-                if chosen_period == 'MONTH':
-                    amount = bag.amount_per_month
-
-                if chosen_period == 'QUARTER':
-                    amount = bag.amount_per_quarter
-
-                    if not amount:
-                        amount = bag.amount_per_month * 3
-
-                if chosen_period == 'HALF':
-                    amount = bag.amount_per_half
-
-                    if not amount:
-                        amount = bag.amount_per_quarter * 2
-
-                    if not amount:
-                        amount = bag.amount_per_month * 6
-
-                if chosen_period == 'YEAR':
-                    amount = bag.amount_per_year
-
-                    if not amount:
-                        amount = bag.amount_per_half * 2
-
-                    if not amount:
-                        amount = bag.amount_per_quarter * 4
-
-                    if not amount:
-                        amount = bag.amount_per_month * 12
+                amount = get_amount_by_chosen_period(bag, chosen_period)
 
                 # if not bag.academy.main_currency:
                 #     raise ValidationException(translation(settings.lang,

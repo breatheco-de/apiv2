@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.caches import (CohortCache, CohortUserCache, TeacherCache)
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.payments.consumers import cohort_consumer
+from breathecode.payments.consumers import cohort_by_url_param
 from breathecode.utils import (APIViewExtensions, DatetimeInteger, GenerateLookupsMixin,
                                HeaderLimitOffsetPagination, ValidationException, capable_of, localize_query)
 from breathecode.utils.decorators import has_permission
@@ -207,15 +207,7 @@ def get_cohorts(request, id=None):
 
     items = items.order_by(sort)
 
-    # print('=================', len(items))
-    # print('=================', type(items))
-    # print('=================', items)
     serializer = PublicCohortSerializer(items, many=True)
-    # print('=================')
-    # print(serializer.data)
-    # print('-----------------')
-    # print(coordinates)
-    # print('=================')
     data = sorted(serializer.data,
                   key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
 
@@ -1722,7 +1714,6 @@ class AcademyCohortHistoryView(APIView):
                 del payload['day']
 
             cohort_log = CohortLog(item)
-            print('2222', cohort_log.days)
             cohort_log.logDay(payload, day)
             cohort_log.save()
         except Exception as e:
@@ -1739,7 +1730,7 @@ class AcademyCohortHistoryView(APIView):
 
 class CohortClassRoomView(APIView, HeaderLimitOffsetPagination):
 
-    @has_permission('cohort_classroom', consumer=cohort_consumer)
+    @has_permission('cohort_classroom', consumer=cohort_by_url_param)
     def get(self, request, cohort_slug=None):
         cohort = Cohort.objects.filter(slug=cohort_slug).first()
         if not cohort:

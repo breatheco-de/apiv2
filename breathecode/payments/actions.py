@@ -1,10 +1,12 @@
 import ast
 from functools import cache
+from typing import Optional
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from django.db.models.query_utils import Q
 
 from breathecode.admissions.models import Academy, Cohort
+from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserSetting
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
@@ -169,13 +171,11 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
     return bag
 
 
-def get_amount(bag: Bag, academy: Academy, settings: UserSetting) -> tuple[float, float, float, float]:
+def get_amount(bag: Bag, currency: Currency) -> tuple[float, float, float, float]:
     price_per_month = 0
     price_per_quarter = 0
     price_per_half = 0
     price_per_year = 0
-
-    currency = academy.main_currency
 
     if not currency:
         currency, _ = Currency.objects.get_or_create(code='USD', name='United States dollar')
@@ -201,3 +201,102 @@ def get_amount(bag: Bag, academy: Academy, settings: UserSetting) -> tuple[float
         price_per_year += plan.price_per_year
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
+
+
+def get_amount_by_chosen_period(bag: Bag, chosen_period: str):
+
+    if chosen_period == 'MONTH':
+        amount = bag.amount_per_month
+
+    if chosen_period == 'QUARTER':
+        amount = bag.amount_per_quarter
+
+        if not amount:
+            amount = bag.amount_per_month * 3
+
+    if chosen_period == 'HALF':
+        amount = bag.amount_per_half
+
+        if not amount:
+            amount = bag.amount_per_quarter * 2
+
+        if not amount:
+            amount = bag.amount_per_month * 6
+
+    if chosen_period == 'YEAR':
+        amount = bag.amount_per_year
+
+        if not amount:
+            amount = bag.amount_per_half * 2
+
+        if not amount:
+            amount = bag.amount_per_quarter * 4
+
+        if not amount:
+            amount = bag.amount_per_month * 12
+
+    return amount
+
+
+def get_chosen_period_from_subscription(subscription: Subscription, settings: Optional[UserSetting] = None):
+    how_many = subscription.pay_every
+    unit = subscription.pay_every_unit
+
+    if not settings:
+        settings = get_user_settings(subscription.user.id)
+
+    if unit == 'MONTH' and how_many == 1:
+        return 'MONTH'
+
+    if unit == 'MONTH' and how_many == 3:
+        return 'QUARTER'
+
+    if unit == 'MONTH' and how_many == 6:
+        return 'HALF'
+
+    if (unit == 'MONTH' and how_many == 12) or (unit == 'YEAR' and how_many == 1):
+        return 'YEAR'
+
+    raise Exception(
+        translation(settings.lang,
+                    en=f'Period not found for pay_every_unit={unit} and pay_every={how_many}',
+                    es=f'Periodo no encontrado para pay_every_unit={unit} and pay_every={how_many}',
+                    slug='cannot-determine-period'))
+
+
+def get_bag_from_subscription(subscription: Subscription, settings: Optional[UserSetting] = None) -> Bag:
+    bag = Bag()
+
+    if not settings:
+        settings = get_user_settings(subscription.user.id)
+
+    last_invoice = subscription.invoices.filter().last()
+    if not last_invoice:
+        raise Exception(
+            translation(settings.lang,
+                        en='Invalid subscription, this has no invoices',
+                        es='Suscripción invalida, esta no tiene facturas',
+                        slug='subscription-has-no-invoices'))
+
+    chosen_period = get_chosen_period_from_subscription(subscription, settings)
+
+    bag.status = 'RENEWAL'
+    bag.type = 'BAG'
+    bag.academy = last_invoice.academy
+    bag.is_recurrent = True
+    bag.chosen_period = chosen_period
+    bag.save()
+
+    for service_item in subscription.service_items.all():
+        bag.service_items.add(service_item)
+
+    for plan in subscription.plans.all():
+        bag.plans.add(plan)
+
+    bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
+        bag, last_invoice.currency)
+
+    #
+    bag.save()
+
+    return bag

@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta
+import traceback
 from typing import Optional
 from django.utils import timezone
 
@@ -11,7 +12,7 @@ from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from dateutil.relativedelta import relativedelta
 
-from .models import Bag, Consumable, Invoice, Subscription
+from .models import Bag, Consumable, Invoice, ServiceStockScheduler, Subscription
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ def renew_consumables(self, subscription_id: int):
         logger.error(f'This subscription needs to be paid to renew the consumables')
         return
 
-    for scheduler in subscription.service_stock_schedulers.filter():
+    for scheduler in ServiceStockScheduler.objects.filter(subscription=subscription):
         unit = scheduler.service_item.renew_at
         unit_type = scheduler.service_item.renew_at_unit
         delta = actions.calculate_relative_delta(unit, unit_type)
@@ -78,19 +79,29 @@ def renew_subscription(self, subscription_id: int, from_datetime: Optional[datet
     settings = get_user_settings(subscription.user.id)
 
     try:
+        bag = actions.get_bag_from_subscription(subscription, settings)
+    except Exception as e:
+        logger.error(f'Error getting bag from subscription {subscription_id}: {e}')
+        subscription.status = 'ERROR'
+        subscription.status_message = str(e)
+        subscription.save()
+        return
+
+    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period)
+
+    try:
         s = Stripe()
         s.set_language_from_settings(settings)
-        invoice: Invoice = s.pay(subscription.user)
+        invoice = s.pay(subscription.user, amount, currency=bag.currency)
 
-    except Exception:
-        value = invoice.currency.format_price(invoice.amount)
-
+    except Exception as e:
+        print(e)
         notify_actions.send_email_message(
             'message',
-            invoice.user.email,
+            subscription.user.email,
             {
                 'SUBJECT': 'Your 4Geeks subscription could not be renewed',
-                'MESSAGE': f'The amount was {value} but the payment failed',
+                'MESSAGE': f'Please update your payment methods',
                 'BUTTON': f'See the invoice',
                 # 'LINK': f'{APP_URL}/invoice/{instance.id}',
             })
@@ -129,37 +140,39 @@ def build_service_stock_scheduler(self, subscription_id: int):
         logger.error(f'Subscription with id {subscription_id} not found')
         return
 
-    schedulers = subscription.service_stock_schedulers.all()
+    schedulers = ServiceStockScheduler.objects.filter(subscription=subscription)
     service_items = subscription.service_items.all()
     plans = subscription.plans.all()
     utc_now = timezone.now()
 
-    not_found = [(x.service_item.service.id, x.service_item.service.how_many, x.is_belongs_to_plan)
+    not_found = [(x.service_item.service.id, x.service_item.how_many, x.is_belongs_to_plan)
                  for x in schedulers]
 
     for service_item in service_items:
-        query = (service_item.service.id, service_item.service.how_many, False)
+        query = (service_item.service.id, service_item.how_many, False)
         if query in not_found:
             not_found.remove(query)
             continue
 
-        subscription.service_stock_schedulers.create(service_item=service_item,
-                                                     is_belongs_to_plan=False,
-                                                     last_renew=utc_now)
+        ServiceStockScheduler.objects.create(service_item=service_item,
+                                             subscription=subscription,
+                                             is_belongs_to_plan=False,
+                                             last_renew=utc_now)
 
     for plan in plans:
-        for service_item in plan.service_items:
-            query = (service_item.service.id, service_item.service.how_many, True)
+        for service_item in plan.service_items.all():
+            query = (service_item.service.id, service_item.how_many, True)
             if query in not_found:
                 not_found.remove(query)
                 continue
 
-            subscription.service_stock_schedulers.create(service_item=service_item,
-                                                         is_belongs_to_plan=True,
-                                                         last_renew=utc_now)
+            ServiceStockScheduler.objects.create(service_item=service_item,
+                                                 subscription=subscription,
+                                                 is_belongs_to_plan=True,
+                                                 last_renew=utc_now)
 
     for scheduler in schedulers:
-        query = (scheduler.service_item.service.id, scheduler.service_item.service.how_many,
+        query = (scheduler.service_item.service.id, scheduler.service_item.how_many,
                  scheduler.is_belongs_to_plan)
 
         if query in not_found:

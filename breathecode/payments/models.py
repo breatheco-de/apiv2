@@ -1,4 +1,5 @@
 import ast
+import os
 from django.contrib.auth.models import Group, User
 from django.db import models
 
@@ -242,7 +243,9 @@ class ServiceItem(AbstractServiceItem):
     renew_at_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     def save(self, *args, **kwargs):
-        if self.id:
+        is_test_env = os.getenv('ENV') == 'test'
+        inside_mixer = hasattr(self, '__mixer__')
+        if self.id and (not inside_mixer or (inside_mixer and not is_test_env)):
             raise Exception('You cannot update a service item')
 
         self.full_clean()
@@ -274,7 +277,7 @@ class Plan(AbstractPriceByTime):
 
     slug = models.CharField(max_length=60, unique=True)
 
-    status = models.CharField(max_length=7, choices=PLAN_STATUS, default=DRAFT)
+    status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT)
     #TODO: visible enum, private, unlisted, visible
 
     pay_every = models.IntegerField(default=1)
@@ -309,12 +312,14 @@ ACTIVE = 'ACTIVE'
 CANCELLED = 'CANCELLED'
 DEPRECATED = 'DEPRECATED'
 PAYMENT_ISSUE = 'PAYMENT_ISSUE'
+ERROR = 'ERROR'
 SUBSCRIPTION_STATUS = [
     (FREE_TRIAL, 'Free trial'),
     (ACTIVE, 'Active'),
     (CANCELLED, 'Cancelled'),
     (DEPRECATED, 'Deprecated'),
     (PAYMENT_ISSUE, 'Payment issue'),
+    (ERROR, 'Error'),
 ]
 
 
@@ -420,6 +425,7 @@ class Subscription(models.Model):
     # last time the subscription was paid
     paid_at = models.DateTimeField()
     status = models.CharField(max_length=13, choices=SUBSCRIPTION_STATUS, default=ACTIVE)
+    status_message = models.CharField(max_length=150, null=True, blank=True, default=None)
 
     is_refundable = models.BooleanField(default=True)
     invoices = models.ManyToManyField(Invoice)
@@ -438,13 +444,6 @@ class Subscription(models.Model):
 
     # this reminds the plans to change the stock scheduler on change
     plans = models.ManyToManyField(Plan)
-
-    # this reminds the stock scheduler of consumables
-    service_stock_schedulers = models.ManyToManyField(
-        ServiceItem,
-        through='ServiceStockScheduler',
-        through_fields=('subscription', 'service_item'),
-    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -540,9 +539,11 @@ class FinancialReputation(models.Model):
         return UNKNOWN
 
 
+RENEWAL = 'RENEWAL'
 CHECKING = 'CHECKING'
 PAID = 'PAID'
 BAG_STATUS = [
+    (RENEWAL, 'Renewal'),
     (CHECKING, 'Checking'),
     (PAID, 'Paid'),
 ]

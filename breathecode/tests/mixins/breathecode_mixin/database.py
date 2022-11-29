@@ -230,7 +230,7 @@ class Database:
         blank = attr.field.blank
         null = attr.field.null
 
-        return {
+        result = {
             'field': key,
             'blank': blank,
             'null': null,
@@ -239,6 +239,12 @@ class Database:
             'handler': attr,
             'model': model,
         }
+
+        if hasattr(attr, 'through'):
+            result['custom_through'] = '_' not in attr.through.__name__
+            result['through_fields'] = attr.rel.through_fields
+
+        return result
 
     @cache
     def _get_models_descriptors(self) -> list[Model]:
@@ -404,12 +410,29 @@ class Database:
                     if related_model_field_name in models:
                         kargs[x['field']] = just_one(models[related_model_field_name])
 
-                for x in descriptor['to_many']:
+                without_through = [x for x in descriptor['to_many'] if x['custom_through'] == False]
+                for x in without_through:
                     related_model_field_name = self.camel_case_to_snake_case(x['model_name'])
+
                     if related_model_field_name in models:
                         kargs[x['field']] = get_list(models[related_model_field_name])
 
                 models[model_field_name] = create_models(arg, f'{app_name}.{model_name}', **kargs)
+
+                with_through = [
+                    x for x in descriptor['to_many']
+                    if x['custom_through'] == True and not x['field'].endswith('_set')
+                ]
+                for x in with_through:
+                    related_model_field_name = self.camel_case_to_snake_case(x['model_name'])
+                    if related_model_field_name in models:
+
+                        for item in get_list(models[related_model_field_name]):
+                            through_current = x['through_fields'][0]
+                            through_related = x['through_fields'][1]
+                            through_args = {through_current: models[model_field_name], through_related: item}
+
+                            x['handler'].through.objects.create(**through_args)
 
             return models
 
@@ -429,9 +452,15 @@ class Database:
 
                     for x in descriptor['to_one']:
                         related_model_field_name = self.camel_case_to_snake_case(x['model_name'])
-                        if related_model_field_name in models and not getattr(
-                                models[model_field_name], x['field']):
+                        model_exists = related_model_field_name in models
+                        is_list = isinstance(models[model_field_name], list) if model_exists else False
+                        if model_exists and not is_list and not getattr(models[model_field_name], x['field']):
                             setattr(m, x['field'], just_one(models[related_model_field_name]))
+
+                        if model_exists and is_list:
+                            for y in models[model_field_name]:
+                                if getattr(y, x['field']):
+                                    setattr(m, x['field'], just_one(models[related_model_field_name]))
 
                     for x in descriptor['to_many']:
                         related_model_field_name = self.camel_case_to_snake_case(x['model_name'])
@@ -439,6 +468,7 @@ class Database:
                                 models[model_field_name], x['field']):
                             setattr(m, x['field'], get_list(models[related_model_field_name]))
 
+                    setattr(m, '__mixer__', None)
                     m.save()
 
             return models
@@ -484,6 +514,9 @@ class Database:
         return wrapper
 
     def create_v2(self, *args, **kwargs) -> dict[str, Model | list[Model]]:
+        """
+        Unstable version of mixin that create all models, do not use this.
+        """
         models = self._get_models_handlers()(*args, **kwargs)
         return models
 
