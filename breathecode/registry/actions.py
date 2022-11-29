@@ -318,6 +318,8 @@ def pull_github_lesson(github, asset, override_meta=False):
 
 
 def clean_asset_readme(asset):
+    if asset.readme_raw is None or asset.readme_raw == '':
+        return asset
 
     asset.last_cleaning_at = timezone.now()
     try:
@@ -331,7 +333,6 @@ def clean_asset_readme(asset):
         asset.cleaning_status = 'OK'
         asset.save()
     except Exception as e:
-        raise e
         asset.cleaning_status = 'ERROR'
         asset.cleaning_status_details = str(e)
         asset.save()
