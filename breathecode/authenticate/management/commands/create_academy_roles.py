@@ -224,6 +224,10 @@ CAPABILITIES = [
         'description': 'Create, delete or update all mentorship services from one academy'
     },
     {
+        'slug': 'read_mentorship_agent',
+        'description': 'Get all mentorship agents from one academy'
+    },
+    {
         'slug': 'read_mentorship_mentor',
         'description': 'Get all mentorship mentors from one academy'
     },
