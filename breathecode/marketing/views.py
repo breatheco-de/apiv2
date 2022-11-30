@@ -413,18 +413,36 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
     @capable_of('crud_tag')
-    def put(self, request, tag_slug, academy_id=None):
+    def put(self, request, tag_slug=None, academy_id=None):
+        many = isinstance(request.data, list)
+        if not many:
+            tag = Tag.objects.filter(slug=tag_slug, ac_academy__academy__id=academy_id).first()
+            if tag is None:
+                raise ValidationException(f'Tag {tag_slug} not found for this academy', slug='tag-not-found')
+        else:
+            tag = []
+            index = -1
+            for x in request.data:
+                index = index + 1
 
-        tag = Tag.objects.filter(slug=tag_slug, ac_academy__academy__id=academy_id).first()
-        if tag is None:
-            raise ValidationException(f'Tag {tag_slug} not found for this academy', slug='tag-not-found')
+                if 'id' not in x:
+                    raise ValidationException('Cannot determine tag in '
+                                              f'index {index}', slug='without-id')
 
+                instance = Tag.objects.filter(id=x['id'], ac_academy__academy__id=academy_id).first()
+
+                if not instance:
+                    raise ValidationException(f'Tag({x["id"]}) does not exist on this academy',
+                                              code=404,
+                                              slug='not-found')
+                tag.append(instance)
         serializer = PUTTagSerializer(tag,
                                       data=request.data,
                                       context={
                                           'request': request,
                                           'academy': academy_id
-                                      })
+                                      },
+                                      many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
