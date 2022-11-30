@@ -292,14 +292,10 @@ class Plan(AbstractPriceByTime):
 
 
 class PlanTranslation(models.Model):
-    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, default=None, blank=True, null=True)
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
-
-    def clean(self):
-        if not self.plan:
-            raise Exception('Plan is required')
 
     def save(self):
         self.full_clean()
@@ -328,11 +324,7 @@ class Consumable(AbstractServiceItem):
     This model is used to represent the units of a service that can be consumed.
     """
 
-    service_item = models.ForeignKey(ServiceItem,
-                                     on_delete=models.CASCADE,
-                                     default=None,
-                                     blank=True,
-                                     null=True)
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
 
     # if null, this is valid until resources are exhausted
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -400,13 +392,13 @@ class Invoice(models.Model):
     paid_at = models.DateTimeField()
     status = models.CharField(max_length=17, choices=INVOICE_STATUS, default=PENDING)
 
-    bag = models.ForeignKey('Bag', on_delete=models.CASCADE, null=True, default=None, blank=True)
+    bag = models.ForeignKey('Bag', on_delete=models.CASCADE)
 
     # actually return 27 characters
     stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True)
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -438,6 +430,7 @@ class Subscription(models.Model):
     pay_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
     # this reminds the service items to change the stock scheduler on change
     service_items = models.ManyToManyField(ServiceItem)
@@ -465,31 +458,30 @@ class ServiceStockScheduler(models.Model):
     is_belongs_to_plan = models.BooleanField(default=False)
 
 
-#TODO: maybe this needs be deleted
-class Credit(models.Model):
-    """
-    Represents a credit that can be used by a user to use a service.
-    """
+# #TODO: maybe this needs be deleted
+# class Credit(models.Model):
+#     """
+#     Represents a credit that can be used by a user to use a service.
+#     """
 
-    # if null, this is valid until resources are exhausted
-    valid_until = models.DateTimeField(null=True, blank=True, default=None)
-    is_free_trial = models.BooleanField(default=False)
+#     # if null, this is valid until resources are exhausted
+#     valid_until = models.DateTimeField(null=True, blank=True, default=None)
+#     is_free_trial = models.BooleanField(default=False)
 
-    services = models.ManyToManyField(Consumable)
-    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE)
+#     services = models.ManyToManyField(Consumable)
+#     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE)
 
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
+#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
+#     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    def save(self, *args, **kwargs):
-        created = not self.id
+#     def save(self, *args, **kwargs):
+#         created = not self.id
 
-        self.full_clean()
-        super().save(*args, **kwargs)
+#         self.full_clean()
+#         super().save(*args, **kwargs)
 
-        if created:
-            signals.grant_service_permissions.send(instance=self, sender=self.__class__)
-
+#         if created:
+#             signals.grant_service_permissions.send(instance=self, sender=self.__class__)
 
 GOOD = 'GOOD'
 BAD = 'BAD'
