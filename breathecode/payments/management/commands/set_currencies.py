@@ -48,21 +48,7 @@ currencies = [
         'code': 'USD',
         'name': 'United States dollar',
         'countries': {
-            'main': [usa, online],
-        },
-    },
-    {
-        'code': 'VES',
-        'name': 'Bolívar',
-        'countries': {
-            'main': [venezuela],
-        },
-    },
-    {
-        'code': 'UYU',
-        'name': 'Peso uruguayo',
-        'countries': {
-            'main': [uruguay],
+            'main': [usa, online, venezuela, uruguay, chile, canada, costa_rica],
         },
     },
     {
@@ -73,24 +59,10 @@ currencies = [
         },
     },
     {
-        'code': 'CRC',
-        'name': 'Colón costarricense',
-        'countries': {
-            'main': [costa_rica],
-        },
-    },
-    {
         'code': 'CLP',
         'name': 'peso chileno',
         'countries': {
             'main': [chile],
-        },
-    },
-    {
-        'code': 'CAD',
-        'name': 'Canadian dollar',
-        'countries': {
-            'main': [canada],
         },
     },
 ]
