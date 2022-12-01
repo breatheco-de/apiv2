@@ -4,6 +4,8 @@ from typing import Optional
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from django.db.models.query_utils import Q
+from django.db.models import Sum, QuerySet
+from django.core.handlers.wsgi import WSGIRequest
 
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_settings
@@ -11,7 +13,7 @@ from breathecode.authenticate.models import UserSetting
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 
-from .models import Bag, Currency, Fixture, Plan, Service, ServiceItem, Subscription
+from .models import SERVICE_UNITS, Bag, Consumable, Currency, Fixture, Plan, Service, ServiceItem, Subscription
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -300,3 +302,42 @@ def get_bag_from_subscription(subscription: Subscription, settings: Optional[Use
     bag.save()
 
     return bag
+
+
+def filter_consumables(request: WSGIRequest, items: QuerySet[Consumable], queryset: QuerySet, key: str):
+    if ids := request.GET.get(key):
+        try:
+            ids = [int(x) for x in ids.split(',')]
+        except:
+            raise ValidationException(f'{key} param must be integer')
+
+        queryset |= items.filter(**{f'{key}__id__in': ids})
+
+    if slugs := request.GET.get(f'{key}_slug'):
+        slugs = slugs.split(',')
+        queryset |= items.filter(**{f'{key}__slug__in': slugs})
+
+    queryset = queryset.distinct()
+    return queryset
+
+
+def get_balance_by_resource(queryset: QuerySet, key: str):
+    result = []
+
+    ids = {getattr(x, key).id for x in queryset}
+    for id in ids:
+        current = queryset.filter(**{f'{key}__id': id})
+        instance = current.first()
+        balance = {}
+        units = {x[0] for x in SERVICE_UNITS}
+        for unit in units:
+            per_unit = current.filter(unit_type=unit)
+            balance[unit.lower()] = float('inf') if per_unit.filter(
+                how_many=-1).exists() else per_unit.aggregate(Sum('how_many'))['how_many__sum']
+
+        result.append({
+            'id': getattr(instance, key).id,
+            'slug': getattr(instance, key).slug,
+            'balance': balance,
+        })
+    return result

@@ -13,6 +13,7 @@ SERVICES = [
         'price_per_unit': 4000,
         'currency': 'USD',
         'groups': ['CLASSROOM'],
+        # 'cohorts': '^miami-backend-\w+$',
         'translations': {
             'en': {
                 'title': 'Backend with DJango',

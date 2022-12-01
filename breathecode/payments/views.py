@@ -7,14 +7,16 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_settings
+from breathecode.events.models import EventType
+from breathecode.mentorship.models import MentorshipService
 # from breathecode.authenticate.models import UserSetting
 
 from breathecode.payments import tasks
-from breathecode.payments.actions import add_items_to_bag, get_amount, get_amount_by_chosen_period
-from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, Service,
-                                         ServiceItem, Subscription)
+from breathecode.payments.actions import add_items_to_bag, filter_consumables, get_amount, get_amount_by_chosen_period, get_balance_by_resource
+from breathecode.payments.models import (SERVICE_UNITS, Bag, Consumable, FinancialReputation, Invoice, Plan,
+                                         Service, ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetConsumableSerializer, GetCreditSerializer,
                                               GetInvoiceSerializer, GetInvoiceSmallSerializer,
                                               GetPlanSerializer, GetServiceItemSerializer,
@@ -280,64 +282,30 @@ class ServiceItemView(APIView):
         return handler.response(serializer.data)
 
 
-class ConsumableView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+class MeConsumableView(APIView):
 
-    def get(self, request, service_slug=None):
-        handler = self.extensions(request)
+    def get(self, request):
         utc_now = timezone.now()
 
         items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None),
-                                          user=request.user).exclude(how_many=0)
+                                          user=request.user)
 
-        if service_slug:
-            items = items.filter(services__slug=service_slug)
+        mentorship_services = MentorshipService.objects.none()
+        mentorship_services = filter_consumables(request, items, mentorship_services, 'mentorship_service')
 
-        if unit_type := request.GET.get('unit_type'):
-            items = items.filter(unit_type=unit_type.split(','))
+        cohorts = Cohort.objects.none()
+        cohorts = filter_consumables(request, items, cohorts, 'cohort')
 
-        items = handler.queryset(items)
-        serializer = GetConsumableSerializer(items, many=True)
+        event_types = EventType.objects.none()
+        event_types = filter_consumables(request, items, event_types, 'event_type')
 
-        return handler.response(serializer.data)
+        balance = {
+            'mentorship_services': get_balance_by_resource(mentorship_services, 'mentorship_service'),
+            'cohorts': get_balance_by_resource(cohorts, 'cohort'),
+            'event_types': get_balance_by_resource(event_types, 'event_type'),
+        }
 
-
-# class CreditView(APIView):
-#     extensions = APIViewExtensions(sort='-created_at', paginate=True)
-
-#     def get(self, request, credit_id=None):
-#         handler = self.extensions(request)
-#         settings = get_user_settings(request.user.id)
-#         now = timezone.now()
-
-#         if credit_id:
-#             item = Credit.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
-#                                          id=credit_id,
-#                                          invoice__user=request.user).first()
-
-#             if not item:
-#                 raise ValidationException(translation(settings.lang,
-#                                                       en='Credit not found',
-#                                                       es='No existe el crédito',
-#                                                       slug='not-found'),
-#                                           code=404)
-
-#             serializer = GetCreditSerializer(items, many=True)
-#             return handler.response(serializer.data)
-
-#         items = Credit.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
-#                                       invoice__user=request.user)
-
-#         if invoice_id := request.GET.get('invoice_id'):
-#             items = items.filter(invoice__id=invoice_id)
-
-#         if service_slug := request.GET.get('service_slug'):
-#             items = items.filter(services_slug=service_slug)
-
-#         items = handler.queryset(items)
-#         serializer = GetCreditSerializer(items, many=True)
-
-#         return handler.response(serializer.data)
+        return Response(balance)
 
 
 class SubscriptionView(APIView):

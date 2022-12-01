@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group, User
 from django.db import models
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
+from breathecode.events.models import EventType
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
@@ -222,9 +223,6 @@ class AbstractServiceItem(models.Model):
     unit_type = models.CharField(max_length=10, choices=SERVICE_UNITS, default=UNIT)
     how_many = models.IntegerField(default=-1)
 
-    def __str__(self):
-        return f'{self.service.slug} {self.how_many}'
-
     class Meta:
         abstract = True
 
@@ -318,6 +316,9 @@ SUBSCRIPTION_STATUS = [
     (ERROR, 'Error'),
 ]
 
+# class MentorshipServiceSet:
+#     mentorship_services = models.ForeignKey(User, on_delete=models.CASCADE)
+
 
 class Consumable(AbstractServiceItem):
     """
@@ -331,6 +332,7 @@ class Consumable(AbstractServiceItem):
 
     # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, default=None, blank=True, null=True)
+    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE, default=None, blank=True, null=True)
     mentorship_service = models.ForeignKey(MentorshipService,
                                            on_delete=models.CASCADE,
                                            default=None,
@@ -341,12 +343,12 @@ class Consumable(AbstractServiceItem):
     valid_until = models.DateTimeField(null=True, blank=True, default=None)
 
     def clean(self) -> None:
-        resources = [self.cohort, self.mentorship_service]
+        resources = [self.cohort, self.mentorship_service, self.event_type]
         how_many_resources_are_set = len([r for r in resources if r is not None])
 
         settings = get_user_settings(self.user.id)
 
-        if how_many_resources_are_set:
+        if how_many_resources_are_set > 1:
             raise Exception(
                 translation(settings.lang,
                             en='A consumable can only be associated with one resource',
@@ -364,6 +366,9 @@ class Consumable(AbstractServiceItem):
         self.full_clean()
 
         super().save()
+
+    def __str__(self):
+        return f'{self.service_item.service.slug} {self.how_many}'
 
 
 FULFILLED = 'FULFILLED'

@@ -95,7 +95,6 @@ def renew_subscription(self, subscription_id: int, from_datetime: Optional[datet
         invoice = s.pay(subscription.user, amount, currency=bag.currency)
 
     except Exception as e:
-        print(e)
         notify_actions.send_email_message(
             'message',
             subscription.user.email,
@@ -217,8 +216,6 @@ def build_subscription(self, bag_id: int, invoice_id: int):
 
     bag.was_delivered = True
     bag.save()
-
-    #TODO: remove the bag
 
     build_service_stock_scheduler.delay(subscription.id)
 
