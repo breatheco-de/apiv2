@@ -10,6 +10,7 @@ from django.core.handlers.wsgi import WSGIRequest
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserSetting
+from breathecode.utils.attr_dict import AttrDict
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 
@@ -332,7 +333,7 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
         units = {x[0] for x in SERVICE_UNITS}
         for unit in units:
             per_unit = current.filter(unit_type=unit)
-            balance[unit.lower()] = float('inf') if per_unit.filter(
+            balance[unit.lower()] = -1 if per_unit.filter(
                 how_many=-1).exists() else per_unit.aggregate(Sum('how_many'))['how_many__sum']
 
         result.append({

@@ -316,6 +316,13 @@ SUBSCRIPTION_STATUS = [
     (ERROR, 'Error'),
 ]
 
+
+class Balance:
+    id: int
+    slug: int
+    how_many: int
+
+
 # class MentorshipServiceSet:
 #     mentorship_services = models.ForeignKey(User, on_delete=models.CASCADE)
 

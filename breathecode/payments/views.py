@@ -15,16 +15,16 @@ from breathecode.mentorship.models import MentorshipService
 
 from breathecode.payments import tasks
 from breathecode.payments.actions import add_items_to_bag, filter_consumables, get_amount, get_amount_by_chosen_period, get_balance_by_resource
-from breathecode.payments.models import (SERVICE_UNITS, Bag, Consumable, FinancialReputation, Invoice, Plan,
-                                         Service, ServiceItem, Subscription)
-from breathecode.payments.serializers import (GetBagSerializer, GetConsumableSerializer, GetCreditSerializer,
-                                              GetInvoiceSerializer, GetInvoiceSmallSerializer,
-                                              GetPlanSerializer, GetServiceItemSerializer,
-                                              GetServiceSerializer, GetSubscriptionSerializer,
-                                              ServiceSerializer)
+from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, Service,
+                                         ServiceItem, Subscription)
+from breathecode.payments.serializers import (GetBagSerializer, GetCreditSerializer, GetInvoiceSerializer,
+                                              GetInvoiceSmallSerializer, GetPlanSerializer,
+                                              GetServiceItemSerializer, GetServiceSerializer,
+                                              GetSubscriptionSerializer, ServiceSerializer)
 from breathecode.payments.services.stripe import Stripe
 # from rest_framework.response import Response
 from breathecode.utils import APIViewExtensions
+from breathecode.utils.attr_dict import AttrDict
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
