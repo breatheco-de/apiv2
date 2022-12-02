@@ -617,6 +617,7 @@ class PayView(APIView):
 
         settings = get_user_settings(request.user.id)
         language = language or settings.lang
+        print()
 
         with transaction.atomic():
             sid = transaction.savepoint()

@@ -22,16 +22,21 @@ def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
     # do not remove the assertions
 
     is_short = len(code) == 2
+    print('code', code)
+    print('is_short', is_short)
 
     # first two character only with lowercase
+    print('code[:2]', code[:2])
     assert code[:2].islower()
 
     # last two character only with lowercase
     if not is_short and from_kwargs:
+        print('code[3:]', code[3:])
         assert code[3:].islower()
 
     # last two character only with uppercase
     elif not is_short:
+        print('code[2:]', code[2:])
         assert code[2:].isupper()
 
     separator = '_' if from_kwargs else '-'

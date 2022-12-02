@@ -113,6 +113,44 @@ def forward_booking_url(request, mentor_slug, token):
 
 
 @private_view()
+@has_permission('join_mentorship')
+def forward_booking_url_by_service(request, mentor_slug, token):
+    # now = timezone.now()
+    if isinstance(token, HttpResponseRedirect):
+        return token
+
+    mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
+    if mentor is None:
+        return render_message(request, f'No mentor found with slug {mentor_slug}')
+
+    # add academy to session, will be available on html templates
+    request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
+
+    if mentor.status not in ['ACTIVE', 'UNLISTED']:
+        return render_message(request, f'This mentor is not active')
+
+    try:
+        actions.mentor_is_ready(mentor)
+
+    except Exception as e:
+        logger.exception(e)
+        return render_message(
+            request,
+            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
+
+    booking_url = mentor.booking_url
+    if '?' not in booking_url:
+        booking_url += '?'
+
+    return render(request, 'book_session.html', {
+        'SUBJECT': 'Mentoring Session',
+        'mentor': mentor,
+        'mentee': token.user,
+        'booking_url': booking_url,
+    })
+
+
+@private_view()
 def pick_mentorship_service(request, token, mentor_slug):
     base_url = request.get_full_path().split('?')[0]
     mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
