@@ -300,7 +300,7 @@ class Asset(models.Model):
     readme_raw = models.TextField(null=True, blank=True, default=None)
     html = models.TextField(null=True, blank=True, default=None)
 
-    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
     config = models.JSONField(null=True, blank=True, default=None)
 

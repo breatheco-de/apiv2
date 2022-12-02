@@ -60,3 +60,20 @@ class RegistryTestAsset(RegistryTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
+
+    # def test__post__with__all__mandatory__propertys(self):
+    #     """Test /Asset creation with all mandatory propertys"""
+    #     model = self.generate_models(slug='testing_asset', academy=1, asset_type='PROJECT', category='how_to')
+
+    #     self.bc.request.authenticate(model.user)
+    #     self.bc.request.set_headers(academy=1)
+    #     self.bc.request.set_headers(category=1)
+    #     url = reverse_lazy('registry:academy_asset')
+    #     data = {'slug': 'model_slug', 'asset_type': 'PROJECT'}
+    #     response = self.client.post(url, data, format='json')
+    #     json = response.json()
+    #     expected = {}
+
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+    #     self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
