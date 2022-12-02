@@ -1990,7 +1990,7 @@ class ProfileMePictureView(APIView):
                 'width': 100,
                 'filename': hash,
                 'bucket': get_profile_bucket(),
-            })
+            }, timeout=10)
 
             cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
             cloud_file_thumbnail_url = cloud_file_thumbnail.url()
