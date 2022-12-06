@@ -25,6 +25,7 @@ def update_or_create_event_mock(raise_error=False):
     return MagicMock(side_effect=update_or_create_event)
 
 
+#FIXME: this file have performance issues often
 class EventbriteWebhookTestSuite(EventTestCase):
     """Test /eventbrite/webhook"""
 
