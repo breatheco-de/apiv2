@@ -1,7 +1,7 @@
 import os, re, json, logging
 from itertools import chain
 from django.db.models import Q
-from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook, ProjectInvoice
+from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook, ProjectInvoice, ISSUE_STATUS
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
 from schema import Schema, And, Use, Optional, SchemaError
@@ -23,12 +23,17 @@ def get_hours(content):
 
 
 def get_status(content):
-    p = re.compile('<status>(\d+\.?\d*)</status>')
+    p = re.compile('<status>(\w+)</status>')
     result = p.search(content)
     status = None
     if result is not None:
         status = result.group(1).upper()
     return status
+
+
+def status_is_valid(status):
+    statuses = [x[0] for x in ISSUE_STATUS]
+    return status in statuses
 
 
 def update_status_based_on_github_action(github_action, issue):
@@ -144,12 +149,16 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
             _issue.duration_in_hours = hours
 
         status = get_status(comment['body'])
-        if status is not None:
+        if status is not None and status_is_valid(status):
             logger.debug(
                 f'Updating issue {node_id} ({issue_number}) status to {status} found <status> tag on new comment'
             )
             _issue.status = status
 
+        elif status is not None:
+            error = f'The status {status} is not valid'
+            logger.debug(error)
+            _issue.status_message = error
     _issue.save()
 
     return _issue
