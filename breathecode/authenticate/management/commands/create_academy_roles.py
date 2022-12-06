@@ -224,6 +224,10 @@ CAPABILITIES = [
         'description': 'Create, delete or update all mentorship services from one academy'
     },
     {
+        'slug': 'read_mentorship_agent',
+        'description': 'Get all mentorship agents from one academy'
+    },
+    {
         'slug': 'read_mentorship_mentor',
         'description': 'Get all mentorship mentors from one academy'
     },
@@ -365,11 +369,28 @@ ROLES = [
             'read_shortlink',
             'read_nps_answers',
             'read_won_lead',
+            'read_asset',
             'read_cohort_log',
             'read_lead_gen_app',
             'read_mentorship_service',
             'read_mentorship_mentor',
             'read_freelancer_bill',
+        ],
+    },
+    {
+        'slug':
+        'basic',
+        'name':
+        'Basic (Base)',
+        'caps': [
+            'read_media',
+            'read_my_academy',
+            'read_invite',
+            'crud_activity',
+            'read_tag',
+            'academy_reporting',
+            'read_activity',
+            'read_technology',
         ],
     },
     {
@@ -402,16 +423,6 @@ ROLES = [
             'read_mentorship_mentor',
             'read_lead_gen_app',
             'read_technology',
-        ],
-    },
-    {
-        'slug':
-        'content_writer',
-        'name':
-        'Content Writer (Base)',
-        'caps': [
-            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
-            'read_asset', 'crud_asset', 'read_category', 'crud_category'
         ],
     },
     {
@@ -471,6 +482,19 @@ def extend_roles(roles: list[RoleType]) -> None:
     These are additional roles that extend from the base roles above,
     you can extend from more than one role but also add additional capabilities at the end.
     """
+
+    roles.append({
+        'slug':
+        'content_writer',
+        'name':
+        'Content Writer',
+        'caps':
+        extend(roles, ['basic']) + [
+            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
+            'read_asset', 'crud_asset', 'read_category', 'crud_category'
+        ]
+    })
+
     roles.append({
         'slug':
         'assistant',
@@ -499,8 +523,12 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_mentorship_service',
             'read_mentorship_session',
             'crud_mentorship_session',
+            'read_assignment',
+            'crud_assignment',
             'crud_mentorship_bill',
             'read_mentorship_bill',
+            'classroom_activity',
+            'read_asset',
         ]
     })
     roles.append({
@@ -529,14 +557,19 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps': extend(roles, ['staff']) + ['crud_member', 'crud_media']
     })
     roles.append({
+        'slug': 'graphic_designer',
+        'name': 'Graphic Designer',
+        'caps': extend(roles, ['staff']) + ['read_event', 'crud_media', 'read_asset', 'read_media']
+    })
+    roles.append({
         'slug':
         'community_manager',
         'name':
         'Manage Syllabus, Exercises and all academy content',
         'caps':
-        extend(roles, ['staff']) + [
-            'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_all_cohort', 'crud_media', 'read_asset', 'crud_asset', 'read_keywordcluster', 'read_keyword'
+        extend(roles, ['staff', 'graphic_designer']) + [
+            'crud_lead', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
+            'read_all_cohort', 'crud_asset', 'read_keywordcluster', 'read_keyword'
         ]
     })
     roles.append({

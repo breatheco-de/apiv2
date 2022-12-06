@@ -6,14 +6,25 @@ from django.db import models
 from datetime import timedelta
 import breathecode.mentorship.signals as signals
 from slugify import slugify
-
+from breathecode.notify.models import SlackChannel
 # settings customizable for each academy
 # class AcademySettings(models.Model):
 #     is_video_streaming_active = models.BooleanField(default=False)
 #     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
 #     @staticmethod
 #     def get(pk):
-#       return AcademySettings.objects.filter(academy__id=pk).first()
+#       settings = AcademySettings.objects.filter(academy__id=pk).first()
+#       # lets create the settings if they dont exist for this academy
+#       if settings is None:
+#           settings = AcademySettings.objects.create(academy=pk)
+#       return settings
+#     def warnings(self):
+#       # return a dictionary with a list of the fields and warning messages related to them
+#       # for example: { "is_video_streaming_active": "Please settup a video streaming" }
+#       return {}
+#     def errors(self):
+#       # return a dictionary with a list of the fields and errors messages related to them
+#       return {}
 
 DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
@@ -62,6 +73,16 @@ class MentorshipService(models.Model):
         return f'{self.name} ({self.id})'
 
 
+class SupportChannel(models.Model):
+    slug = models.SlugField(max_length=150)
+    slack_channel = models.ForeignKey(SlackChannel, on_delete=models.CASCADE, blank=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    syllabis = models.ManyToManyField(Syllabus, related_name='support_channels')
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
 INVITED = 'INVITED'
 MENTOR_STATUS = (
     (INVITED, 'Invited'),
@@ -69,6 +90,32 @@ MENTOR_STATUS = (
     (UNLISTED, 'Unlisted'),
     (INNACTIVE, 'Innactive'),
 )
+
+
+class SupportAgent(models.Model):
+
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             help_text='If the user does not exist, you can use the email field instead')
+    token = models.CharField(max_length=255,
+                             unique=True,
+                             help_text='Used for inviting the user to become a support agent')
+    status = models.CharField(max_length=15,
+                              choices=MENTOR_STATUS,
+                              default=INVITED,
+                              help_text=f'Options are: {", ".join([key for key,label in MENTOR_STATUS])}')
+
+    email = models.CharField(blank=True,
+                             max_length=150,
+                             null=True,
+                             default=None,
+                             help_text='Only use this if the user does not exist on 4geeks already')
+    one_line_bio = models.TextField(max_length=60, default=None, blank=True, null=True)
+
+    channel = models.ForeignKey(SupportChannel, related_name='agents', on_delete=models.SET_NULL, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
 class MentorProfile(models.Model):
@@ -120,7 +167,7 @@ class MentorProfile(models.Model):
     status = models.CharField(max_length=15,
                               choices=MENTOR_STATUS,
                               default=INVITED,
-                              help_text=f'Options are: {"".join([key for key,label in MENTOR_STATUS])}')
+                              help_text=f'Options are: {", ".join([key for key,label in MENTOR_STATUS])}')
 
     email = models.CharField(blank=True,
                              max_length=150,

@@ -171,6 +171,11 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'utm_placement': model.form_entry.utm_placement,
+            'utm_term': model.form_entry.utm_term,
+            'utm_plan': model.form_entry.utm_plan,
+            'sex': model.form_entry.sex,
+            'custom_fields': model.form_entry.custom_fields,
         }]
 
         self.assertEqual(json, expected)
@@ -246,6 +251,11 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'utm_placement': model.form_entry.utm_placement,
+            'utm_term': model.form_entry.utm_term,
+            'utm_plan': model.form_entry.utm_plan,
+            'sex': model.form_entry.sex,
+            'custom_fields': model.form_entry.custom_fields,
         }]
 
         self.assertEqual(json, expected)
@@ -305,6 +315,11 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'utm_placement': model.form_entry.utm_placement,
+            'utm_term': model.form_entry.utm_term,
+            'utm_plan': model.form_entry.utm_plan,
+            'sex': model.form_entry.sex,
+            'custom_fields': model.form_entry.custom_fields,
         } for model in models]
 
         self.assertEqual(json, expected)
@@ -381,6 +396,11 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'utm_placement': model.form_entry.utm_placement,
+            'utm_term': model.form_entry.utm_term,
+            'utm_plan': model.form_entry.utm_plan,
+            'sex': model.form_entry.sex,
+            'custom_fields': model.form_entry.custom_fields,
         }]
 
         self.assertEqual(json, expected)
@@ -455,6 +475,11 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'utm_placement': model.form_entry.utm_placement,
+            'utm_term': model.form_entry.utm_term,
+            'utm_plan': model.form_entry.utm_plan,
+            'sex': model.form_entry.sex,
+            'custom_fields': model.form_entry.custom_fields,
         }]
 
         self.assertEqual(json, expected)

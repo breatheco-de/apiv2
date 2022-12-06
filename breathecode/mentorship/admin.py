@@ -1,7 +1,7 @@
 import pytz, logging, requests, re
 from django.contrib import admin, messages
 from django import forms
-from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
+from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill, SupportAgent, SupportChannel
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
@@ -108,6 +108,35 @@ def generate_slug_based_on_calendly(modeladmin, request, queryset):
         entry.save()
 
 
+@admin.register(SupportChannel)
+class SupportChannelAdmin(admin.ModelAdmin):
+    list_display = ['id', 'slug', 'slack_channel', 'academy']
+    raw_id_fields = ['slack_channel', 'academy', 'syllabis']
+    search_fields = ['slug', 'slack_channel__slack_id', 'slack_channel__name']
+    list_filter = ['syllabis']
+
+
+@admin.register(SupportAgent)
+class AgentAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'channel', 'email', 'current_status']
+    raw_id_fields = ['user', 'channel']
+    search_fields = ['email', 'user__first_name', 'user__last_name', 'user__email']
+    list_filter = ['channel__academy__slug', 'status', 'channel__syllabis__slug', 'channel__slug']
+    readonly_fields = ('token', )
+    actions = change_field(['INNACTIVE', 'INVITED'], name='status')
+
+    def current_status(self, obj):
+        colors = {
+            'ACTIVE': 'bg-success',
+            'INVITED': 'bg-warning',
+            'UNLISTED': 'bg-warning',
+            'INNACTIVE': 'bg-error',
+            None: 'bg-warning',
+        }
+
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
+
 @admin.register(MentorProfile)
 class MentorAdmin(admin.ModelAdmin):
     form = MentorForm
@@ -116,6 +145,7 @@ class MentorAdmin(admin.ModelAdmin):
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email', 'slug']
     list_filter = ['services__academy__slug', 'status', 'services__slug']
     readonly_fields = ('token', )
+    filter_horizontal = ('syllabus', 'services')
     actions = [generate_bill, mark_as_active, generate_slug_based_on_calendly] + change_field(
         ['INNACTIVE', 'INVITED'], name='status')
 

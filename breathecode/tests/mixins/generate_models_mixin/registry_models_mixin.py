@@ -62,6 +62,9 @@ class RegistryModelsMixin(ModelsMixin):
             if 'asset_keyword' in models:
                 kargs['seo_keywords'] = get_list(models['asset_keyword'])
 
+            if 'asset_category' in models:
+                kargs['category'] = just_one(models['asset_category'])
+
             models['asset'] = create_models(asset, 'registry.Asset', **kargs)
 
         if 'asset_technology' in models and 'asset' in models:

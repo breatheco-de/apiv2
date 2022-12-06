@@ -4,7 +4,7 @@ from .views import (AssetThumbnailView, AssetView, get_keywords, get_categories,
                     get_technologies, get_config, get_translations, render_preview_html, handle_test_asset,
                     forward_asset_url, get_alias_redirects, AcademyAssetView, AcademyAssetActionView,
                     AcademyAssetCommentView, AcademyTechnologyView, AcademyKeywordView,
-                    AcademyKeywordClusterView, AcademyCategoryView)
+                    AcademyKeywordClusterView, AcademyCategoryView, AcademyAssetSEOReportView)
 
 app_name = 'registry'
 urlpatterns = [
@@ -20,6 +20,7 @@ urlpatterns = [
     path('academy/asset/comment', AcademyAssetCommentView.as_view()),
     path('academy/asset/comment/<str:comment_id>', AcademyAssetCommentView.as_view()),
     path('academy/asset/<str:asset_slug>/action/<str:action_slug>', AcademyAssetActionView.as_view()),
+    path('academy/asset/<str:asset_slug>/seo_report', AcademyAssetSEOReportView.as_view()),
     path('academy/asset/<str:asset_slug>', AcademyAssetView.as_view()),
     path('keyword', get_keywords),
     path('academy/category', AcademyCategoryView.as_view()),
