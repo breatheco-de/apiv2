@@ -326,7 +326,123 @@ class EventbriteWebhookTestSuite(EventTestCase):
                  timeout=2),
         ])
 
-        self.check_old_breathecode_calls(model, ['create_contact', 'contact_automations'])
+        self.assertEqual(requests.request.call_args_list, [
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/admin/api.php',
+                 params=[('api_action', 'contact_sync'), ('api_key', model.active_campaign_academy.ac_key),
+                         ('api_output', 'json')],
+                 data={
+                     'email': model.user.email,
+                     'first_name': model.user.first_name,
+                     'last_name': model.user.last_name,
+                     'field[18,0]': model.academy.slug,
+                     'field[59,0]': 'eventbrite',
+                     'field[33,0]': 'eventbrite order placed'
+                 },
+                 timeout=2),
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
+                 headers={
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json',
+                     'Api-Token': model.active_campaign_academy.ac_key,
+                 },
+                 json={'contactAutomation': {
+                     'contact': 1,
+                     'automation': model.automation.acp_id,
+                 }},
+                 timeout=2),
+        ])
+
+        self.assertEqual(add_event_tags_to_student.delay.call_args_list, [
+            call(model.event.id, email=model.user.email),
+        ])
+
+    @patch('requests.get', apply_eventbrite_requests_post_mock())
+    @patch('requests.request', apply_old_breathecode_requests_request_mock())
+    @patch('breathecode.marketing.tasks.add_event_tags_to_student', MagicMock())
+    @patch('time.sleep', MagicMock())
+    def test_eventbrite_webhook_without_lang__active_campaign_belong_to_other_academy_than_event(self):
+        from breathecode.marketing.tasks import add_event_tags_to_student
+
+        model = self.generate_models(
+            organization=True,
+            event={
+                'eventbrite_id': 1,
+                'academy_id': 2,
+            },
+            academy=2,
+            active_campaign_academy={'ac_url': 'https://old.hardcoded.breathecode.url'},
+            automation=True,
+            user={
+                'email': 'john.smith@example.com',
+                'first_name': 'John',
+                'last_name': 'Smith'
+            })
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+        response = self.client.post(url,
+                                    self.data('order.placed', EVENTBRITE_ORDER_URL),
+                                    headers=self.headers('order.placed'),
+                                    format='json')
+        content = response.content
+
+        self.assertEqual(content, b'ok')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+            'action': 'order.placed',
+            'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
+            'endpoint_url': 'https://something.io/eventbrite/webhook',
+            'id': 1,
+            'organization_id': '1',
+            'status': 'DONE',
+            'status_text': 'OK',
+            'user_id': '123456789012',
+            'webhook_id': '1234567'
+        }])
+
+        self.assertEqual(self.all_event_checkin_dict(), [{
+            'attendee_id': 1,
+            'email': 'john.smith@example.com',
+            'event_id': 1,
+            'id': 1,
+            'status': 'PENDING',
+            'attended_at': None
+        }])
+
+        self.assertEqual(requests.get.call_args_list, [
+            call('https://www.eventbriteapi.com/v3/events/1/orders/1/',
+                 headers={'Authorization': 'Bearer '},
+                 timeout=2),
+        ])
+
+        self.assertEqual(requests.request.call_args_list, [
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/admin/api.php',
+                 params=[('api_action', 'contact_sync'), ('api_key', model.active_campaign_academy.ac_key),
+                         ('api_output', 'json')],
+                 data={
+                     'email': model.user.email,
+                     'first_name': model.user.first_name,
+                     'last_name': model.user.last_name,
+                     'field[18,0]': model.academy[1].slug,
+                     'field[59,0]': 'eventbrite',
+                     'field[33,0]': 'eventbrite order placed'
+                 },
+                 timeout=2),
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
+                 headers={
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json',
+                     'Api-Token': model.active_campaign_academy.ac_key,
+                 },
+                 json={'contactAutomation': {
+                     'contact': 1,
+                     'automation': model.automation.acp_id,
+                 }},
+                 timeout=2),
+        ])
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [
             call(model.event.id, email=model.user.email),
         ])
