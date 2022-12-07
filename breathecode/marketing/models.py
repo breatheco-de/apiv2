@@ -58,7 +58,7 @@ class ActiveCampaignAcademy(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.academy.name}'
+        return f'{self.academy.name}' if self.academy else 'Unnamed'
 
 
 class AcademyAlias(models.Model):
