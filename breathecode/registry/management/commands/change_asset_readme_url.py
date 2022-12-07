@@ -10,15 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Assign miami as default academy for lessons'
+    help = 'This command changes every readme_url instance that look like this >>https://raw.githubusercontent.com/breatheco-de/exercise-postcard/main/README.md and turned into one that looks like this >>https://github.com/breatheco-de/exercise-postcard/blob/main/README.md'
 
     def handle(self, *args, **options):
 
-        readme = Asset.objects.filter()
-        readme_url = readme.filter(readme_url)
-        print(readme_url)
-
-        # miami = Academy.objects.filter(slug='downtown-miami').first()
-        # Asset.objects.filter(academy__isnull=True).update(academy=miami)
-        # Asset.objects.filter(status='OK').update(status='PUBLISHED')
-        # Asset.objects.filter(status='UNNASIGNED').update(status='UNASSIGNED')
+        readme = Asset.objects.filter(
+            readme_url='https://raw.githubusercontent.com/breatheco-de/exercise-postcard/main/README.md'
+        ).update(readme_url='https://github.com/breatheco-de/exercise-postcard/blob/main/README.md')
