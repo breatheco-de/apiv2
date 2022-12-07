@@ -224,6 +224,10 @@ CAPABILITIES = [
         'description': 'Create, delete or update all mentorship services from one academy'
     },
     {
+        'slug': 'read_mentorship_agent',
+        'description': 'Get all mentorship agents from one academy'
+    },
+    {
         'slug': 'read_mentorship_mentor',
         'description': 'Get all mentorship mentors from one academy'
     },
@@ -553,14 +557,9 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps': extend(roles, ['staff']) + ['crud_member', 'crud_media']
     })
     roles.append({
-        'slug':
-        'graphic_designer',
-        'name':
-        'Graphic Designer',
-        'caps':
-        extend(roles, ['staff']) + [
-            'read_event', 'crud_media', 'read_asset', 'read_media'
-        ]
+        'slug': 'graphic_designer',
+        'name': 'Graphic Designer',
+        'caps': extend(roles, ['staff']) + ['read_event', 'crud_media', 'read_asset', 'read_media']
     })
     roles.append({
         'slug':

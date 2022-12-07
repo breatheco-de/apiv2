@@ -1,3 +1,4 @@
+import re
 import os
 from typing import Optional
 from celery import shared_task, Task
@@ -9,7 +10,9 @@ from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.monitoring.actions import test_link
 from breathecode.utils import getLogger
 from breathecode.utils.validation_exception import ValidationException
-from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
+from .models import AcademyAlias, FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
+from breathecode.monitoring.models import CSVUpload
+from .serializers import (PostFormEntrySerializer)
 from .actions import register_new_lead, save_get_geolocal, acp_ids
 
 logger = getLogger(__name__)
@@ -363,3 +366,109 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
 
     except:
         logger.exception(f'There was an error creating tag for downloadable {downloadable.slug}')
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def create_form_entry(self, csv_upload_id, **item):
+
+    logger.info('Create form entry started')
+
+    csv_upload = CSVUpload.objects.filter(id=csv_upload_id).first()
+
+    if not csv_upload:
+        logger.error('No CSVUpload found with this id')
+        return ''
+
+    form_entry = FormEntry()
+
+    error_message = ''
+
+    if 'first_name' in item:
+        form_entry.first_name = item['first_name']
+    if 'last_name' in item:
+        form_entry.last_name = item['last_name']
+    if 'email' in item:
+        form_entry.email = item['email']
+    if 'location' in item:
+        if AcademyAlias.objects.filter(active_campaign_slug=item['location']).exists():
+            form_entry.location = item['location']
+        elif Academy.objects.filter(active_campaign_slug=item['location']).exists():
+            form_entry.location = item['location']
+        else:
+            message = f'No academy exists with this academy active_campaign_slug: {item["academy"]}'
+            error_message += f'{message}, '
+            logger.error(message)
+    if 'academy' in item:
+        if alias := AcademyAlias.objects.filter(slug=item['academy']).first():
+            form_entry.academy = alias.academy
+        elif academy := Academy.objects.filter(slug=item['academy']).first():
+            form_entry.academy = academy
+        else:
+            message = f'No academy exists with this academy slug: {item["academy"]}'
+            error_message += f'{message}, '
+            logger.error(message)
+
+    if not form_entry.first_name:
+        message = 'No first name in form entry'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    if form_entry.first_name and not re.findall(r'^[A-Za-zÀ-ÖØ-öø-ÿ ]+$', form_entry.first_name):
+        message = 'first name has incorrect characters'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    if not form_entry.last_name:
+        message = 'No last name in form entry'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    if form_entry.last_name and not re.findall(r'^[A-Za-zÀ-ÖØ-öø-ÿ ]+$', form_entry.last_name):
+        message = 'last name has incorrect characters'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    if not form_entry.email:
+        message = 'No email in form entry'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    EMAIL_PATTERN = r'(?:[a-z0-9!#$%&\'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&\'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])'
+
+    if form_entry.email and not re.findall(EMAIL_PATTERN, form_entry.email, re.IGNORECASE):
+        message = 'email has incorrect format'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    if not form_entry.location or not form_entry.academy:
+        message = 'No location or academy in form entry'
+        error_message += f'{message}, '
+        logger.error(message)
+
+    if error_message.endswith(', '):
+        error_message = error_message[0:-2]
+        error_message = f'{error_message}. '
+
+    if error_message:
+        csv_upload.log = csv_upload.log or ''
+        csv_upload.log += error_message
+        logger.error('Missing field in received item')
+        logger.error(item)
+        csv_upload.status = 'ERROR'
+
+    elif csv_upload.status != 'ERROR':
+        csv_upload.status = 'DONE'
+
+    csv_upload.id = csv_upload_id
+
+    csv_upload.save()
+
+    if not error_message:
+        form_entry.save()
+        serializer = PostFormEntrySerializer(form_entry, data={})
+        if serializer.is_valid():
+            persist_single_lead.delay(serializer.data)
+        logger.info('create_form_entry successfully created')
+
+    # state = vars(form_entry).copy()
+    # del state['_state']

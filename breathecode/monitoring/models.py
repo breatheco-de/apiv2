@@ -148,3 +148,23 @@ class CSVDownload(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     finished_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+PENDING = 'PENDING'
+UPLOAD_STATUS = (
+    (PENDING, 'Pending'),
+    (ERROR, 'Error'),
+    (DONE, 'Done'),
+)
+
+
+class CSVUpload(models.Model):
+    name = models.CharField(max_length=255)
+    url = models.URLField()
+    status = models.CharField(max_length=20, choices=UPLOAD_STATUS, default=PENDING)
+    status_message = models.TextField(null=True, blank=True, default=None)
+    log = models.CharField(max_length=50)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, blank=True, default=None)
+    hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    finished_at = models.DateTimeField(auto_now=True, editable=False)

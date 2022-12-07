@@ -230,6 +230,20 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
         return result
 
 
+class PutFormEntrySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FormEntry
+        exclude = ()
+
+    def validate(self, data):
+
+        if 'location' in data and 'academy' in data:
+            result = FormEntry.objects.filter(id=data['id'])
+
+        return result
+
+
 class ShortLinkSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False, default=None)
 
@@ -283,11 +297,25 @@ class ShortLinkSerializer(serializers.ModelSerializer):
         return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
 
 
+class TagListSerializer(serializers.ListSerializer):
+
+    def update(self, instances, validated_data):
+
+        instance_hash = {index: instance for index, instance in enumerate(instances)}
+
+        result = [
+            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
+        ]
+
+        return result
+
+
 class PUTTagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
         exclude = ('slug', 'acp_id', 'subscribers', 'ac_academy', 'created_at', 'updated_at')
+        list_serializer_class = TagListSerializer
 
 
 class ActiveCampaignAcademySerializer(serializers.ModelSerializer):

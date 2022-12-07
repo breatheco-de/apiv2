@@ -16,8 +16,8 @@ class CohortDayLog(object):
     current_module = None
     teacher_comments = None
     created_at = None
-    attendance_ids: []
-    unattendance_ids: []
+    attendance_ids = []
+    unattendance_ids = []
 
     def __init__(self,
                  current_module: str = None,
@@ -82,7 +82,7 @@ class CohortLog(object):
         self.cohort = None
 
         if cohort is None:
-            raise Exception("Cohort log cannot be retrived because it's null")
+            raise Exception("Cohort log cannot be retrieved because it's null")
 
         self.cohort = cohort
         if self.cohort.current_day == 0:

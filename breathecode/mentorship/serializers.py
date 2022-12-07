@@ -67,6 +67,41 @@ class GetUserSmallSerializer(serpy.Serializer):
     profile = ProfileSerializer(required=False)
 
 
+class SlackChannelTinySerializer(serpy.Serializer):
+    slack_id = serpy.Field()
+    name = serpy.Field()
+
+
+class SupportChannelTinySerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class GETAgentSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    email = serpy.Field()
+    status = serpy.Field()
+    channel = SupportChannelTinySerializer()
+    user = GetUserSmallSerializer()
+
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class GETSupportChannelSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    slack_channel = SlackChannelTinySerializer(required=False)
+    academy = GetAcademySmallSerializer()
+    syllabis = serpy.MethodField()
+
+    def get_syllabis(self, obj):
+        return GetSyllabusSmallSerializer(obj.syllabis.all(), many=True).data
+
+
 class GETServiceTinySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
