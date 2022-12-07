@@ -12,10 +12,10 @@ from ...models import AssetCategory
 from breathecode.registry import tasks
 
 
-def database_list_of_serializer(academy, category, data={}):
+def database_item(academy, category, data={}):
     return {
         'academy_id': academy.id,
-        'assessment_id': academy.id,
+        'assessment_id': None,
         'asset_type': 'PROJECT',
         'author_id': None,
         'authors_username': None,
@@ -33,6 +33,7 @@ def database_list_of_serializer(academy, category, data={}):
         'gitpod': False,
         'graded': False,
         'html': None,
+        'id': 1,
         'interactive': False,
         'intro_video_url': None,
         'is_seo_tracked': True,
@@ -194,28 +195,6 @@ class RegistryTestAsset(RegistryTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        #self.assertEqual(task.async_pull_from_github.call_args_list, [])
-        #self.assertEqual(self.bc.database.list_of('registry.Asset'),
-        #                 database_list_of_serializer(model.academy, model.asset_category))
-
-    # def test__list__of__registry__asset__category(self):
-    #     model = self.bc.database.create(
-    #         role=1,
-    #         capability='crud_asset',
-    #         profile_academy=1,
-    #         academy=1,
-    #         user=1,
-    #         asset_category=1,
-    #     )
-
-    #     self.bc.request.authenticate(model.user)
-    #     self.bc.request.set_headers(academy=1)
-
-    #     url = reverse_lazy('registry:academy_asset')
-    #     data = {'slug': 'model_slug', 'asset_type': 'PROJECT', 'category': 1, 'title': 'model_slug'}
-    #     response = self.client.post(url, data, format='json')
-    #     json = response.json()
-    #     del data['category']
-    #     expected = database_list_of_serializer(model.academy, model.asset_category, data=data)
-
-    #     self.assertEqual(self.bc.database.list_of('registry.Asset'), expected)
+        self.assertEqual(tasks.async_pull_from_github.delay.call_args_list, [call('model_slug')])
+        self.assertEqual(self.bc.database.list_of('registry.Asset'),
+                         [database_item(model.academy, model.asset_category, data)])
