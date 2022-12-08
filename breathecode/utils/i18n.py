@@ -22,27 +22,22 @@ def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
     # do not remove the assertions
 
     is_short = len(code) == 2
-    print('code', code)
-    print('is_short', is_short)
 
     # first two character only with lowercase
-    print('code[:2]', code[:2])
-    assert code[:2].islower()
+    assert code[:2].islower(), 'lang code is not lowercase'
 
     # last two character only with lowercase
     if not is_short and from_kwargs:
-        print('code[3:]', code[3:])
-        assert code[3:].islower()
+        assert code[3:].islower(), 'country code is not lowercase'
 
     # last two character only with uppercase
     elif not is_short:
-        print('code[2:]', code[2:])
-        assert code[2:].isupper()
+        assert code[2:].isupper(), 'country code is not uppercase'
 
     separator = '_' if from_kwargs else '-'
 
     #the format is en or en-US
-    assert len(code) == 2 or (len(code) == 5 and code[2] == separator)
+    assert len(code) == 2 or (len(code) == 5 and code[2] == separator), 'code malformed'
 
     if not from_kwargs:
         return code.replace(separator, '_')
@@ -51,16 +46,25 @@ def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
 
 
 # parse a date to a str with the local format
-def format_date(code: str, date: date, format='medium'):
+def format_date(code: Optional[str], date: date, format='medium'):
     """Translate the date to the local language"""
+
+    if not code:
+        code = 'en'
 
     code = format_and_assert_code(code)
     return babel_format_date(date, locale=code, format=format)
 
 
 # parse a date to a str with the local format
-def format_datetime(code: str, date: datetime, tz: pytz.BaseTzInfo | str = pytz.UTC, format='medium'):
+def format_datetime(code: Optional[str],
+                    date: datetime,
+                    tz: pytz.BaseTzInfo | str = pytz.UTC,
+                    format='medium'):
     """Translate the datetime to the local language"""
+
+    if not code:
+        code = 'en'
 
     code = format_and_assert_code(code)
 
@@ -70,23 +74,32 @@ def format_datetime(code: str, date: datetime, tz: pytz.BaseTzInfo | str = pytz.
     return babel_format_datetime(date, locale=code, tzinfo=tz, format=format)
 
 
-def format_time(code: str, date: time, format='full', **kwargs: str):
+def format_time(code: Optional[str], date: time, format='full', **kwargs: str):
     """Translate the time to the local language"""
+
+    if not code:
+        code = 'en'
 
     code = format_and_assert_code(code)
     return babel_format_time(date, locale=code, format=format)
 
 
-def format_timedelta(code: str, date: time):
+def format_timedelta(code: Optional[str], date: time):
     """Translate the timedelta to the local language"""
+
+    if not code:
+        code = 'en'
 
     code = format_and_assert_code(code)
     return babel_format_timedelta(date, locale=code)
 
 
 @cache
-def translation(code: str, slug: Optional[str] = None, **kwargs: str) -> str:
+def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) -> str:
     """Get the translation"""
+
+    if not code:
+        code = 'en'
 
     code = format_and_assert_code(code)
 
@@ -95,15 +108,15 @@ def translation(code: str, slug: Optional[str] = None, **kwargs: str) -> str:
         format_and_assert_code(key, from_kwargs=True)
 
     # the english if mandatory
-    assert 'en' in kwargs or 'en_us' in kwargs
+    assert 'en' in kwargs or 'en_us' in kwargs, 'The english translation is mandatory'
 
     if slug and IS_TEST_ENV:
         return slug
 
     is_short = len(code) == 2
 
-    if code in kwargs:
-        return kwargs[code]
+    if code.lower() in kwargs:
+        return kwargs[code.lower()]
 
     elif not is_short and (short_code := get_short_code(code)) in kwargs:
         return kwargs[short_code]
