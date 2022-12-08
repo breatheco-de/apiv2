@@ -285,7 +285,9 @@ def get_bag_from_subscription(subscription: Subscription, settings: Optional[Use
 
     bag.status = 'RENEWAL'
     bag.type = 'BAG'
-    bag.academy = last_invoice.academy
+    bag.academy = subscription.academy
+    bag.currency = last_invoice.currency
+    bag.user = subscription.user
     bag.is_recurrent = True
     bag.chosen_period = chosen_period
     bag.save()

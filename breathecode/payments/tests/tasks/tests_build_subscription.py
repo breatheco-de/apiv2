@@ -19,11 +19,13 @@ UTC_NOW = timezone.now()
 def subscription_item(data={}):
     return {
         'id': 1,
+        'academy_id': 1,
         'is_refundable': True,
         'paid_at': UTC_NOW,
         'pay_every': 1,
         'pay_every_unit': 'MONTH',
         'status': 'ACTIVE',
+        'status_message': None,
         'user_id': 1,
         'valid_until': UTC_NOW,
         **data,

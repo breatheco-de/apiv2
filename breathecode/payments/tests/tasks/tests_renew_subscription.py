@@ -101,7 +101,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_subscription_without_invoices(self):
-        model = self.bc.database.create_v2(subscription=1, invoice=1)
+        model = self.bc.database.create_v2(subscription=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []

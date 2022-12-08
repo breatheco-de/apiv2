@@ -99,6 +99,7 @@ class EventType(models.Model):
 
     shared_with_academies = models.ManyToManyField(Academy,
                                                    blank=True,
+                                                   related_name='shared_event_types',
                                                    through='EventTypeAcademy',
                                                    through_fields=('event_type', 'academy'))
 

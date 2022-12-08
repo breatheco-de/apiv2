@@ -617,7 +617,6 @@ class PayView(APIView):
 
         settings = get_user_settings(request.user.id)
         language = language or settings.lang
-        print()
 
         with transaction.atomic():
             sid = transaction.savepoint()
@@ -694,12 +693,14 @@ class PayView(APIView):
                 if amount > 0:
                     s = Stripe()
                     s.set_language(language)
-                    invoice = s.pay(request.user, amount, currency=bag.currency.code)
+                    invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
 
                 else:
                     invoice = Invoice(amount=0,
                                       paid_at=utc_now,
                                       user=request.user,
+                                      bag=bag,
+                                      academy=bag.academy,
                                       status='FULFILLED',
                                       currency=bag.academy.main_currency)
 

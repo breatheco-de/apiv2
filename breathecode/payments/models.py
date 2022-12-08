@@ -378,6 +378,61 @@ class Consumable(AbstractServiceItem):
         return f'{self.service_item.service.slug} {self.how_many}'
 
 
+RENEWAL = 'RENEWAL'
+CHECKING = 'CHECKING'
+PAID = 'PAID'
+BAG_STATUS = [
+    (RENEWAL, 'Renewal'),
+    (CHECKING, 'Checking'),
+    (PAID, 'Paid'),
+]
+
+BAG = 'BAG'
+PREVIEW = 'PREVIEW'
+BAG_TYPE = [
+    (BAG, 'Bag'),
+    (PREVIEW, 'Preview'),
+]
+
+QUARTER = 'QUARTER'
+HALF = 'HALF'
+YEAR = 'YEAR'
+CHOSEN_PERIOD = [
+    (MONTH, 'Month'),
+    (QUARTER, 'Quarter'),
+    (HALF, 'Half'),
+    (YEAR, 'Year'),
+]
+
+
+class Bag(AbstractAmountByTime):
+    """
+    Represents a credit that can be used by a user to use a service.
+    """
+
+    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
+    type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG)
+    chosen_period = models.CharField(max_length=7, choices=CHOSEN_PERIOD, default=MONTH)
+
+    academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    service_items = models.ManyToManyField(ServiceItem)
+    plans = models.ManyToManyField(Plan)
+
+    is_recurrent = models.BooleanField(default=False)
+    was_delivered = models.BooleanField(default=False)
+
+    token = models.CharField(max_length=40, db_index=True, default=None, null=True, blank=True)
+    expires_at = models.DateTimeField(default=None, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
 FULFILLED = 'FULFILLED'
 REJECTED = 'REJECTED'
 PENDING = 'PENDING'
@@ -470,31 +525,6 @@ class ServiceStockScheduler(models.Model):
     is_belongs_to_plan = models.BooleanField(default=False)
 
 
-# #TODO: maybe this needs be deleted
-# class Credit(models.Model):
-#     """
-#     Represents a credit that can be used by a user to use a service.
-#     """
-
-#     # if null, this is valid until resources are exhausted
-#     valid_until = models.DateTimeField(null=True, blank=True, default=None)
-#     is_free_trial = models.BooleanField(default=False)
-
-#     services = models.ManyToManyField(Consumable)
-#     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE)
-
-#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-#     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-#     def save(self, *args, **kwargs):
-#         created = not self.id
-
-#         self.full_clean()
-#         super().save(*args, **kwargs)
-
-#         if created:
-#             signals.grant_service_permissions.send(instance=self, sender=self.__class__)
-
 GOOD = 'GOOD'
 BAD = 'BAD'
 FRAUD = 'FRAUD'
@@ -541,58 +571,3 @@ class FinancialReputation(models.Model):
             return GOOD
 
         return UNKNOWN
-
-
-RENEWAL = 'RENEWAL'
-CHECKING = 'CHECKING'
-PAID = 'PAID'
-BAG_STATUS = [
-    (RENEWAL, 'Renewal'),
-    (CHECKING, 'Checking'),
-    (PAID, 'Paid'),
-]
-
-BAG = 'BAG'
-PREVIEW = 'PREVIEW'
-BAG_TYPE = [
-    (BAG, 'Bag'),
-    (PREVIEW, 'Preview'),
-]
-
-QUARTER = 'QUARTER'
-HALF = 'HALF'
-YEAR = 'YEAR'
-CHOSEN_PERIOD = [
-    (MONTH, 'Month'),
-    (QUARTER, 'Quarter'),
-    (HALF, 'Half'),
-    (YEAR, 'Year'),
-]
-
-
-class Bag(AbstractAmountByTime):
-    """
-    Represents a credit that can be used by a user to use a service.
-    """
-
-    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
-    type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG)
-    chosen_period = models.CharField(max_length=7, choices=CHOSEN_PERIOD, default=MONTH)
-
-    academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    service_items = models.ManyToManyField(ServiceItem)
-    plans = models.ManyToManyField(Plan)
-
-    is_recurrent = models.BooleanField(default=False)
-    was_delivered = models.BooleanField(default=False)
-
-    token = models.CharField(max_length=40, db_index=True, default=None, null=True, blank=True)
-    expires_at = models.DateTimeField(default=None, blank=True, null=True)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
