@@ -52,7 +52,7 @@ def order_placed(self, webhook, payload: dict):
     }
 
     custom = {
-        'academy': org.academy.slug,
+        'academy': local_event.academy.slug,
         'source': SOURCE,
         'campaign': CAMPAIGN,
         'language': local_event.lang,
