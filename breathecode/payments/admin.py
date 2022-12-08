@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from breathecode.payments.models import (Bag, Consumable, Currency, FinancialReputation, Fixture, Invoice,
                                          PaymentContact, Plan, PlanTranslation, Service, ServiceItem,
-                                         ServiceTranslation, Subscription)
+                                         ServiceStockScheduler, ServiceTranslation, Subscription)
 
 # Register your models here.
 
@@ -82,10 +82,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
 
 
-# @admin.register(Credit)
-# class CreditAdmin(admin.ModelAdmin):
-#     list_display = ('id', 'valid_until', 'is_free_trial', 'invoice')
-#     list_filter = ['is_free_trial']
+@admin.register(ServiceStockScheduler)
+class ServiceStockSchedulerAdmin(admin.ModelAdmin):
+    list_display = ('id', 'subscription', 'service_item', 'last_renew', 'is_belongs_to_plan')
+    list_filter = ['is_belongs_to_plan']
 
 
 @admin.register(PaymentContact)
