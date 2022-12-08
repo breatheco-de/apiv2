@@ -26,10 +26,10 @@ def format_user_setting(data={}):
 
 def format_invoice_item(data={}):
     return {
-        'academy_id': None,
+        'academy_id': 1,
         'amount': 0.0,
         'currency_id': 1,
-        'bag_id': None,
+        'bag_id': 1,
         'id': 1,
         'paid_at': UTC_NOW,
         'status': 'FULFILLED',

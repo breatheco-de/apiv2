@@ -92,10 +92,9 @@ def renew_subscription(self, subscription_id: int, from_datetime: Optional[datet
     try:
         s = Stripe()
         s.set_language_from_settings(settings)
-        invoice = s.pay(subscription.user, amount, currency=bag.currency)
+        invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
 
     except Exception as e:
-        print(e)
         notify_actions.send_email_message(
             'message',
             subscription.user.email,
@@ -206,6 +205,7 @@ def build_subscription(self, bag_id: int, invoice_id: int):
 
     subscription = Subscription.objects.create(user=bag.user,
                                                paid_at=invoice.paid_at,
+                                               academy=bag.academy,
                                                valid_until=invoice.paid_at + relativedelta(months=months),
                                                status='ACTIVE')
 
@@ -217,8 +217,6 @@ def build_subscription(self, bag_id: int, invoice_id: int):
 
     bag.was_delivered = True
     bag.save()
-
-    #TODO: remove the bag
 
     build_service_stock_scheduler.delay(subscription.id)
 

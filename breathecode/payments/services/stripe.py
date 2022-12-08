@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from breathecode.authenticate.models import UserSetting
-from breathecode.payments.models import Currency, FinancialReputation, Invoice, PaymentContact
+from breathecode.payments.models import Bag, Currency, FinancialReputation, Invoice, PaymentContact
 from breathecode.utils import PaymentException, ValidationException, getLogger
 from breathecode.utils.i18n import translation
 import math
@@ -138,6 +138,7 @@ class Stripe:
 
     def pay(self,
             user: User,
+            bag: Bag,
             amount: int,
             currency: str | Currency = 'usd',
             description: str = '') -> Invoice:
@@ -169,6 +170,8 @@ class Stripe:
         payment = Invoice(user=user, amount=amount, stripe_id=charge['id'], paid_at=utc_now)
         payment.status = 'FULFILLED'
         payment.currency = currency
+        payment.bag = bag
+        payment.academy = bag.academy
         #   status='FULFILLED' if successfully else 'REJECTED',
 
         payment.save()

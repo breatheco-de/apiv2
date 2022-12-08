@@ -16,7 +16,8 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from breathecode.utils import GenerateLookupsMixin, response_207
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
+from .models import (MentorProfile, MentorshipService, MentorshipSession, MentorshipBill, SupportAgent,
+                     SupportChannel)
 from .forms import CloseMentoringSessionForm
 from .actions import close_mentoring_session, render_session, generate_mentor_bills
 from breathecode.mentorship import actions
@@ -41,6 +42,8 @@ from .serializers import (
     MentorshipBillPUTSerializer,
     BillSessionSerializer,
     GETMentorPublicTinySerializer,
+    GETAgentSmallSerializer,
+    GETSupportChannelSerializer,
 )
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -74,6 +77,44 @@ def render_html_bill(request, token, id=None):
 
 @private_view()
 def forward_booking_url(request, mentor_slug, token):
+    # now = timezone.now()
+    if isinstance(token, HttpResponseRedirect):
+        return token
+
+    mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
+    if mentor is None:
+        return render_message(request, f'No mentor found with slug {mentor_slug}')
+
+    # add academy to session, will be available on html templates
+    request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
+
+    if mentor.status not in ['ACTIVE', 'UNLISTED']:
+        return render_message(request, f'This mentor is not active')
+
+    try:
+        actions.mentor_is_ready(mentor)
+
+    except Exception as e:
+        logger.exception(e)
+        return render_message(
+            request,
+            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
+
+    booking_url = mentor.booking_url
+    if '?' not in booking_url:
+        booking_url += '?'
+
+    return render(request, 'book_session.html', {
+        'SUBJECT': 'Mentoring Session',
+        'mentor': mentor,
+        'mentee': token.user,
+        'booking_url': booking_url,
+    })
+
+
+@private_view()
+@has_permission('join_mentorship')
+def forward_booking_url_by_service(request, mentor_slug, token):
     # now = timezone.now()
     if isinstance(token, HttpResponseRedirect):
         return token
@@ -729,6 +770,74 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
 
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AgentView(APIView, HeaderLimitOffsetPagination):
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_mentorship_agent')
+    def get(self, request, agent_id=None, academy_id=None):
+        handler = self.extensions(request)
+
+        if agent_id is not None:
+            agent = SupportAgent.objects.filter(id=agent_id, channel__academy__id=academy_id).first()
+            if agent is None:
+                raise ValidationException('This agent does not exist on this academy', code=404)
+
+            serializer = GETAgentSmallSerializer(agent)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        items = SupportAgent.objects.filter(channel__academy__id=academy_id)
+        lookup = {}
+
+        if 'channel' in self.request.GET:
+            param = self.request.GET.get('channel', '').split(',')
+            lookup['channel__slug__in'] = param
+
+        if 'status' in self.request.GET:
+            param = self.request.GET.get('status', 'ACTIVE')
+            lookup['status__in'] = [s.strip().upper() for s in param.split(',')]
+
+        if 'syllabus' in self.request.GET:
+            param = self.request.GET.get('syllabus')
+            lookup['channel__syllabis__slug'] = param
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = GETAgentSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class SupportChannelView(APIView, HeaderLimitOffsetPagination):
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_mentorship_agent')
+    def get(self, request, supportchannel_id=None, academy_id=None):
+        handler = self.extensions(request)
+
+        if supportchannel_id is not None:
+            channel = SupportChannel.objects.filter(id=supportchannel_id, academy__id=academy_id).first()
+            if channel is None:
+                raise ValidationException('This support channel does not exist on this academy', code=404)
+
+            serializer = GETSupportChannelSerializer(channel)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        items = SupportChannel.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        if 'syllabus' in self.request.GET:
+            param = self.request.GET.get('syllabus')
+            lookup['syllabis__slug'] = param
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = GETSupportChannelSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
 
 class SessionView(APIView, HeaderLimitOffsetPagination):

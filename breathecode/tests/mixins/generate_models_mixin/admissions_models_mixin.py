@@ -51,6 +51,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    keyword_cluster=False,
                                    asset_keyword=False,
                                    bag=False,
+                                   subscription=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -85,7 +86,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                         or is_valid(mentorship_service) or is_valid(mentor_profile)
                                         or is_valid(user_specialty) or is_valid(asset_category)
                                         or is_valid(keyword_cluster) or is_valid(asset_keyword)
-                                        or is_valid(bag)):
+                                        or is_valid(bag) or is_valid(subscription)):
             kargs = {}
 
             if 'country' in models:

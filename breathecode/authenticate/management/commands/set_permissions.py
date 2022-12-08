@@ -39,6 +39,11 @@ PERMISSIONS = [
         'description': 'Get my mentoring sessions',
         'codename': 'get_my_mentoring_sessions',
     },
+    {
+        'name': 'Join mentorship',
+        'description': 'Join mentorship',
+        'codename': 'join_mentorship',
+    },
 ]
 
 GROUPS = [
@@ -61,6 +66,10 @@ GROUPS = [
     {
         'name': 'Mentor',
         'permissions': ['get_my_mentoring_sessions'],
+    },
+    {
+        'name': 'Mentorships',
+        'permissions': ['join_mentorship'],
     },
 ]
 

@@ -106,3 +106,13 @@ i should hide
 ![react router](https://github.com/breatheco-de/content/blob/master/src/content/lesson/../../assets/images/6fd2b44b-598b-4ddb-85ba-9c32b086127f.png?raw=true)
 
 ## Defining your Application Routes"""))
+
+    def test__clean_asset_without_readme_raw(self):
+        model = self.bc.database.create(
+            asset={
+                'readme_url':
+                'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
+            })
+
+        asset = clean_asset_readme(model['asset'])
+        self.assertEqual(asset, model['asset'])

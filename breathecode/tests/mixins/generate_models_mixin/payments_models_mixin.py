@@ -20,7 +20,7 @@ class PaymentsModelsMixin(ModelsMixin):
             consumable=False,
             invoice=False,
             subscription=False,
-            credit=False,
+            service_stock_scheduler=False,
             payment_contact=False,
             financial_reputation=False,
             academy=False,
@@ -31,7 +31,6 @@ class PaymentsModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        # if not 'currency' in models and (is_valid(currency) or is_valid(price) or is_valid(invoice)):
         if not 'currency' in models and (is_valid(currency) or is_valid(invoice) or is_valid(plan)
                                          or is_valid(service) or is_valid(service_item)):
             kargs = {}
@@ -99,7 +98,8 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['fixture'] = create_models(service_translation, 'payments.Fixture', **kargs)
 
-        if not 'service_item' in models and (is_valid(service_item) or is_valid(consumable)):
+        if not 'service_item' in models and (is_valid(service_item) or is_valid(consumable)
+                                             or is_valid(service_stock_scheduler)):
             kargs = {}
 
             if 'service' in models:
@@ -152,69 +152,7 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['consumable'] = create_models(consumable, 'payments.Consumable', **kargs)
 
-        if not 'invoice' in models and (is_valid(invoice) or is_valid(credit)):
-            kargs = {}
-
-            if 'currency' in models:
-                kargs['currency'] = just_one(models['currency'])
-
-            if 'bag' in models:
-                kargs['bag'] = just_one(models['bag'])
-
-            if 'user' in models:
-                kargs['user'] = just_one(models['user'])
-
-            if 'academy' in models:
-                kargs['academy'] = just_one(models['academy'])
-
-            models['invoice'] = create_models(invoice, 'payments.Invoice', **kargs)
-
-        if not 'subscription' in models and is_valid(subscription):
-            kargs = {}
-
-            if 'invoice' in models:
-                kargs['invoices'] = get_list(models['invoice'])
-
-            if 'user' in models:
-                kargs['user'] = just_one(models['user'])
-
-            if 'service_item' in models:
-                kargs['service_items'] = get_list(models['service_item'])
-
-            if 'plan' in models:
-                kargs['plans'] = get_list(models['plan'])
-
-            models['subscription'] = create_models(subscription, 'payments.Subscription', **kargs)
-
-        if not 'credit' in models and is_valid(credit):
-            kargs = {}
-
-            if 'consumable' in models:
-                kargs['services'] = get_list(models['consumable'])
-
-            if 'invoice' in models:
-                kargs['invoice'] = just_one(models['invoice'])
-
-            models['credit'] = create_models(credit, 'payments.Credit', **kargs)
-
-        if not 'payment_contact' in models and is_valid(payment_contact):
-            kargs = {}
-
-            if 'user' in models:
-                kargs['user'] = just_one(models['user'])
-
-            models['payment_contact'] = create_models(payment_contact, 'payments.PaymentContact', **kargs)
-
-        if not 'financial_reputation' in models and is_valid(financial_reputation):
-            kargs = {}
-
-            if 'user' in models:
-                kargs['user'] = just_one(models['user'])
-
-            models['financial_reputation'] = create_models(financial_reputation,
-                                                           'payments.FinancialReputation', **kargs)
-
-        if not 'bag' in models and is_valid(bag):
+        if not 'bag' in models and (is_valid(bag) or is_valid(invoice)):
             kargs = {}
 
             if 'academy' in models:
@@ -233,5 +171,74 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['plans'] = get_list(models['plan'])
 
             models['bag'] = create_models(bag, 'payments.Bag', **kargs)
+
+        if not 'invoice' in models and is_valid(invoice):
+            kargs = {}
+
+            if 'currency' in models:
+                kargs['currency'] = just_one(models['currency'])
+
+            if 'bag' in models:
+                kargs['bag'] = just_one(models['bag'])
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['invoice'] = create_models(invoice, 'payments.Invoice', **kargs)
+
+        if not 'subscription' in models and (is_valid(subscription) or is_valid(service_stock_scheduler)):
+            kargs = {}
+
+            if 'invoice' in models:
+                kargs['invoices'] = get_list(models['invoice'])
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'service_item' in models:
+                kargs['service_items'] = get_list(models['service_item'])
+
+            if 'plan' in models:
+                kargs['plans'] = get_list(models['plan'])
+
+            models['subscription'] = create_models(subscription, 'payments.Subscription', **kargs)
+
+        if not 'service_stock_scheduler' in models and is_valid(service_stock_scheduler):
+            kargs = {}
+
+            if 'subscription' in models:
+                kargs['subscription'] = just_one(models['subscription'])
+
+            if 'service_item' in models:
+                kargs['service_item'] = just_one(models['service_item'])
+
+            if 'consumable' in models:
+                kargs['consumables'] = get_list(models['consumable'])
+
+            models['service_stock_scheduler'] = create_models(service_stock_scheduler,
+                                                              'payments.ServiceStockScheduler', **kargs)
+
+        if not 'payment_contact' in models and is_valid(payment_contact):
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            models['payment_contact'] = create_models(payment_contact, 'payments.PaymentContact', **kargs)
+
+        if not 'financial_reputation' in models and is_valid(financial_reputation):
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            models['financial_reputation'] = create_models(financial_reputation,
+                                                           'payments.FinancialReputation', **kargs)
 
         return models

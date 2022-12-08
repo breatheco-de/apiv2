@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group, User
 from django.db import models
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
+from breathecode.events.models import EventType
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
@@ -222,9 +223,6 @@ class AbstractServiceItem(models.Model):
     unit_type = models.CharField(max_length=10, choices=SERVICE_UNITS, default=UNIT)
     how_many = models.IntegerField(default=-1)
 
-    def __str__(self):
-        return f'{self.service.slug} {self.how_many}'
-
     class Meta:
         abstract = True
 
@@ -319,6 +317,16 @@ SUBSCRIPTION_STATUS = [
 ]
 
 
+class Balance:
+    id: int
+    slug: int
+    how_many: int
+
+
+# class MentorshipServiceSet:
+#     mentorship_services = models.ForeignKey(User, on_delete=models.CASCADE)
+
+
 class Consumable(AbstractServiceItem):
     """
     This model is used to represent the units of a service that can be consumed.
@@ -331,6 +339,7 @@ class Consumable(AbstractServiceItem):
 
     # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, default=None, blank=True, null=True)
+    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE, default=None, blank=True, null=True)
     mentorship_service = models.ForeignKey(MentorshipService,
                                            on_delete=models.CASCADE,
                                            default=None,
@@ -341,12 +350,12 @@ class Consumable(AbstractServiceItem):
     valid_until = models.DateTimeField(null=True, blank=True, default=None)
 
     def clean(self) -> None:
-        resources = [self.cohort, self.mentorship_service]
+        resources = [self.cohort, self.mentorship_service, self.event_type]
         how_many_resources_are_set = len([r for r in resources if r is not None])
 
         settings = get_user_settings(self.user.id)
 
-        if how_many_resources_are_set:
+        if how_many_resources_are_set > 1:
             raise Exception(
                 translation(settings.lang,
                             en='A consumable can only be associated with one resource',
@@ -364,6 +373,64 @@ class Consumable(AbstractServiceItem):
         self.full_clean()
 
         super().save()
+
+    def __str__(self):
+        return f'{self.service_item.service.slug} {self.how_many}'
+
+
+RENEWAL = 'RENEWAL'
+CHECKING = 'CHECKING'
+PAID = 'PAID'
+BAG_STATUS = [
+    (RENEWAL, 'Renewal'),
+    (CHECKING, 'Checking'),
+    (PAID, 'Paid'),
+]
+
+BAG = 'BAG'
+PREVIEW = 'PREVIEW'
+BAG_TYPE = [
+    (BAG, 'Bag'),
+    (PREVIEW, 'Preview'),
+]
+
+QUARTER = 'QUARTER'
+HALF = 'HALF'
+YEAR = 'YEAR'
+CHOSEN_PERIOD = [
+    (MONTH, 'Month'),
+    (QUARTER, 'Quarter'),
+    (HALF, 'Half'),
+    (YEAR, 'Year'),
+]
+
+
+class Bag(AbstractAmountByTime):
+    """
+    Represents a credit that can be used by a user to use a service.
+    """
+
+    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
+    type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG)
+    chosen_period = models.CharField(max_length=7, choices=CHOSEN_PERIOD, default=MONTH)
+
+    academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    service_items = models.ManyToManyField(ServiceItem)
+    plans = models.ManyToManyField(Plan)
+
+    is_recurrent = models.BooleanField(default=False)
+    was_delivered = models.BooleanField(default=False)
+
+    token = models.CharField(max_length=40, db_index=True, default=None, null=True, blank=True)
+    expires_at = models.DateTimeField(default=None, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 FULFILLED = 'FULFILLED'
@@ -458,31 +525,6 @@ class ServiceStockScheduler(models.Model):
     is_belongs_to_plan = models.BooleanField(default=False)
 
 
-# #TODO: maybe this needs be deleted
-# class Credit(models.Model):
-#     """
-#     Represents a credit that can be used by a user to use a service.
-#     """
-
-#     # if null, this is valid until resources are exhausted
-#     valid_until = models.DateTimeField(null=True, blank=True, default=None)
-#     is_free_trial = models.BooleanField(default=False)
-
-#     services = models.ManyToManyField(Consumable)
-#     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE)
-
-#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-#     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-#     def save(self, *args, **kwargs):
-#         created = not self.id
-
-#         self.full_clean()
-#         super().save(*args, **kwargs)
-
-#         if created:
-#             signals.grant_service_permissions.send(instance=self, sender=self.__class__)
-
 GOOD = 'GOOD'
 BAD = 'BAD'
 FRAUD = 'FRAUD'
@@ -529,58 +571,3 @@ class FinancialReputation(models.Model):
             return GOOD
 
         return UNKNOWN
-
-
-RENEWAL = 'RENEWAL'
-CHECKING = 'CHECKING'
-PAID = 'PAID'
-BAG_STATUS = [
-    (RENEWAL, 'Renewal'),
-    (CHECKING, 'Checking'),
-    (PAID, 'Paid'),
-]
-
-BAG = 'BAG'
-PREVIEW = 'PREVIEW'
-BAG_TYPE = [
-    (BAG, 'Bag'),
-    (PREVIEW, 'Preview'),
-]
-
-QUARTER = 'QUARTER'
-HALF = 'HALF'
-YEAR = 'YEAR'
-CHOSEN_PERIOD = [
-    (MONTH, 'Month'),
-    (QUARTER, 'Quarter'),
-    (HALF, 'Half'),
-    (YEAR, 'Year'),
-]
-
-
-class Bag(AbstractAmountByTime):
-    """
-    Represents a credit that can be used by a user to use a service.
-    """
-
-    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
-    type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG)
-    chosen_period = models.CharField(max_length=7, choices=CHOSEN_PERIOD, default=MONTH)
-
-    academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    service_items = models.ManyToManyField(ServiceItem)
-    plans = models.ManyToManyField(Plan)
-
-    is_recurrent = models.BooleanField(default=False)
-    was_delivered = models.BooleanField(default=False)
-
-    token = models.CharField(max_length=40, db_index=True, default=None, null=True, blank=True)
-    expires_at = models.DateTimeField(default=None, blank=True, null=True)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
