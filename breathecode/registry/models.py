@@ -518,6 +518,11 @@ class Asset(models.Model):
             readme['html'] = body
         return readme
 
+    def get_thumbnail_name(self):
+        slug1 = self.category.slug if self.category is not None else 'default'
+        slug2 = self.slug
+        return f'{self.academy.slug}-{slug1}-{slug2}.png'
+
     @staticmethod
     def encode(content):
         if content is not None:
