@@ -517,8 +517,13 @@ class Asset(models.Model):
         return readme
 
     def get_thumbnail_name(self):
+
         slug1 = self.category.slug if self.category is not None else 'default'
         slug2 = self.slug
+
+        if self.academy is None:
+            raise Exception('Asset needs to belong to an academy to generate its thumbnail')
+
         return f'{self.academy.slug}-{slug1}-{slug2}.png'
 
     @staticmethod
