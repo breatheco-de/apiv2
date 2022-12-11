@@ -562,7 +562,7 @@ class Asset(models.Model):
         while len(findings) > 0:
             task_find = findings.pop(0)
             task = task_find.groupdict()
-            task['id'] = int(hashlib.sha1(task['label'].encode('utf-8')).hexdigest(), 16) % (10**8)
+            task['id'] = hashlib.md5(task['label'].encode('utf-8')).hexdigest()
             task['status'] = 'DONE' if 'status' in task and task['status'].strip().lower(
             ) == 'x' else 'PENDING'
 
