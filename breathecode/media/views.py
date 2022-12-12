@@ -1,6 +1,6 @@
 # from breathecode.media.schemas import MediaSchema
 from breathecode.media.schemas import FileSchema, MediaSchema
-import os, hashlib, requests, logging
+import os, hashlib, requests, logging, datetime
 from breathecode.services.google_cloud import FunctionV1
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category, MediaResolution
@@ -82,9 +82,21 @@ class MediaView(ViewSet, GenerateLookupsMixin):
             for category in categories:
                 items = items.filter(categories__pk=category)
 
+        start = request.GET.get('start', None)
+        if start is not None:
+            start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
+            lookups['created_at__gte'] = start_date
+
+        end = request.GET.get('end', None)
+        if end is not None:
+            end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
+            lookups['created_at__lte'] = end_date
+
         tp = request.GET.get('type')
         if tp:
             items = items.filter(mime__icontains=tp)
+
+        items = items.filter(**lookups)
 
         like = request.GET.get('like')
         if like:

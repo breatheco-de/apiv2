@@ -336,10 +336,14 @@ class PostAssetSerializer(serializers.ModelSerializer):
         if 'readme_raw' in validated_data:
             readme_raw = validated_data['readme_raw']
 
-        return super(PostAssetSerializer, self).create({
-            **validated_data, 'academy': academy,
-            'readme_raw': readme_raw
-        })
+        try:
+            return super(PostAssetSerializer, self).create({
+                **validated_data, 'academy': academy,
+                'readme_raw': readme_raw
+            })
+        except Exception as e:
+
+            raise ValidationException(e.message_dict, 400)
 
 
 class PostKeywordClusterSerializer(serializers.ModelSerializer):

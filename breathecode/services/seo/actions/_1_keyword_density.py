@@ -19,21 +19,21 @@ def keyword_density(client, report):
     all_h2s = []
     h2s = BeautifulSoup(readme['html'], features='html.parser').find_all('h2')
     for h in h2s:
-        all_h2s.append(h2s.contents[0])
+        all_h2s.append(h.contents[0])
 
     for keyword in asset.seo_keywords.all():
         h2s_with_keywords = []
         for h2 in all_h2s:
-            if keyword in h2:
+            if keyword.title in h2:
                 h2s_with_keywords.append(h2)
 
         if len(h2s_with_keywords) > 2:
             report.bad(
                 -20,
-                f'Too many h2 tags contain the target keyword "{keyword}", please consider a max of 2 h2 tags'
+                f'Too many h2 tags contain the target keyword "{keyword.title}", please consider a max of 2 h2 tags'
             )
         elif len(h2s_with_keywords) == 0:
-            report.bad(-20, f'Please add the target keyword "{keyword}" to at least one tag')
+            report.bad(-20, f'Please add the target keyword "{keyword.title}" to at least one tag')
 
 
 keyword_density.description = """
