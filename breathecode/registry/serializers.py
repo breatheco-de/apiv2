@@ -342,11 +342,6 @@ class PostAssetSerializer(serializers.ModelSerializer):
                 'readme_raw': readme_raw
             })
         except Exception as e:
-            print(dir(e))
-            print(vars(e))
-            print(e.error_dict)
-            print(e.message_dict)
-            print(e.messages)
 
             raise ValidationException(e.message_dict, 400)
 
