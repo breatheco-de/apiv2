@@ -10,7 +10,7 @@ from django.db.models.signals import post_delete, post_save
 from breathecode.admissions.models import Cohort
 from breathecode.payments.actions import get_fixture_patterns
 
-from .models import Consumable, Fixture, Subscription, ServiceStockScheduler
+from .models import Consumable, PaymentServiceScheduler, Subscription, ServiceStockScheduler
 from .signals import (consume_service, grant_service_permissions, lose_service_permissions,
                       reimburse_service_units)
 
@@ -92,7 +92,7 @@ def manage_fixture_related_to_cohort_on_save(sender: Type[Cohort], instance: Coh
 
         if re.findall(fixture['cohort'], instance.slug):
             if 'id' not in fixture:
-                cache[fixture['id']] = Fixture.objects.filter(id=fixture['id']).first()
+                cache[fixture['id']] = PaymentServiceScheduler.objects.filter(id=fixture['id']).first()
             else:
                 cache[fixture['id']] = cache.get(fixture['id'])
 
@@ -103,18 +103,21 @@ def manage_fixture_related_to_cohort_on_save(sender: Type[Cohort], instance: Coh
                 cache[fixture['id']].cohorts.add(instance)
 
 
-@receiver(post_save, sender=Fixture)
-def clear_fixture_cache_on_save(sender: Type[Fixture], instance: Fixture, **kwargs):
+@receiver(post_save, sender=PaymentServiceScheduler)
+def clear_fixture_cache_on_save(sender: Type[PaymentServiceScheduler], instance: PaymentServiceScheduler,
+                                **kwargs):
     get_fixture_patterns.cache_clear()
 
 
-@receiver(post_delete, sender=Fixture)
-def clear_fixture_cache_on_delete(sender: Type[Fixture], instance: Fixture, **kwargs):
+@receiver(post_delete, sender=PaymentServiceScheduler)
+def clear_fixture_cache_on_delete(sender: Type[PaymentServiceScheduler], instance: PaymentServiceScheduler,
+                                  **kwargs):
     get_fixture_patterns.cache_clear()
 
 
-@receiver(post_save, sender=Fixture)
-def seed_fixture_on_save(sender: Type[Fixture], instance: Fixture, created: bool, **kwargs):
+@receiver(post_save, sender=PaymentServiceScheduler)
+def seed_fixture_on_save(sender: Type[PaymentServiceScheduler], instance: PaymentServiceScheduler,
+                         created: bool, **kwargs):
     if instance.cohort_pattern:
         cohorts = Cohort.objects.filter(slug__regex=instance.cohort_pattern).values_list('id', flat=True)
 
@@ -126,14 +129,14 @@ def seed_fixture_on_save(sender: Type[Fixture], instance: Fixture, created: bool
 
 
 @receiver(post_save, sender=Subscription)
-def build_consumables_for_service_item_on_save(sender: Type[Fixture], instance: Subscription, created: bool,
-                                               **kwargs):
+def build_consumables_for_service_item_on_save(sender: Type[PaymentServiceScheduler], instance: Subscription,
+                                               created: bool, **kwargs):
     if created:
         ...
 
 
 @receiver(post_save, sender=ServiceStockScheduler)
-def build_consumables_for_service_item_on_save(sender: Type[Fixture], instance: ServiceStockScheduler,
-                                               created: bool, **kwargs):
+def build_consumables_for_service_item_on_save(sender: Type[PaymentServiceScheduler],
+                                               instance: ServiceStockScheduler, created: bool, **kwargs):
     if created:
         ...
