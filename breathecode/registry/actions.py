@@ -459,7 +459,6 @@ class AssetThumbnailGenerator:
             media.save()
 
             tasks.async_resize_asset_thumbnail.delay(media.id, width=self.width, height=self.height)
-            print('33333')
             return (media.url, False)
 
         # register click
@@ -482,7 +481,7 @@ class AssetThumbnailGenerator:
         if not self.asset:
             return None
 
-        slug = self.asset.get_thumbnail_name().split()[0]
+        slug = self.asset.get_thumbnail_name().split('.')[0]
         return Media.objects.filter(slug=slug).first()
 
     def _get_media_resolution(self, hash: str) -> Optional[MediaResolution]:

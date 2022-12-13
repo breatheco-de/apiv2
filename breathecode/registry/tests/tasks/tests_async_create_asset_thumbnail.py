@@ -87,7 +87,7 @@ class RegistryTestSuite(RegistryTestCase):
                     'dimension': '1200x630',
                     'delay': 1000,
                 },
-                     timeout=5)
+                     timeout=8)
             ]))
 
     """
@@ -150,7 +150,7 @@ class RegistryTestSuite(RegistryTestCase):
                     'dimension': '1200x630',
                     'delay': 1000,
                 },
-                     timeout=5)
+                     timeout=8)
             ]))
 
     """
@@ -206,14 +206,21 @@ class RegistryTestSuite(RegistryTestCase):
     @patch.multiple('breathecode.services.google_cloud.File',
                     __init__=MagicMock(return_value=None),
                     delete=MagicMock(),
+                    rename=MagicMock(),
                     download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
                     create=True)
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
     def test__with_asset__with_media__with_asset_category_with_url(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
-        media = {'hash': hash}
-        asset_category = {'preview_generation_url': self.bc.fake.url()}
-        model = self.bc.database.create_v2(asset=1, media=media, asset_category=asset_category)
+
+        academy_slug = 'unknown'
+        asset_slug = self.bc.fake.slug()
+        asset = {'hash': hash, 'slug': asset_slug}
+        asset_category_slug = 'default'
+        asset_category = {'slug': asset_category_slug, 'preview_generation_url': self.bc.fake.url()}
+        media = {'slug': f'{academy_slug}-{asset_category_slug}-{asset_slug}'}
+
+        model = self.bc.database.create_v2(asset=asset, media=media, asset_category=asset_category)
 
         async_create_asset_thumbnail.delay(model.asset.slug)
 
@@ -228,16 +235,27 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(
             str(FunctionV1.__init__.call_args_list),
             str([call(region='us-central1', project_id='labor-day-story', name='screenshots', method='GET')]))
+
+        print(FunctionV1.call.call_args_list)
+        print([
+            call(params={
+                'url': f'{model.asset_category.preview_generation_url}?slug={model.asset.slug}',
+                'name': f'learn-to-code-{model.asset.slug}.png',
+                'dimension': '1200x630',
+                'delay': 1000,
+            },
+                 timeout=8)
+        ])
         self.assertEqual(
             str(FunctionV1.call.call_args_list),
             str([
                 call(params={
-                    'url': model.asset_category.preview_generation_url,
+                    'url': f'{model.asset_category.preview_generation_url}?slug={model.asset.slug}',
                     'name': f'learn-to-code-{model.asset.slug}.png',
                     'dimension': '1200x630',
                     'delay': 1000,
                 },
-                     timeout=5)
+                     timeout=8)
             ]))
 
     """
@@ -290,5 +308,5 @@ class RegistryTestSuite(RegistryTestCase):
                     'dimension': '1200x630',
                     'delay': 1000,
                 },
-                     timeout=5)
+                     timeout=8)
             ]))

@@ -521,7 +521,8 @@ class Asset(models.Model):
     def get_thumbnail_name(self):
         slug1 = self.category.slug if self.category is not None else 'default'
         slug2 = self.slug
-        return f'{self.academy.slug}-{slug1}-{slug2}.png'
+        academy_slug = self.academy.slug if self.academy else 'unknown'
+        return f'{academy_slug}-{slug1}-{slug2}.png'
 
     @staticmethod
     def encode(content):

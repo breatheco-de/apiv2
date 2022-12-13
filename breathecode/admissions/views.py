@@ -1717,7 +1717,6 @@ class AcademyCohortHistoryView(APIView):
                 del payload['day']
 
             cohort_log = CohortLog(item)
-            print('2222', cohort_log.days)
             cohort_log.logDay(payload, day)
             cohort_log.save()
         except Exception as e:
