@@ -274,30 +274,34 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
     @patch('logging.Logger.debug', MagicMock())
     def testing_AssigneeID_FreelancerIsNone(self):
 
+        models1 = self.bc.database.create(freelancer=None)
+
+        assignment_id = 3
+        status = random.choice(['IGNORED', 'DRAFT', 'TODO', 'DOING', 'DONE'])
+        title = self.bc.fake.slug()
+        hours = random.random() * 50
+        another = random.random() * 50
+        minutes = hours * 60
+        freelancer: None
+        assignees = [{'id': assignment_id}]
+        assigne = assignees[0]
+        issue_body = f'<hrs>{another}</hrs>'
+        comment_body = f'<hrs>{hours}</hrs> <status>{status}</status>'
+        url = self.bc.fake.url()
+
         with self.assertRaisesMessage(
                 Exception,
                 f'Assigned github user: {assigne["id"]} is not a freelancer but is the main user associated to this issue'
         ):
-            models1 = self.bc.database.create(freelancer=None)
-
-            status = random.choice(['IGNORED', 'DRAFT', 'TODO', 'DOING', 'DONE'])
-            title = self.bc.fake.slug()
-            hours = random.random() * 50
-            another = random.random() * 50
-            minutes = hours * 60
-            assignees = random.random() * 50
-            assigne = assignees
-            issue_body = f'<hrs>{another}</hrs>'
-            comment_body = f'<hrs>{hours}</hrs> <status>{status}</status>'
-            url = self.bc.fake.url()
-
-            result = sync_single_issue({
-                'node_id': 1,
-                'title': title,
-                'body': issue_body,
-                'html_url': url,
-            },
-                                       freelancer=None)
+            result = sync_single_issue(
+                {
+                    'node_id': 1,
+                    'title': title,
+                    'body': issue_body,
+                    'html_url': url,
+                    'assignees': assignees,
+                },
+                freelancer=None)
 
             issue_item({
                 'node_id': str(1),
@@ -305,7 +309,7 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
                 'body': issue_body,
                 'url': url,
                 'assignees': assignees,
-                'assigne': assigne,
+                'freelancer': freelancer,
                 'duration_in_hours': hours,
                 'duration_in_minutes': minutes,
                 'status': status,
