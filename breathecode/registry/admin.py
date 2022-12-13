@@ -8,7 +8,6 @@ from django import forms
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from breathecode.assessment.models import Assessment
-from breathecode.assessment.actions import create_from_json
 from breathecode.utils.admin import change_field
 from breathecode.services.seo import SEOAnalyzer
 from .models import (
@@ -21,8 +20,11 @@ from .models import (
     AssetKeyword,
     AssetComment,
     SEOReport,
+    AssetImage,
 )
-from .tasks import async_pull_from_github, async_test_asset, async_execute_seo_report, async_regenerate_asset_readme
+from .tasks import (async_pull_from_github, async_test_asset, async_execute_seo_report,
+                    async_regenerate_asset_readme, async_download_readme_images, async_remove_img_from_cloud,
+                    async_upload_image_to_bucket)
 from .actions import pull_from_github, get_user_from_github_username, test_asset
 
 logger = logging.getLogger(__name__)
@@ -70,7 +72,7 @@ def pull_content_from_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         async_pull_from_github.delay(a.slug, request.user.id)
-        # pull_from_github(a.slug)  # uncomment for testing purposes
+        # pull_from_github(a.slug, override_meta=True)  # uncomment for testing purposes
 
 
 def async_regenerate_readme(modeladmin, request, queryset):
@@ -169,24 +171,12 @@ def seo_report(modeladmin, request, queryset):
             messages.error(request, a.slug + ': ' + str(e))
 
 
-def create_assessment_from_asset(modeladmin, request, queryset):
-    queryset.update(test_status='PENDING')
-    assets = queryset.all()
+def seo_optimization_off(modeladmin, request, queryset):
+    queryset.update(is_seo_tracked=False)
 
-    for a in assets:
-        try:
-            if a.asset_type != 'QUIZ':
-                raise Exception(f'Can\'t create assessment from {a.asset_type.lower()}, only quiz.')
-            ass = Assessment.objects.filter(slug=a.slug).first()
-            if ass is not None:
-                raise Exception(f'Assessment with slug {a.slug} already exists, try a different slug?')
 
-            if a.config is None or a.config == '':
-                raise Exception(f'Assessment with slug {a.slug} has no config')
-
-            create_from_json(a.config, slug=a.slug)
-        except Exception as e:
-            messages.error(request, a.slug + ': ' + str(e))
+def seo_optimization_on(modeladmin, request, queryset):
+    queryset.update(is_seo_tracked=True)
 
 
 def load_readme_tasks(modeladmin, request, queryset):
@@ -195,6 +185,16 @@ def load_readme_tasks(modeladmin, request, queryset):
         try:
             tasks = a.get_tasks()
             print(f'{len(tasks)} tasks', [t['status'] + ': ' + t['label'] + '\n' for t in tasks])
+        except Exception as e:
+            messages.error(request, a.slug + ': ' + str(e))
+
+
+def download_and_replace_images(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        try:
+            async_download_readme_images.delay(a.slug)
+            messages.success(request, message='Asset was schedule for download')
         except Exception as e:
             messages.error(request, a.slug + ': ' + str(e))
 
@@ -284,6 +284,7 @@ class WithKeywordFilter(admin.SimpleListFilter):
 class AssetAdmin(admin.ModelAdmin):
     form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
+    filter_horizontal = ('technologies', 'all_translations', 'seo_keywords')
     list_display = ('main', 'current_status', 'alias', 'techs', 'url_path')
     list_filter = [
         'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter,
@@ -295,15 +296,17 @@ class AssetAdmin(admin.ModelAdmin):
         add_gitpod,
         remove_gitpod,
         pull_content_from_github,
+        seo_optimization_off,
+        seo_optimization_on,
         seo_report,
         make_me_author,
         make_me_owner,
-        create_assessment_from_asset,
         get_author_grom_github_usernames,
         generate_spanish_translation,
         remove_dot_from_slug,
         load_readme_tasks,
         async_regenerate_readme,
+        download_and_replace_images,
     ] + change_field(['DRAFT', 'UNASSIGNED', 'PUBLISHED'], name='status') + change_field(['us', 'es'],
                                                                                          name='lang')
 
@@ -341,6 +344,7 @@ class AssetAdmin(admin.ModelAdmin):
             'PENDING': 'bg-warning',
             'WARNING': 'bg-warning',
             'UNASSIGNED': 'bg-error',
+            'NEEDS_RESYNC': 'bg-error',
             'UNLISTED': 'bg-warning',
         }
 
@@ -596,3 +600,41 @@ class SEOReportAdmin(admin.ModelAdmin):
     search_fields = ('asset__slug', 'asset__title', 'report_type')
     raw_id_fields = ['asset']
     list_filter = ['asset__academy']
+
+
+def remove_image_from_bucket(modeladmin, request, queryset):
+    images = queryset.all()
+    for img in images:
+        async_remove_img_from_cloud.delay(img.id)
+
+
+def upload_image_to_bucket(modeladmin, request, queryset):
+    images = queryset.all()
+    for img in images:
+        async_upload_image_to_bucket.delay(img.id)
+
+
+@admin.register(AssetImage)
+class AssetImageAdmin(admin.ModelAdmin):
+    list_display = ['name', 'current_status', 'mime', 'original', 'bucket']
+    search_fields = ('name', 'original_url', 'bucket_url', 'assets__slug')
+    raw_id_fields = ['assets']
+    list_filter = ['mime', 'assets__academy']
+    actions = [remove_image_from_bucket]
+
+    def original(self, obj):
+        return format_html(f'<a href="{obj.original_url}">{obj.original_url}</a>')
+
+    def bucket(self, obj):
+        return format_html(f'<a href="{obj.bucket_url}">{obj.bucket_url}</a>')
+
+    def current_status(self, obj):
+        colors = {
+            'DONE': 'bg-success',
+            'OK': 'bg-success',
+            'PENDING': 'bg-warning',
+            'WARNING': 'bg-warning',
+            'ERROR': 'bg-error',
+            'NEEDS_RESYNC': 'bg-error',
+        }
+        return format_html(f"<span class='badge {colors[obj.download_status]}'>{obj.download_status}</span>")

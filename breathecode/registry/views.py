@@ -8,7 +8,7 @@ from django.core.validators import URLValidator
 from .tasks import async_pull_from_github
 from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
-                     AssetKeyword, AssetComment)
+                     AssetKeyword, AssetComment, SEOReport)
 
 from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github, clean_asset_readme
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -23,7 +23,8 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           PostAssetCommentSerializer, PutAssetCommentSerializer, AssetBigTechnologySerializer,
                           TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
                           PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
-                          AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer)
+                          AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
+                          KeywordClusterMidSerializer, SEOReportSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -101,7 +102,7 @@ def render_preview_html(request, asset_slug):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_technologies(request):
-    tech = AssetTechnology.objects.filter(parent__isnull=True)
+    tech = AssetTechnology.objects.filter(parent__isnull=True).order_by('sort_priority')
 
     serializer = AssetTechnologySerializer(tech, many=True)
     return Response(serializer.data)
@@ -161,7 +162,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         if asset_type := request.GET.get('asset_type'):
             lookup['featured_asset__asset_type__in'] = asset_type.split(',')
 
-        items = items.filter(**lookup)
+        items = items.filter(**lookup).order_by('sort_priority')
         items = handler.queryset(items)
 
         serializer = AssetBigTechnologySerializer(items, many=True)
@@ -184,7 +185,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         elif tech_slug is not None:
             lookups['slug__in'] = [tech_slug]
 
-        techs = AssetTechnology.objects.filter(**lookups)
+        techs = AssetTechnology.objects.filter(**lookups).order_by('sort_priority')
         _count = techs.count()
         if _count == 0:
             raise ValidationException('This technolog(ies) does not exist for this academy', 404)
@@ -215,7 +216,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
 @api_view(['GET'])
 def get_categories(request):
-    items = AssetCategory.objects.filer(visibility='PUBLIC')
+    items = AssetCategory.objects.filter(visibility='PUBLIC')
     serializer = AssetCategorySerializer(items, many=True)
     return Response(serializer.data)
 
@@ -389,6 +390,14 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('category')
             lookup['category__slug__iexact'] = param
 
+        if 'test_status' in self.request.GET:
+            param = self.request.GET.get('test_status')
+            lookup['test_status__iexact'] = param
+
+        if 'sync_status' in self.request.GET:
+            param = self.request.GET.get('sync_status')
+            lookup['sync_status__iexact'] = param
+
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)
             param = self.request.GET.get('slug')
@@ -413,6 +422,10 @@ class AssetView(APIView, GenerateLookupsMixin):
         if 'technologies' in self.request.GET:
             param = self.request.GET.get('technologies')
             lookup['technologies__in'] = [p.lower() for p in param.split(',')]
+
+        if 'keywords' in self.request.GET:
+            param = self.request.GET.get('keywords')
+            items = items.filter(seo_keywords__slug__in=param.split(','))
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
@@ -468,9 +481,10 @@ class AcademyAssetActionView(APIView):
         if asset_slug is None:
             raise ValidationException('Missing asset_slug')
 
-        asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
+        asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
         if asset is None:
-            raise ValidationException('This asset does not exist for this academy', 404)
+            raise ValidationException(f'This asset {asset_slug} does not exist for this academy {academy_id}',
+                                      404)
 
         possible_actions = ['test', 'pull', 'push', 'analyze_seo', 'clean']
         if action_slug not in possible_actions:
@@ -497,6 +511,7 @@ class AcademyAssetActionView(APIView):
                 report.start()
 
         except Exception as e:
+            logger.exception(e)
             pass
 
         asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
@@ -505,6 +520,26 @@ class AcademyAssetActionView(APIView):
 
 
 # Create your views here.
+class AcademyAssetSEOReportView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_asset')
+    def get(self, request, asset_slug, academy_id):
+
+        handler = self.extensions(request)
+
+        reports = SEOReport.objects.filter(asset__slug=asset_slug)
+        if reports.count() == 0:
+            raise ValidationException(f'No report found for asset {asset_slug}', status.HTTP_404_NOT_FOUND)
+
+        reports = handler.queryset(reports)
+        serializer = SEOReportSerializer(reports, many=True)
+        return handler.response(serializer.data)
+
+
 class AcademyAssetView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -536,13 +571,13 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         lookup = {}
 
-        if 'author' in self.request.GET:
+        if member.role.slug == 'content_writer':
+            items = items.filter(author__id=request.user.id)
+        elif 'author' in self.request.GET:
             param = self.request.GET.get('author')
             lookup['author__id'] = param
 
-        if member.role.slug == 'content_writer':
-            items = items.filter(owner__id=request.user.id)
-        elif 'owner' in self.request.GET:
+        if 'owner' in self.request.GET:
             param = self.request.GET.get('owner')
             lookup['owner__id'] = param
 
@@ -558,7 +593,15 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         if 'category' in self.request.GET:
             param = self.request.GET.get('category')
-            lookup['category__slug__iexact'] = param
+            lookup['category__slug__in'] = [p.lower() for p in param.split(',')]
+
+        if 'test_status' in self.request.GET:
+            param = self.request.GET.get('test_status')
+            lookup['test_status'] = param.upper()
+
+        if 'sync_status' in self.request.GET:
+            param = self.request.GET.get('sync_status')
+            lookup['sync_status'] = param.upper()
 
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)
@@ -584,6 +627,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if 'technologies' in self.request.GET:
             param = self.request.GET.get('technologies')
             lookup['technologies__slug__in'] = [p.lower() for p in param.split(',')]
+
+        if 'keywords' in self.request.GET:
+            param = self.request.GET.get('keywords')
+            items = items.filter(seo_keywords__slug__in=[p.lower() for p in param.split(',')])
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
@@ -626,7 +673,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
 
-        items = items.filter(**lookup)
+        items = items.filter(**lookup).distinct()
         items = handler.queryset(items)
 
         serializer = AcademyAssetSerializer(items, many=True)
@@ -638,9 +685,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if asset_slug is None:
             raise ValidationException('Missing asset_slug')
 
-        asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
+        asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
         if asset is None:
-            raise ValidationException('This asset does not exist for this academy', 404)
+            raise ValidationException(f'This asset {asset_slug} does not exist for this academy {academy_id}',
+                                      404)
 
         data = {
             **request.data,
@@ -699,7 +747,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
                 data['technologies'][0], str):
             technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
-                'pk', flat=True)
+                'pk', flat=True).order_by('sort_priority')
             delta = len(data['technologies']) - len(technology_ids)
             if delta != 0:
                 raise ValidationException(
@@ -740,6 +788,23 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('resolved')
             if param == 'true':
                 lookup['resolved'] = True
+            elif param == 'false':
+                lookup['resolved'] = False
+
+        if 'delivered' in self.request.GET:
+            param = self.request.GET.get('delivered')
+            if param == 'true':
+                lookup['delivered'] = True
+            elif param == 'false':
+                lookup['delivered'] = False
+
+        if 'owner' in self.request.GET:
+            param = self.request.GET.get('owner')
+            lookup['owner__email'] = param
+
+        if 'author' in self.request.GET:
+            param = self.request.GET.get('author')
+            lookup['author__email'] = param
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -974,7 +1039,16 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(cache=KeywordClusterCache, sort='-created_at', paginate=True)
 
     @capable_of('read_keywordcluster')
-    def get(self, request, keywordcluster_slug=None, academy_id=None):
+    def get(self, request, cluster_slug=None, academy_id=None):
+
+        if cluster_slug is not None:
+            item = KeywordCluster.objects.filter(academy__id=academy_id, slug=cluster_slug).first()
+            if item is None:
+                raise ValidationException(f'Cluster with slug {cluster_slug} not found for this academy',
+                                          status.HTTP_404_NOT_FOUND,
+                                          slug='cluster-not-found')
+            serializer = KeywordClusterBigSerializer(item)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         handler = self.extensions(request)
         cache = handler.cache.get()
@@ -997,7 +1071,7 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
         items = items.filter(**lookup)
         items = handler.queryset(items)
 
-        serializer = KeywordClusterBigSerializer(items, many=True)
+        serializer = KeywordClusterMidSerializer(items, many=True)
         return handler.response(serializer.data)
 
     @capable_of('crud_keywordcluster')

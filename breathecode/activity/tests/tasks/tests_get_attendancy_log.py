@@ -12,6 +12,8 @@ from ...models import Activity
 from ..mixins import MediaTestCase
 from breathecode.activity.tasks import get_attendancy_log
 
+UTC_NOW = timezone.now()
+
 
 def get_datastore_seed(slug, day, data={}):
     return {
@@ -166,6 +168,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_the_student_attended_the_first_day(self):
         cases = [
             ([get_datastore_seed(self.bc.fake.slug(), 1, {'slug': 'classroom_attendance'})], [], [1], []),
@@ -207,15 +210,21 @@ class MediaTestSuite(MediaTestCase):
             ])
             self.assertEqual(logging.Logger.error.call_args_list, [])
 
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-                **self.bc.format.to_dict(model.cohort),
-                'history_log': [{
-                    'current_module': x['label'],
+            history_log = {}
+            for day in model.syllabus_version.json['days'][:1]:
+                history_log[day['label']] = {
+                    'current_module': 'unknown',
                     'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
-                } for x in model.syllabus_version.json['days'][:1]],
-            }])
+                    'updated_at': str(UTC_NOW),
+                }
+
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                             [{
+                                 **self.bc.format.to_dict(model.cohort),
+                                 'history_log': history_log,
+                             }])
 
             self.assertEqual(self.bc.database.list_of('admissions.SyllabusVersion'), [{
                 **self.bc.format.to_dict(model.syllabus_version),
@@ -231,6 +240,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_the_students_attended_all_days(self):
         cases = [
             ([
@@ -397,15 +407,21 @@ class MediaTestSuite(MediaTestCase):
             ])
             self.assertEqual(logging.Logger.error.call_args_list, [])
 
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-                **self.bc.format.to_dict(model.cohort),
-                'history_log': [{
-                    'current_module': x['label'],
+            history_log = {}
+            for day in model.syllabus_version.json['days']:
+                history_log[day['label']] = {
+                    'current_module': 'unknown',
                     'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
-                } for x in model.syllabus_version.json['days']],
-            }])
+                    'updated_at': str(UTC_NOW),
+                }
+
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                             [{
+                                 **self.bc.format.to_dict(model.cohort),
+                                 'history_log': history_log,
+                             }])
 
             self.assertEqual(self.bc.database.list_of('admissions.SyllabusVersion'), [{
                 **self.bc.format.to_dict(model.syllabus_version),
@@ -421,6 +437,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_the_students_attended_all_days__the_days_is_string(self):
         cases = [
             ([
@@ -587,15 +604,21 @@ class MediaTestSuite(MediaTestCase):
             ])
             self.assertEqual(logging.Logger.error.call_args_list, [])
 
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-                **self.bc.format.to_dict(model.cohort),
-                'history_log': [{
-                    'current_module': x['label'],
+            history_log = {}
+            for day in model.syllabus_version.json['days']:
+                history_log[day['label']] = {
+                    'current_module': 'unknown',
                     'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
-                } for x in model.syllabus_version.json['days']],
-            }])
+                    'updated_at': str(UTC_NOW),
+                }
+
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                             [{
+                                 **self.bc.format.to_dict(model.cohort),
+                                 'history_log': history_log,
+                             }])
 
             self.assertEqual(self.bc.database.list_of('admissions.SyllabusVersion'), [{
                 **self.bc.format.to_dict(model.syllabus_version),
@@ -612,6 +635,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_the_students_attended_all_days__duration_in_days(self):
         cases = [
             ([
@@ -940,44 +964,50 @@ class MediaTestSuite(MediaTestCase):
             day1 = model.syllabus_version.json['days'][0]
             day2 = model.syllabus_version.json['days'][1]
             day3 = model.syllabus_version.json['days'][2]
-            history_log = [
-                {
-                    'current_module': day1['label'],
+            history_log = {
+                day1['label']: {
+                    'current_module': 'unknown',
                     'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
+                    'updated_at': str(UTC_NOW),
                 },
-                {
-                    'current_module': day2['label'],
+                day2['label']: {
+                    'current_module': 'unknown',
                     'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
+                    'updated_at': str(UTC_NOW),
                 },
-                {
-                    'current_module': day2['label'],
+                day2['label']: {
+                    'current_module': 'unknown',
                     'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
+                    'updated_at': str(UTC_NOW),
                 },
-                {
-                    'current_module': day3['label'],
+                day3['label']: {
+                    'current_module': 'unknown',
                     'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
+                    'updated_at': str(UTC_NOW),
                 },
-                {
-                    'current_module': day3['label'],
+                day3['label']: {
+                    'current_module': 'unknown',
                     'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
+                    'updated_at': str(UTC_NOW),
                 },
-                {
-                    'current_module': day3['label'],
+                day3['label']: {
+                    'current_module': 'unknown',
                     'teacher_comments': None,
                     'attendance_ids': attendance_ids,
                     'unattendance_ids': unattendance_ids,
+                    'updated_at': str(UTC_NOW),
                 },
-            ]
+            }
             self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
                 {
                     **self.bc.format.to_dict(model.cohort),

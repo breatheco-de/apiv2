@@ -21,11 +21,6 @@ class Assessment(models.Model):
     title = models.CharField(max_length=255, blank=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
 
-    score_threshold = models.IntegerField(
-        default=None,
-        blank=True,
-        null=True,
-        help_text='You can set a threshold to determine if the user score is successfull')
     academy = models.ForeignKey(Academy,
                                 on_delete=models.CASCADE,
                                 default=None,
@@ -35,6 +30,11 @@ class Assessment(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
 
     private = models.BooleanField(default=False)
+
+    next = models.URLField(default=False)
+
+    is_instant_feedback = models.BooleanField(
+        default=True, help_text='If true, users will know immediately if their answer was correct')
 
     # the original translation (will only be set if the quiz is a translation of anotherone)
     original = models.ForeignKey(
@@ -58,6 +58,37 @@ class Assessment(models.Model):
         super().save(*args, **kwargs)
 
 
+class AssessmentThreshold(models.Model):
+
+    assessment = models.ForeignKey('Assessment',
+                                   on_delete=models.CASCADE,
+                                   related_name='score_thresholds',
+                                   default=None,
+                                   blank=True,
+                                   null=True)
+
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text=
+        'If null it will be default, but if specified, the only this academy will have this threshold')
+
+    score_threshold = models.IntegerField(
+        help_text='You can set a threshold to determine if the user score is successfull')
+
+    success_message = models.TextField(default=None, blank=True, null=True)
+    fail_message = models.TextField(default=None, blank=True, null=True)
+
+    success_next = models.URLField(default=None, blank=True, null=True)
+    fail_next = models.URLField(default=None, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
 TEXT = 'TEXT'
 NUMBER = 'NUMBER'
 SELECT = 'SELECT'
@@ -74,25 +105,7 @@ class Question(models.Model):
     title = models.TextField()
     help_text = models.CharField(max_length=255, default=None, blank=True, null=True)
 
-    # TODO: Add image and intro message to assessments
-    """
-        If we add intro message and image the questions will be able (for example) to show up
-        a sample of code and ask the student to answer qustions about it.
-    """
-    # image_url = models.URLField(blank=True,
-    #                             default=None,
-    #                             blank=True,
-    #                             null=True,
-    #                             help_text='You can add any image necessary to answer the questions')
-    # intro_message = models.TextField(
-    #     blank=True,
-    #     default=None,
-    #     blank=True,
-    #     null=True,
-    #     help_text=
-    #     'You can add any additional markdown message, instructions or code necessary to answer the questions')
-
-    lang = models.CharField(max_length=3, blank=True, default='en')
+    lang = models.CharField(max_length=3, blank=True, default='us')
 
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)

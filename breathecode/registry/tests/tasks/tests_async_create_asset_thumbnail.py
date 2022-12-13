@@ -65,7 +65,8 @@ class RegistryTestSuite(RegistryTestCase):
            MagicMock(return_value=FUNCTION_BAD_RESPONSE))
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
     def test__with_asset__bad_function_response(self):
-        model = self.bc.database.create(asset=1)
+        asset_category = {'preview_generation_url': self.bc.fake.url()}
+        model = self.bc.database.create_v2(asset=1, asset_category=asset_category)
         async_create_asset_thumbnail.delay(model.asset.slug)
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [])
@@ -81,7 +82,7 @@ class RegistryTestSuite(RegistryTestCase):
             str(FunctionV1.call.call_args_list),
             str([
                 call(params={
-                    'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                    'url': model.asset_category.preview_generation_url,
                     'name': f'learn-to-code-{model.asset.slug}.png',
                     'dimension': '1200x630',
                     'delay': 1000,
@@ -117,7 +118,8 @@ class RegistryTestSuite(RegistryTestCase):
            })))
     def test__with_asset__good_function_response(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
-        model = self.bc.database.create(asset=1)
+        asset_category = {'preview_generation_url': self.bc.fake.url()}
+        model = self.bc.database.create_v2(asset=1, asset_category=asset_category)
         async_create_asset_thumbnail.delay(model.asset.slug)
 
         self.assertEqual(self.bc.database.list_of('media.Media'),
@@ -143,7 +145,7 @@ class RegistryTestSuite(RegistryTestCase):
             str(FunctionV1.call.call_args_list),
             str([
                 call(params={
-                    'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                    'url': model.asset_category.preview_generation_url,
                     'name': f'learn-to-code-{model.asset.slug}.png',
                     'dimension': '1200x630',
                     'delay': 1000,
@@ -152,7 +154,7 @@ class RegistryTestSuite(RegistryTestCase):
             ]))
 
     """
-    🔽🔽🔽 With Asset and Media, good Function response
+    🔽🔽🔽 With Asset and Media, good Function response, without AssetCategory
     """
 
     @patch('logging.Logger.warn', MagicMock())
@@ -170,15 +172,55 @@ class RegistryTestSuite(RegistryTestCase):
                     download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
                     create=True)
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
-    def test__with_asset__with_media(self):
+    def test__with_asset__with_media__without_asset_category_with_url(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
         media = {'hash': hash}
-        model = self.bc.database.create(asset=1, media=media)
+        model = self.bc.database.create_v2(asset=1, media=media)
         async_create_asset_thumbnail.delay(model.asset.slug)
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [
             self.bc.format.to_dict(model.media),
         ])
+        self.assertEqual(Logger.warn.call_args_list, [
+            call('Not able to retrieve a preview generation'),
+        ])
+        self.assertEqual(Logger.error.call_args_list, [])
+        self.assertEqual(
+            str(FunctionV1.__init__.call_args_list),
+            str([call(region='us-central1', project_id='labor-day-story', name='screenshots', method='GET')]))
+        self.assertEqual(FunctionV1.call.call_args_list, [])
+
+    """
+    🔽🔽🔽 With Asset and Media, good Function response, with AssetCategory without preview_generation_url
+    """
+
+    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
+    @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
+           MagicMock(return_value=FUNCTION_GOOD_RESPONSE))
+    @patch.multiple('breathecode.services.google_cloud.Storage',
+                    __init__=MagicMock(return_value=None),
+                    client=PropertyMock(),
+                    create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    delete=MagicMock(),
+                    download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
+                    create=True)
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
+    def test__with_asset__with_media__with_asset_category_with_url(self):
+        hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
+        media = {'hash': hash}
+        asset_category = {'preview_generation_url': self.bc.fake.url()}
+        model = self.bc.database.create_v2(asset=1, media=media, asset_category=asset_category)
+
+        async_create_asset_thumbnail.delay(model.asset.slug)
+
+        self.assertEqual(self.bc.database.list_of('media.Media'), [
+            self.bc.format.to_dict(model.media),
+        ])
+
         self.assertEqual(Logger.warn.call_args_list, [
             call(f'Media with hash {hash} already exists, skipping'),
         ])
@@ -190,7 +232,7 @@ class RegistryTestSuite(RegistryTestCase):
             str(FunctionV1.call.call_args_list),
             str([
                 call(params={
-                    'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                    'url': model.asset_category.preview_generation_url,
                     'name': f'learn-to-code-{model.asset.slug}.png',
                     'dimension': '1200x630',
                     'delay': 1000,
@@ -221,7 +263,8 @@ class RegistryTestSuite(RegistryTestCase):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
         asset = {'academy_id': 1}
         media = {'hash': hash, 'academy_id': 2}
-        model = self.bc.database.create(asset=asset, media=media, academy=2)
+        asset_category = {'preview_generation_url': self.bc.fake.url()}
+        model = self.bc.database.create_v2(asset=asset, media=media, academy=2, asset_category=asset_category)
         async_create_asset_thumbnail.delay(model.asset.slug)
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [
@@ -242,7 +285,7 @@ class RegistryTestSuite(RegistryTestCase):
             str(FunctionV1.call.call_args_list),
             str([
                 call(params={
-                    'url': f'https://4geeksacademy.com/us/learn-to-code/{model.asset.slug}/preview',
+                    'url': model.asset_category.preview_generation_url,
                     'name': f'learn-to-code-{model.asset.slug}.png',
                     'dimension': '1200x630',
                     'delay': 1000,

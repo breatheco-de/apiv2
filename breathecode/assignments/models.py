@@ -3,7 +3,24 @@ from django.db import models
 from . import signals
 from breathecode.admissions.models import Cohort
 
-__all__ = ['UserProxy', 'CohortProxy', 'Task']
+__all__ = ['UserProxy', 'CohortProxy', 'Task', 'UserAttachment']
+
+
+class UserAttachment(models.Model):
+    slug = models.SlugField(max_length=150, unique=True)
+    name = models.CharField(max_length=150)
+    mime = models.CharField(max_length=60)
+    url = models.URLField(max_length=255)
+    hash = models.CharField(max_length=64)
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.id})'
+
 
 PENDING = 'PENDING'
 DONE = 'DONE'
@@ -56,6 +73,8 @@ class Task(models.Model):
     )
 
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
+
+    attachments = models.ManyToManyField(UserAttachment, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

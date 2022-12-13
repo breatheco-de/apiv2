@@ -1,0 +1,102 @@
+[
+    {
+        "model": "mentorship.mentorshipservice",
+        "pk": 1,
+        "fields": {
+            "slug": "geekpal",
+            "name": "GeekPal 1-1 Coding Mentorship",
+            "logo_url": null,
+            "description": "1-1 Mentoring technical session using the GeekPal service.",
+            "duration": "01:00:00",
+            "max_duration": "02:00:00",
+            "missed_meeting_duration": "00:10:00",
+            "status": "ACTIVE",
+            "language": "en",
+            "allow_mentee_to_extend": true,
+            "allow_mentors_to_extend": true,
+            "academy": 1,
+            "created_at": "2022-10-13T14:20:47.106Z",
+            "updated_at": "2022-10-13T14:20:47.106Z"
+        }
+    },
+    {
+        "model": "mentorship.mentorprofile",
+        "pk": 1,
+        "fields": {
+            "name": null,
+            "slug": "Joe",
+            "price_per_hour": 8.0,
+            "one_line_bio": "",
+            "bio": "",
+            "academy": 1,
+            "timezone": "America/New_York",
+            "online_meeting_url": "https://whereby.com/joedoe",
+            "token": "cad0c7787bfb147994590b449a2edb19720fbfb4",
+            "booking_url": "https://calendly.com/joedoe/4geeks",
+            "status": "ACTIVE",
+            "email": "joedoe@gmail.com",
+            "user": 7,
+            "created_at": "2022-10-13T14:22:18.656Z",
+            "updated_at": "2022-10-13T14:22:18.656Z",
+            "rating": null,
+            "services": [
+                1
+            ],
+            "syllabus": [
+                1
+            ]
+        }
+    },
+    {
+        "model": "mentorship.mentorshipbill",
+        "pk": 1,
+        "fields": {
+            "status": "DUE",
+            "status_mesage": "",
+            "total_duration_in_minutes": 0.0,
+            "total_duration_in_hours": 0.0,
+            "total_price": 0.0,
+            "overtime_minutes": 0.0,
+            "academy": 1,
+            "started_at": "2022-10-13T14:24:11Z",
+            "ended_at": "2022-10-18T14:24:13Z",
+            "reviewer": 1,
+            "mentor": 1,
+            "paid_at": null,
+            "created_at": "2022-10-13T14:24:20.900Z",
+            "updated_at": "2022-10-13T14:24:20.900Z"
+        }
+    },
+    {
+        "model": "mentorship.mentorshipsession",
+        "pk": 1,
+        "fields": {
+            "name": "kBxxBTTrgapJjZeB21B3",
+            "is_online": true,
+            "latitude": null,
+            "longitude": null,
+            "mentor": 1,
+            "service": 1,
+            "mentee": 8,
+            "online_meeting_url": "https://4geeks.daily.co/kBxxBTTrgapJjZeB21B3",
+            "online_recording_url": null,
+            "status": "COMPLETED",
+            "status_message": "",
+            "allow_billing": true,
+            "bill": null,
+            "suggested_accounted_duration": null,
+            "accounted_duration": null,
+            "agenda": "",
+            "summary": "It was a great meeting where I helped Mary with all her questions about javascript",
+            "starts_at": "2022-10-13T14:23:27Z",
+            "ends_at": "2022-10-13T15:23:28Z",
+            "started_at": "2022-10-13T14:23:32Z",
+            "ended_at": "2022-10-13T15:23:34Z",
+            "mentor_joined_at": "2022-10-13T14:23:38Z",
+            "mentor_left_at": "2022-10-13T15:23:40Z",
+            "mentee_left_at": "2022-10-13T15:23:43Z",
+            "created_at": "2022-10-13T14:23:45.719Z",
+            "updated_at": "2022-10-13T14:23:45.719Z"
+        }
+    }
+]
