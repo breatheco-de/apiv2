@@ -42,6 +42,9 @@ class Currency(models.Model):
         self.code = self.code.upper()
         return super().clean()
 
+    def __str__(self) -> str:
+        return f'{self.name} ({self.code})'
+
 
 class AbstractPriceByUnit(models.Model):
     """
@@ -149,6 +152,9 @@ class ServiceTranslation(models.Model):
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
 
+    def __str__(self) -> str:
+        return f'{self.lang}: {self.title}'
+
 
 # class PlanOffer(models.Model):
 #     original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
@@ -222,6 +228,9 @@ class PaymentServiceScheduler(models.Model):
 
         super().save()
 
+    def __str__(self) -> str:
+        return f'{self.academy.slug} -> {self.service.slug} -> {self.cohort_pattern or "unset"}'
+
 
 UNIT = 'UNIT'
 SERVICE_UNITS = [
@@ -268,8 +277,11 @@ class ServiceItem(AbstractServiceItem):
     def delete(self):
         raise Exception('You cannot delete a service item')
 
+    def __str__(self) -> str:
+        return f'{self.service.slug} ({self.how_many})'
 
-class ServiceItemFeature(AbstractServiceItem):
+
+class ServiceItemFeature(models.Model):
     """
     This model is used as referenced of units of a service can be used.
     """
@@ -278,6 +290,9 @@ class ServiceItemFeature(AbstractServiceItem):
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     description = models.CharField(max_length=255)
     one_line_desc = models.CharField(max_length=30)
+
+    def __str__(self) -> str:
+        return f'{self.lang} {self.service_item.service.slug} ({self.service_item.how_many})'
 
 
 class FinancingOption(models.Model):
@@ -289,6 +304,9 @@ class FinancingOption(models.Model):
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
 
     how_many_months = models.IntegerField(default=1)
+
+    def __str__(self) -> str:
+        return f'{self.monthly_price} {self.currency.code} per {self.how_many_months} months'
 
 
 DRAFT = 'DRAFT'
@@ -330,6 +348,9 @@ class Plan(AbstractPriceByTime):
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     is_onboarding = models.BooleanField(default=False)
 
+    def __str__(self) -> str:
+        return self.slug
+
 
 class PlanTranslation(models.Model):
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
@@ -341,6 +362,9 @@ class PlanTranslation(models.Model):
         self.full_clean()
 
         super().save()
+
+    def __str__(self) -> str:
+        return f'{self.lang} {self.title}: ({self.plan.slug})'
 
 
 # class Balance:
@@ -400,7 +424,7 @@ class Consumable(AbstractServiceItem):
         super().save()
 
     def __str__(self):
-        return f'{self.service_item.service.slug} {self.how_many}'
+        return f'{self.user.email}: {self.service_item.service.slug} ({self.how_many})'
 
 
 RENEWAL = 'RENEWAL'
@@ -457,6 +481,9 @@ class Bag(AbstractAmountByTime):
         self.full_clean()
         super().save(*args, **kwargs)
 
+    def __str__(self) -> str:
+        return f'{self.type} {self.status} {self.chosen_period}'
+
 
 FULFILLED = 'FULFILLED'
 REJECTED = 'REJECTED'
@@ -499,6 +526,9 @@ class Invoice(models.Model):
         self.full_clean()
 
         super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f'{self.user.email} {self.amount} ({self.currency.code})'
 
 
 FREE_TRIAL = 'FREE_TRIAL'
@@ -563,10 +593,16 @@ class Subscription(AbstractIOweYou):
     pay_every = models.IntegerField(default=1)
     pay_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.valid_until})'
+
 
 class SubscriptionServiceItem(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
+
+    def __str__(self) -> str:
+        return self.service_item
 
 
 class PlanFinancing(AbstractIOweYou):
@@ -579,6 +615,9 @@ class PlanFinancing(AbstractIOweYou):
 
     # in this day the subscription needs being paid again
     pay_until = models.DateTimeField()
+
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.pay_until})'
 
 
 class PlanServiceItem(models.Model):
@@ -593,6 +632,9 @@ class PlanServiceItem(models.Model):
         self.full_clean()
 
         super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.service_item
 
 
 class PlanServiceItemHandler(models.Model):
@@ -630,6 +672,9 @@ class PlanServiceItemHandler(models.Model):
         self.full_clean()
 
         super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.subscription or self.plan_financing or 'Unset'
 
 
 class ServiceStockScheduler(models.Model):
@@ -674,6 +719,18 @@ class ServiceStockScheduler(models.Model):
 
         super().save(*args, **kwargs)
 
+    def __str__(self) -> str:
+        if self.subscription_handler and self.subscription_handler.subscription:
+            return f'{self.subscription_handler.subscription.user.email} - {self.subscription_handler.service_item}'
+
+        if self.plan_handler and self.plan_handler.subscription:
+            return f'{self.plan_handler.subscription.user.email} - {self.plan_handler.handler.service_item}'
+
+        if self.plan_handler and self.plan_handler.plan_financing:
+            return f'{self.plan_handler.plan_financing.user.email} - {self.plan_handler.handler.service_item}'
+
+        return 'Unset'
+
 
 GOOD = 'GOOD'
 BAD = 'BAD'
@@ -690,6 +747,9 @@ REPUTATION_STATUS = [
 class PaymentContact(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='payment_contact')
     stripe_id = models.CharField(max_length=20)  # actually return 18 characters
+
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.stripe_id})'
 
 
 class FinancialReputation(models.Model):
@@ -721,3 +781,6 @@ class FinancialReputation(models.Model):
             return GOOD
 
         return UNKNOWN
+
+    def __str__(self) -> str:
+        return f'{self.user.email} -> {self.get_reputation()}'

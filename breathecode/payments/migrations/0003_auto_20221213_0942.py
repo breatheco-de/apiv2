@@ -226,14 +226,28 @@ class Migration(migrations.Migration):
                                     on_delete=django.db.models.deletion.CASCADE,
                                     to='payments.subscriptionserviceitem'),
         ),
-        migrations.AlterField(
+        migrations.RemoveField(
             model_name='plan',
             name='service_items',
             field=models.ManyToManyField(blank=True,
                                          through='payments.PlanServiceItem',
                                          to='payments.ServiceItem'),
         ),
-        migrations.AlterField(
+        migrations.AddField(
+            model_name='plan',
+            name='service_items',
+            field=models.ManyToManyField(blank=True,
+                                         through='payments.PlanServiceItem',
+                                         to='payments.ServiceItem'),
+        ),
+        migrations.RemoveField(
+            model_name='subscription',
+            name='service_items',
+            field=models.ManyToManyField(blank=True,
+                                         through='payments.SubscriptionServiceItem',
+                                         to='payments.ServiceItem'),
+        ),
+        migrations.AddField(
             model_name='subscription',
             name='service_items',
             field=models.ManyToManyField(blank=True,
