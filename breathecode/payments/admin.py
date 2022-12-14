@@ -1,9 +1,11 @@
 from django.contrib import admin
 
-from breathecode.payments.models import (Bag, Consumable, Currency, FinancialReputation,
+from breathecode.payments.models import (Bag, Consumable, Currency, FinancialReputation, FinancingOption,
                                          PaymentServiceScheduler, Invoice, PaymentContact, Plan,
-                                         PlanTranslation, Service, ServiceItem, ServiceStockScheduler,
-                                         ServiceTranslation, Subscription)
+                                         PlanFinancing, PlanServiceItem, PlanServiceItemHandler,
+                                         PlanTranslation, Service, ServiceItem, ServiceItemFeature,
+                                         ServiceStockScheduler, ServiceTranslation, Subscription,
+                                         SubscriptionServiceItem)
 
 # Register your models here.
 
@@ -36,6 +38,22 @@ class ServiceItemAdmin(admin.ModelAdmin):
         'service__slug', 'service__title', 'service__groups__name', 'service__cohorts__slug',
         'service__mentorship_services__slug'
     ]
+
+
+@admin.register(ServiceItemFeature)
+class ServiceItemFeatureAdmin(admin.ModelAdmin):
+    list_display = ('id', 'service_item', 'lang', 'one_line_desc')
+    list_filter = ['service_item__service__owner', 'lang']
+    search_fields = [
+        'service_item__service__slug', 'service_item__service__title', 'service_item__service__groups__name',
+        'service_item__service__cohorts__slug', 'service_item__service__mentorship_services__slug'
+    ]
+
+
+@admin.register(FinancingOption)
+class FinancingOptionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'monthly_price', 'currency', 'how_many_months')
+    list_filter = ['currency__code']
 
 
 @admin.register(PaymentServiceScheduler)
@@ -81,6 +99,32 @@ class SubscriptionAdmin(admin.ModelAdmin):
                     'user')
     list_filter = ['status', 'is_refundable', 'pay_every_unit']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+
+
+@admin.register(SubscriptionServiceItem)
+class SubscriptionServiceItemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'subscription', 'service_item')
+    list_filter = [
+        'subscription__user__email', 'subscription__user__first_name', 'subscription__user__last_name'
+    ]
+
+
+@admin.register(PlanFinancing)
+class PlanFinancingAdmin(admin.ModelAdmin):
+    list_display = ('id', 'paid_at', 'pay_until', 'status', 'user')
+    list_filter = ['status']
+    search_fields = ['user__email', 'user__first_name', 'user__last_name']
+
+
+@admin.register(PlanServiceItem)
+class PlanServiceItemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'plan', 'service_item')
+    list_filter = ['plan__slug', 'plan__owner__slug']
+
+
+@admin.register(PlanServiceItemHandler)
+class PlanServiceItemHandlerAdmin(admin.ModelAdmin):
+    list_display = ('id', 'handler', 'subscription', 'plan_financing')
 
 
 @admin.register(ServiceStockScheduler)
