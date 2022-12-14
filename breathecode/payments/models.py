@@ -602,7 +602,7 @@ class SubscriptionServiceItem(models.Model):
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
 
     def __str__(self) -> str:
-        return self.service_item
+        return str(self.service_item)
 
 
 class PlanFinancing(AbstractIOweYou):
@@ -634,7 +634,7 @@ class PlanServiceItem(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
-        return self.service_item
+        return str(self.service_item)
 
 
 class PlanServiceItemHandler(models.Model):
@@ -674,7 +674,7 @@ class PlanServiceItemHandler(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
-        return self.subscription or self.plan_financing or 'Unset'
+        return str(self.subscription or self.plan_financing or 'Unset')
 
 
 class ServiceStockScheduler(models.Model):
