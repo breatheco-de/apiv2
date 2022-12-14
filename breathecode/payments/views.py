@@ -300,6 +300,13 @@ class ServiceItemView(APIView):
             args = {'id': int(plan)} if plan.isnumeric() else {'slug': plan}
 
             p = Plan.objects.filter(**args).first()
+            if not p:
+                raise ValidationException(translation(language,
+                                                      en='Plan not found',
+                                                      es='No existe el Plan',
+                                                      slug='not-found'),
+                                          code=404)
+
             items |= p.service_items.all()
             items = items.distinct()
 
