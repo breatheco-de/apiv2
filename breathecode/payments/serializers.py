@@ -1,6 +1,7 @@
 import logging
 import serpy
-from breathecode.payments.models import Plan, Service, ServiceItem, Subscription
+from breathecode.payments.models import Plan, Service, ServiceItem, ServiceItemFeature, Subscription
+from django.db.models.query_utils import Q
 
 from breathecode.utils import serializers
 
@@ -102,11 +103,30 @@ class GetServiceSerializer(serpy.Serializer):
 class GetServiceItemSerializer(serpy.Serializer):
     unit_type = serpy.Field()
     how_many = serpy.Field()
-    # service = serpy.MethodField()
     service = GetServiceSmallSerializer()
 
-    # def get_service(self, obj):
-    #     return GetServiceSerializer(obj.service, many=False).data
+
+class GetServiceItemFeatureShortSerializer(serpy.Serializer):
+    description = serpy.Field()
+    one_line_desc = serpy.Field()
+
+
+class GetServiceItemWithFeaturesSerializer(GetServiceItemSerializer):
+    features = serpy.MethodField()
+
+    def get_features(self, obj):
+        query_args = []
+        query_kwargs = {'service_item': obj}
+        obj.lang = obj.lang or 'en'
+
+        if '-' in obj.lang:
+            query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]))
+
+        else:
+            query_kwargs['lang'] = obj.lang
+
+        items = ServiceItemFeature.objects.filter(*query_args, **query_kwargs)
+        return GetServiceItemFeatureShortSerializer(items, many=True).data
 
 
 class GetUserSmallSerializer(serpy.Serializer):

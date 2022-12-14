@@ -502,6 +502,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=service_item,
                                         service=service,
                                         plan=plan,
+                                        plan_service_item=1,
                                         currency=currency)
         self.bc.request.authenticate(model.user)
 
@@ -672,6 +673,7 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_quarter': random.random() * 100,
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
+            'is_onboarding': True,
         }
 
         service = {
@@ -681,6 +683,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        plan_service_items = [{'service_id': 1, 'plan_id': x} for x in range(1, 3)]
 
         # fixture = []
 
@@ -691,7 +694,9 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=service_item,
                                         service=service,
                                         plan=(2, plan),
-                                        fixture=2,
+                                        payment_service_scheduler=2,
+                                        syllabus_version=1,
+                                        plan_service_item=plan_service_items,
                                         currency=currency)
         self.bc.request.authenticate(model.user)
 
@@ -755,6 +760,7 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_quarter': random.random() * 100,
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
+            'is_onboarding': True,
         }
 
         service = {
@@ -764,14 +770,17 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        plan_service_item = {'service_id': 1, 'plan_id': 1}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
                                         academy=1,
                                         cohort=1,
-                                        fixture=1,
+                                        payment_service_scheduler=1,
                                         service_item=service_item,
+                                        plan_service_item=plan_service_item,
                                         service=service,
+                                        syllabus_version=1,
                                         plan=plan,
                                         currency=currency)
         self.bc.request.authenticate(model.user)

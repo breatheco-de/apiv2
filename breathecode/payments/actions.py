@@ -7,14 +7,14 @@ from django.db.models.query_utils import Q
 from django.db.models import Sum, QuerySet
 from django.core.handlers.wsgi import WSGIRequest
 
-from breathecode.admissions.models import Academy, Cohort
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserSetting
 from breathecode.utils.attr_dict import AttrDict
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 
-from .models import SERVICE_UNITS, Bag, Consumable, Currency, Fixture, Plan, Service, ServiceItem, Subscription
+from .models import SERVICE_UNITS, Bag, Consumable, Currency, PaymentServiceScheduler, Plan, Service, ServiceItem, Subscription
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -62,24 +62,51 @@ def get_fixture_patterns(academy_id: int):
 
     fixtures = []
 
-    for fixture in Fixture.objects.filter(cohort_pattern__isnull=False,
-                                          academy__id=academy_id).values_list('id', 'cohort_pattern'):
+    for fixture in PaymentServiceScheduler.objects.filter(cohort_pattern__isnull=False,
+                                                          academy__id=academy_id).values_list(
+                                                              'id', 'cohort_pattern'):
 
         fixtures.append({'id': fixture[0], 'cohort': fixture[1]})
 
     return fixtures
 
 
-def get_plans_belong_to_cohort(cohort):
-    Fixture.objects.filter(cohorts__id=cohort.id)
-    fixtures = cohort.fixture_set.filter(cohorts__id=cohort.id, cohorts__stage__in=['INACTIVE', 'PREWORK'])
+def get_plans_belong_to_cohort(cohort: Cohort, on_boarding: Optional[bool] = None, auto: bool = False):
+    additional_args = {}
+
+    if on_boarding is not None:
+        additional_args['on_boarding'] = on_boarding
+
+    if not cohort.syllabus_version:
+        return Plan.objects.none()
+
+    if not additional_args and auto:
+        additional_args['is_onboarding'] = not CohortUser.objects.filter(
+            cohort__syllabus_version__syllabus=cohort.syllabus_version.syllabus).exists()
+
+    fixtures = cohort.paymentservicescheduler_set.filter(cohorts__id=cohort.id,
+                                                         cohorts__stage__in=['INACTIVE', 'PREWORK'])
 
     plans = Plan.objects.none()
 
     for fixture in fixtures:
-        plans |= Plan.objects.filter(service_items__service=fixture.service)
+        plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
 
     return plans
+
+
+def get_plans_belong_to_cohort_from_request(request, cohort):
+    is_onboarding = request.data.get('is_onboarding') or request.GET.get('is_onboarding')
+
+    additional_args = {}
+
+    if is_onboarding:
+        additional_args['is_onboarding'] = is_onboarding
+
+    if not additional_args:
+        additional_args['auto'] = True
+
+    return get_plans_belong_to_cohort(cohort, **additional_args)
 
 
 def add_items_to_bag(request, settings: UserSetting, bag: Bag):
@@ -122,7 +149,7 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
                                                   es='Cohort no encontrada'),
                                       slug='cohort-not-found')
 
-        cohort_plans = get_plans_belong_to_cohort(cohort)
+        cohort_plans = get_plans_belong_to_cohort_from_request(request, cohort)
 
         if not cohort_plans:
             raise ValidationException(translation(settings.lang,

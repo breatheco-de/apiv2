@@ -11,8 +11,9 @@ from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from dateutil.relativedelta import relativedelta
+from django.db.models import Q
 
-from .models import Bag, Consumable, Invoice, ServiceStockScheduler, Subscription
+from .models import Bag, Consumable, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, ServiceStockScheduler, Subscription, SubscriptionServiceItem
 
 logger = logging.getLogger(__name__)
 
@@ -132,52 +133,98 @@ def renew_subscription(self, subscription_id: int, from_datetime: Optional[datet
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def build_service_stock_scheduler(self, subscription_id: int):
-    logger.info(f'Starting build_service_stock_scheduler for subscription {subscription_id}')
+def build_service_stock_scheduler_from_subscription(self,
+                                                    subscription_id: int,
+                                                    user_id: Optional[int] = None):
+    logger.info(
+        f'Starting build_service_stock_scheduler_from_subscription for subscription {subscription_id}')
 
-    if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+    k = {
+        'subscription': 'user__id',
+        # service items of
+        'handlers': {
+            'of_subscription': 'subscription_handler__subscription__user__id',
+            'of_plan': 'plan_handler__subscription__user__id',
+        },
+    }
+
+    additional_args = {
+        'subscription': {
+            k['subscription']: user_id
+        } if user_id else {},
+        # service items of
+        'handlers': {
+            'of_subscription': {
+                k['handlers']['of_subscription']: user_id,
+            },
+            'of_plan': {
+                k['handlers']['of_plan']: user_id,
+            },
+        },
+    }
+
+    if not (subscription := Subscription.objects.filter(id=subscription_id, **
+                                                        additional_args['subscription']).first()):
         logger.error(f'Subscription with id {subscription_id} not found')
         return
 
-    schedulers = ServiceStockScheduler.objects.filter(subscription=subscription)
-    service_items = subscription.service_items.all()
-    plans = subscription.plans.all()
+    service_items = SubscriptionServiceItem.objects.filter(subscription=subscription)
+    plans = PlanServiceItemHandler.objects.filter(subscription=subscription)
     utc_now = timezone.now()
 
-    not_found = [(x.service_item.service.id, x.service_item.how_many, x.is_belongs_to_plan)
-                 for x in schedulers]
+    for subscription_handler in service_items:
+        ServiceStockScheduler.objects.get_or_create(subscription_handler=subscription_handler,
+                                                    last_renew=utc_now)
 
-    for service_item in service_items:
-        query = (service_item.service.id, service_item.how_many, False)
-        if query in not_found:
-            not_found.remove(query)
-            continue
-
-        ServiceStockScheduler.objects.create(service_item=service_item,
-                                             subscription=subscription,
-                                             is_belongs_to_plan=False,
-                                             last_renew=utc_now)
-
-    for plan in plans:
-        for service_item in plan.service_items.all():
-            query = (service_item.service.id, service_item.how_many, True)
-            if query in not_found:
-                not_found.remove(query)
-                continue
-
-            ServiceStockScheduler.objects.create(service_item=service_item,
-                                                 subscription=subscription,
-                                                 is_belongs_to_plan=True,
-                                                 last_renew=utc_now)
-
-    for scheduler in schedulers:
-        query = (scheduler.service_item.service.id, scheduler.service_item.how_many,
-                 scheduler.is_belongs_to_plan)
-
-        if query in not_found:
-            scheduler.delete()
+    for plan_handler in plans:
+        ServiceStockScheduler.objects.get_or_create(plan_handler=plan_handler, last_renew=utc_now)
 
     renew_consumables.delay(subscription.id)
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def build_service_stock_scheduler_from_plan_financing(self,
+                                                      plan_financing_id: int,
+                                                      user_id: Optional[int] = None):
+    logger.info(
+        f'Starting build_service_stock_scheduler_from_plan_financing for subscription {plan_financing_id}')
+
+    k = {
+        'subscription': 'user__id',
+        # service items of
+        'handlers': {
+            'of_subscription': 'subscription_handler__subscription__user__id',
+            'of_plan': 'plan_handler__subscription__user__id',
+        },
+    }
+
+    additional_args = {
+        'subscription': {
+            k['subscription']: user_id
+        } if user_id else {},
+        # service items of
+        'handlers': {
+            'of_subscription': {
+                k['handlers']['of_subscription']: user_id,
+            },
+            'of_plan': {
+                k['handlers']['of_plan']: user_id,
+            },
+        },
+    }
+
+    if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id,
+                                                           **additional_args['subscription']).first()):
+        logger.error(f'PlanFinancing with id {plan_financing_id} not found')
+        return
+
+    plans = PlanServiceItem.objects.filter(plan_financing=plan_financing)
+    utc_now = timezone.now()
+
+    for plan_handler in plans:
+        ServiceStockScheduler.objects.get_or_create(plan_handler=plan_handler, last_renew=utc_now)
+
+    # renew_consumables.delay(subscription.id)
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -218,6 +265,6 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     bag.was_delivered = True
     bag.save()
 
-    build_service_stock_scheduler.delay(subscription.id)
+    build_service_stock_scheduler_from_subscription.delay(subscription.id)
 
     logger.info(f'Subscription was created with id {subscription.id}')

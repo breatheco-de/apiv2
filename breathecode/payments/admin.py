@@ -1,8 +1,9 @@
 from django.contrib import admin
 
-from breathecode.payments.models import (Bag, Consumable, Currency, FinancialReputation, Fixture, Invoice,
-                                         PaymentContact, Plan, PlanTranslation, Service, ServiceItem,
-                                         ServiceStockScheduler, ServiceTranslation, Subscription)
+from breathecode.payments.models import (Bag, Consumable, Currency, FinancialReputation,
+                                         PaymentServiceScheduler, Invoice, PaymentContact, Plan,
+                                         PlanTranslation, Service, ServiceItem, ServiceStockScheduler,
+                                         ServiceTranslation, Subscription)
 
 # Register your models here.
 
@@ -37,10 +38,10 @@ class ServiceItemAdmin(admin.ModelAdmin):
     ]
 
 
-@admin.register(Fixture)
-class FixtureAdmin(admin.ModelAdmin):
+@admin.register(PaymentServiceScheduler)
+class PaymentServiceSchedulerAdmin(admin.ModelAdmin):
     list_display = ('id', 'academy', 'service', 'cohort_pattern', 'renew_every', 'renew_every_unit')
-    list_filter = ['renew_every_unit', 'academy']
+    list_filter = ['academy', 'renew_every_unit']
     search_fields = [
         'service__slug', 'service__title', 'service__groups__name', 'service__cohorts__slug',
         'service__mentorship_services__slug'
@@ -84,8 +85,25 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceStockScheduler)
 class ServiceStockSchedulerAdmin(admin.ModelAdmin):
-    list_display = ('id', 'subscription', 'service_item', 'last_renew', 'is_belongs_to_plan')
-    list_filter = ['is_belongs_to_plan']
+    list_display = ('id', 'subscription', 'service_item', 'plan_financing', 'last_renew')
+
+    def subscription(self, obj):
+        if obj.subscription_handler:
+            return obj.subscription_handler.subscription
+
+        if obj.plan_handler:
+            return obj.plan_handler.subscription
+
+    def service_item(self, obj):
+        if obj.subscription_handler:
+            return obj.subscription_handler.service_item
+
+        if obj.plan_handler:
+            return obj.plan_handler.service_item
+
+    def plan_financing(self, obj):
+        if obj.plan_handler:
+            return obj.plan_handler.plan_financing
 
 
 @admin.register(PaymentContact)

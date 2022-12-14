@@ -29,6 +29,7 @@ class Currency(models.Model):
     name = models.CharField(max_length=20, unique=True)
 
     countries = models.ManyToManyField(Country,
+                                       blank=True,
                                        related_name='currencies',
                                        help_text='Countries that use this currency officially')
 
@@ -40,6 +41,9 @@ class Currency(models.Model):
     def clean(self) -> None:
         self.code = self.code.upper()
         return super().clean()
+
+    def __str__(self) -> str:
+        return f'{self.name} ({self.code})'
 
 
 class AbstractPriceByUnit(models.Model):
@@ -131,7 +135,7 @@ class Service(AbstractAsset):
     Represents the service that can be purchased by the customer.
     """
 
-    groups = models.ManyToManyField(Group)
+    groups = models.ManyToManyField(Group, blank=True)
 
     def __str__(self):
         return self.slug
@@ -148,8 +152,25 @@ class ServiceTranslation(models.Model):
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
 
+    def __str__(self) -> str:
+        return f'{self.lang}: {self.title}'
 
-class Fixture(models.Model):
+
+# class PlanOffer(models.Model):
+#     original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
+#     from_syllabus = models.ManyToManyField(Syllabus, on_delete=models.CASCADE)
+#     suggested_plans = models.ManyToManyField(Plan, on_delete=models.CASCADE)
+#     description = models.CharField(max_length=255)
+#     short_description = models.CharField(max_length=255)
+
+# class PlanOfferTranslation(models.Model):
+#     offer = models.ForeignKey(PlanOffer, on_delete=models.CASCADE)
+#     lang = models.CharField(max_length=5, validators=[validate_language_code])
+#     title = models.CharField(max_length=60)
+#     description = models.CharField(max_length=255)
+
+
+class PaymentServiceScheduler(models.Model):
     _lang = 'en'
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
@@ -163,8 +184,8 @@ class Fixture(models.Model):
     renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     # section of cache, is a nightmare solve this problem without it
-    cohorts = models.ManyToManyField(Cohort)
-    mentorship_services = models.ManyToManyField(MentorshipService)
+    cohorts = models.ManyToManyField(Cohort, blank=True)
+    mentorship_services = models.ManyToManyField(MentorshipService, blank=True)
 
     def _how_many(self):
         how_many = 0
@@ -206,6 +227,9 @@ class Fixture(models.Model):
         self.full_clean()
 
         super().save()
+
+    def __str__(self) -> str:
+        return f'{self.academy.slug} -> {self.service.slug} -> {self.cohort_pattern or "unset"}'
 
 
 UNIT = 'UNIT'
@@ -253,6 +277,37 @@ class ServiceItem(AbstractServiceItem):
     def delete(self):
         raise Exception('You cannot delete a service item')
 
+    def __str__(self) -> str:
+        return f'{self.service.slug} ({self.how_many})'
+
+
+class ServiceItemFeature(models.Model):
+    """
+    This model is used as referenced of units of a service can be used.
+    """
+
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
+    lang = models.CharField(max_length=5, validators=[validate_language_code])
+    description = models.CharField(max_length=255)
+    one_line_desc = models.CharField(max_length=30)
+
+    def __str__(self) -> str:
+        return f'{self.lang} {self.service_item.service.slug} ({self.service_item.how_many})'
+
+
+class FinancingOption(models.Model):
+    """
+    This model is used as referenced of units of a service can be used.
+    """
+
+    monthly_price = models.IntegerField(default=1)
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
+
+    how_many_months = models.IntegerField(default=1)
+
+    def __str__(self) -> str:
+        return f'{self.monthly_price} {self.currency.code} per {self.how_many_months} months'
+
 
 DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
@@ -274,6 +329,7 @@ class Plan(AbstractPriceByTime):
     """
 
     slug = models.CharField(max_length=60, unique=True)
+    financing_options = models.ManyToManyField(FinancingOption, blank=True)
 
     status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT)
     #TODO: visible enum, private, unlisted, visible
@@ -284,9 +340,16 @@ class Plan(AbstractPriceByTime):
     trial_duration = models.IntegerField(default=1)
     trial_duration_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
-    service_items = models.ManyToManyField(ServiceItem)
-    # cohorts = models.ManyToManyField(Cohort)
+    service_items = models.ManyToManyField(ServiceItem,
+                                           blank=True,
+                                           through='PlanServiceItem',
+                                           through_fields=('plan', 'service_item'))
+
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
+    is_onboarding = models.BooleanField(default=False)
+
+    def __str__(self) -> str:
+        return self.slug
 
 
 class PlanTranslation(models.Model):
@@ -300,28 +363,14 @@ class PlanTranslation(models.Model):
 
         super().save()
 
-
-FREE_TRIAL = 'FREE_TRIAL'
-ACTIVE = 'ACTIVE'
-CANCELLED = 'CANCELLED'
-DEPRECATED = 'DEPRECATED'
-PAYMENT_ISSUE = 'PAYMENT_ISSUE'
-ERROR = 'ERROR'
-SUBSCRIPTION_STATUS = [
-    (FREE_TRIAL, 'Free trial'),
-    (ACTIVE, 'Active'),
-    (CANCELLED, 'Cancelled'),
-    (DEPRECATED, 'Deprecated'),
-    (PAYMENT_ISSUE, 'Payment issue'),
-    (ERROR, 'Error'),
-]
+    def __str__(self) -> str:
+        return f'{self.lang} {self.title}: ({self.plan.slug})'
 
 
-class Balance:
-    id: int
-    slug: int
-    how_many: int
-
+# class Balance:
+#     id: int
+#     slug: int
+#     how_many: int
 
 # class MentorshipServiceSet:
 #     mentorship_services = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -375,7 +424,7 @@ class Consumable(AbstractServiceItem):
         super().save()
 
     def __str__(self):
-        return f'{self.service_item.service.slug} {self.how_many}'
+        return f'{self.user.email}: {self.service_item.service.slug} ({self.how_many})'
 
 
 RENEWAL = 'RENEWAL'
@@ -416,8 +465,8 @@ class Bag(AbstractAmountByTime):
 
     academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    service_items = models.ManyToManyField(ServiceItem)
-    plans = models.ManyToManyField(Plan)
+    service_items = models.ManyToManyField(ServiceItem, blank=True)
+    plans = models.ManyToManyField(Plan, blank=True)
 
     is_recurrent = models.BooleanField(default=False)
     was_delivered = models.BooleanField(default=False)
@@ -431,6 +480,9 @@ class Bag(AbstractAmountByTime):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f'{self.type} {self.status} {self.chosen_period}'
 
 
 FULFILLED = 'FULFILLED'
@@ -475,38 +527,154 @@ class Invoice(models.Model):
 
         super().save(*args, **kwargs)
 
+    def __str__(self) -> str:
+        return f'{self.user.email} {self.amount} ({self.currency.code})'
 
-class Subscription(models.Model):
+
+FREE_TRIAL = 'FREE_TRIAL'
+ACTIVE = 'ACTIVE'
+CANCELLED = 'CANCELLED'
+DEPRECATED = 'DEPRECATED'
+PAYMENT_ISSUE = 'PAYMENT_ISSUE'
+ERROR = 'ERROR'
+SUBSCRIPTION_STATUS = [
+    (FREE_TRIAL, 'Free trial'),
+    (ACTIVE, 'Active'),
+    (CANCELLED, 'Cancelled'),
+    (DEPRECATED, 'Deprecated'),
+    (PAYMENT_ISSUE, 'Payment issue'),
+    (ERROR, 'Error'),
+]
+
+
+class AbstractIOweYou(models.Model):
+    """
+    Common fields for all I owe you.
+    """
+
+    status = models.CharField(max_length=13, choices=SUBSCRIPTION_STATUS, default=ACTIVE)
+    status_message = models.CharField(max_length=150, null=True, blank=True, default=None)
+
+    invoices = models.ManyToManyField(Invoice, blank=True)
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    # this reminds the plans to change the stock scheduler on change
+    plans = models.ManyToManyField(Plan, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        abstract = True
+
+
+class Subscription(AbstractIOweYou):
     """
     Allows to create a subscription to a plan and services.
     """
 
     # last time the subscription was paid
     paid_at = models.DateTimeField()
-    status = models.CharField(max_length=13, choices=SUBSCRIPTION_STATUS, default=ACTIVE)
-    status_message = models.CharField(max_length=150, null=True, blank=True, default=None)
 
     is_refundable = models.BooleanField(default=True)
-    invoices = models.ManyToManyField(Invoice)
 
     # in this day the subscription needs being paid again
     valid_until = models.DateTimeField()
+
+    # this reminds the service items to change the stock scheduler on change
+    service_items = models.ManyToManyField(ServiceItem,
+                                           blank=True,
+                                           through='SubscriptionServiceItem',
+                                           through_fields=('subscription', 'service_item'))
 
     # remember the chosen period to pay again
     pay_every = models.IntegerField(default=1)
     pay_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.valid_until})'
 
-    # this reminds the service items to change the stock scheduler on change
-    service_items = models.ManyToManyField(ServiceItem)
 
-    # this reminds the plans to change the stock scheduler on change
-    plans = models.ManyToManyField(Plan)
+class SubscriptionServiceItem(models.Model):
+    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
 
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
+    def __str__(self) -> str:
+        return self.service_item
+
+
+class PlanFinancing(AbstractIOweYou):
+    """
+    Allows to financing a plan
+    """
+
+    # last time the subscription was paid
+    paid_at = models.DateTimeField()
+
+    # in this day the subscription needs being paid again
+    pay_until = models.DateTimeField()
+
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.pay_until})'
+
+
+class PlanServiceItem(models.Model):
+    """
+    M2M between plan and ServiceItem
+    """
+
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.service_item
+
+
+class PlanServiceItemHandler(models.Model):
+    """
+    M2M between plan and ServiceItem
+    """
+
+    handler = models.ForeignKey(PlanServiceItem, on_delete=models.CASCADE)
+
+    # resources associated to this service item, one is required
+    subscription = models.ForeignKey(Subscription,
+                                     on_delete=models.CASCADE,
+                                     null=True,
+                                     blank=True,
+                                     default=None)
+    plan_financing = models.ForeignKey(PlanFinancing,
+                                       on_delete=models.CASCADE,
+                                       null=True,
+                                       blank=True,
+                                       default=None)
+
+    def clean(self) -> None:
+        resources = [self.subscription, self.plan_financing]
+        how_many_resources_are_set = len([r for r in resources if r is not None])
+
+        if how_many_resources_are_set == 0:
+            raise Exception('A PlanServiceItem must be associated with one resource')
+
+        if how_many_resources_are_set != 1:
+            raise Exception('A PlanServiceItem can only be associated with one resource')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.subscription or self.plan_financing or 'Unset'
 
 
 class ServiceStockScheduler(models.Model):
@@ -514,15 +682,54 @@ class ServiceStockScheduler(models.Model):
     This model is used to represent the units of a service that can be consumed.
     """
 
-    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
-    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
+    # all this section are M2M service items, in the first case we have a query with subscription and service
+    # item for schedule the renovations
+    subscription_handler = models.ForeignKey(SubscriptionServiceItem,
+                                             on_delete=models.CASCADE,
+                                             default=None,
+                                             blank=True,
+                                             null=True)
+    plan_handler = models.ForeignKey(PlanServiceItemHandler,
+                                     on_delete=models.CASCADE,
+                                     default=None,
+                                     blank=True,
+                                     null=True)
 
     # this reminds which scheduler generated the consumable
-    consumables = models.ManyToManyField(Consumable)
+    consumables = models.ManyToManyField(Consumable, blank=True)
 
-    last_renew = models.DateTimeField(null=True, blank=False, default=None)
+    last_renew = models.DateTimeField(null=True, blank=True, default=None)
+
     # valid_until = models.DateTimeField(null=True, blank=False, default=None)
-    is_belongs_to_plan = models.BooleanField(default=False)
+
+    def clean(self) -> None:
+        resources = [self.subscription_handler, self.plan_handler]
+        how_many_resources_are_set = len([r for r in resources if r is not None])
+
+        if how_many_resources_are_set == 0:
+            raise Exception('A ServiceStockScheduler must be associated with one resource')
+
+        if how_many_resources_are_set != 1:
+            raise Exception('A ServiceStockScheduler can only be associated with one resource')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        if self.subscription_handler and self.subscription_handler.subscription:
+            return f'{self.subscription_handler.subscription.user.email} - {self.subscription_handler.service_item}'
+
+        if self.plan_handler and self.plan_handler.subscription:
+            return f'{self.plan_handler.subscription.user.email} - {self.plan_handler.handler.service_item}'
+
+        if self.plan_handler and self.plan_handler.plan_financing:
+            return f'{self.plan_handler.plan_financing.user.email} - {self.plan_handler.handler.service_item}'
+
+        return 'Unset'
 
 
 GOOD = 'GOOD'
@@ -540,6 +747,9 @@ REPUTATION_STATUS = [
 class PaymentContact(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='payment_contact')
     stripe_id = models.CharField(max_length=20)  # actually return 18 characters
+
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.stripe_id})'
 
 
 class FinancialReputation(models.Model):
@@ -571,3 +781,6 @@ class FinancialReputation(models.Model):
             return GOOD
 
         return UNKNOWN
+
+    def __str__(self) -> str:
+        return f'{self.user.email} -> {self.get_reputation()}'

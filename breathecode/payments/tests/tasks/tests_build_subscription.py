@@ -84,7 +84,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.tasks.build_service_stock_scheduler.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay', MagicMock())
     def test_subscription_was_created(self):
         bag = {
             'status': 'PAID',
@@ -135,4 +135,5 @@ class PaymentsTestSuite(PaymentsTestCase):
             }),
         ])
 
-        self.assertEqual(tasks.build_service_stock_scheduler.delay.call_args_list, [call(1)])
+        self.assertEqual(tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list,
+                         [call(1)])

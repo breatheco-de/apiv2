@@ -25,7 +25,12 @@ class PaymentsModelsMixin(ModelsMixin):
             financial_reputation=False,
             academy=False,
             bag=False,
-            fixture=False,
+            plan_service_item_handler=False,
+            payment_service_scheduler=False,
+            subscription_service_item=False,
+            plan_service_item=False,
+            plan_financing=False,
+            service_item_feature=False,
             models={},
             **kwargs):
         """Generate models"""
@@ -81,7 +86,7 @@ class PaymentsModelsMixin(ModelsMixin):
             models['service_translation'] = create_models(service_translation, 'payments.ServiceTranslation',
                                                           **kargs)
 
-        if not 'fixture' in models and is_valid(fixture):
+        if not 'payment_service_scheduler' in models and is_valid(payment_service_scheduler):
             kargs = {}
 
             if 'academy' in models:
@@ -96,10 +101,13 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'mentorship_service' in models:
                 kargs['mentorship_services'] = get_list(models['mentorship_service'])
 
-            models['fixture'] = create_models(service_translation, 'payments.Fixture', **kargs)
+            models['payment_service_scheduler'] = create_models(service_translation,
+                                                                'payments.PaymentServiceScheduler', **kargs)
 
         if not 'service_item' in models and (is_valid(service_item) or is_valid(consumable)
-                                             or is_valid(service_stock_scheduler)):
+                                             or is_valid(service_stock_scheduler)
+                                             or is_valid(subscription_service_item) or
+                                             is_valid(plan_service_item) or is_valid(service_item_feature)):
             kargs = {}
 
             if 'service' in models:
@@ -107,7 +115,17 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['service_item'] = create_models(service_item, 'payments.ServiceItem', **kargs)
 
-        if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation)):
+        if not 'service_item_feature' in models and is_valid(service_item_feature):
+            kargs = {}
+
+            if 'service_item' in models:
+                kargs['service_item'] = just_one(models['service_item'])
+
+            models['service_item_feature'] = create_models(service_item_feature,
+                                                           'payments.ServiceItemFeature', **kargs)
+
+        if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation)
+                                     or is_valid(plan_service_item)):
             kargs = {}
 
             # if 'price' in models:
@@ -116,8 +134,8 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'currency' in models:
                 kargs['currency'] = just_one(models['currency'])
 
-            if 'service_item' in models:
-                kargs['service_items'] = get_list(models['service_item'])
+            # if 'service_item' in models:
+            #     kargs['service_items'] = get_list(models['service_item'])
 
             if 'cohort' in models:
                 kargs['cohorts'] = get_list(models['cohort'])
@@ -189,7 +207,7 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['invoice'] = create_models(invoice, 'payments.Invoice', **kargs)
 
-        if not 'subscription' in models and (is_valid(subscription) or is_valid(service_stock_scheduler)):
+        if not 'subscription' in models and (is_valid(subscription) or is_valid(subscription_service_item)):
             kargs = {}
 
             if 'invoice' in models:
@@ -201,15 +219,15 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            if 'service_item' in models:
-                kargs['service_items'] = get_list(models['service_item'])
+            # if 'service_item' in models:
+            #     kargs['service_items'] = get_list(models['service_item'])
 
             if 'plan' in models:
                 kargs['plans'] = get_list(models['plan'])
 
             models['subscription'] = create_models(subscription, 'payments.Subscription', **kargs)
 
-        if not 'service_stock_scheduler' in models and is_valid(service_stock_scheduler):
+        if not 'subscription_service_item' in models and is_valid(subscription_service_item):
             kargs = {}
 
             if 'subscription' in models:
@@ -217,6 +235,63 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'service_item' in models:
                 kargs['service_item'] = just_one(models['service_item'])
+
+            models['subscription_service_item'] = create_models(subscription_service_item,
+                                                                'payments.SubscriptionServiceItem', **kargs)
+
+        if not 'plan_financing' in models and is_valid(plan_financing):
+            kargs = {}
+
+            if 'invoice' in models:
+                kargs['invoices'] = get_list(models['invoice'])
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'plan' in models:
+                kargs['plans'] = get_list(models['plan'])
+
+            models['plan_financing'] = create_models(subscription, 'payments.PlanFinancing', **kargs)
+
+        if not 'plan_service_item' in models and (is_valid(plan_service_item)
+                                                  or is_valid(plan_service_item_handler)):
+            kargs = {}
+
+            if 'plan' in models:
+                kargs['plan'] = just_one(models['plan'])
+
+            if 'service_item' in models:
+                kargs['service_item'] = just_one(models['service_item'])
+
+            models['plan_service_item'] = create_models(plan_service_item, 'payments.PlanServiceItem',
+                                                        **kargs)
+
+        if not 'plan_service_item_handler' in models and is_valid(plan_service_item_handler):
+            kargs = {}
+
+            if 'plan_service_item' in models:
+                kargs['handler'] = just_one(models['plan_service_item'])
+
+            if 'subscription' in models:
+                kargs['subscription'] = just_one(models['subscription'])
+
+            if 'plan_financing' in models:
+                kargs['plan_financing'] = just_one(models['plan_financing'])
+
+            models['plan_service_item_handler'] = create_models(plan_service_item_handler,
+                                                                'payments.PlanServiceItemHandler', **kargs)
+
+        if not 'service_stock_scheduler' in models and is_valid(service_stock_scheduler):
+            kargs = {}
+
+            if 'subscription_service_item' in models:
+                kargs['subscription_handler'] = just_one(models['subscription_service_item'])
+
+            if 'plan_service_item' in models:
+                kargs['plan_handler'] = just_one(models['plan_service_item'])
 
             if 'consumable' in models:
                 kargs['consumables'] = get_list(models['consumable'])

@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from django.db.models.query_utils import Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -11,20 +10,21 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.events.models import EventType
 from breathecode.mentorship.models import MentorshipService
-# from breathecode.authenticate.models import UserSetting
+from django.db.models import CharField, Q, Value
 
 from breathecode.payments import tasks
-from breathecode.payments.actions import add_items_to_bag, filter_consumables, get_amount, get_amount_by_chosen_period, get_balance_by_resource
+from breathecode.payments.actions import (add_items_to_bag, filter_consumables, get_amount,
+                                          get_amount_by_chosen_period, get_balance_by_resource,
+                                          get_plans_belong_to_cohort_from_request)
 from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, Service,
                                          ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetCreditSerializer, GetInvoiceSerializer,
                                               GetInvoiceSmallSerializer, GetPlanSerializer,
-                                              GetServiceItemSerializer, GetServiceSerializer,
-                                              GetSubscriptionSerializer, ServiceSerializer)
+                                              GetServiceItemSerializer, GetServiceItemWithFeaturesSerializer,
+                                              GetServiceSerializer, GetSubscriptionSerializer,
+                                              ServiceSerializer)
 from breathecode.payments.services.stripe import Stripe
-# from rest_framework.response import Response
 from breathecode.utils import APIViewExtensions
-from breathecode.utils.attr_dict import AttrDict
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
@@ -52,7 +52,16 @@ class PlanView(APIView):
             serializer = GetPlanSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = Plan.objects.filter(slug=plan_slug)
+        if cohort_slug := request.GET.get('cohort', None):
+            items = get_plans_belong_to_cohort_from_request(request, cohort_slug)
+
+        else:
+            items = Plan.objects.filter()
+
+        if not cohort_slug and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
+            items = items.filter(is_onboarding=is_onboarding == 'true')
+
+        items = items.exclude(status='DELETED')
 
         if service_slug:
             items = items.filter(services__slug=service_slug)
@@ -84,7 +93,16 @@ class AcademyPlanView(APIView):
             serializer = GetPlanSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED')
+        if cohort_slug := request.GET.get('cohort', None):
+            items = get_plans_belong_to_cohort_from_request(request, cohort_slug)
+
+        else:
+            items = Plan.objects.filter()
+
+        if not cohort_slug and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
+            items = items.filter(is_onboarding=is_onboarding == 'true')
+
+        items = items.filter(Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED')
 
         if service_slug:
             items = items.filter(services__slug=service_slug).exclude(status='DELETED')
@@ -263,21 +281,41 @@ class AcademyServiceView(APIView):
 
 class ServiceItemView(APIView):
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request, service_slug=None):
         handler = self.extensions(request)
+        language = handler.language.get()
 
-        items = ServiceItem.objects.filter()
+        if request.user.id:
+            settings = get_user_settings(request.user.id)
+            language = language or settings.lang
+
+        else:
+            language = language or 'en'
+
+        items = ServiceItem.objects.none()
+
+        if plan := request.GET.get('plan'):
+            args = {'id': int(plan)} if plan.isnumeric() else {'slug': plan}
+
+            p = Plan.objects.filter(**args).first()
+            items |= p.service_items.all()
+            items = items.distinct()
+
+        else:
+            items = ServiceItem.objects.filter()
 
         if service_slug:
             items = items.filter(service__slug=service_slug)
 
         if unit_type := request.GET.get('unit_type'):
-            items = items.filter(unit_type=unit_type.split(','))
+            items = items.filter(unit_type__in=unit_type.split(','))
+
+        items = items.annotate(lang=Value(language, output_field=CharField()))
 
         items = handler.queryset(items)
-        serializer = GetServiceItemSerializer(items, many=True)
+        serializer = GetServiceItemWithFeaturesSerializer(items, many=True)
 
         return handler.response(serializer.data)
 

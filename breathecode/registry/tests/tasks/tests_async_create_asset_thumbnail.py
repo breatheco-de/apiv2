@@ -264,7 +264,7 @@ class RegistryTestSuite(RegistryTestCase):
         asset = {'academy_id': 1}
         media = {'hash': hash, 'academy_id': 2}
         asset_category = {'preview_generation_url': self.bc.fake.url()}
-        model = self.bc.database.create_v2(asset=asset, media=media, academy=2, asset_category=asset_category)
+        model = self.bc.database.create(asset=asset, media=media, academy=2, asset_category=asset_category)
         async_create_asset_thumbnail.delay(model.asset.slug)
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [
