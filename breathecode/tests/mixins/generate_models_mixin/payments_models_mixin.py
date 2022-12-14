@@ -30,6 +30,7 @@ class PaymentsModelsMixin(ModelsMixin):
             subscription_service_item=False,
             plan_service_item=False,
             plan_financing=False,
+            service_item_feature=False,
             models={},
             **kwargs):
         """Generate models"""
@@ -105,14 +106,23 @@ class PaymentsModelsMixin(ModelsMixin):
 
         if not 'service_item' in models and (is_valid(service_item) or is_valid(consumable)
                                              or is_valid(service_stock_scheduler)
-                                             or is_valid(subscription_service_item)
-                                             or is_valid(plan_service_item)):
+                                             or is_valid(subscription_service_item) or
+                                             is_valid(plan_service_item) or is_valid(service_item_feature)):
             kargs = {}
 
             if 'service' in models:
                 kargs['service'] = just_one(models['service'])
 
             models['service_item'] = create_models(service_item, 'payments.ServiceItem', **kargs)
+
+        if not 'service_item_feature' in models and is_valid(service_item_feature):
+            kargs = {}
+
+            if 'service_item' in models:
+                kargs['service_item'] = just_one(models['service_item'])
+
+            models['service_item_feature'] = create_models(service_item_feature,
+                                                           'payments.ServiceItemFeature', **kargs)
 
         if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation)
                                      or is_valid(plan_service_item)):

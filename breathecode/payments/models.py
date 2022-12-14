@@ -150,6 +150,20 @@ class ServiceTranslation(models.Model):
     description = models.CharField(max_length=255)
 
 
+# class PlanOffer(models.Model):
+#     original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
+#     from_syllabus = models.ManyToManyField(Syllabus, on_delete=models.CASCADE)
+#     suggested_plans = models.ManyToManyField(Plan, on_delete=models.CASCADE)
+#     description = models.CharField(max_length=255)
+#     short_description = models.CharField(max_length=255)
+
+# class PlanOfferTranslation(models.Model):
+#     offer = models.ForeignKey(PlanOffer, on_delete=models.CASCADE)
+#     lang = models.CharField(max_length=5, validators=[validate_language_code])
+#     title = models.CharField(max_length=60)
+#     description = models.CharField(max_length=255)
+
+
 class PaymentServiceScheduler(models.Model):
     _lang = 'en'
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -253,6 +267,17 @@ class ServiceItem(AbstractServiceItem):
 
     def delete(self):
         raise Exception('You cannot delete a service item')
+
+
+class ServiceItemFeature(AbstractServiceItem):
+    """
+    This model is used as referenced of units of a service can be used.
+    """
+
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
+    lang = models.CharField(max_length=5, validators=[validate_language_code])
+    description = models.CharField(max_length=255)
+    one_line_desc = models.CharField(max_length=30)
 
 
 class FinancingOption(models.Model):
