@@ -1,11 +1,13 @@
 import ast
 from functools import cache
+import re
 from typing import Optional
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from django.db.models.query_utils import Q
 from django.db.models import Sum, QuerySet
 from django.core.handlers.wsgi import WSGIRequest
+from pytz import UTC
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_settings
@@ -359,15 +361,29 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
         current = queryset.filter(**{f'{key}__id': id})
         instance = current.first()
         balance = {}
+        items = []
         units = {x[0] for x in SERVICE_UNITS}
         for unit in units:
             per_unit = current.filter(unit_type=unit)
             balance[unit.lower()] = -1 if per_unit.filter(
                 how_many=-1).exists() else per_unit.aggregate(Sum('how_many'))['how_many__sum']
 
+        for x in queryset:
+            valid_until = x.valid_until
+            if valid_until:
+                valid_until = re.sub(r'\+00:00$', 'Z', valid_until.replace(tzinfo=UTC).isoformat())
+
+            items.append({
+                'id': x.id,
+                'how_many': x.how_many,
+                'unit_type': x.unit_type,
+                'valid_until': x.valid_until,
+            })
+
         result.append({
             'id': getattr(instance, key).id,
             'slug': getattr(instance, key).slug,
             'balance': balance,
+            'items': items,
         })
     return result
