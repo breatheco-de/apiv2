@@ -216,7 +216,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
 @api_view(['GET'])
 def get_categories(request):
-    items = AssetCategory.objects.filer(visibility='PUBLIC')
+    items = AssetCategory.objects.filter(visibility='PUBLIC')
     serializer = AssetCategorySerializer(items, many=True)
     return Response(serializer.data)
 
@@ -737,48 +737,72 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_asset')
     def put(self, request, asset_slug=None, academy_id=None):
-        if asset_slug is None:
-            raise ValidationException('Missing asset_slug')
 
-        asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
-        if asset is None:
-            raise ValidationException(f'This asset {asset_slug} does not exist for this academy {academy_id}',
-                                      404)
+        many = isinstance(request.data, list)
+        if not many:
+            if asset_slug is None:
+                raise ValidationException('Missing asset_slug')
 
-        data = {
-            **request.data,
-        }
-
-        if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
-                data['technologies'][0], str):
-            technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
-                'pk', flat=True)
-            delta = len(data['technologies']) - len(technology_ids)
-            if delta != 0:
+            asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
+            if asset is None:
                 raise ValidationException(
-                    f'{delta} of the assigned technologies for this lesson are not found')
+                    f'This asset {asset_slug} does not exist for this academy {academy_id}', 404)
 
-            data['technologies'] = technology_ids
+            data = {
+                **request.data,
+            }
 
-        if 'seo_keywords' in data and len(data['seo_keywords']) > 0:
-            if isinstance(data['seo_keywords'][0], str):
-                data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list(
+            if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
+                    data['technologies'][0], str):
+                technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
                     'pk', flat=True)
+                delta = len(data['technologies']) - len(technology_ids)
+                if delta != 0:
+                    raise ValidationException(
+                        f'{delta} of the assigned technologies for this lesson are not found')
 
-        if 'all_translations' in data and len(data['all_translations']) > 0 and isinstance(
-                data['all_translations'][0], str):
-            data['all_translations'] = Asset.objects.filter(slug__in=data['all_translations']).values_list(
-                'pk', flat=True)
+                data['technologies'] = technology_ids
+
+            if 'seo_keywords' in data and len(data['seo_keywords']) > 0:
+                if isinstance(data['seo_keywords'][0], str):
+                    data['seo_keywords'] = AssetKeyword.objects.filter(
+                        slug__in=data['seo_keywords']).values_list('pk', flat=True)
+
+            if 'all_translations' in data and len(data['all_translations']) > 0 and isinstance(
+                    data['all_translations'][0], str):
+                data['all_translations'] = Asset.objects.filter(
+                    slug__in=data['all_translations']).values_list('pk', flat=True)
+
+        else:
+            data = request.data
+            asset = []
+            index = -1
+            for x in request.data:
+                index = index + 1
+
+                if 'id' not in x:
+                    raise ValidationException('Cannot determine asset in '
+                                              f'index {index}',
+                                              slug='without-id')
+
+                instance = Asset.objects.filter(id=x['id'], academy__id=academy_id).first()
+
+                if not instance:
+                    raise ValidationException(f'Asset({x["id"]}) does not exist on this academy',
+                                              code=404,
+                                              slug='not-found')
+                asset.append(instance)
 
         serializer = AssetPUTSerializer(asset,
                                         data=data,
                                         context={
                                             'request': request,
                                             'academy_id': academy_id
-                                        })
+                                        },
+                                        many=many)
         if serializer.is_valid():
             serializer.save()
-            serializer = AcademyAssetSerializer(asset, many=False)
+            serializer = AcademyAssetSerializer(asset, many=many)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

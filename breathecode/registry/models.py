@@ -197,7 +197,7 @@ class AssetKeyword(models.Model):
     def save(self, *args, **kwargs):
 
         if self.__old_slug != self.slug:
-            # Prevent multiple keywords with same slug
+            # Prevent multiple keywords with same slug and make category mandatory
             keyword = AssetKeyword.objects.filter(slug=self.slug, academy=self.academy).first()
             if keyword is not None:
                 raise Exception(f'Keyword with slug {self.slug} already exists on this academy')
@@ -270,11 +270,12 @@ class Asset(models.Model):
     all_translations = models.ManyToManyField('self', blank=True)
     technologies = models.ManyToManyField(AssetTechnology, blank=True)
 
-    category = models.ForeignKey(AssetCategory,
-                                 on_delete=models.SET_NULL,
-                                 default=None,
-                                 blank=True,
-                                 null=True)
+    category = models.ForeignKey(
+        AssetCategory,
+        on_delete=models.SET_NULL,
+        blank=False,
+        null=True,
+    )
 
     url = models.URLField(null=True, blank=True, default=None)
     solution_url = models.URLField(null=True, blank=True, default=None)
@@ -299,7 +300,7 @@ class Asset(models.Model):
     readme_raw = models.TextField(null=True, blank=True, default=None)
     html = models.TextField(null=True, blank=True, default=None)
 
-    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
     config = models.JSONField(null=True, blank=True, default=None)
 
@@ -431,6 +432,7 @@ class Asset(models.Model):
                 raise Exception(
                     f'New slug {self.slug} for {self.__old_slug} is already taken by alias for asset {alias.asset.slug}'
                 )
+        self.full_clean()
 
         super().save(*args, **kwargs)
         self.__old_slug = self.slug
@@ -515,6 +517,11 @@ class Asset(models.Model):
             readme['frontmatter']['format'] = format
             readme['html'] = body
         return readme
+
+    def get_thumbnail_name(self):
+        slug1 = self.category.slug if self.category is not None else 'default'
+        slug2 = self.slug
+        return f'{self.academy.slug}-{slug1}-{slug2}.png'
 
     @staticmethod
     def encode(content):

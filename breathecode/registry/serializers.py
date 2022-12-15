@@ -336,10 +336,14 @@ class PostAssetSerializer(serializers.ModelSerializer):
         if 'readme_raw' in validated_data:
             readme_raw = validated_data['readme_raw']
 
-        return super(PostAssetSerializer, self).create({
-            **validated_data, 'academy': academy,
-            'readme_raw': readme_raw
-        })
+        try:
+            return super(PostAssetSerializer, self).create({
+                **validated_data, 'academy': academy,
+                'readme_raw': readme_raw
+            })
+        except Exception as e:
+
+            raise ValidationException(e.message_dict, 400)
 
 
 class PostKeywordClusterSerializer(serializers.ModelSerializer):
@@ -514,6 +518,19 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
         return validated_data
 
 
+class AssetListSerializer(serializers.ListSerializer):
+
+    def update(self, instances, validated_data):
+
+        instance_hash = {index: instance for index, instance in enumerate(instances)}
+
+        result = [
+            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
+        ]
+
+        return result
+
+
 class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
     technologies = serializers.ListField(required=False)
@@ -523,6 +540,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         exclude = ('academy', )
+        list_serializer_class = AssetListSerializer
 
     def validate(self, data):
 
