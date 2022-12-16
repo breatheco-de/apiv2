@@ -1,7 +1,7 @@
 import ast
 from functools import cache
 import re
-from typing import Optional
+from typing import Optional, Type
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from django.db.models.query_utils import Q
@@ -9,12 +9,13 @@ from django.db.models import Sum, QuerySet
 from django.core.handlers.wsgi import WSGIRequest
 from pytz import UTC
 
-from breathecode.admissions.models import Academy, Cohort, CohortUser
+from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserSetting
 from breathecode.utils.attr_dict import AttrDict
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
+from rest_framework.request import Request
 
 from .models import SERVICE_UNITS, Bag, Consumable, Currency, PaymentServiceScheduler, Plan, Service, ServiceItem, Subscription
 from breathecode.utils import getLogger
@@ -73,42 +74,123 @@ def get_fixture_patterns(academy_id: int):
     return fixtures
 
 
-def get_plans_belong_to_cohort(cohort: Cohort, on_boarding: Optional[bool] = None, auto: bool = False):
-    additional_args = {}
+class PlanFinder:
+    cohort: Optional[Cohort] = None
+    syllabus: Optional[Syllabus] = None
 
-    if on_boarding is not None:
-        additional_args['on_boarding'] = on_boarding
+    def __init__(self, request: Request, lang: Optional[str] = None) -> None:
+        self.request = request
 
-    if not cohort.syllabus_version:
-        return Plan.objects.none()
+        if lang:
+            self.lang = lang
 
-    if not additional_args and auto:
-        additional_args['is_onboarding'] = not CohortUser.objects.filter(
-            cohort__syllabus_version__syllabus=cohort.syllabus_version.syllabus).exists()
+        else:
+            self.lang = request.META.get('HTTP_ACCEPT_LANGUAGE')
 
-    fixtures = cohort.paymentservicescheduler_set.filter(cohorts__id=cohort.id,
-                                                         cohorts__stage__in=['INACTIVE', 'PREWORK'])
+        if not self.lang:
+            settings = get_user_settings(request.user.id)
+            self.lang = settings.lang
 
-    plans = Plan.objects.none()
+        if cohort := request.GET.get('cohort') or request.data.get('cohort'):
+            self.cohort = self._get_instance(Cohort, cohort)
 
-    for fixture in fixtures:
-        plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
+        self.academy_slug = request.GET.get('academy') or request.data.get('academy')
 
-    return plans
+        if syllabus := request.GET.get('syllabus') or request.data.get('syllabus'):
+            self.syllabus = self._get_instance(Syllabus, syllabus, self.academy_slug)
 
+    def _get_instance(self,
+                      model: Type[Cohort | Syllabus],
+                      pk: str,
+                      academy: Optional[str] = None) -> Optional[Cohort | Syllabus]:
+        args = []
+        kwargs = {}
 
-def get_plans_belong_to_cohort_from_request(request, cohort):
-    is_onboarding = request.data.get('is_onboarding') or request.GET.get('is_onboarding')
+        if isinstance(pk, int) or pk.isnumeric():
+            kwargs['id'] = int(pk)
+        else:
+            kwargs['slug'] = pk
 
-    additional_args = {}
+        if academy:
+            args.append(Q(academy_owner__slug=academy) | Q(private=False))
 
-    if is_onboarding:
-        additional_args['is_onboarding'] = is_onboarding
+        resource = model.objects.filter(*args, **kwargs).first()
+        if not resource:
+            raise ValidationException(
+                translation(self.lang,
+                            en=f'{model.__call__.__name__} not found',
+                            es=f'{model.__call__.__name__} no encontrada',
+                            slug=f'{model.__call__.__name__.lower()}-not-found'))
 
-    if not additional_args:
-        additional_args['auto'] = True
+        return resource
 
-    return get_plans_belong_to_cohort(cohort, **additional_args)
+    def _cohort_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
+        additional_args = {}
+
+        if on_boarding is not None:
+            additional_args['on_boarding'] = on_boarding
+
+        if not self.cohort.syllabus_version:
+            return Plan.objects.none()
+
+        if not additional_args and auto:
+            additional_args['is_onboarding'] = not CohortUser.objects.filter(
+                cohort__syllabus_version__syllabus=self.cohort.syllabus_version.syllabus).exists()
+
+        fixtures = self.cohort.paymentservicescheduler_set.filter(cohorts__id=self.cohort.id,
+                                                                  cohorts__stage__in=['INACTIVE', 'PREWORK'])
+
+        plans = Plan.objects.none()
+
+        for fixture in fixtures:
+            plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
+
+        return plans
+
+    def _syllabus_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
+        additional_args = {}
+
+        if on_boarding is not None:
+            additional_args['on_boarding'] = on_boarding
+
+        if not additional_args and auto:
+            additional_args['is_onboarding'] = not CohortUser.objects.filter(
+                cohort__syllabus_version__syllabus=self.syllabus).exists()
+
+        fixtures = self.syllabus.paymentservicescheduler_set.filter(
+            cohorts__id=self.syllabus.id, cohorts__stage__in=['INACTIVE', 'PREWORK'])
+
+        fixtures = PaymentServiceScheduler.objects.filter(cohorts__syllabus_version__syllabus=self.syllabus,
+                                                          cohorts__stage__in=['INACTIVE', 'PREWORK'])
+
+        plans = Plan.objects.none()
+
+        for fixture in fixtures:
+            plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
+
+        return plans
+
+    def get_plans_belongs(self, on_boarding: Optional[bool] = None, auto: bool = False):
+        if self.syllabus:
+            return self._syllabus_handler(on_boarding, auto)
+
+        if self.cohort:
+            return self._cohort_handler(on_boarding, auto)
+
+        raise NotImplementedError('Resource handler not implemented')
+
+    def get_plans_belongs_from_request(self):
+        is_onboarding = self.request.data.get('is_onboarding') or self.request.GET.get('is_onboarding')
+
+        additional_args = {}
+
+        if is_onboarding:
+            additional_args['is_onboarding'] = is_onboarding
+
+        if not additional_args:
+            additional_args['auto'] = True
+
+        return self.get_plans_belongs(**additional_args)
 
 
 def add_items_to_bag(request, settings: UserSetting, bag: Bag):
@@ -143,15 +225,15 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
 
     # get plan related to a cohort
     if cohort_id:
-        try:
-            cohort = Cohort.objects.get(id=int(cohort_id))
-        except:
-            raise ValidationException(translation(settings.lang,
-                                                  en='Cohort not found',
-                                                  es='Cohort no encontrada'),
-                                      slug='cohort-not-found')
+        # try:
+        #     cohort = Cohort.objects.get(id=int(cohort_id))
+        # except:
+        #     raise ValidationException(translation(settings.lang,
+        #                                           en='Cohort not found',
+        #                                           es='Cohort no encontrada'),
+        #                               slug='cohort-not-found')
 
-        cohort_plans = get_plans_belong_to_cohort_from_request(request, cohort)
+        cohort_plans = PlanFinder(request).get_plans_belongs_from_request()
 
         if not cohort_plans:
             raise ValidationException(translation(settings.lang,

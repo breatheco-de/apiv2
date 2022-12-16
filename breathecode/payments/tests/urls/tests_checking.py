@@ -171,7 +171,7 @@ class SignalTestSuite(PaymentsTestCase):
                     'amount_per_quarter': 0.0,
                     'amount_per_half': 0.0,
                     'amount_per_year': 0.0,
-                    'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
+                    'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                     'token': token,
                 },
             )
@@ -186,7 +186,7 @@ class SignalTestSuite(PaymentsTestCase):
                     'amount_per_quarter': 0.0,
                     'amount_per_half': 0.0,
                     'amount_per_year': 0.0,
-                    'expires_at': UTC_NOW + timedelta(minutes=10),
+                    'expires_at': UTC_NOW + timedelta(minutes=60),
                     'token': token,
                 },
             ])
@@ -264,7 +264,7 @@ class SignalTestSuite(PaymentsTestCase):
                 'amount_per_quarter': 0.0,
                 'amount_per_half': 0.0,
                 'amount_per_year': 0.0,
-                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
+                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 'token': token,
             },
         )
@@ -279,7 +279,7 @@ class SignalTestSuite(PaymentsTestCase):
                 'amount_per_quarter': 0.0,
                 'amount_per_half': 0.0,
                 'amount_per_year': 0.0,
-                'expires_at': UTC_NOW + timedelta(minutes=10),
+                'expires_at': UTC_NOW + timedelta(minutes=60),
                 'token': token,
             },
         ])
@@ -542,7 +542,7 @@ class SignalTestSuite(PaymentsTestCase):
                 'amount_per_quarter': price_per_quarter,
                 'amount_per_half': price_per_half,
                 'amount_per_year': price_per_year,
-                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
+                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 'token': token,
             },
         )
@@ -557,7 +557,7 @@ class SignalTestSuite(PaymentsTestCase):
                 'amount_per_quarter': price_per_quarter,
                 'amount_per_half': price_per_half,
                 'amount_per_year': price_per_year,
-                'expires_at': UTC_NOW + timedelta(minutes=10),
+                'expires_at': UTC_NOW + timedelta(minutes=60),
                 'token': token,
             },
         ])
@@ -821,7 +821,7 @@ class SignalTestSuite(PaymentsTestCase):
                 'amount_per_quarter': price_per_quarter,
                 'amount_per_half': price_per_half,
                 'amount_per_year': price_per_year,
-                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=10)),
+                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 'token': token,
             },
         )
@@ -836,7 +836,7 @@ class SignalTestSuite(PaymentsTestCase):
                 'amount_per_quarter': price_per_quarter,
                 'amount_per_half': price_per_half,
                 'amount_per_year': price_per_year,
-                'expires_at': UTC_NOW + timedelta(minutes=10),
+                'expires_at': UTC_NOW + timedelta(minutes=60),
                 'token': token,
             },
         ])

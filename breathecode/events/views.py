@@ -21,7 +21,7 @@ from rest_framework.permissions import AllowAny
 
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from .models import Event, EventType, EventCheckin, Organization, Venue, EventbriteWebhook, Organizer
-from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
+from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
                           EventSmallSerializerNoAcademy, VenueSerializer, OrganizationBigSerializer,
@@ -133,6 +133,69 @@ class EventView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EventMeView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    def build_query_params(self, cohort=None, syllabus=None, academy=None):
+        """
+        Build the query params to the visibility options.
+        """
+
+        return {
+            'visibility_settings__cohort': cohort,
+            'visibility_settings__syllabus': syllabus,
+            'visibility_settings__academy': academy,
+        }
+
+    def get_related_resources(self):
+        """
+        Get the resources related to this user.
+        """
+
+        syllabus = Syllabus.objects.none()
+        academies = Academy.objects.none()
+        cohorts = Cohort.objects.none()
+        cohort_users = CohortUser.objects.filter(user=self.request.user)
+        cohort_users_with_syllabus = cohort_users.filter(cohort__syllabus_version__isnull=False)
+
+        for cohort_user in cohort_users_with_syllabus:
+            syllabus |= cohort_user.cohort.syllabus_version.syllabus
+
+        for cohort_user in cohort_users:
+            academies |= cohort_user.cohort.academy
+
+        for cohort_user in cohort_users:
+            cohorts |= cohort_user.cohort
+
+        return academies.distinct(), cohorts.distinct(), syllabus.distinct()
+
+    def get(self, request):
+        params = []
+
+        academies, cohorts, syllabus = self.get_related_resources()
+
+        # shared with the whole academy
+        for academy in academies:
+            params.append(Q(**self.build_query_params(academy=academy)))
+
+        # shared with a specific cohort
+        for cohort in cohorts:
+            # is not necessary provided the syllabus
+            params.append(Q(**self.build_query_params(academy=cohort.academy, cohort=cohort)))
+
+        # shared with a specific syllabus
+        for s in syllabus:
+            params.append(Q(**self.build_query_params(academy=cohort.academy, syllabus=s)))
+
+        items = EventType.objects.filter(*params)
+        items = items.order_by('-created_at')
+
+        serializer = EventTypeSerializer(items, many=True)
+        return Response(serializer.data)
 
 
 class AcademyEventView(APIView, GenerateLookupsMixin):
@@ -316,6 +379,11 @@ class EventTypeView(APIView):
         if 'academy' in self.request.GET:
             value = self.request.GET.get('academy')
             lookup['academy__slug'] = value
+
+        if 'allow_shared_creation' in self.request.GET:
+            value = self.request.GET.get('allow_shared_creation', '').lower()
+            lookup['allow_shared_creation'] = value == 'true'
+
         items = items.filter(**lookup).order_by('-created_at')
 
         serializer = EventTypeSerializer(items, many=True)

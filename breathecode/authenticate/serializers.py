@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser
 from breathecode.utils import ValidationException
-from breathecode.admissions.models import Academy, Cohort
+from breathecode.admissions.models import Academy, Cohort, Syllabus
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from django.db.models import Q
@@ -859,7 +859,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserInvite
 
-        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'access_token')
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token')
 
     def validate(self, data: dict[str, str]):
         if 'email' not in data:
@@ -879,23 +879,36 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         now = str(timezone.now())
 
         cohort = data.get('cohort')
+        syllabus = data.get('syllabus')
         if cohort and cohort.academy and cohort.academy.available_as_saas == True:
             data['academy'] = cohort.academy
             data['cohort'] = cohort
+            data['status'] = 'ACCEPTED'
+
+        elif syllabus and Cohort.objects.filter(academy__available_as_saas=True,
+                                                syllabus_version__syllabus=syllabus).exists():
+            data['syllabus'] = syllabus
             data['status'] = 'ACCEPTED'
 
         else:
             data['status'] = 'WAITING_LIST'
 
         self.cohort = cohort
+        self.syllabus = syllabus
 
         if not self.instance:
             data['token'] = hashlib.sha1((now + data['email']).encode('UTF-8')).hexdigest()
 
+        print('data', data)
+
         return data
 
     def get_access_token(self, obj: UserInvite):
-        if not self.cohort or not self.cohort.academy or self.cohort.academy.available_as_saas != True:
+        without_cohort = not self.cohort or not self.cohort.academy or self.cohort.academy.available_as_saas != True
+        without_syllabus = not self.syllabus or not Cohort.objects.filter(
+            academy__available_as_saas=True, syllabus_version__syllabus=self.syllabus).exists()
+
+        if without_cohort and without_syllabus:
             return None
 
         if not self.user:

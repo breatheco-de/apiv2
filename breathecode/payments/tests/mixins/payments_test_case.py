@@ -16,3 +16,4 @@ class PaymentsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
 
     def setUp(self):
         self.set_test_instance(self)
+        self.bc.database.reset_queries()

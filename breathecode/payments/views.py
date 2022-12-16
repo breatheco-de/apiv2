@@ -13,9 +13,8 @@ from breathecode.mentorship.models import MentorshipService
 from django.db.models import CharField, Q, Value
 
 from breathecode.payments import tasks
-from breathecode.payments.actions import (add_items_to_bag, filter_consumables, get_amount,
-                                          get_amount_by_chosen_period, get_balance_by_resource,
-                                          get_plans_belong_to_cohort_from_request)
+from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
+                                          get_amount_by_chosen_period, get_balance_by_resource)
 from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, Service,
                                          ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetCreditSerializer, GetInvoiceSerializer,
@@ -52,13 +51,14 @@ class PlanView(APIView):
             serializer = GetPlanSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        if cohort_slug := request.GET.get('cohort', None):
-            items = get_plans_belong_to_cohort_from_request(request, cohort_slug)
+        filtering = 'cohort' in request.GET or 'syllabus' in request.GET
+        if 'cohort' in request.GET or 'syllabus' in request.GET:
+            items = PlanFinder(request).get_plans_belongs_from_request()
 
         else:
             items = Plan.objects.filter()
 
-        if not cohort_slug and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
+        if not filtering and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
             items = items.filter(is_onboarding=is_onboarding == 'true')
 
         items = items.exclude(status='DELETED')
@@ -93,13 +93,14 @@ class AcademyPlanView(APIView):
             serializer = GetPlanSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        if cohort_slug := request.GET.get('cohort', None):
-            items = get_plans_belong_to_cohort_from_request(request, cohort_slug)
+        filtering = 'cohort' in request.GET or 'syllabus' in request.GET
+        if 'cohort' in request.GET or 'syllabus' in request.GET:
+            items = PlanFinder(request).get_plans_belongs_from_request()
 
         else:
             items = Plan.objects.filter()
 
-        if not cohort_slug and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
+        if not filtering and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
             items = items.filter(is_onboarding=is_onboarding == 'true')
 
         items = items.filter(Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED')
@@ -636,7 +637,7 @@ class CheckingView(APIView):
                 utc_now = timezone.now()
 
                 bag.token = Token.generate_key()
-                bag.expires_at = utc_now + timedelta(minutes=10)
+                bag.expires_at = utc_now + timedelta(minutes=60)
                 bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
                     bag, bag.academy.main_currency)
 

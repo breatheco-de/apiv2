@@ -1141,6 +1141,7 @@ class StudentPostTestSuite(AuthTestCase):
                 'last_name': 'McKornick',
                 'role_id': 'student',
                 'token': TOKEN,
+                'syllabus_id': None,
             }),
         ])
         self.assertEqual(actions.send_email_message.call_args_list, [
@@ -1265,6 +1266,7 @@ class StudentPostTestSuite(AuthTestCase):
                 'email': 'dude2@dude.dude',
                 'role_id': 'student',
                 'token': model.user_invite.token,
+                'syllabus_id': None,
             }),
             generate_user_invite({
                 'id': 2,
@@ -1276,6 +1278,7 @@ class StudentPostTestSuite(AuthTestCase):
                 'last_name': 'McKornick',
                 'role_id': 'student',
                 'token': TOKEN,
+                'syllabus_id': None,
             }),
         ])
 

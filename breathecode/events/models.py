@@ -91,28 +91,29 @@ class Venue(models.Model):
         return self.title or 'No title'
 
 
+class EventTypeVisibilitySetting(models.Model):
+    """
+    This will be used to show the workshops, this table point to the resource the user have access, if he/she
+    have access, he/she can watch this collection of workshops, the requires hierarchy to see the content
+    will be implemented in the view.
+    """
+
+    #TODO: is possible show a workshops to a person assist to a event? this should be used for marketing
+    # purposed
+    # ???
+
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, blank=True, null=True)
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+
 class EventType(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
     description = models.CharField(max_length=255, default='', null=False)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
 
-    shared_with_academies = models.ManyToManyField(Academy,
-                                                   blank=True,
-                                                   related_name='shared_event_types',
-                                                   through='EventTypeAcademy',
-                                                   through_fields=('event_type', 'academy'))
-
-    shared_with_syllabus = models.ManyToManyField(Syllabus,
-                                                  blank=True,
-                                                  through='EventTypeSyllabus',
-                                                  through_fields=('event_type', 'syllabus'))
-
-    shared_with_cohorts = models.ManyToManyField(Cohort,
-                                                 blank=True,
-                                                 through='EventTypeCohort',
-                                                 through_fields=('event_type', 'cohort'))
-
+    visibility_settings = models.ManyToManyField(EventTypeVisibilitySetting, blank=True)
     allow_shared_creation = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -120,65 +121,6 @@ class EventType(models.Model):
 
     def __str__(self):
         return self.name or 'Nameless'
-
-
-class EventTypeAcademy(models.Model):
-    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-
-    def save(self, *args, **kwargs):
-        if EventTypeAcademy.objects.filter(event_type=self.event_type,
-                                           academy=self.academy).exclude(id=self.id).exists():
-            raise ValidationException('Cannot add a academy twice')
-
-        super().save(*args, **kwargs)
-
-
-class EventTypeSyllabus(models.Model):
-    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
-    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
-
-    def save(self, *args, **kwargs):
-        if EventTypeSyllabus.objects.filter(event_type=self.event_type,
-                                            syllabus=self.syllabus).exclude(id=self.id).exists():
-            raise ValidationException('Cannot add a syllabus twice')
-
-        if not self.event_type.shared_with_cohorts.filter(syllabus_version__syllabus=self.syllabus).exists():
-            raise ValidationException(
-                'Cannot determine the cohort belong to this syllabus, please add the cohort')
-
-        super().save(*args, **kwargs)
-
-
-class EventTypeCohort(models.Model):
-    """
-    The purpose of this model is manage
-    """
-    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
-    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
-
-    def save(self, *args, **kwargs):
-        if EventTypeCohort.objects.filter(event_type=self.event_type,
-                                          cohort=self.cohort).exclude(id=self.id).exists():
-            raise ValidationException('Cannot add a cohort twice')
-
-        super().save(*args, **kwargs)
-        if not self.event_type.shared_with_academies.filter(academy=self.cohort.academy).exists():
-            self.event_type.shared_with_academies.add(self.cohort.academy)
-
-        if self.cohort.syllabus_version and not self.event_type.shared_with_academies.filter(
-                academy=self.cohort.academy).exists():
-            self.event_type.shared_with_syllabus.add(self.cohort.syllabus_version.syllabus)
-
-    def delete(self, *args, **kwargs):
-        super().delete(*args, **kwargs)
-
-        if not self.event_type.shared_with_cohorts.filter(academy=self.cohort.academy).exists():
-            self.event_type.shared_with_academies.remove(self.cohort.academy)
-
-        if self.cohort.syllabus_version and not self.event_type.shared_with_cohorts.filter(
-                syllabus_version__syllabus=self.cohort.syllabus_version.syllabus).exists():
-            self.event_type.shared_with_syllabus.remove(self.cohort.syllabus_version.syllabus)
 
 
 EVENT_STATUS = (
