@@ -100,6 +100,16 @@ def get_amount_per_period(period, data):
     return data[CHOSEN_PERIOD[period]]
 
 
+def serialize_consumable(consumable, data={}):
+    return {
+        'how_many': consumable.how_many,
+        'id': consumable.id,
+        'unit_type': consumable.unit_type,
+        'valid_until': consumable.valid_until,
+        **data,
+    }
+
+
 class SignalTestSuite(PaymentsTestCase):
     """
     🔽🔽🔽 GET without auth
@@ -222,6 +232,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.cohort[0].id,
                     'slug': model.cohort[0].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -229,6 +240,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.cohort[1].id,
                     'slug': model.cohort[1].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -236,6 +248,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.cohort[2].id,
                     'slug': model.cohort[2].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
             'event_types': [],
@@ -311,6 +324,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.mentorship_service[0].id,
                     'slug': model.mentorship_service[0].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -318,6 +332,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.mentorship_service[1].id,
                     'slug': model.mentorship_service[1].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -325,6 +340,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.mentorship_service[2].id,
                     'slug': model.mentorship_service[2].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
             'event_types': [],
@@ -400,6 +416,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.event_type[0].id,
                     'slug': model.event_type[0].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -407,6 +424,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.event_type[1].id,
                     'slug': model.event_type[1].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -414,6 +432,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.event_type[2].id,
                     'slug': model.event_type[2].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
             'mentorship_services': [],
@@ -492,6 +511,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.cohort[0].id,
                     'slug': model.cohort[0].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -499,6 +519,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.cohort[1].id,
                     'slug': model.cohort[1].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -506,6 +527,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.cohort[2].id,
                     'slug': model.cohort[2].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
             'event_types': [],
@@ -584,6 +606,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.mentorship_service[0].id,
                     'slug': model.mentorship_service[0].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -591,6 +614,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.mentorship_service[1].id,
                     'slug': model.mentorship_service[1].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -598,6 +622,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.mentorship_service[2].id,
                     'slug': model.mentorship_service[2].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
             'event_types': [],
@@ -674,6 +699,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.event_type[0].id,
                     'slug': model.event_type[0].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -681,6 +707,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.event_type[1].id,
                     'slug': model.event_type[1].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
@@ -688,6 +715,7 @@ class SignalTestSuite(PaymentsTestCase):
                     },
                     'id': model.event_type[2].id,
                     'slug': model.event_type[2].slug,
+                    'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
             'mentorship_services': [],
@@ -761,8 +789,14 @@ class SignalTestSuite(PaymentsTestCase):
                     'balance': {
                         'unit': -1,
                     },
-                    'id': model.cohort.id,
-                    'slug': model.cohort.slug,
+                    'id':
+                    model.cohort.id,
+                    'slug':
+                    model.cohort.slug,
+                    'items': [
+                        serialize_consumable(model.consumable[2]),
+                        serialize_consumable(model.consumable[3]),
+                    ],
                 },
             ],
             'event_types': [
@@ -770,8 +804,14 @@ class SignalTestSuite(PaymentsTestCase):
                     'balance': {
                         'unit': -1,
                     },
-                    'id': model.event_type.id,
-                    'slug': model.event_type.slug,
+                    'id':
+                    model.event_type.id,
+                    'slug':
+                    model.event_type.slug,
+                    'items': [
+                        serialize_consumable(model.consumable[0]),
+                        serialize_consumable(model.consumable[1]),
+                    ],
                 },
             ],
             'mentorship_services': [
@@ -779,8 +819,14 @@ class SignalTestSuite(PaymentsTestCase):
                     'balance': {
                         'unit': -1,
                     },
-                    'id': model.mentorship_service.id,
-                    'slug': model.mentorship_service.slug,
+                    'id':
+                    model.mentorship_service.id,
+                    'slug':
+                    model.mentorship_service.slug,
+                    'items': [
+                        serialize_consumable(model.consumable[4]),
+                        serialize_consumable(model.consumable[5]),
+                    ],
                 },
             ],
         }
