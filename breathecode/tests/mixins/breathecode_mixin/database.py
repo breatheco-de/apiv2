@@ -16,6 +16,8 @@ from django.db.models.fields.related_descriptors import (ReverseManyToOneDescrip
 
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
+from django.db import reset_queries
+from django.db import connection
 
 __all__ = ['Database']
 
@@ -31,6 +33,12 @@ class Database:
     def __init__(self, parent, bc: interfaces.BreathecodeInterface) -> None:
         self._parent = parent
         self._bc = bc
+
+    def reset_queries(self):
+        reset_queries()
+
+    def get_queries(self):
+        return connection.queries
 
     @classmethod
     def get_model(cls, path: str) -> Model:

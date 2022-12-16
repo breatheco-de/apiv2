@@ -314,6 +314,7 @@ class FormEntry(models.Model):
                                      default=None,
                                      blank=True,
                                      help_text='Active Campaign Contact ID')
+
     ac_deal_id = models.CharField(max_length=20,
                                   null=True,
                                   default=None,

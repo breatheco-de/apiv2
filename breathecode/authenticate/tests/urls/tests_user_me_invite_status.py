@@ -244,6 +244,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'token': model1['user_invite'].token,
                              'process_message': '',
                              'process_status': 'PENDING',
+                             'syllabus_id': None,
                          }, {
                              'academy_id': 1,
                              'author_id': 1,
@@ -259,6 +260,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'token': model2['user_invite'].token,
                              'process_message': '',
                              'process_status': 'PENDING',
+                             'syllabus_id': None,
                          }])
 
     def test_user_me_invite_status__to_accepted_invitations_not_matched(self):

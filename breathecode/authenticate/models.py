@@ -118,6 +118,11 @@ class UserInvite(models.Model):
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    syllabus = models.ForeignKey('admissions.Syllabus',
+                                 on_delete=models.CASCADE,
+                                 null=True,
+                                 default=None,
+                                 blank=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
 

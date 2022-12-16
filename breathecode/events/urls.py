@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import (EventView, EventTypeView, EventCheckinView, get_events, eventbrite_webhook,
+from .views import (EventMeView, EventView, EventTypeView, EventCheckinView, get_events, eventbrite_webhook,
                     AcademyEventView, AcademyVenueView, ICalCohortsView, ICalEventView, ICalStudentView,
                     AcademyOrganizationView, OrganizationWebhookView, AcademyOrganizerView,
                     AcademyOrganizationOrganizerView)
@@ -7,6 +7,7 @@ from .views import (EventView, EventTypeView, EventCheckinView, get_events, even
 app_name = 'events'
 urlpatterns = [
     path('', EventView.as_view(), name='root'),
+    path('me', EventMeView.as_view(), name='me'),
     path('all', get_events, name='all'),
     path('academy/event', AcademyEventView.as_view(), name='academy_event'),
     path('academy/organization', AcademyOrganizationView.as_view(), name='academy_organization'),
@@ -25,7 +26,7 @@ urlpatterns = [
     path('ical/student/<int:user_id>', ICalStudentView.as_view(), name='ical_student_id'),
     path('academy/venues', AcademyVenueView.as_view(), name='academy_venues'),
     path('academy/event/<int:event_id>', AcademyEventView.as_view(), name='academy_event_id'),
-    path('academy/eventype', EventTypeView.as_view(), name='type'),
+    path('academy/eventype', EventTypeView.as_view(), name='academy_eventype'),
     path('academy/checkin', EventCheckinView.as_view(), name='academy_checkin'),
     path('eventbrite/webhook/<int:organization_id>', eventbrite_webhook, name='eventbrite_webhook_id'),
 ]
