@@ -8,6 +8,8 @@ import urllib.parse
 import breathecode.notify.actions as notify_actions
 from django.utils import timezone
 from django.contrib.auth.models import User
+
+from breathecode.utils.i18n import translation
 from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort, Syllabus
@@ -862,17 +864,28 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token')
 
     def validate(self, data: dict[str, str]):
+        lang = self.context.get('lang', 'en')
+
         if 'email' not in data:
-            raise ValidationException('Email is required', slug='without-email')
+            raise ValidationException(
+                translation(lang, en='Email is required', es='El email es requerido', slug='without-email'))
 
         if not self.instance and UserInvite.objects.filter(email=data['email'],
                                                            status='WAITING_LIST').exists():
-            raise ValidationException('User already exists in the waiting list', slug='user-invite-exists')
+            raise ValidationException(
+                translation(lang,
+                            en='User already exists in the waiting list',
+                            es='El usuario ya existe en la lista de espera',
+                            slug='user-invite-exists'))
 
         user = User.objects.filter(email=data['email']).first()
 
         if not self.instance and user:
-            raise ValidationException('User already exists, go ahead and log in instead.', slug='user-exists')
+            raise ValidationException(
+                translation(lang,
+                            en='User already exists, go ahead and log in instead.',
+                            es='El usuario ya existe, inicie sesión en su lugar.',
+                            slug='user-exists'))
 
         self.user = user
 
@@ -904,6 +917,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         return data
 
     def get_access_token(self, obj: UserInvite):
+        lang = self.context.get('lang', 'en')
+
         without_cohort = not self.cohort or not self.cohort.academy or self.cohort.academy.available_as_saas != True
         without_syllabus = not self.syllabus or not Cohort.objects.filter(
             academy__available_as_saas=True, syllabus_version__syllabus=self.syllabus).exists()
@@ -920,9 +935,14 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                              is_active=True)
             self.user.save()
 
+            subject = translation(
+                lang,
+                en='Set your password at 4Geeks',
+                es='Agrega tu contraseña en 4Geeks',
+            )
             notify_actions.send_email_message(
                 'pick_password', self.user.email, {
-                    'SUBJECT': 'Set your password at 4Geeks',
+                    'SUBJECT': subject,
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
                 })
 
