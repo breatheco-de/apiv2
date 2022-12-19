@@ -164,7 +164,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             try:
                 data['syllabus'] = Syllabus.objects.filter(syllabus=syllabus).values_list('id',
                                                                                           flat=True).first()
-            except:
+            except Exception as e:
                 import traceback
                 print(traceback.print_exc())
                 print(e)
