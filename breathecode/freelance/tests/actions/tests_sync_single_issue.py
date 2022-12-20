@@ -37,11 +37,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
     @patch('logging.Logger.debug', MagicMock())
     def test_IssueWithNoId(self):
 
-        # models1 = self.bc.database.create(syllabus=True,
-        #                                   syllabus_version={'json': data1},
-        #                                   authenticate=True,
-        #                                   capability='crud_syllabus')
-
         result = sync_single_issue({})
         self.assertEqual(result, None)
         self.assertEqual(self.bc.database.list_of('freelance.Issue'), [])
@@ -55,11 +50,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
 
     @patch('logging.Logger.debug', MagicMock())
     def test_IssueWithFakeSlug(self):
-
-        # models1 = self.bc.database.create(syllabus=True,
-        #                                   syllabus_version={'json': data1},
-        #                                   authenticate=True,
-        #                                   capability='crud_syllabus')
 
         with self.assertRaisesMessage(Exception, 'There was no freelancer associated with this issue'):
 
@@ -84,7 +74,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         body = self.bc.fake.slug()
         url = self.bc.fake.url()
 
-        # with self.assertRaisesMessage(Exception, 'There was no freelancer associated with this issue'):
         print(models1.freelancer)
         result = sync_single_issue({
             'node_id': 1,
@@ -107,6 +96,74 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         self.assertEqual(Logger.debug.call_args_list, [])
 
     @patch('logging.Logger.debug', MagicMock())
+    def test_IssueWith_number(self):
+
+        models1 = self.bc.database.create(freelancer=1)
+
+        title = self.bc.fake.slug()
+        body = self.bc.fake.slug()
+        url = self.bc.fake.url()
+        number = random.randint(1, 10)
+
+        print(models1.freelancer)
+        result = sync_single_issue(
+            {
+                'node_id': 1,
+                'title': title,
+                'body': body,
+                'html_url': url,
+                'number': number
+            },
+            freelancer=models1.freelancer)
+
+        self.assertEqual(self.bc.database.list_of('freelance.Issue'), [
+            issue_item({
+                'node_id': str(1),
+                'title': title,
+                'body': body,
+                'url': url,
+                'github_number': number
+            }),
+        ])
+
+        print(Logger.debug.call_args_list)
+        self.assertEqual(Logger.debug.call_args_list, [])
+
+    @patch('logging.Logger.debug', MagicMock())
+    def test_resultSearch_isNotNone(self):
+
+        models1 = self.bc.database.create(freelancer=1)
+
+        title = self.bc.fake.slug()
+        body = self.bc.fake.slug()
+        result = self.bc.fake.url()
+        url = self.bc.fake.url()
+        repository_url = 'https://github.com/etolopez/apiv2/asdasd'
+
+        res = sync_single_issue(
+            {
+                'node_id': 1,
+                'title': title,
+                'body': body,
+                'result': result,
+                'html_url': repository_url,
+            },
+            freelancer=models1.freelancer)
+
+        self.assertEqual(self.bc.database.list_of('freelance.Issue'), [
+            issue_item({
+                'node_id': str(1),
+                'title': title,
+                'body': body,
+                'url': repository_url,
+                'repository_url': repository_url[:-7],
+            }),
+        ])
+
+        print(Logger.debug.call_args_list)
+        self.assertEqual(Logger.debug.call_args_list, [])
+
+    @patch('logging.Logger.debug', MagicMock())
     def testing_hours(self):
 
         models1 = self.bc.database.create(freelancer=1)
@@ -116,8 +173,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         minutes = hours * 60
         body = f'<hrs>{hours}</hrs>'
         url = self.bc.fake.url()
-
-        # with self.assertRaisesMessage(Exception, 'There was no freelancer associated with this issue'):
 
         result = sync_single_issue({
             'node_id': 1,
@@ -155,8 +210,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         comment_body = f'<hrs>{hours}</hrs> <status>comment</status>'
         url = self.bc.fake.url()
 
-        # with self.assertRaisesMessage(Exception, 'There was no freelancer associated with this issue'):
-
         result = sync_single_issue({
             'node_id': 1,
             'title': title,
@@ -187,10 +240,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
 
     @patch('logging.Logger.debug', MagicMock())
     def testing_correct_status_with_hours(self):
-        """
-        When the mentor gets into the room before the mentee
-        if should create a room with status 'pending'
-        """
 
         models1 = self.bc.database.create(freelancer=1)
 
@@ -202,8 +251,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         issue_body = f'<hrs>{another}</hrs>'
         comment_body = f'<hrs>{hours}</hrs> <status>{status}</status>'
         url = self.bc.fake.url()
-
-        # with self.assertRaisesMessage(Exception, 'There was no freelancer associated with this issue'):
 
         result = sync_single_issue({
             'node_id': 1,

@@ -95,11 +95,6 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
             node_id=node_id,
         )
 
-    if _issue.status in ['DONE', 'IGNORED'] and incoming_github_action not in ['reopened']:
-        logger.debug(
-            f'Ignoring changes to this issue {node_id} ({issue_number}) because status is {_issue.status} and its not being reponened: {_issue.title}'
-        )
-
     _issue.academy = Academy.objects.filter(slug=academy_slug).first()
 
     if issue_number is not None:
@@ -114,6 +109,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     _issue.url = issue['html_url']
 
     result = re.search(r'github\.com\/([\w\-_]+)\/([\w\-_]+)\/.+', _issue.url)
+    print(result, _issue.url)
     if result is not None:
         _issue.repository_url = f'https://github.com/{result.group(1)}/{result.group(2)}'
 
