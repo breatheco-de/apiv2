@@ -1,5 +1,5 @@
 """
-Test mentorhips
+Test Sync Single Issue
 """
 import json
 from ..mixins import FreelanceTestCase
@@ -40,8 +40,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         result = sync_single_issue({})
         self.assertEqual(result, None)
         self.assertEqual(self.bc.database.list_of('freelance.Issue'), [])
-
-        print(Logger.debug.call_args_list)
         self.assertEqual(Logger.debug.call_args_list, [
             call(
                 'Impossible to identify issue because it does not have a node_id (number:None), ignoring synch: {}'
@@ -62,7 +60,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
 
         self.assertEqual(self.bc.database.list_of('freelance.Issue'), [])
 
-        print(Logger.debug.call_args_list)
         self.assertEqual(Logger.debug.call_args_list, [])
 
     @patch('logging.Logger.debug', MagicMock())
@@ -74,7 +71,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         body = self.bc.fake.slug()
         url = self.bc.fake.url()
 
-        print(models1.freelancer)
         result = sync_single_issue({
             'node_id': 1,
             'title': title,
@@ -92,7 +88,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        print(Logger.debug.call_args_list)
         self.assertEqual(Logger.debug.call_args_list, [])
 
     @patch('logging.Logger.debug', MagicMock())
@@ -105,7 +100,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         url = self.bc.fake.url()
         number = random.randint(1, 10)
 
-        print(models1.freelancer)
         result = sync_single_issue(
             {
                 'node_id': 1,
@@ -126,7 +120,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        print(Logger.debug.call_args_list)
         self.assertEqual(Logger.debug.call_args_list, [])
 
     @patch('logging.Logger.debug', MagicMock())
@@ -160,7 +153,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        print(Logger.debug.call_args_list)
         self.assertEqual(Logger.debug.call_args_list, [])
 
     @patch('logging.Logger.debug', MagicMock())
@@ -193,7 +185,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        print(Logger.debug.call_args_list)
         self.assertEqual(Logger.debug.call_args_list,
                          [call(f'Updating issue 1 (None) hrs with {hours}, found <hrs> tag on updated body')])
 
@@ -231,7 +222,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        print(Logger.debug.call_args_list)
         self.assertEqual(Logger.debug.call_args_list, [
             call(f'Updating issue 1 (None) hrs with {another}, found <hrs> tag on updated body'),
             call(f'Updating issue 1 (None) hrs with {hours}, found <hrs> tag on new comment'),
@@ -273,7 +263,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        print(Logger.debug.call_args_list)
         self.assertEqual(Logger.debug.call_args_list, [
             call(f'Updating issue 1 (None) hrs with {another}, found <hrs> tag on updated body'),
             call(f'Updating issue 1 (None) hrs with {hours}, found <hrs> tag on new comment'),
@@ -315,7 +304,6 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
                 'status': status,
             })
 
-            print(Logger.debug.call_args_list)
             self.assertEqual(Logger.debug.call_args_list, [])
 
     @patch('logging.Logger.debug', MagicMock())
@@ -362,5 +350,4 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
                 'status': status,
             })
 
-            print(Logger.debug.call_args_list)
             self.assertEqual(Logger.debug.call_args_list, [])
