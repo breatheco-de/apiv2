@@ -1,7 +1,7 @@
 import os, re, json, logging
 from itertools import chain
 from django.db.models import Q
-from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook, ProjectInvoice
+from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook, ProjectInvoice, ISSUE_STATUS
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
 from schema import Schema, And, Use, Optional, SchemaError
@@ -23,12 +23,17 @@ def get_hours(content):
 
 
 def get_status(content):
-    p = re.compile('<status>(\d+\.?\d*)</status>')
+    p = re.compile('<status>(\w+)</status>')
     result = p.search(content)
     status = None
     if result is not None:
         status = result.group(1).upper()
     return status
+
+
+def status_is_valid(status):
+    statuses = [x[0] for x in ISSUE_STATUS]
+    return status in statuses
 
 
 def update_status_based_on_github_action(github_action, issue):
@@ -90,11 +95,6 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
             node_id=node_id,
         )
 
-    if _issue.status in ['DONE', 'IGNORED'] and incoming_github_action not in ['reopened']:
-        logger.debug(
-            f'Ignoring changes to this issue {node_id} ({issue_number}) because status is {_issue.status} and its not being reponened: {_issue.title}'
-        )
-
     _issue.academy = Academy.objects.filter(slug=academy_slug).first()
 
     if issue_number is not None:
@@ -109,6 +109,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     _issue.url = issue['html_url']
 
     result = re.search(r'github\.com\/([\w\-_]+)\/([\w\-_]+)\/.+', _issue.url)
+    print(result, _issue.url)
     if result is not None:
         _issue.repository_url = f'https://github.com/{result.group(1)}/{result.group(2)}'
 
@@ -121,8 +122,10 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
             freelancer = Freelancer.objects.filter(github_user__github_id=assigne['id']).first()
             if freelancer is None:
                 raise Exception(
-                    f'Assined github user: {assigne["id"]} is not a freelancer but is the main user asociated to this issue'
+                    f'Assigned github user: {assigne["id"]} is not a freelancer but is the main user associated to this issue'
                 )
+        else:
+            raise Exception(f'There was no freelancer associated with this issue')
 
     _issue.freelancer = freelancer
     hours = get_hours(_issue.body)
@@ -142,12 +145,16 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
             _issue.duration_in_hours = hours
 
         status = get_status(comment['body'])
-        if status is not None:
+        if status is not None and status_is_valid(status):
             logger.debug(
                 f'Updating issue {node_id} ({issue_number}) status to {status} found <status> tag on new comment'
             )
             _issue.status = status
 
+        elif status is not None:
+            error = f'The status {status} is not valid'
+            logger.debug(error)
+            _issue.status_message = error
     _issue.save()
 
     return _issue
