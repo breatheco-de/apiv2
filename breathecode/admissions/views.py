@@ -149,10 +149,6 @@ def get_cohorts(request, id=None):
     items = items.annotate(longitude=Value(None, output_field=FloatField()),
                            latitude=Value(None, output_field=FloatField()))
 
-    if isinstance(request.user, AnonymousUser) == False:
-        # filter only to the local academy
-        items = localize_query(items, request)
-
     upcoming = request.GET.get('upcoming', None)
     if upcoming == 'true':
         now = timezone.now()
