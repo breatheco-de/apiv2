@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.template.loader import get_template
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
+from django.utils import timezone
 from django.db.models import Q
 from .signals import asset_slug_modified, asset_readme_modified
 from slugify import slugify
@@ -297,6 +298,8 @@ class Asset(models.Model):
     solution_video_url = models.URLField(null=True, blank=True, default=None)
     readme = models.TextField(null=True, blank=True, default=None)
     readme_raw = models.TextField(null=True, blank=True, default=None)
+    readme_updated_at = models.DateTimeField(null=True, blank=True, default=None)
+
     html = models.TextField(null=True, blank=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None)
@@ -384,6 +387,7 @@ class Asset(models.Model):
     seo_json_status = models.JSONField(null=True, blank=True, default=None)
 
     # clean status refers to the cleaning of the readme file
+
     last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None)
     cleaning_status_details = models.TextField(null=True, blank=True, default=None)
     cleaning_status = models.CharField(
@@ -421,6 +425,7 @@ class Asset(models.Model):
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
+            self.readme_updated_at = timezone.now()
             self.cleaning_status = 'PENDING'
 
         # only validate this on creation
