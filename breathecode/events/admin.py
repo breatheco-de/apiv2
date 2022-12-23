@@ -114,3 +114,13 @@ class EventbriteWebhookAdmin(admin.ModelAdmin):
 
     def organization(self, obj):
         return Organization.objects.filter(eventbrite_id=obj.organization_id).first()
+
+
+@admin.register(EventbriteWebhook)
+class EventTypeVisibilitySettingAdmin(admin.ModelAdmin):
+    list_display = ('academy', 'cohort', 'syllabus')
+    list_filter = ['academy']
+    search_fields = [
+        'academy__slug', 'academy__name', 'syllabus__slug', 'syllabus__name', 'cohort__slug', 'cohort__name'
+    ]
+    actions = [reattempt_eventbrite_webhook]
