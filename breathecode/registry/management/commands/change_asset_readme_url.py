@@ -15,63 +15,18 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        assets = Asset.objects.all()
+        assets = Asset.objects.filter(readme_url__startswith='https://raw.githubusercontent.com/')
         for asset in assets:
-            readme_urls = asset.readme_url
-            regex = re.search('^https://raw.githubusercontent.com', readme_urls)
-            if regex:
-                link_split = readme_urls.split('/')
+            result = re.findall('^https?://raw.githubusercontent.com/([a-zA-Z-_0-9]+)/([a-zA-Z-_0-9]+)/(.+)$',
+                                asset.readme_url)
 
-                if len(link_split) == 6:
-                    new_link = 'https://github.com' + '/' + link_split[3] + '/' + link_split[
-                        4] + '/' + 'blob' + '/' + link_split[5]
-                    Asset.objects.update(readme_url=new_link)
+            if result:
+                new = f'https://github.com/{result[0][0]}/{result[0][1]}/blob/{result[0][2]}'
+                asset.readme_url = new
+                asset.save()
 
-                elif len(link_split) == 7:
-                    new_link = 'https://github.com' + '/' + link_split[3] + '/' + link_split[
-                        4] + '/' + 'blob' + '/' + link_split[5] + '/' + link_split[6]
-                    Asset.objects.update(readme_url=new_link)
-
-                elif len(link_split) == 8:
-                    new_link = 'https://github.com' + '/' + link_split[3] + '/' + link_split[
-                        4] + '/' + 'blob' + '/' + link_split[5] + '/' + link_split[6] + '/' + link_split[7]
-                    Asset.objects.update(readme_url=new_link)
-
-                elif len(link_split) == 9:
-                    new_link = 'https://github.com' + '/' + link_split[3] + '/' + link_split[
-                        4] + '/' + 'blob' + '/' + link_split[5] + '/' + link_split[6] + '/' + link_split[
-                            7] + '/' + link_split[8]
-                    Asset.objects.update(readme_url=new_link)
-
-                elif len(link_split) == 10:
-                    new_link = 'https://github.com' + '/' + link_split[3] + '/' + link_split[
-                        4] + '/' + 'blob' + '/' + link_split[5] + '/' + link_split[6] + '/' + link_split[
-                            7] + '/' + link_split[8] + '/' + link_split[9]
-                    Asset.objects.update(readme_url=new_link)
-
-                elif len(link_split) == 11:
-                    new_link = 'https://github.com' + '/' + link_split[3] + '/' + link_split[
-                        4] + '/' + 'blob' + '/' + link_split[5] + '/' + link_split[6] + '/' + link_split[
-                            7] + '/' + link_split[8] + '/' + link_split[9] + '/' + link_split[10]
-                    Asset.objects.update(readme_url=new_link)
-
-                elif len(link_split) == 12:
-                    new_link = 'https://github.com' + '/' + link_split[3] + '/' + link_split[
-                        4] + '/' + 'blob' + '/' + link_split[5] + '/' + link_split[6] + '/' + link_split[
-                            7] + '/' + link_split[8] + '/' + link_split[9] + '/' + link_split[
-                                10] + '/' + link_split[11]
-                    Asset.objects.update(readme_url=new_link)
-
-                elif len(link_split) == 13:
-                    new_link = 'https://github.com' + '/' + link_split[3] + '/' + link_split[
-                        4] + '/' + 'blob' + '/' + link_split[5] + '/' + link_split[6] + '/' + link_split[
-                            7] + '/' + link_split[8] + '/' + link_split[9] + '/' + link_split[
-                                10] + '/' + link_split[11] + '/' + link_split[12]
-                    Asset.objects.update(readme_url=new_link)
-
-                elif len(link_split) == 14:
-                    new_link = 'https://github.com' + '/' + link_split[3] + '/' + link_split[
-                        4] + '/' + 'blob' + '/' + link_split[5] + '/' + link_split[6] + '/' + link_split[
-                            7] + '/' + link_split[8] + '/' + link_split[9] + '/' + link_split[
-                                10] + '/' + link_split[11] + '/' + link_split[12] + '/' + link_split[13]
-                    Asset.objects.update(readme_url=new_link)
+        # result = re.findall('^https?://github.com/([a-zA-Z-_0-9]+)/([a-zA-Z-_0-9]+)/blob/(.+)$', a)
+        # print(222, result)
+        # if result:
+        #     new = f'https://raw.githubusercontent.com/{result[0][0]}/{result[0][1]}/{result[0][2]}'
+        #     print(new)
