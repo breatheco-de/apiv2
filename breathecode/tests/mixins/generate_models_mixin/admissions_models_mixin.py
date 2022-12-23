@@ -33,6 +33,7 @@ class AdmissionsModelsMixin(ModelsMixin):
     def generate_admissions_models(self,
                                    mentorship_service=False,
                                    academy=False,
+                                   event_type=False,
                                    cohort=False,
                                    profile_academy=False,
                                    cohort_user=False,
@@ -52,6 +53,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    asset_keyword=False,
                                    bag=False,
                                    subscription=False,
+                                   event_type_visibility_setting=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -67,13 +69,15 @@ class AdmissionsModelsMixin(ModelsMixin):
         models = models.copy()
 
         if not 'country' in models and (is_valid(country) or is_valid(city) or is_valid(academy)
-                                        or is_valid(profile_academy)):
+                                        or is_valid(profile_academy) or is_valid(event_type)
+                                        or is_valid(event_type_visibility_setting)):
             kargs = {}
 
             models['country'] = create_models(country, 'admissions.Country', **{**kargs, **country_kwargs})
 
         if not 'city' in models and (is_valid(city) or is_valid(country) or is_valid(academy)
-                                     or is_valid(profile_academy)):
+                                     or is_valid(profile_academy) or is_valid(event_type)
+                                     or is_valid(event_type_visibility_setting)):
             kargs = {}
 
             if 'country' in models:
@@ -86,7 +90,8 @@ class AdmissionsModelsMixin(ModelsMixin):
                                         or is_valid(mentorship_service) or is_valid(mentor_profile)
                                         or is_valid(user_specialty) or is_valid(asset_category)
                                         or is_valid(keyword_cluster) or is_valid(asset_keyword)
-                                        or is_valid(bag) or is_valid(subscription)):
+                                        or is_valid(bag) or is_valid(subscription) or is_valid(event_type)
+                                        or is_valid(event_type_visibility_setting)):
             kargs = {}
 
             if 'country' in models:
@@ -135,7 +140,7 @@ class AdmissionsModelsMixin(ModelsMixin):
             })
 
         if not 'cohort' in models and not skip_cohort and (is_valid(cohort) or is_valid(profile_academy)
-                                                           or is_valid(cohort_user) or is_valid(academy)):
+                                                           or is_valid(cohort_user)):
             kargs = {}
 
             if profile_academy or 'academy' in models:

@@ -20,7 +20,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from .models import Event, EventType, EventCheckin, Organization, Venue, EventbriteWebhook, Organizer
+from .models import Event, EventType, EventCheckin, EventTypeVisibilitySetting, Organization, Venue, EventbriteWebhook, Organizer
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
@@ -156,45 +156,65 @@ class EventMeView(APIView):
         Get the resources related to this user.
         """
 
-        syllabus = Syllabus.objects.none()
-        academies = Academy.objects.none()
-        cohorts = Cohort.objects.none()
+        syllabus = []
+        academies = []
+        cohorts = []
         cohort_users = CohortUser.objects.filter(user=self.request.user)
         cohort_users_with_syllabus = cohort_users.filter(cohort__syllabus_version__isnull=False)
 
         for cohort_user in cohort_users_with_syllabus:
-            syllabus |= cohort_user.cohort.syllabus_version.syllabus
+            if cohort_user.cohort.syllabus_version.syllabus not in cohorts:
+                syllabus.append(cohort_user.cohort.syllabus_version.syllabus)
 
         for cohort_user in cohort_users:
-            academies |= cohort_user.cohort.academy
+            if cohort_user.cohort.academy not in cohorts:
+                academies.append(cohort_user.cohort.academy)
 
         for cohort_user in cohort_users:
-            cohorts |= cohort_user.cohort
+            if cohort_user.cohort not in cohorts:
+                cohorts.append(cohort_user.cohort)
 
-        return academies.distinct(), cohorts.distinct(), syllabus.distinct()
+        return academies, cohorts, syllabus
 
     def get(self, request):
-        params = []
+        query = None
 
         academies, cohorts, syllabus = self.get_related_resources()
 
         # shared with the whole academy
         for academy in academies:
-            params.append(Q(**self.build_query_params(academy=academy)))
+            kwargs = self.build_query_params(academy=academy)
+            if query:
+                query |= Q(**kwargs, academy=academy) | Q(**kwargs, allow_shared_creation=True)
+            else:
+                query = Q(**kwargs, academy=academy) | Q(**kwargs, allow_shared_creation=True)
 
         # shared with a specific cohort
         for cohort in cohorts:
+            kwargs = self.build_query_params(academy=cohort.academy, cohort=cohort)
             # is not necessary provided the syllabus
-            params.append(Q(**self.build_query_params(academy=cohort.academy, cohort=cohort)))
+            if query:
+                query |= Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
+            else:
+                query = Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
 
         # shared with a specific syllabus
         for s in syllabus:
-            params.append(Q(**self.build_query_params(academy=cohort.academy, syllabus=s)))
+            kwargs = self.build_query_params(academy=cohort.academy, syllabus=s)
+            if query:
+                query |= Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
+            else:
+                query = Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
 
-        items = EventType.objects.filter(*params)
-        items = items.order_by('-created_at')
+        if query:
+            items = EventType.objects.filter(query)
 
-        serializer = EventTypeSerializer(items, many=True)
+        else:
+            items = EventType.objects.none()
+
+        items = Event.objects.filter(event_type__in=items).order_by('-created_at')
+
+        serializer = EventSerializer(items, many=True)
         return Response(serializer.data)
 
 

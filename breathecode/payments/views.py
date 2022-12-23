@@ -13,6 +13,7 @@ from breathecode.mentorship.models import MentorshipService
 from django.db.models import CharField, Q, Value
 
 from breathecode.payments import tasks
+from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
 from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, Service,
@@ -762,6 +763,9 @@ class PayView(APIView):
                 transaction.savepoint_commit(sid)
 
                 tasks.build_subscription.delay(bag.id, invoice.id)
+
+                for cohort in bag.selected_cohorts.all():
+                    admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
                 return Response(serializer.data, status=201)

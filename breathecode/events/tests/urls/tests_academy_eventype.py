@@ -78,7 +78,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         response = self.client.get(url)
         json = response.json()
-        expected = [get_serializer(model.event_type)]
+        expected = [get_serializer(model.event_type, model.academy, model.city)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)

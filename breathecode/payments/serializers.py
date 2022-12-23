@@ -145,8 +145,6 @@ class GetPlanSmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     # description = serpy.Field()
     status = serpy.Field()
-    pay_every = serpy.Field()
-    pay_every_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
     service_items = serpy.MethodField()

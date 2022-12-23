@@ -1,6 +1,6 @@
 import logging, os
 from celery import shared_task, Task
-from .models import SyllabusVersion
+from .models import Cohort, CohortUser, SyllabusVersion
 from .actions import test_syllabus
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -48,3 +48,29 @@ def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
                 'SUBJECT': f'Critical error error found on syllabus {syllabus_slug} v{version}',
                 'details': [f'- {item}\n' for error in syl_version.integrity_report.errors]
             })
+
+
+@shared_task
+def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT') -> None:
+    logger.info(f'Starting build_cohort_user for cohort {cohort_id} and user {user_id}')
+
+    bad_stages = ['DELETED', 'ENDED', 'FINAL_PROJECT', 'STARTED']
+
+    if not (cohort := Cohort.objects.filter(id=cohort_id).exclude(stage__in=bad_stages).first()):
+        logger.error(f'Cohort with id {cohort_id} not found')
+        return
+
+    if not (user := User.objects.filter(id=user_id, is_active=True).first()):
+        logger.error(f'User with id {user_id} not found')
+        return
+
+    _, created = CohortUser.objects.get_or_create(cohort=cohort,
+                                                  user=user,
+                                                  role=role,
+                                                  defaults={
+                                                      'finantial_status': 'UP_TO_DATE',
+                                                      'educational_status': 'ACTIVE',
+                                                  })
+
+    if created:
+        logger.info('User added to cohort')

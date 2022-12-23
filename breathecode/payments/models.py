@@ -66,10 +66,10 @@ class AbstractPriceByTime(models.Model):
     This model is used to store the price of a Product or a Service.
     """
 
-    price_per_month = models.FloatField(default=0)
-    price_per_quarter = models.FloatField(default=0)
-    price_per_half = models.FloatField(default=0)
-    price_per_year = models.FloatField(default=0)
+    price_per_month = models.FloatField(default=None, blank=True, null=True)
+    price_per_quarter = models.FloatField(default=None, blank=True, null=True)
+    price_per_half = models.FloatField(default=None, blank=True, null=True)
+    price_per_year = models.FloatField(default=None, blank=True, null=True)
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
 
     def format_price(self):
@@ -332,10 +332,6 @@ class Plan(AbstractPriceByTime):
     financing_options = models.ManyToManyField(FinancingOption, blank=True)
 
     status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT)
-    #TODO: visible enum, private, unlisted, visible
-
-    pay_every = models.IntegerField(default=1)
-    pay_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
     trial_duration = models.IntegerField(default=1)
     trial_duration_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
@@ -467,6 +463,7 @@ class Bag(AbstractAmountByTime):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     service_items = models.ManyToManyField(ServiceItem, blank=True)
     plans = models.ManyToManyField(Plan, blank=True)
+    selected_cohorts = models.ManyToManyField('admissions.Cohort', blank=True)
 
     is_recurrent = models.BooleanField(default=False)
     was_delivered = models.BooleanField(default=False)

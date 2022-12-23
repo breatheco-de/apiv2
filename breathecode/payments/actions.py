@@ -118,9 +118,9 @@ class PlanFinder:
         if not resource:
             raise ValidationException(
                 translation(self.lang,
-                            en=f'{model.__call__.__name__} not found',
-                            es=f'{model.__call__.__name__} no encontrada',
-                            slug=f'{model.__call__.__name__.lower()}-not-found'))
+                            en=f'{model.__name__} not found',
+                            es=f'{model.__name__} no encontrada',
+                            slug=f'{model.__name__.lower()}-not-found'))
 
         return resource
 
@@ -156,9 +156,6 @@ class PlanFinder:
         if not additional_args and auto:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.syllabus).exists()
-
-        fixtures = self.syllabus.paymentservicescheduler_set.filter(
-            cohorts__id=self.syllabus.id, cohorts__stage__in=['INACTIVE', 'PREWORK'])
 
         fixtures = PaymentServiceScheduler.objects.filter(cohorts__syllabus_version__syllabus=self.syllabus,
                                                           cohorts__stage__in=['INACTIVE', 'PREWORK'])
@@ -197,6 +194,7 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
     service_items = request.data.get('service_items')
     plans = request.data.get('plans')
     cohort_id = request.data.get('cohort')
+    syllabus_id = request.data.get('syllabus')
 
     bag.service_items.clear()
     bag.plans.clear()
@@ -224,16 +222,9 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
                                           slug='service-item-malformed')
 
     # get plan related to a cohort
-    if cohort_id:
-        # try:
-        #     cohort = Cohort.objects.get(id=int(cohort_id))
-        # except:
-        #     raise ValidationException(translation(settings.lang,
-        #                                           en='Cohort not found',
-        #                                           es='Cohort no encontrada'),
-        #                               slug='cohort-not-found')
-
-        cohort_plans = PlanFinder(request).get_plans_belongs_from_request()
+    if cohort_id or syllabus_id:
+        finder = PlanFinder(request)
+        cohort_plans = finder.get_plans_belongs_from_request()
 
         if not cohort_plans:
             raise ValidationException(translation(settings.lang,
@@ -281,6 +272,9 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
             bag.plans.add(plan)
 
     bag.save()
+
+    if cohort_id and finder.cohort:
+        bag.selected_cohorts.add(finder.cohort)
 
     return bag
 

@@ -631,6 +631,7 @@ class SubscribeTestSuite(AuthTestCase):
             'email': 'pokemon@potato.io',
             'status': 'WAITING_LIST',
             'token': token,
+            'cohort_id': None,
         }
         self.bc.database.create(user_invite=user_invite, cohort=1, syllabus_version=1)
         url = reverse_lazy('authenticate:subscribe')
@@ -657,24 +658,24 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        del data['cohort']
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
-                         [{
-                             'academy_id': 1,
-                             'author_id': None,
-                             'cohort_id': 1,
-                             'id': 1,
-                             'role_id': None,
-                             'sent_at': None,
-                             'status': 'WAITING_LIST',
-                             'token': hashlib.sha1(
-                                 (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
-                             'process_message': '',
-                             'process_status': 'PENDING',
-                             'token': token,
-                             'syllabus_id': None,
-                             **data,
-                         }])
+        del data['syllabus']
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            {
+                'academy_id': 1,
+                'author_id': None,
+                'cohort_id': None,
+                'id': 1,
+                'role_id': None,
+                'sent_at': None,
+                'status': 'WAITING_LIST',
+                'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                'process_message': '',
+                'process_status': 'PENDING',
+                'token': token,
+                'syllabus_id': 1,
+                **data,
+            },
+        ])
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [])
@@ -693,6 +694,7 @@ class SubscribeTestSuite(AuthTestCase):
             'email': 'pokemon@potato.io',
             'status': 'WAITING_LIST',
             'token': token,
+            'cohort_id': None,
         }
         academy = {'available_as_saas': True}
         self.bc.database.create(user_invite=user_invite, cohort=1, syllabus_version=1, academy=academy)
@@ -722,12 +724,12 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        del data['cohort']
+        del data['syllabus']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
                              'academy_id': 1,
                              'author_id': None,
-                             'cohort_id': 1,
+                             'cohort_id': None,
                              'id': 1,
                              'role_id': None,
                              'sent_at': None,
@@ -737,7 +739,7 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_message': '',
                              'process_status': 'PENDING',
                              'token': token,
-                             'syllabus_id': None,
+                             'syllabus_id': 1,
                              **data,
                          }])
 
@@ -784,12 +786,14 @@ class SubscribeTestSuite(AuthTestCase):
             'email': 'pokemon@potato.io',
             'status': 'WAITING_LIST',
             'token': token,
+            'cohort_id': None,
         }
         academy = {'available_as_saas': True}
         user = {'email': 'pokemon@potato.io'}
         model = self.bc.database.create(user_invite=user_invite,
                                         cohort=1,
                                         syllabus_version=1,
+                                        syllabus=1,
                                         academy=academy,
                                         user=user)
         url = reverse_lazy('authenticate:subscribe')
@@ -815,18 +819,15 @@ class SubscribeTestSuite(AuthTestCase):
             **data,
         }
 
-        print("self.bc.database.list_of('authenticate.UserInvite')",
-              self.bc.database.list_of('authenticate.UserInvite'))
-
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        del data['cohort']
+        del data['syllabus']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
                              'academy_id': 1,
                              'author_id': 1,
-                             'cohort_id': 1,
+                             'cohort_id': None,
                              'id': 1,
                              'role_id': None,
                              'sent_at': None,
@@ -836,7 +837,7 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_message': '',
                              'process_status': 'PENDING',
                              'token': token,
-                             'syllabus_id': None,
+                             'syllabus_id': 1,
                              **data,
                          }])
 

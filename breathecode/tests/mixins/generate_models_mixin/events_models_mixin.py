@@ -1,9 +1,13 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+from breathecode.tests.mixins.generate_models_mixin.utils.get_list import get_list
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
 from .utils import is_valid, create_models, just_one
+from faker import Faker
+
+fake = Faker()
 
 
 class EventsModelsMixin(ModelsMixin):
@@ -18,6 +22,7 @@ class EventsModelsMixin(ModelsMixin):
                                event=False,
                                event_checkin=False,
                                eventbrite_webhook=False,
+                               event_type_visibility_setting=False,
                                organization_kwargs={},
                                organizer_kwargs={},
                                venue_kwargs={},
@@ -66,11 +71,32 @@ class EventsModelsMixin(ModelsMixin):
 
             models['venue'] = create_models(venue, 'events.Venue', **{**kargs, **venue_kwargs})
 
+        if not 'event_type_visibility_setting' in models and is_valid(event_type_visibility_setting):
+            kargs = {}
+
+            if 'syllabus' in models:
+                kargs['syllabus'] = just_one(models['syllabus'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'cohort' in models:
+                kargs['cohort'] = just_one(models['cohort'])
+
+            models['event_type_visibility_setting'] = create_models(event_type_visibility_setting,
+                                                                    'events.EventTypeVisibilitySetting',
+                                                                    **kargs)
+
         if not 'event_type' in models and is_valid(event_type):
             kargs = {}
 
+            kargs['description'] = fake.text()[:255]
+
             if 'academy' in models or academy:
                 kargs['academy'] = just_one(models['academy'])
+
+            if 'event_type_visibility_setting' in models:
+                kargs['visibility_settings'] = get_list(models['event_type_visibility_setting'])
 
             models['event_type'] = create_models(event_type, 'events.EventType', **{
                 **kargs,
