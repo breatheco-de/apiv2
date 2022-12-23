@@ -24,9 +24,3 @@ class Command(BaseCommand):
                 new = f'https://github.com/{result[0][0]}/{result[0][1]}/blob/{result[0][2]}'
                 asset.readme_url = new
                 asset.save()
-
-        # result = re.findall('^https?://github.com/([a-zA-Z-_0-9]+)/([a-zA-Z-_0-9]+)/blob/(.+)$', a)
-        # print(222, result)
-        # if result:
-        #     new = f'https://raw.githubusercontent.com/{result[0][0]}/{result[0][1]}/{result[0][2]}'
-        #     print(new)
