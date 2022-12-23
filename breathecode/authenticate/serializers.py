@@ -912,8 +912,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if not self.instance:
             data['token'] = hashlib.sha1((now + data['email']).encode('UTF-8')).hexdigest()
 
-        print('data', data)
-
         return data
 
     def get_access_token(self, obj: UserInvite):

@@ -163,10 +163,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
             try:
                 data['syllabus'] = Syllabus.objects.filter(slug=syllabus).values_list('id', flat=True).first()
-            except Exception as e:
-                import traceback
-                print(traceback.print_exc())
-                print(e)
+            except:
                 raise ValidationException(
                     translation(lang,
                                 en='The syllabus does not exist',
@@ -198,10 +195,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
             try:
                 data['syllabus'] = Syllabus.objects.filter(slug=syllabus).values_list('id', flat=True).first()
-            except Exception as e:
-                import traceback
-                print(traceback.print_exc())
-                print(e)
+            except:
                 raise ValidationException(
                     translation(lang,
                                 en='The syllabus does not exist',
