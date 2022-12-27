@@ -100,6 +100,7 @@ def async_execute_seo_report(asset_slug):
 
 @shared_task
 def async_create_asset_thumbnail(asset_slug: str):
+
     asset = Asset.objects.filter(slug=asset_slug).first()
     if asset is None:
         logger.error(f'Asset with slug {asset_slug} not found')
@@ -174,7 +175,7 @@ def async_create_asset_thumbnail(asset_slug: str):
     if media:
         # this prevent a screenshots duplicated
         cloud_file.delete()
-        media = Media(slug=name.split()[0],
+        media = Media(slug=name.split('.')[0],
                       name=media.name,
                       url=media.url,
                       thumbnail=media.thumbnail,
@@ -195,7 +196,7 @@ def async_create_asset_thumbnail(asset_slug: str):
     url = f'https://storage.googleapis.com/{screenshots_bucket()}/{hash}'
 
     media = Media(
-        slug=name.split()[0],
+        slug=name.split('.')[0],
         name=name,
         url=url,
         thumbnail=f'{url}-thumbnail',

@@ -192,7 +192,9 @@ def load_readme_tasks(modeladmin, request, queryset):
     for a in assets:
         try:
             tasks = a.get_tasks()
-            print(f'{len(tasks)} tasks', [t['status'] + ': ' + t['label'] + '\n' for t in tasks])
+            print(f'{len(tasks)} tasks')
+            for t in tasks:
+                print(t['status'] + ': ' + t['slug'] + '\n')
         except Exception as e:
             messages.error(request, a.slug + ': ' + str(e))
 

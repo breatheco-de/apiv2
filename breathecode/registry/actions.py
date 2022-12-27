@@ -433,14 +433,18 @@ class AssetThumbnailGenerator:
         Get thumbnail url for asset, the first element of tuple is the url, the second if is permanent
         redirect.
         """
+        print('1')
         if not self.asset:
             return (self._get_default_url(), False)
-
+        print('2')
         media = self._get_media()
+        print('3')
         if not media:
+            print('4')
             tasks.async_create_asset_thumbnail.delay(self.asset.slug)
             return (self._get_asset_url(), False)
 
+        print('5')
         if not self._the_client_want_resize():
             # register click
             media.hits += 1
@@ -459,7 +463,6 @@ class AssetThumbnailGenerator:
             media.save()
 
             tasks.async_resize_asset_thumbnail.delay(media.id, width=self.width, height=self.height)
-            print('33333')
             return (media.url, False)
 
         # register click
@@ -482,7 +485,9 @@ class AssetThumbnailGenerator:
         if not self.asset:
             return None
 
-        slug = self.asset.get_thumbnail_name().split()[0]
+        slug = self.asset.get_thumbnail_name().split('.')[0]
+        print('slug', slug)
+        print('allllll', Media.objects.all())
         return Media.objects.filter(slug=slug).first()
 
     def _get_media_resolution(self, hash: str) -> Optional[MediaResolution]:
