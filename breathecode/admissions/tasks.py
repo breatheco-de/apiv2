@@ -1,5 +1,7 @@
 import logging, os
 from celery import shared_task, Task
+
+from breathecode.authenticate.models import ProfileAcademy
 from .models import Cohort, CohortUser, SyllabusVersion
 from .actions import test_syllabus
 from django.utils import timezone
@@ -42,6 +44,7 @@ def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
         syl_version.integrity_status = 'ERROR'
     syl_version.save()
 
+    #FIXME: this doesn't work
     if syl_version.status == 'ERROR':
         notify_actions.send_email_message(
             'diagnostic', user.email, {
@@ -74,3 +77,34 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT') -> No
 
     if created:
         logger.info('User added to cohort')
+
+    if role == 'TEACHER':
+        role = 'teacher'
+
+    elif role == 'ASSISTANT':
+        role = 'assistant'
+
+    elif role == 'REVIEWER':
+        role = 'homework_reviewer'
+
+    else:
+        role = 'student'
+
+    profile, created = ProfileAcademy.objects.get_or_create(cohort=cohort,
+                                                            user=user,
+                                                            role=role,
+                                                            defaults={
+                                                                'email': user.email,
+                                                                'first_name': user.first_name,
+                                                                'last_name': user.last_name,
+                                                                'last_name': user.last_name,
+                                                                'status': 'ACTIVE',
+                                                            })
+
+    if profile.status != 'ACTIVE':
+        profile.status = 'ACTIVE'
+        profile.save()
+        logger.info('ProfileAcademy mark as active')
+
+    if created:
+        logger.info('ProfileAcademy added')

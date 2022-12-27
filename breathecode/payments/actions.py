@@ -91,13 +91,19 @@ class PlanFinder:
             settings = get_user_settings(request.user.id)
             self.lang = settings.lang
 
-        if cohort := request.GET.get('cohort') or request.data.get('cohort'):
-            self.cohort = self._get_instance(Cohort, cohort)
-
         self.academy_slug = request.GET.get('academy') or request.data.get('academy')
+
+        if cohort := request.GET.get('cohort') or request.data.get('cohort'):
+            self.cohort = self._get_instance(Cohort, cohort, self.academy_slug)
 
         if syllabus := request.GET.get('syllabus') or request.data.get('syllabus'):
             self.syllabus = self._get_instance(Syllabus, syllabus, self.academy_slug)
+
+    def _get_pk(self, pk):
+        if isinstance(pk, int) or pk.isnumeric():
+            return int(pk)
+
+        return 0
 
     def _get_instance(self,
                       model: Type[Cohort | Syllabus],
@@ -111,8 +117,13 @@ class PlanFinder:
         else:
             kwargs['slug'] = pk
 
-        if academy:
-            args.append(Q(academy_owner__slug=academy) | Q(private=False))
+        if academy and model == Syllabus:
+            args.append(
+                Q(academy_owner__slug=academy) | Q(academy_owner__id=self._get_pk(academy))
+                | Q(private=False))
+
+        elif academy and model == Cohort:
+            args.append(Q(academy__slug=academy) | Q(academy__id=self._get_pk(academy)))
 
         resource = model.objects.filter(*args, **kwargs).first()
         if not resource:

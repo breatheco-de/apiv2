@@ -34,11 +34,18 @@ from django.db import IntegrityError, transaction
 
 class PlanView(APIView):
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request, plan_slug=None, service_slug=None):
         handler = self.extensions(request)
-        settings = get_user_settings(request.user.id)
+
+        lang = handler.language.get()
+        if not lang and request.user.id:
+            settings = get_user_settings(request.user.id)
+            lang = settings.lang
+
+        if not lang:
+            lang = 'en'
 
         if plan_slug:
             item = Plan.objects.filter(slug=plan_slug).first()
@@ -49,7 +56,10 @@ class PlanView(APIView):
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetPlanSerializer(item, many=False)
+            serializer = GetPlanSerializer(item,
+                                           many=False,
+                                           context={'academy_id': request.GET.get('academy')},
+                                           select=request.GET.get('select'))
             return handler.response(serializer.data)
 
         filtering = 'cohort' in request.GET or 'syllabus' in request.GET
@@ -68,7 +78,10 @@ class PlanView(APIView):
             items = items.filter(services__slug=service_slug)
 
         items = handler.queryset(items)
-        serializer = GetPlanSerializer(items, many=True)
+        serializer = GetPlanSerializer(items,
+                                       many=True,
+                                       context={'academy_id': request.GET.get('academy')},
+                                       select=request.GET.get('select'))
 
         return handler.response(serializer.data)
 
@@ -91,7 +104,10 @@ class AcademyPlanView(APIView):
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetPlanSerializer(item, many=False)
+            serializer = GetPlanSerializer(item,
+                                           many=False,
+                                           context={'academy_id': academy_id},
+                                           select=request.GET.get('select'))
             return handler.response(serializer.data)
 
         filtering = 'cohort' in request.GET or 'syllabus' in request.GET
@@ -110,7 +126,10 @@ class AcademyPlanView(APIView):
             items = items.filter(services__slug=service_slug).exclude(status='DELETED')
 
         items = handler.queryset(items)
-        serializer = GetPlanSerializer(items, many=True)
+        serializer = GetPlanSerializer(items,
+                                       many=True,
+                                       context={'academy_id': academy_id},
+                                       select=request.GET.get('select'))
 
         return handler.response(serializer.data)
 
@@ -174,19 +193,29 @@ class ServiceView(APIView):
 
     def get(self, request, service_slug=None):
         handler = self.extensions(request)
-        settings = get_user_settings(request.user.id)
+
+        lang = handler.language.get()
+        if not lang and request.user.id:
+            settings = get_user_settings(request.user.id)
+            lang = settings.lang
+
+        if not lang:
+            lang = 'en'
 
         if service_slug:
             item = Service.objects.filter(slug=service_slug).first()
 
             if not item:
-                raise ValidationException(translation(settings.lang,
+                raise ValidationException(translation(lang,
                                                       en='Service not found',
                                                       es='No existe el Servicio',
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetServiceSerializer(item, many=False)
+            serializer = GetServiceSerializer(item,
+                                              many=False,
+                                              context={'academy_id': request.GET.get('academy')},
+                                              select=request.GET.get('select'))
             return handler.response(serializer.data)
 
         items = Service.objects.filter()
@@ -201,7 +230,10 @@ class ServiceView(APIView):
             items = items.filter(mentorship_services__slug=mentorship_service_slug)
 
         items = handler.queryset(items)
-        serializer = GetServiceSerializer(items, many=True)
+        serializer = GetServiceSerializer(items,
+                                          many=True,
+                                          context={'academy_id': request.GET.get('academy')},
+                                          select=request.GET.get('select'))
 
         return handler.response(serializer.data)
 
@@ -225,7 +257,10 @@ class AcademyServiceView(APIView):
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetServiceSerializer(item, many=False)
+            serializer = GetServiceSerializer(item,
+                                              many=False,
+                                              context={'academy_id': academy_id},
+                                              select=request.GET.get('select'))
             return handler.response(serializer.data)
 
         items = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None) | Q(private=False))
@@ -240,7 +275,10 @@ class AcademyServiceView(APIView):
             items = items.filter(mentorship_services__slug=mentorship_service_slug)
 
         items = handler.queryset(items)
-        serializer = GetServiceSerializer(items, many=True)
+        serializer = GetServiceSerializer(items,
+                                          many=True,
+                                          context={'academy_id': academy_id},
+                                          select=request.GET.get('select'))
 
         return handler.response(serializer.data)
 
@@ -355,7 +393,7 @@ class MeConsumableView(APIView):
         return Response(balance)
 
 
-class SubscriptionView(APIView):
+class MeSubscriptionView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     def get(self, request, subscription_id=None):
@@ -453,7 +491,7 @@ class AcademySubscriptionView(APIView):
         return handler.response(serializer.data)
 
 
-class InvoiceView(APIView):
+class MeInvoiceView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     def get(self, request, invoice_id=None):
@@ -618,9 +656,30 @@ class CheckingView(APIView):
                                               code=404)
                 if bag_type == 'PREVIEW':
                     academy = request.data.get('academy')
-                    try:
-                        academy = Academy.objects.get(id=int(academy), main_currency__isnull=False)
-                    except:
+                    kwargs = {}
+
+                    if academy and (isinstance(academy, int) or academy.isnumeric()):
+                        kwargs['id'] = int(academy)
+                    else:
+                        kwargs['slug'] = academy
+
+                    academy = Academy.objects.filter(main_currency__isnull=False, **kwargs).first()
+
+                    if not academy:
+                        cohort = request.data.get('cohort')
+
+                        kwargs = {}
+
+                        if cohort and (isinstance(cohort, int) or cohort.isnumeric()):
+                            kwargs['id'] = int(cohort)
+                        else:
+                            kwargs['slug'] = cohort
+
+                        cohort = Cohort.objects.filter(academy__main_currency__isnull=False, **kwargs).first()
+                        if cohort:
+                            academy = cohort.academy
+
+                    if not academy:
                         raise ValidationException(translation(
                             settings.lang,
                             en='Academy not found or not configured properly',
@@ -705,6 +764,13 @@ class PayView(APIView):
                         es='Bolsa no encontrada, quizás necesitas renovar el checking',
                         slug='not-found-or-without-checking'),
                                               code=404)
+
+                # if not bag.academy:
+                #     raise ValidationException(translation(settings.lang,
+                #                                           en='The bag does not have an academy associated',
+                #                                           es='La bolsa no tiene una academia asociada',
+                #                                           slug='without-academy'),
+                #                               code=404)
 
                 if bag.service_items.count() == 0 and bag.plans.count() == 0:
                     raise ValidationException(translation(settings.lang,

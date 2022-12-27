@@ -1095,6 +1095,114 @@ class AcademyEventTestSuite(EventTestCase):
         }])
 
     """
+    🔽🔽🔽 Post bad slug
+    """
+
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    def test_all_academy_events__post__bad_slug____(self):
+        self.headers(academy=1)
+
+        tags = [{
+            'slug': self.bc.random.string(lower=True, size=10),
+            'tag_type': 'DISCOVERY'
+        } for _ in range(2)]
+        event_type = {'lang': self.bc.random.string(lower=True, size=2)}
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     tag=tags,
+                                     event_type=event_type,
+                                     capability='crud_event',
+                                     active_campaign_academy=True,
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_event')
+        current_date = self.datetime_now()
+        data = {
+            # 'slug': 'they-killed-kenny',
+            'tags': f'{tags[0]["slug"]},{tags[1]["slug"]}',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+            'event_type': 1,
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+
+        del json['created_at']
+        del json['updated_at']
+
+        expected = {
+            'academy': 1,
+            'author': None,
+            'description': None,
+            'event_type': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'tags': '',
+            'slug': None,
+            'excerpt': None,
+            'host': None,
+            'id': 1,
+            'slug': None,
+            'lang': model.event_type.lang,
+            'online_event': False,
+            'organization': 1,
+            'published_at': None,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'venue': None,
+            'sync_with_eventbrite': False,
+            'currency': 'USD',
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(self.all_event_dict(), [{
+            'academy_id': 1,
+            'author_id': None,
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'description': None,
+            'ending_at': current_date,
+            'event_type_id': 1,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'excerpt': None,
+            'tags': '',
+            'slug': None,
+            'host': None,
+            'id': 1,
+            'lang': model.event_type.lang,
+            'online_event': False,
+            'organization_id': 1,
+            'published_at': None,
+            'starting_at': current_date,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'url': 'https://www.google.com/',
+            'venue_id': None,
+            'sync_with_eventbrite': False,
+            'currency': 'USD',
+            'tags': ','.join([x.slug for x in model.tag]),
+        }])
+
+    """
     🔽🔽🔽 Spy the extensions
     """
 
