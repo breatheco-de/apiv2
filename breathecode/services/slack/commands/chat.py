@@ -1,49 +1,43 @@
 """
 Possible parameters for this command:
-Ask my anything
+- bot_slug: Name of the bot to chat with
 
 """
 import os
+import openai
 
-from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.mentorship.models import ChatBot
 from ..decorator import command
 from ..utils import to_string
 from ..exceptions import SlackException
 
 
-@command(capable_of='read_cohort')
-def execute(channel_id, academies, **context):
+@command(capable_of='chatbot_message')
+def execute(bot_name=None, academies=[], **context):
+
+    query = ChatBot.objects.filter(academy__id__in=[academies])
+
+    if bot_name is not None:
+        query = query.filter(slug=bot_name)
+
+    bot = query.first()
+    if bot is None:
+        raise SlackException(f'No chatbot was found to respond this message.', slug='chatbot-not-found')
+
+    text = context['text']
+
+    openai.organization = bot.api_organization
+    openai.api_key = bot.api_key
+    result = openai.Completion.create(model='text-davinci-003', prompt=text, max_tokens=2000, temperature=0)
 
     response = {'blocks': []}
-    response['blocks'].append(render_cohort(channel_id=channel_id, academies=academies))
+    response['blocks'].append(render_message(result))
 
     return response
 
 
-def render_cohort(channel_id, academies):
+def render_message(result):
 
-    cohort = Cohort.objects.filter(slackchannel__slack_id=channel_id, academy__id__in=[academies]).first()
-    if cohort is None:
-        raise SlackException(
-            f'Cohort was not found as slack channel, make sure the channel name matches the cohort slug',
-            slug='cohort-not-found')
+    message = result['choices'].pop()
 
-    teachers = CohortUser.objects.filter(cohort=cohort,
-                                         role__in=['TEACHER', 'ASSISTANT'],
-                                         cohort__academy__id__in=[academies])
-    return {
-        'type': 'section',
-        'text': {
-            'type':
-            'mrkdwn',
-            'text':
-            f"""
-*Cohort name:* {cohort.name}
-*Start Date:* {cohort.kickoff_date}
-*End Date:* {cohort.ending_date}
-*Current day:* {cohort.current_day}
-*Stage:* {cohort.stage}
-*Teachers:* {', '.join([cu.user.first_name + ' ' + cu.user.last_name for cu in teachers])}
-"""
-        }
-    }
+    return {'type': 'section', 'text': {'type': 'mrkdwn', 'text': f"""{message["text"]}"""}}
