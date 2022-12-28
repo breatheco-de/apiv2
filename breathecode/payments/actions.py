@@ -171,43 +171,64 @@ class PlanFinder:
 
     def _syllabus_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
         additional_args = {}
+        print('before distinct 2 -1')
+
+        print('in syllabus handler')
+        print('before distinct 2 -2')
 
         if on_boarding is not None:
             additional_args['on_boarding'] = on_boarding
+        print('before distinct 2 -3')
 
         if not additional_args and auto:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.syllabus).exists()
+        print('before distinct 2 -4')
 
         fixtures = PaymentServiceScheduler.objects.filter(cohorts__syllabus_version__syllabus=self.syllabus,
                                                           cohorts__stage__in=['INACTIVE', 'PREWORK'])
+        print('before distinct 2 -5')
 
         plans = Plan.objects.none()
+        print('before distinct 2 -6')
 
         for fixture in fixtures:
             plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
+
+        print('before distinct', plans)
+        plans = plans.distinct()
+        print('after distinct', plans)
 
         return plans
 
     def get_plans_belongs(self, on_boarding: Optional[bool] = None, auto: bool = False):
         if self.syllabus:
+            print('before syllabus handler')
             return self._syllabus_handler(on_boarding, auto)
 
         if self.cohort:
+            print('before cohort handler')
             return self._cohort_handler(on_boarding, auto)
 
         raise NotImplementedError('Resource handler not implemented')
 
     def get_plans_belongs_from_request(self):
+        print('starting 1')
         is_onboarding = self.request.data.get('is_onboarding') or self.request.GET.get('is_onboarding')
+        print('starting 2')
 
         additional_args = {}
+        print('starting 3')
 
         if is_onboarding:
             additional_args['is_onboarding'] = is_onboarding
+        print('starting 4')
 
         if not additional_args:
+            print('starting 5')
             additional_args['auto'] = True
+
+        print('starting 6')
 
         return self.get_plans_belongs(**additional_args)
 
