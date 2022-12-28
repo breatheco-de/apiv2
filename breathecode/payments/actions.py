@@ -138,20 +138,27 @@ class PlanFinder:
     def _cohort_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
         additional_args = {}
 
+        print('before distinct -1')
+
         if on_boarding is not None:
             additional_args['on_boarding'] = on_boarding
+        print('before distinct -2')
 
         if not self.cohort.syllabus_version:
             return Plan.objects.none()
+        print('before distinct -3')
 
         if not additional_args and auto:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.cohort.syllabus_version.syllabus).exists()
+        print('before distinct -4')
 
         fixtures = self.cohort.paymentservicescheduler_set.filter(cohorts__id=self.cohort.id,
                                                                   cohorts__stage__in=['INACTIVE', 'PREWORK'])
 
+        print('before distinct -5')
         plans = Plan.objects.none()
+        print('before distinct -6')
 
         for fixture in fixtures:
             plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
