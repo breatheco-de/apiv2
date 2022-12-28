@@ -9,6 +9,7 @@ app_name = 'events'
 urlpatterns = [
     path('', EventView.as_view(), name='root'),
     path('me', EventMeView.as_view(), name='me'),
+    path('me/event/<int:event_id>', EventMeView.as_view(), name='me'),
     path('all', get_events, name='all'),
     path('eventype', EventTypeView.as_view(), name='eventype'),
     path('academy/event', AcademyEventView.as_view(), name='academy_event'),

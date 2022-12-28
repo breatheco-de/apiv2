@@ -156,6 +156,10 @@ class PlanFinder:
         for fixture in fixtures:
             plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
 
+        print('before distinct', plans)
+        plans = plans.distinct()
+        print('after distinct', plans)
+
         return plans
 
     def _syllabus_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):

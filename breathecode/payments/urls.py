@@ -12,6 +12,8 @@ urlpatterns = [
     path('plan/<slug:plan_slug>', PlanView.as_view()),
     path('academy/plan', AcademyPlanView.as_view()),
     path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view()),
+    #FIXME
+    # path('academy/plan/<slug:plan_slug>/financingoption', AcademyPlanView.as_view()),
     path('service', ServiceView.as_view()),
     path('service/<slug:service_slug>', ServiceView.as_view()),
     path('service/<slug:service_slug>/items', ServiceItemView.as_view()),
