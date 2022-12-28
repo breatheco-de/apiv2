@@ -138,97 +138,101 @@ class PlanFinder:
     def _cohort_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
         additional_args = {}
 
-        print('before distinct -1')
+        logger.error('before distinct -1')
 
         if on_boarding is not None:
             additional_args['on_boarding'] = on_boarding
-        print('before distinct -2')
+        logger.error('before distinct -2')
 
         if not self.cohort.syllabus_version:
             return Plan.objects.none()
-        print('before distinct -3')
+        logger.error('before distinct -3')
 
         if not additional_args and auto:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.cohort.syllabus_version.syllabus).exists()
-        print('before distinct -4')
+        logger.error('before distinct -4')
 
         fixtures = self.cohort.paymentservicescheduler_set.filter(cohorts__id=self.cohort.id,
                                                                   cohorts__stage__in=['INACTIVE', 'PREWORK'])
 
-        print('before distinct -5')
+        logger.error('before distinct -5')
         plans = Plan.objects.none()
-        print('before distinct -6')
+        logger.error('before distinct -6')
 
         for fixture in fixtures:
             plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
 
-        print('before distinct', plans)
+        logger.error('before distinct', plans)
+        logger.error(plans)
         plans = plans.distinct()
-        print('after distinct', plans)
+        logger.error('after distinct', plans)
+        logger.error(plans)
 
         return plans
 
     def _syllabus_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
         additional_args = {}
-        print('before distinct 2 -1')
+        logger.error('before distinct 2 -1')
 
-        print('in syllabus handler')
-        print('before distinct 2 -2')
+        logger.error('in syllabus handler')
+        logger.error('before distinct 2 -2')
 
         if on_boarding is not None:
             additional_args['on_boarding'] = on_boarding
-        print('before distinct 2 -3')
+        logger.error('before distinct 2 -3')
 
         if not additional_args and auto:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.syllabus).exists()
-        print('before distinct 2 -4')
+        logger.error('before distinct 2 -4')
 
         fixtures = PaymentServiceScheduler.objects.filter(cohorts__syllabus_version__syllabus=self.syllabus,
                                                           cohorts__stage__in=['INACTIVE', 'PREWORK'])
-        print('before distinct 2 -5')
+        logger.error('before distinct 2 -5')
 
         plans = Plan.objects.none()
-        print('before distinct 2 -6')
+        logger.error('before distinct 2 -6')
 
         for fixture in fixtures:
             plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
 
-        print('before distinct', plans)
+        logger.error('before distinct')
+        logger.error(plans)
         plans = plans.distinct()
-        print('after distinct', plans)
+        logger.error('after distinct')
+        logger.error(plans)
 
         return plans
 
     def get_plans_belongs(self, on_boarding: Optional[bool] = None, auto: bool = False):
         if self.syllabus:
-            print('before syllabus handler')
+            logger.error('before syllabus handler')
             return self._syllabus_handler(on_boarding, auto)
 
         if self.cohort:
-            print('before cohort handler')
+            logger.error('before cohort handler')
             return self._cohort_handler(on_boarding, auto)
 
         raise NotImplementedError('Resource handler not implemented')
 
     def get_plans_belongs_from_request(self):
-        print('starting 1')
+        logger.error('starting 1')
         is_onboarding = self.request.data.get('is_onboarding') or self.request.GET.get('is_onboarding')
-        print('starting 2')
+        logger.error('starting 2')
 
         additional_args = {}
-        print('starting 3')
+        logger.error('starting 3')
 
         if is_onboarding:
             additional_args['is_onboarding'] = is_onboarding
-        print('starting 4')
+        logger.error('starting 4')
 
         if not additional_args:
             print('starting 5')
             additional_args['auto'] = True
 
-        print('starting 6')
+        logger.error('starting 6')
 
         return self.get_plans_belongs(**additional_args)
 
@@ -264,16 +268,21 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
                     es='El service item debe tener las llaves de tipo entero how_many y service'),
                                           slug='service-item-malformed')
 
+    logger.error('pre starting 0')
     # get plan related to a cohort
     if cohort_id or syllabus_id:
+        logger.error('pre starting 1')
+
         finder = PlanFinder(request)
         cohort_plans = finder.get_plans_belongs_from_request()
+        logger.error('pre starting 2')
 
         if not cohort_plans:
             raise ValidationException(translation(settings.lang,
                                                   en='Does not exists a fixture associated to this cohort',
                                                   es='No existe un accesorio asociado a esta cohorte'),
                                       slug='cohort-is-not-eligible')
+        logger.error('pre starting 3')
 
         if len(cohort_plans) > 1:
             raise ValidationException(translation(
@@ -281,6 +290,7 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
                 en='Exists many plans associated to this cohort, can\'t be determined which one to use',
                 es='No existe un accesorio asociado a esta cohorte'),
                                       slug='too-many-plans-associated-to-cohort')
+        logger.error('pre starting 4')
 
     if isinstance(service_items, list):
         for service_item in service_items:

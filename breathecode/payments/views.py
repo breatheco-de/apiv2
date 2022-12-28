@@ -30,6 +30,9 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
 from django.db import IntegrityError, transaction
+from breathecode.utils import getLogger
+
+logger = getLogger(__name__)
 
 
 class PlanView(APIView):
