@@ -39,7 +39,7 @@ class AcademyEventTestSuite(EventTestCase):
 
     def test_all_academy_events_no_auth(self):
 
-        url = reverse_lazy('events:academy_eventype')
+        url = reverse_lazy('events:eventype')
 
         response = self.client.get(url)
         json = response.json()
@@ -49,11 +49,10 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_academy_event_type_no_results(self):
-        self.bc.request.set_headers(academy=1)
 
         # TODO: this is bad placed
-        url = reverse_lazy('events:academy_eventype')
-        self.generate_models(authenticate=True, profile_academy=1, role=1, capability='read_event_type')
+        url = reverse_lazy('events:eventype')
+        self.generate_models(authenticate=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -63,10 +62,9 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_academy_event_type_with_results(self):
-        self.bc.request.set_headers(academy=1)
 
         # TODO: this is bad placed
-        url = reverse_lazy('events:academy_eventype')
+        url = reverse_lazy('events:eventype')
         event_type_kwargs = {
             'slug': 'potato',
             'name': 'Potato',
@@ -76,10 +74,7 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(authenticate=True,
                                      event=True,
                                      event_type=True,
-                                     event_type_kwargs=event_type_kwargs,
-                                     profile_academy=1,
-                                     role=1,
-                                     capability='read_event_type')
+                                     event_type_kwargs=event_type_kwargs)
 
         response = self.client.get(url)
         json = response.json()
@@ -93,9 +88,8 @@ class AcademyEventTestSuite(EventTestCase):
         }])
 
     def test_bad_academy_slug(self):
-        self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('events:academy_eventype') + '?academy=banana'
+        url = reverse_lazy('events:eventype') + '?academy=banana'
         event_type_kwargs = {
             'slug': 'potato',
             'name': 'Potato',
@@ -105,10 +99,7 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(authenticate=True,
                                      event=True,
                                      event_type=True,
-                                     event_type_kwargs=event_type_kwargs,
-                                     profile_academy=1,
-                                     role=1,
-                                     capability='read_event_type')
+                                     event_type_kwargs=event_type_kwargs)
 
         response = self.client.get(url)
         json = response.json()
@@ -122,7 +113,6 @@ class AcademyEventTestSuite(EventTestCase):
         }])
 
     def test_properly_academy_slug(self):
-        self.bc.request.set_headers(academy=1)
 
         event_type_kwargs = {
             'slug': 'potato',
@@ -134,11 +124,8 @@ class AcademyEventTestSuite(EventTestCase):
                                      academy=1,
                                      event=True,
                                      event_type=True,
-                                     event_type_kwargs=event_type_kwargs,
-                                     profile_academy=1,
-                                     role=1,
-                                     capability='read_event_type')
-        url = reverse_lazy('events:academy_eventype') + f'?academy={model.academy.slug}'
+                                     event_type_kwargs=event_type_kwargs)
+        url = reverse_lazy('events:eventype') + f'?academy={model.academy.slug}'
 
         response = self.client.get(url)
         json = response.json()
@@ -152,9 +139,8 @@ class AcademyEventTestSuite(EventTestCase):
         }])
 
     def test_bad_allow_shared_creation_slug(self):
-        self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('events:academy_eventype') + '?allow_shared_creation=false'
+        url = reverse_lazy('events:eventype') + '?allow_shared_creation=false'
         event_type_kwargs = {
             'slug': 'potato',
             'name': 'Potato',
@@ -164,10 +150,7 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(authenticate=True,
                                      event=True,
                                      event_type=True,
-                                     event_type_kwargs=event_type_kwargs,
-                                     profile_academy=1,
-                                     role=1,
-                                     capability='read_event_type')
+                                     event_type_kwargs=event_type_kwargs)
 
         response = self.client.get(url)
         json = response.json()
@@ -181,7 +164,6 @@ class AcademyEventTestSuite(EventTestCase):
         }])
 
     def test_properly_allow_shared_creation_slug(self):
-        self.bc.request.set_headers(academy=1)
 
         event_type_kwargs = {
             'slug': 'potato',
@@ -193,15 +175,11 @@ class AcademyEventTestSuite(EventTestCase):
                                      academy=1,
                                      event=True,
                                      event_type=True,
-                                     event_type_kwargs=event_type_kwargs,
-                                     profile_academy=1,
-                                     role=1,
-                                     capability='read_event_type')
-        url = reverse_lazy('events:academy_eventype') + f'?allow_shared_creation=true'
+                                     event_type_kwargs=event_type_kwargs)
+        url = reverse_lazy('events:eventype') + f'?allow_shared_creation=true'
 
         response = self.client.get(url)
         json = response.json()
-        print(json)
         expected = [get_serializer(model.event_type, model.academy, model.city)]
 
         self.assertEqual(json, expected)

@@ -3,7 +3,7 @@ import os
 
 from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
-from breathecode.authenticate.actions import server_id
+from breathecode.authenticate.actions import get_user_settings, server_id
 from breathecode.events.caches import EventCache
 from breathecode.utils import APIException
 from datetime import datetime, timedelta
@@ -18,13 +18,15 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from breathecode.utils.i18n import translation
 
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from .models import Event, EventType, EventCheckin, EventTypeVisibilitySetting, Organization, Venue, EventbriteWebhook, Organizer
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
-                          EventSmallSerializerNoAcademy, VenueSerializer, OrganizationBigSerializer,
+                          EventSmallSerializerNoAcademy, EventTypeVisibilitySettingSerializer,
+                          PostEventTypeSerializer, VenueSerializer, OrganizationBigSerializer,
                           OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -274,17 +276,30 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_event')
     def post(self, request, format=None, academy_id=None):
+        handler = self.extensions(request)
+
+        lang = handler.language.get()
+        if not lang:
+            settings = get_user_settings(request.user.id)
+            lang = settings.lang
+
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
-            raise ValidationException(f'Academy {academy_id} not found')
+            raise ValidationException(
+                translation(lang,
+                            en=f'Academy {academy_id} not found',
+                            es=f'Academia {academy_id} no encontrada',
+                            slug='academy-not-found'))
 
         organization_id = Organization.objects.filter(
             Q(academy__id=academy_id) | Q(organizer__academy__id=academy_id)).values_list('id',
                                                                                           flat=True).first()
         if not organization_id:
             raise ValidationException(
-                f"Academy {academy.name} doesn\'t have the integrations with Eventbrite done",
-                slug='organization-not-exist')
+                translation(lang,
+                            en=f"Academy {academy.name} doesn\'t have the integrations with Eventbrite done",
+                            es=f'La academia {academy.name} no tiene las integraciones con Eventbrite aún',
+                            slug='organization-not-exist'))
 
         data = {}
         for key in request.data.keys():
@@ -293,7 +308,13 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         data['sync_status'] = 'PENDING'
         data['organization'] = organization_id
 
-        serializer = EventSerializer(data={**data, 'academy': academy.id}, context={'academy_id': academy_id})
+        serializer = EventSerializer(data={
+            **data, 'academy': academy.id
+        },
+                                     context={
+                                         'lang': lang,
+                                         'academy_id': academy_id
+                                     })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -301,17 +322,31 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_event')
     def put(self, request, academy_id=None, event_id=None):
+        handler = self.extensions(request)
+
+        lang = handler.language.get()
+        if not lang:
+            settings = get_user_settings(request.user.id)
+            lang = settings.lang
+
         already = Event.objects.filter(id=event_id, academy__id=academy_id).first()
         if already is None:
-            raise ValidationException(f'Event not found for this academy {academy_id}')
+            raise ValidationException(
+                translation(lang,
+                            en=f'Event not found for this academy {academy_id}',
+                            es=f'Evento no encontrado para esta academia {academy_id}',
+                            slug='event-not-found'))
 
         organization_id = Organization.objects.filter(
             Q(academy__id=academy_id) | Q(organizer__academy__id=academy_id)).values_list('id',
                                                                                           flat=True).first()
         if not organization_id:
             raise ValidationException(
-                f"Academy {already.academy.name} doesn\'t have the integrations with Eventbrite done",
-                slug='organization-not-exist')
+                translation(
+                    lang,
+                    en=f"Academy {already.academy.name} doesn\'t have the integrations with Eventbrite done",
+                    es=f'La academia {already.academy.name} no tiene las integraciones con Eventbrite aún',
+                    slug='organization-not-exist'))
 
         data = {}
         for key in request.data.keys():
@@ -320,7 +355,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         data['sync_status'] = 'PENDING'
         data['organization'] = organization_id
 
-        serializer = EventSerializer(already, data=data, context={'academy_id': academy_id})
+        serializer = EventSerializer(already, data=data, context={'lang': lang, 'academy_id': academy_id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -408,6 +443,71 @@ class EventTypeView(APIView):
 
         serializer = EventTypeSerializer(items, many=True)
         return Response(serializer.data)
+
+
+class AcademyEventTypeView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_event_type')
+    def get(self, request, academy_id=None):
+
+        items = EventType.objects.filter(Q(academy__id=academy_id) | Q(allow_shared_creation=True))
+        lookup = {}
+
+        if 'academy' in self.request.GET:
+            value = self.request.GET.get('academy')
+            lookup['academy__slug'] = value
+
+        if 'allow_shared_creation' in self.request.GET:
+            value = self.request.GET.get('allow_shared_creation', '').lower()
+            lookup['allow_shared_creation'] = value == 'true'
+
+        items = items.filter(**lookup).order_by('-created_at')
+
+        serializer = EventTypeSerializer(items, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_event_type')
+    def post(self, request, academy_id):
+        serializer = PostEventTypeSerializer(data=request.data, context={'academy_id': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EventTypeVisibilitySettingView(APIView):
+    """
+    Show the visibility settings of a EventType.
+    """
+
+    extensions = APIViewExtensions(sort='-id')
+
+    @capable_of('read_event_type')
+    def get(self, request, event_type_slug, academy_id=None):
+        handler = self.extensions(request)
+
+        lang = handler.language.get()
+        if not lang:
+            settings = get_user_settings(request.user.id)
+            lang = settings.lang
+
+        event_type = EventType.objects.filter(slug=event_type_slug).first()
+        if not event_type:
+            raise ValidationException('Event type not found', slug='not-found')
+
+        if event_type.allow_shared_creation or event_type.academy.id == academy_id:
+            items = event_type.visibility_settings.filter(academy__id=academy_id)
+
+        # avoid show the visibility settings from a other academy if allow_shared_creation is false
+        else:
+            items = EventTypeVisibilitySetting.objects.none()
+
+        items = handler.queryset(items)
+        serializer = EventTypeVisibilitySettingSerializer(items, many=True)
+        return handler.response(serializer.data)
 
 
 class EventCheckinView(APIView):

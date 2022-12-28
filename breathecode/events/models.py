@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort, Syllabus
 from breathecode.utils.validation_exception import ValidationException
+from breathecode.utils.validators.language import validate_language_code
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
@@ -98,10 +99,6 @@ class EventTypeVisibilitySetting(models.Model):
     will be implemented in the view.
     """
 
-    #TODO: is possible show a workshops to a person assist to a event? this should be used for marketing
-    # purposed
-    # ???
-
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, blank=True, null=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -112,6 +109,7 @@ class EventType(models.Model):
     name = models.CharField(max_length=150)
     description = models.CharField(max_length=255, default='', null=False)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
+    lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
 
     visibility_settings = models.ManyToManyField(EventTypeVisibilitySetting, blank=True)
     allow_shared_creation = models.BooleanField(default=True)
@@ -152,7 +150,11 @@ class Event(models.Model):
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
-    lang = models.CharField(max_length=2, blank=True, default=None, null=True)
+    lang = models.CharField(max_length=5,
+                            blank=True,
+                            default=None,
+                            null=True,
+                            validators=[validate_language_code])
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
 

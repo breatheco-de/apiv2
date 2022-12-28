@@ -1,8 +1,8 @@
 from django.urls import path
 
-from .views import (AcademyPlanView, AcademySubscriptionView, BagView, CardView, CheckingView,
-                    MeConsumableView, InvoiceView, PayView, PlanView, ServiceItemView, ServiceView,
-                    SubscriptionView)
+from .views import (AcademyPlanView, AcademyServiceView, AcademySubscriptionView, BagView, CardView,
+                    CheckingView, MeConsumableView, MeInvoiceView, AcademyInvoiceView, PayView, PlanView,
+                    ServiceItemView, ServiceView, MeSubscriptionView)
 
 app_name = 'payments'
 urlpatterns = [
@@ -12,24 +12,25 @@ urlpatterns = [
     path('plan/<slug:plan_slug>', PlanView.as_view()),
     path('academy/plan', AcademyPlanView.as_view()),
     path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view()),
+    #FIXME
+    # path('academy/plan/<slug:plan_slug>/financingoption', AcademyPlanView.as_view()),
     path('service', ServiceView.as_view()),
     path('service/<slug:service_slug>', ServiceView.as_view()),
     path('service/<slug:service_slug>/items', ServiceItemView.as_view()),
+    path('academy/service', AcademyServiceView.as_view()),
+    path('academy/service/<slug:service_slug>', AcademyServiceView.as_view()),
     path('serviceitem', ServiceItemView.as_view(), name='serviceitem'),
     path('me/service/consumable', MeConsumableView.as_view(), name='me_service_consumable'),
-    path('subscription', SubscriptionView.as_view()),
-    path('subscription/<int:subscription_id>', SubscriptionView.as_view()),
+    path('me/subscription', MeSubscriptionView.as_view()),
+    path('me/subscription/<int:subscription_id>', MeSubscriptionView.as_view()),
     path('academy/subscription', AcademySubscriptionView.as_view()),
     path('academy/subscription/<int:subscription_id>', AcademySubscriptionView.as_view()),
-    # path('credit', CreditView.as_view()),
-    # path('credit/<int:credit_id>', CreditView.as_view()),
-    path('invoice', InvoiceView.as_view()),
-    path('invoice/<int:invoice_id>', InvoiceView.as_view()),
-    path('academy/invoice', InvoiceView.as_view()),
-    path('academy/invoice/<int:invoice_id>', InvoiceView.as_view()),
+    path('me/invoice', MeInvoiceView.as_view()),
+    path('me/invoice/<int:invoice_id>', MeInvoiceView.as_view()),
+    path('academy/invoice', AcademyInvoiceView.as_view()),
+    path('academy/invoice/<int:invoice_id>', AcademyInvoiceView.as_view()),
     path('card', CardView.as_view()),
     path('bag', BagView.as_view()),
-    #TODO: can pass a cohort and if is free trial or not
     path('checking', CheckingView.as_view(), name='checking'),
     path('pay', PayView.as_view(), name='pay'),
 ]

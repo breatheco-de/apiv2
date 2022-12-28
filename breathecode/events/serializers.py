@@ -1,7 +1,8 @@
 from typing import Any
 from breathecode.marketing.actions import validate_marketing_tags
+from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-from .models import Event, Organization, EventbriteWebhook
+from .models import Event, EventType, Organization, EventbriteWebhook
 from slugify import slugify
 from rest_framework import serializers
 import serpy, logging
@@ -37,6 +38,31 @@ class EventTypeSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     academy = AcademySerializer(required=False)
+
+
+class AcademySmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
+class SyllabusSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
+class CohortSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
+class EventTypeVisibilitySettingSerializer(serpy.Serializer):
+    id = serpy.Field()
+    cohort = CohortSmallSerializer(required=False)
+    syllabus = SyllabusSmallSerializer(required=False)
+    academy = AcademySmallSerializer(required=False)
 
 
 class VenueSerializer(serpy.Serializer):
@@ -148,24 +174,37 @@ class EventSerializer(serializers.ModelSerializer):
         exclude = ()
 
     def validate(self, data: dict[str, Any]):
+        lang = data.get('lang', 'en')
 
         academy = self.context.get('academy_id')
 
         if ('sync_with_eventbrite' not in data or data['sync_with_eventbrite']
                 == False) and ('url' not in data or data['url'] is None or data['url'] == ''):
             raise ValidationException(
-                f'Event URL must not be empty unless it will be synched with Eventbrite', slug='empty-url')
+                translation(
+                    lang,
+                    en='Event URL must not be empty unless it will be synched with Eventbrite',
+                    es='La URL del evento no puede estar vacía a menos que se sincronice con Eventbrite',
+                    slug='empty-url'))
 
         if 'tags' not in data or data['tags'] == '':
-            raise ValidationException(f'Event must have at least one tag', slug='empty-tags')
+            raise ValidationException(
+                translation(lang,
+                            en='Event must have at least one tag',
+                            es='El evento debe tener al menos un tag',
+                            slug='empty-tags'))
 
-        validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'])
+        validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'], lang=lang)
 
         title = data.get('title')
         slug = data.get('slug')
 
         if slug and self.instance:
-            raise ValidationException(f'The slug field is readonly', slug='try-update-slug')
+            raise ValidationException(
+                translation(lang,
+                            en='The slug field is readonly',
+                            es='El campo slug es de solo lectura',
+                            slug='try-update-slug'))
 
         if title and not slug:
             slug = slugify(data['title']).lower()
@@ -175,8 +214,21 @@ class EventSerializer(serializers.ModelSerializer):
 
         existing_events = Event.objects.filter(slug=slug)
         if slug and not self.instance and existing_events.exists():
-            raise ValidationException(f'Event slug {slug} already taken, try a different event slug?',
-                                      slug='slug-taken')
+            raise ValidationException(
+                translation(lang,
+                            en=f'Event slug {slug} already taken, try a different slug',
+                            es=f'El slug {slug} ya está en uso, prueba con otro slug',
+                            slug='slug-taken'))
+
+        if 'event_type' in data and 'lang' in data and data['event_type'].academy.lang != data['lang']:
+            raise ValidationException(
+                translation(lang,
+                            en='Event type and event language must match',
+                            es='El tipo de evento y el idioma del evento deben coincidir',
+                            slug='event-type-lang-mismatch'))
+
+        if 'event_type' in data:
+            data['lang'] = data['event_type'].lang
 
         data['slug'] = slug
 
@@ -213,4 +265,11 @@ class EventbriteWebhookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventbriteWebhook
+        exclude = ()
+
+
+class PostEventTypeSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = EventType
         exclude = ()
