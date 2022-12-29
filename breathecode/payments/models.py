@@ -156,20 +156,7 @@ class ServiceTranslation(models.Model):
         return f'{self.lang}: {self.title}'
 
 
-# class PlanOffer(models.Model):
-#     original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
-#     from_syllabus = models.ManyToManyField(Syllabus, on_delete=models.CASCADE)
-#     suggested_plans = models.ManyToManyField(Plan, on_delete=models.CASCADE)
-#     description = models.CharField(max_length=255)
-#     short_description = models.CharField(max_length=255)
-
-# class PlanOfferTranslation(models.Model):
-#     offer = models.ForeignKey(PlanOffer, on_delete=models.CASCADE)
-#     lang = models.CharField(max_length=5, validators=[validate_language_code])
-#     title = models.CharField(max_length=60)
-#     description = models.CharField(max_length=255)
-
-
+#FIXME: this is broken
 class PaymentServiceScheduler(models.Model):
     _lang = 'en'
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -329,7 +316,13 @@ class Plan(AbstractPriceByTime):
     """
 
     slug = models.CharField(max_length=60, unique=True)
-    financing_options = models.ManyToManyField(FinancingOption, blank=True)
+    financing_options = models.ManyToManyField(FinancingOption,
+                                               blank=True,
+                                               help_text='If the plan is renew, it would be ignore')
+
+    is_renewable = models.BooleanField(
+        default=True,
+        help_text='Is if true, it will create a reneweval subscription instead of a plan financing')
 
     status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT)
 
@@ -363,10 +356,19 @@ class PlanTranslation(models.Model):
         return f'{self.lang} {self.title}: ({self.plan.slug})'
 
 
-# class Balance:
-#     id: int
-#     slug: int
-#     how_many: int
+class PlanOffer(models.Model):
+    original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
+    from_syllabus = models.ManyToManyField('admissions.Syllabus')
+    suggested_plans = models.ManyToManyField(Plan, related_name='+')
+
+
+class PlanOfferTranslation(models.Model):
+    offer = models.ForeignKey(PlanOffer, on_delete=models.CASCADE)
+    lang = models.CharField(max_length=5, validators=[validate_language_code])
+    title = models.CharField(max_length=60)
+    description = models.CharField(max_length=255)
+    short_description = models.CharField(max_length=255)
+
 
 # class MentorshipServiceSet:
 #     mentorship_services = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -458,6 +460,7 @@ class Bag(AbstractAmountByTime):
     status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
     type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG)
     chosen_period = models.CharField(max_length=7, choices=CHOSEN_PERIOD, default=MONTH)
+    how_many_installments = models.IntegerField(default=0)
 
     academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -672,6 +675,10 @@ class PlanServiceItemHandler(models.Model):
 
     def __str__(self) -> str:
         return str(self.subscription or self.plan_financing or 'Unset')
+
+
+#TODO during the renovation, if the ServiceStockScheduler valid_until is greather than subscription valid_until,
+# take it instead
 
 
 class ServiceStockScheduler(models.Model):

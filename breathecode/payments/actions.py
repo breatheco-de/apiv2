@@ -87,9 +87,12 @@ class PlanFinder:
         else:
             self.lang = request.META.get('HTTP_ACCEPT_LANGUAGE')
 
-        if not self.lang:
+        if not self.lang and request.user.id:
             settings = get_user_settings(request.user.id)
             self.lang = settings.lang
+
+        if not self.lang:
+            self.lang = 'en'
 
         self.academy_slug = request.GET.get('academy') or request.data.get('academy')
 
@@ -138,97 +141,69 @@ class PlanFinder:
     def _cohort_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
         additional_args = {}
 
-        print('before distinct -1')
-
         if on_boarding is not None:
             additional_args['on_boarding'] = on_boarding
-        print('before distinct -2')
 
         if not self.cohort.syllabus_version:
             return Plan.objects.none()
-        print('before distinct -3')
 
         if not additional_args and auto:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.cohort.syllabus_version.syllabus).exists()
-        print('before distinct -4')
 
         fixtures = self.cohort.paymentservicescheduler_set.filter(cohorts__id=self.cohort.id,
                                                                   cohorts__stage__in=['INACTIVE', 'PREWORK'])
 
-        print('before distinct -5')
         plans = Plan.objects.none()
-        print('before distinct -6')
 
         for fixture in fixtures:
             plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
 
-        print('before distinct', plans)
         plans = plans.distinct()
-        print('after distinct', plans)
 
         return plans
 
     def _syllabus_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
         additional_args = {}
-        print('before distinct 2 -1')
-
-        print('in syllabus handler')
-        print('before distinct 2 -2')
 
         if on_boarding is not None:
             additional_args['on_boarding'] = on_boarding
-        print('before distinct 2 -3')
 
         if not additional_args and auto:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.syllabus).exists()
-        print('before distinct 2 -4')
 
         fixtures = PaymentServiceScheduler.objects.filter(cohorts__syllabus_version__syllabus=self.syllabus,
                                                           cohorts__stage__in=['INACTIVE', 'PREWORK'])
-        print('before distinct 2 -5')
 
         plans = Plan.objects.none()
-        print('before distinct 2 -6')
 
         for fixture in fixtures:
             plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
 
-        print('before distinct', plans)
         plans = plans.distinct()
-        print('after distinct', plans)
 
         return plans
 
     def get_plans_belongs(self, on_boarding: Optional[bool] = None, auto: bool = False):
         if self.syllabus:
-            print('before syllabus handler')
             return self._syllabus_handler(on_boarding, auto)
 
         if self.cohort:
-            print('before cohort handler')
             return self._cohort_handler(on_boarding, auto)
 
         raise NotImplementedError('Resource handler not implemented')
 
     def get_plans_belongs_from_request(self):
-        print('starting 1')
         is_onboarding = self.request.data.get('is_onboarding') or self.request.GET.get('is_onboarding')
-        print('starting 2')
 
         additional_args = {}
-        print('starting 3')
 
         if is_onboarding:
             additional_args['is_onboarding'] = is_onboarding
-        print('starting 4')
 
         if not additional_args:
-            print('starting 5')
             additional_args['auto'] = True
-
-        print('starting 6')
 
         return self.get_plans_belongs(**additional_args)
 
@@ -236,17 +211,18 @@ class PlanFinder:
 def add_items_to_bag(request, settings: UserSetting, bag: Bag):
     service_items = request.data.get('service_items')
     plans = request.data.get('plans')
-    cohort_id = request.data.get('cohort')
-    syllabus_id = request.data.get('syllabus')
+    cohorts = request.data.get('cohort')
 
     bag.service_items.clear()
     bag.plans.clear()
     bag.token = None
     bag.expires_at = None
-    cohort_plans = []
 
     services_not_found = set()
     plans_not_found = set()
+    cohorts_not_found = set()
+
+    cohort_ids = []
 
     if isinstance(service_items, list):
         for item in service_items:
@@ -264,44 +240,49 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
                     es='El service item debe tener las llaves de tipo entero how_many y service'),
                                           slug='service-item-malformed')
 
-    # get plan related to a cohort
-    if cohort_id or syllabus_id:
-        finder = PlanFinder(request)
-        cohort_plans = finder.get_plans_belongs_from_request()
-
-        if not cohort_plans:
-            raise ValidationException(translation(settings.lang,
-                                                  en='Does not exists a fixture associated to this cohort',
-                                                  es='No existe un accesorio asociado a esta cohorte'),
-                                      slug='cohort-is-not-eligible')
-
-        if len(cohort_plans) > 1:
-            raise ValidationException(translation(
-                settings.lang,
-                en='Exists many plans associated to this cohort, can\'t be determined which one to use',
-                es='No existe un accesorio asociado a esta cohorte'),
-                                      slug='too-many-plans-associated-to-cohort')
-
     if isinstance(service_items, list):
         for service_item in service_items:
             if not Service.objects.filter(id=service_item['service']):
                 services_not_found.add(service_item['service'])
+
+    if isinstance(cohorts, list):
+        for cohort in cohorts:
+            kwargs = {}
+
+            if isinstance(cohort, int) or cohort.isnumeric():
+                kwargs['id'] = int(cohort)
+
+            else:
+                kwargs['slug'] = cohort
+
+            if c := Cohort.objects.filter(**kwargs).first():
+                cohort_ids.append(c.id)
+
+            if not c:
+                cohorts_not_found.add(cohort)
 
     if isinstance(plans, list):
         for plan in plans:
             if not Plan.objects.filter(id=plan):
                 plans_not_found.add(plan)
 
-    if services_not_found or plans_not_found:
+    if services_not_found or plans_not_found or plans_not_found:
         raise ValidationException(translation(
             settings.lang,
-            en=f'Items not found: services={services_not_found}, plans={plans_not_found}',
-            es=f'Elementos no encontrados: servicios={services_not_found}, planes={plans_not_found}',
+            en=f'Items not found: services={services_not_found}, plans={plans_not_found}, '
+            f'cohorts={cohorts_not_found}',
+            es=f'Elementos no encontrados: servicios={services_not_found}, planes={plans_not_found}, '
+            f'cohortes={cohorts_not_found}',
             slug='some-items-not-found'),
                                   code=404)
 
-    if cohort_plans:
-        bag.plans.add(*cohort_plans)
+    too_many_cohorts_error = translation(settings.lang,
+                                         en='You can only select one cohort',
+                                         es='Solo puedes seleccionar una cohorte',
+                                         slug='more-than-one-cohort-selected')
+
+    if len(cohort_ids) > 1:
+        raise ValidationException(too_many_cohorts_error, code=400)
 
     if isinstance(service_items, list):
         for service_item in service_items:
@@ -314,10 +295,21 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
         for plan in plans:
             bag.plans.add(plan)
 
-    bag.save()
+    how_many_plans = bag.plans.count()
+    if how_many_plans > 1:
+        raise ValidationException(too_many_cohorts_error, code=400)
 
-    if cohort_id and finder.cohort:
-        bag.selected_cohorts.add(finder.cohort)
+    for cohort in cohort_ids:
+        bag.selected_cohorts.add(cohort)
+
+    if how_many_plans == 1 and bag.service_items.count():
+        raise ValidationException(translation(settings.lang,
+                                              en="You can't select a plan and a services at the same time",
+                                              es='No puedes seleccionar un plan y servicios al mismo tiempo',
+                                              slug='one-plan-and-many-services'),
+                                  code=400)
+
+    bag.save()
 
     return bag
 
