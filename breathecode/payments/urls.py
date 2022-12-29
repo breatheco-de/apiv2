@@ -4,6 +4,9 @@ from .views import (AcademyPlanView, AcademyServiceView, AcademySubscriptionView
                     CheckingView, MeConsumableView, MeInvoiceView, AcademyInvoiceView, PayView, PlanView,
                     ServiceItemView, ServiceView, MeSubscriptionView)
 
+# /v1/payment/offer
+# /v1/payment/planoffer?original_plan=<>&from_syllabus=<>
+
 app_name = 'payments'
 urlpatterns = [
     #TODO generate plans and services from yml

@@ -176,6 +176,13 @@ class GetConsumableSerializer(GetServiceItemSerializer):
     valid_until = serpy.Field()
 
 
+class GetFinancingOptionSerializer(serpy.Serializer):
+    # title = serpy.Field()
+    monthly_price = serpy.Field()
+    how_many_months = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+
+
 class GetPlanSmallSerializer(custom_serpy.Serializer):
     # title = serpy.Field()
     slug = serpy.Field()
@@ -184,9 +191,13 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
     service_items = serpy.MethodField()
+    financing_options = serpy.MethodField()
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
+
+    def get_financing_options(self, obj):
+        return GetFinancingOptionSerializer(obj.financing_options.all(), many=True).data
 
 
 class GetPlanSerializer(GetPlanSmallSerializer):
@@ -200,7 +211,6 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     cohorts = custom_serpy.MethodField()
 
     def get_cohorts(self, obj):
-        print('jldfskjldjdsjsdfjsjsdfjl')
         utc_now = timezone.now()
         kwargs = {}
         if 'academy' in self.context and self.context['academy_id'] and (isinstance(

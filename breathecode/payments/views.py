@@ -65,14 +65,10 @@ class PlanView(APIView):
                                            select=request.GET.get('select'))
             return handler.response(serializer.data)
 
-        filtering = 'cohort' in request.GET or 'syllabus' in request.GET
-        if 'cohort' in request.GET or 'syllabus' in request.GET:
-            items = PlanFinder(request).get_plans_belongs_from_request()
+        # The fixture of filter by cohort and syllabus are disabled
+        items = Plan.objects.filter()
 
-        else:
-            items = Plan.objects.filter()
-
-        if not filtering and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
+        if is_onboarding := request.GET.get('is_onboarding', '').lower():
             items = items.filter(is_onboarding=is_onboarding == 'true')
 
         items = items.exclude(status='DELETED')
@@ -701,8 +697,13 @@ class CheckingView(APIView):
 
                 bag.token = Token.generate_key()
                 bag.expires_at = utc_now + timedelta(minutes=60)
-                bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-                    bag, bag.academy.main_currency)
+
+                plan = bag.plans.filter(status='CHECKING').first()
+
+                #FIXME: the service items should be bought without renewals
+                if not plan or plan.is_renewable:
+                    bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
+                        bag, bag.academy.main_currency)
 
                 bag.save()
                 transaction.savepoint_commit(sid)
@@ -768,13 +769,6 @@ class PayView(APIView):
                         slug='not-found-or-without-checking'),
                                               code=404)
 
-                # if not bag.academy:
-                #     raise ValidationException(translation(settings.lang,
-                #                                           en='The bag does not have an academy associated',
-                #                                           es='La bolsa no tiene una academia asociada',
-                #                                           slug='without-academy'),
-                #                               code=404)
-
                 if bag.service_items.count() == 0 and bag.plans.count() == 0:
                     raise ValidationException(translation(settings.lang,
                                                           en='Bag is empty',
@@ -797,14 +791,21 @@ class PayView(APIView):
                                                           slug='invalid-chosen-period'),
                                               code=400)
 
-                amount = get_amount_by_chosen_period(bag, chosen_period)
-
-                # if not bag.academy.main_currency:
-                #     raise ValidationException(translation(settings.lang,
-                #                                           en='Academy main currency not found',
-                #                                           es='Moneda principal de la academia no encontrada',
-                #                                           slug='academy-main-currency-not-found'),
-                #                               code=404)
+                if bag.how_many_installments > 0:
+                    try:
+                        plan = bag.plans.filter().first()
+                        option = plan.financing_options.filter(
+                            how_many_months=bag.how_many_installments).first()
+                        amount = option.monthly_price
+                    except:
+                        raise ValidationException(translation(
+                            settings.lang,
+                            en='Bag bad configured, related to financing option',
+                            es='La bolsa esta mal configurada, relacionado a la opción de financiamiento',
+                            slug='invalid-chosen-period'),
+                                                  code=500)
+                else:
+                    amount = get_amount_by_chosen_period(bag, chosen_period)
 
                 if amount > 0:
                     s = Stripe()
@@ -831,7 +832,10 @@ class PayView(APIView):
 
                 transaction.savepoint_commit(sid)
 
-                tasks.build_subscription.delay(bag.id, invoice.id)
+                if bag.how_many_installments > 0:
+                    tasks.build_plan_financing.delay(bag.id, invoice.id)
+                else:
+                    tasks.build_subscription.delay(bag.id, invoice.id)
 
                 for cohort in bag.selected_cohorts.all():
                     admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
