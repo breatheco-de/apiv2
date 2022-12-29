@@ -6,6 +6,7 @@ import re
 import string
 import urllib.parse
 from random import randint
+from django.core.handlers.wsgi import WSGIRequest
 
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -305,3 +306,16 @@ def get_user_settings(user_id: int) -> UserSetting:
         settings.save()
 
     return settings
+
+
+def get_user_language(request: WSGIRequest):
+    lang = request.META.get('HTTP_ACCEPT_LANGUAGE')
+
+    if not lang and request.user.id:
+        settings = get_user_settings(request.user.id)
+        lang = settings.lang
+
+    if not lang:
+        lang = 'en'
+
+    return lang

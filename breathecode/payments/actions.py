@@ -87,9 +87,12 @@ class PlanFinder:
         else:
             self.lang = request.META.get('HTTP_ACCEPT_LANGUAGE')
 
-        if not self.lang:
+        if not self.lang and request.user.id:
             settings = get_user_settings(request.user.id)
             self.lang = settings.lang
+
+        if not self.lang:
+            self.lang = 'en'
 
         self.academy_slug = request.GET.get('academy') or request.data.get('academy')
 

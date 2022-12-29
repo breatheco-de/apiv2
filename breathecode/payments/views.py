@@ -7,7 +7,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.actions import get_user_language, get_user_settings
 from breathecode.events.models import EventType
 from breathecode.mentorship.models import MentorshipService
 from django.db.models import CharField, Q, Value
@@ -41,19 +41,12 @@ class PlanView(APIView):
 
     def get(self, request, plan_slug=None, service_slug=None):
         handler = self.extensions(request)
-
-        lang = handler.language.get()
-        if not lang and request.user.id:
-            settings = get_user_settings(request.user.id)
-            lang = settings.lang
-
-        if not lang:
-            lang = 'en'
+        lang = get_user_language(request)
 
         if plan_slug:
             item = Plan.objects.filter(slug=plan_slug).first()
             if not item:
-                raise ValidationException(translation(settings.lang,
+                raise ValidationException(translation(lang,
                                                       en='Plan not found',
                                                       es='Plan no existe',
                                                       slug='not-found'),
@@ -91,13 +84,13 @@ class AcademyPlanView(APIView):
     @capable_of('read_plan')
     def get(self, request, plan_slug=None, service_slug=None, academy_id=None):
         handler = self.extensions(request)
-        settings = get_user_settings(request.user.id)
+        lang = get_user_language(request)
 
         if plan_slug:
             item = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None),
                                        slug=plan_slug).exclude(status='DELETED').first()
             if not item:
-                raise ValidationException(translation(settings.lang,
+                raise ValidationException(translation(lang,
                                                       en='Plan not found',
                                                       es='Plan no existe',
                                                       slug='not-found'),
@@ -146,12 +139,12 @@ class AcademyPlanView(APIView):
 
     @capable_of('crud_plan')
     def put(self, request, plan_id=None, academy_id=None):
-        settings = get_user_settings(request.user.id)
+        lang = get_user_language(request)
 
         plan = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None),
                                    id=plan_id).exclude(status='DELETED').first()
         if not plan:
-            raise ValidationException(translation(settings.lang,
+            raise ValidationException(translation(lang,
                                                   en='Plan not found',
                                                   es='Plan no existe',
                                                   slug='not-found'),
@@ -169,12 +162,12 @@ class AcademyPlanView(APIView):
 
     @capable_of('crud_plan')
     def delete(self, request, plan_id=None, academy_id=None):
-        settings = get_user_settings(request.user.id)
+        lang = get_user_language(request)
 
         plan = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None),
                                    id=plan_id).exclude(status='DELETED').first()
         if not plan:
-            raise ValidationException(translation(settings.lang,
+            raise ValidationException(translation(lang,
                                                   en='Plan not found',
                                                   es='Plan no existe',
                                                   slug='not-found'),
@@ -193,13 +186,7 @@ class ServiceView(APIView):
     def get(self, request, service_slug=None):
         handler = self.extensions(request)
 
-        lang = handler.language.get()
-        if not lang and request.user.id:
-            settings = get_user_settings(request.user.id)
-            lang = settings.lang
-
-        if not lang:
-            lang = 'en'
+        lang = get_user_language(request)
 
         if service_slug:
             item = Service.objects.filter(slug=service_slug).first()
@@ -243,14 +230,14 @@ class AcademyServiceView(APIView):
     @capable_of('read_service')
     def get(self, request, service_slug=None, academy_id=None):
         handler = self.extensions(request)
-        settings = get_user_settings(request.user.id)
+        lang = get_user_language(request)
 
         if service_slug:
             item = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None) | Q(private=False),
                                           slug=service_slug).first()
 
             if not item:
-                raise ValidationException(translation(settings.lang,
+                raise ValidationException(translation(lang,
                                                       en='Service not found',
                                                       es='No existe el Servicio',
                                                       slug='not-found'),
@@ -297,10 +284,10 @@ class AcademyServiceView(APIView):
     @capable_of('crud_service')
     def put(self, request, service_slug=None, academy_id=None):
         service = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None), slug=service_slug).first()
-        settings = get_user_settings(request.user.id)
+        lang = get_user_language(request)
 
         if not service:
-            raise ValidationException(translation(settings.lang,
+            raise ValidationException(translation(lang,
                                                   en='Service not found',
                                                   es='No existe el Servicio',
                                                   slug='not-found'),
@@ -324,14 +311,7 @@ class ServiceItemView(APIView):
 
     def get(self, request, service_slug=None):
         handler = self.extensions(request)
-        language = handler.language.get()
-
-        if request.user.id:
-            settings = get_user_settings(request.user.id)
-            language = language or settings.lang
-
-        else:
-            language = language or 'en'
+        lang = get_user_language(request)
 
         items = ServiceItem.objects.none()
 
@@ -340,7 +320,7 @@ class ServiceItemView(APIView):
 
             p = Plan.objects.filter(**args).first()
             if not p:
-                raise ValidationException(translation(language,
+                raise ValidationException(translation(lang,
                                                       en='Plan not found',
                                                       es='No existe el Plan',
                                                       slug='not-found'),
@@ -358,7 +338,7 @@ class ServiceItemView(APIView):
         if unit_type := request.GET.get('unit_type'):
             items = items.filter(unit_type__in=unit_type.split(','))
 
-        items = items.annotate(lang=Value(language, output_field=CharField()))
+        items = items.annotate(lang=Value(lang, output_field=CharField()))
 
         items = handler.queryset(items)
         serializer = GetServiceItemWithFeaturesSerializer(items, many=True)
@@ -397,7 +377,8 @@ class MeSubscriptionView(APIView):
 
     def get(self, request, subscription_id=None):
         handler = self.extensions(request)
-        settings = get_user_settings(request.user.id)
+        lang = get_user_language(request)
+
         now = timezone.now()
 
         if subscription_id:
@@ -406,7 +387,7 @@ class MeSubscriptionView(APIView):
                     status='CANCELLED').exclude(status='DEPRECATED').exclude(status='PAYMENT_ISSUE').first()
 
             if not item:
-                raise ValidationException(translation(settings.lang,
+                raise ValidationException(translation(lang,
                                                       en='Subscription not found',
                                                       es='No existe el suscripción',
                                                       slug='not-found'),
@@ -449,7 +430,8 @@ class AcademySubscriptionView(APIView):
     @capable_of('read_subscription')
     def get(self, request, subscription_id=None):
         handler = self.extensions(request)
-        settings = get_user_settings(request.user.id)
+        lang = get_user_language(request)
+
         now = timezone.now()
 
         if subscription_id:
@@ -458,7 +440,7 @@ class AcademySubscriptionView(APIView):
                     status='CANCELLED').exclude(status='DEPRECATED').exclude(status='PAYMENT_ISSUE').first()
 
             if not item:
-                raise ValidationException(translation(settings.lang,
+                raise ValidationException(translation(lang,
                                                       en='Subscription not found',
                                                       es='No existe el suscripción',
                                                       slug='not-found'),
@@ -495,14 +477,13 @@ class MeInvoiceView(APIView):
 
     def get(self, request, invoice_id=None):
         handler = self.extensions(request)
-        settings = get_user_settings(request.user.id)
-        now = timezone.now()
+        lang = get_user_language(request)
 
         if invoice_id:
             item = Invoice.objects.filter(id=invoice_id, user=request.user).first()
 
             if not item:
-                raise ValidationException(translation(settings.lang,
+                raise ValidationException(translation(lang,
                                                       en='Invoice not found',
                                                       es='La factura no existe',
                                                       slug='not-found'),
@@ -528,14 +509,13 @@ class AcademyInvoiceView(APIView):
     @capable_of('read_invoice')
     def get(self, request, invoice_id=None, academy_id=None):
         handler = self.extensions(request)
-        settings = get_user_settings(request.user.id)
-        now = timezone.now()
+        lang = get_user_language(request)
 
         if invoice_id:
             item = Invoice.objects.filter(id=invoice_id, user=request.user, academy__id=academy_id).first()
 
             if not item:
-                raise ValidationException(translation(settings.lang,
+                raise ValidationException(translation(lang,
                                                       en='Invoice not found',
                                                       es='La factura no existe',
                                                       slug='not-found'),
@@ -559,14 +539,10 @@ class CardView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     def post(self, request):
-        handler = self.extensions(request)
-        language = handler.language.get()
-
-        settings = get_user_settings(request.user.id)
-        language = language or settings.lang
+        lang = get_user_language(request)
 
         s = Stripe()
-        s.set_language(language)
+        s.set_language(lang)
         s.add_contact(request.user)
 
         token = request.data.get('token')
@@ -576,7 +552,7 @@ class CardView(APIView):
         cvc = request.data.get('cvc')
 
         if not ((card_number and exp_month and exp_year and cvc) or token):
-            raise ValidationException(translation(settings.lang,
+            raise ValidationException(translation(lang,
                                                   en='Missing card information',
                                                   es='Falta la información de la tarjeta',
                                                   slug='missing-card-information'),
@@ -615,7 +591,7 @@ class BagView(APIView):
         language = handler.language.get()
 
         settings = get_user_settings(request.user.id)
-        language = language or settings.lang
+        language = language or settings.lang or 'en'
 
         s = Stripe()
         s.set_language(language)
@@ -721,12 +697,8 @@ class PayView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     def post(self, request):
-        handler = self.extensions(request)
-        language = handler.language.get()
         utc_now = timezone.now()
-
-        settings = get_user_settings(request.user.id)
-        language = language or settings.lang
+        lang = get_user_language(request)
 
         with transaction.atomic():
             sid = transaction.savepoint()
@@ -738,7 +710,7 @@ class PayView(APIView):
                 if current_reputation == 'FRAUD' or current_reputation == 'BAD':
                     raise PaymentException(
                         translation(
-                            language,
+                            lang,
                             en=
                             'The payment could not be completed because you have a bad reputation on this platform',
                             es='No se pudo completar el pago porque tienes mala reputación en esta plataforma',
@@ -748,7 +720,7 @@ class PayView(APIView):
                 # type = request.data.get('type', 'BAG').upper()
                 token = request.data.get('token')
                 if not token:
-                    raise ValidationException(translation(language,
+                    raise ValidationException(translation(lang,
                                                           en='Invalid bag token',
                                                           es='El token de la bolsa es inválido',
                                                           slug='missing-token'),
@@ -763,14 +735,14 @@ class PayView(APIView):
 
                 if not bag:
                     raise ValidationException(translation(
-                        settings.lang,
+                        lang,
                         en='Bag not found, maybe you need to renew the checking',
                         es='Bolsa no encontrada, quizás necesitas renovar el checking',
                         slug='not-found-or-without-checking'),
                                               code=404)
 
                 if bag.service_items.count() == 0 and bag.plans.count() == 0:
-                    raise ValidationException(translation(settings.lang,
+                    raise ValidationException(translation(lang,
                                                           en='Bag is empty',
                                                           es='La bolsa esta vacía',
                                                           slug='bag-is-empty'),
@@ -778,14 +750,14 @@ class PayView(APIView):
 
                 chosen_period = request.data.get('chosen_period', '').upper()
                 if not chosen_period:
-                    raise ValidationException(translation(settings.lang,
+                    raise ValidationException(translation(lang,
                                                           en='Missing chosen period',
                                                           es='Falta el periodo elegido',
                                                           slug='missing-chosen-period'),
                                               code=400)
 
                 if chosen_period not in ['MONTH', 'QUARTER', 'HALF', 'YEAR']:
-                    raise ValidationException(translation(settings.lang,
+                    raise ValidationException(translation(lang,
                                                           en='Invalid chosen period',
                                                           es='Periodo elegido inválido',
                                                           slug='invalid-chosen-period'),
@@ -799,7 +771,7 @@ class PayView(APIView):
                         amount = option.monthly_price
                     except:
                         raise ValidationException(translation(
-                            settings.lang,
+                            lang,
                             en='Bag bad configured, related to financing option',
                             es='La bolsa esta mal configurada, relacionado a la opción de financiamiento',
                             slug='invalid-chosen-period'),
@@ -809,7 +781,7 @@ class PayView(APIView):
 
                 if amount > 0:
                     s = Stripe()
-                    s.set_language(language)
+                    s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
 
                 else:
