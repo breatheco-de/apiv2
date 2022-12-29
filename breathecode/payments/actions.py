@@ -250,8 +250,8 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
             else:
                 kwargs['slug'] = service_item['service']
 
-            if not (x := Service.objects.filter(**kwargs).first()):
-                services_not_found.add(x.id)
+            if not Service.objects.filter(**kwargs):
+                services_not_found.add(service_item['service'])
 
     if isinstance(cohorts, list):
         for cohort in cohorts:
@@ -271,7 +271,6 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
 
     if isinstance(plans, list):
         for plan in plans:
-
             kwargs = {}
 
             if plan and (isinstance(plan, int) or plan.isnumeric()):
@@ -279,8 +278,8 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
             else:
                 kwargs['slug'] = plan
 
-            if not (x := Plan.objects.filter(**kwargs).first()):
-                plans_not_found.add(x.id)
+            if not Plan.objects.filter(**kwargs):
+                plans_not_found.add(plan)
 
     if services_not_found or plans_not_found or plans_not_found:
         raise ValidationException(translation(
@@ -302,14 +301,30 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
 
     if isinstance(service_items, list):
         for service_item in service_items:
-            service = Service.objects.filter(id=service_item['service']).first()
+            kwargs = {}
+
+            if service_item['service'] and (isinstance(service_item['service'], int)
+                                            or service_item['service'].isnumeric()):
+                kwargs['id'] = int(service_item['service'])
+            else:
+                kwargs['slug'] = service_item['service']
+
+            service = Service.objects.filter(**kwargs).first()
             service_item, _ = ServiceItem.objects.get_or_create(service=service,
                                                                 how_many=service_item['how_many'])
             bag.service_items.add(service_item)
 
     if isinstance(plans, list):
         for plan in plans:
-            bag.plans.add(plan)
+            kwargs = {}
+
+            if plan and (isinstance(plan, int) or plan.isnumeric()):
+                kwargs['id'] = int(plan)
+            else:
+                kwargs['slug'] = plan
+
+            p = Plan.objects.filter(**kwargs).first()
+            bag.plans.add(p)
 
     how_many_plans = bag.plans.count()
     if how_many_plans > 1:
