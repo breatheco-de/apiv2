@@ -242,8 +242,16 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
 
     if isinstance(service_items, list):
         for service_item in service_items:
-            if not Service.objects.filter(id=service_item['service']):
-                services_not_found.add(service_item['service'])
+            kwargs = {}
+
+            if service_item['service'] and (isinstance(service_item['service'], int)
+                                            or service_item['service'].isnumeric()):
+                kwargs['id'] = int(service_item['service'])
+            else:
+                kwargs['slug'] = service_item['service']
+
+            if not (x := Service.objects.filter(**kwargs).first()):
+                services_not_found.add(x.id)
 
     if isinstance(cohorts, list):
         for cohort in cohorts:
@@ -263,8 +271,16 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
 
     if isinstance(plans, list):
         for plan in plans:
-            if not Plan.objects.filter(id=plan):
-                plans_not_found.add(plan)
+
+            kwargs = {}
+
+            if plan and (isinstance(plan, int) or plan.isnumeric()):
+                kwargs['id'] = int(plan)
+            else:
+                kwargs['slug'] = plan
+
+            if not (x := Plan.objects.filter(**kwargs).first()):
+                plans_not_found.add(x.id)
 
     if services_not_found or plans_not_found or plans_not_found:
         raise ValidationException(translation(
