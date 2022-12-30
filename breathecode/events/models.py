@@ -102,6 +102,9 @@ class EventTypeVisibilitySetting(models.Model):
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, blank=True, null=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    
+    def __str__(self):
+        return f"{str(self.academy)}, {str(self.syllabus)}, {str(self.cohort)}"
 
 
 class EventType(models.Model):
