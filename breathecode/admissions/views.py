@@ -203,10 +203,11 @@ def get_cohorts(request, id=None):
 
     plan = request.GET.get('plan', '')
     if plan == 'true':
-        items = items.filter(academy__main_currency__isnull=False, paymentservicescheduler__plan__id__gte=1)
+        items = items.filter(academy__main_currency__isnull=False,
+                             paymentservicescheduler__plan__id__gte=1).distinct()
 
     elif plan == 'false':
-        items = items.filter().exclude(paymentservicescheduler__plan__id__gte=1)
+        items = items.filter().exclude(paymentservicescheduler__plan__id__gte=1).distinct()
 
     elif plan:
         kwargs = {}
@@ -216,7 +217,7 @@ def get_cohorts(request, id=None):
         else:
             kwargs['paymentservicescheduler__plan__slug'] = plan
 
-        items = items.filter(**kwargs)
+        items = items.filter(**kwargs).distinct()
 
     sort = request.GET.get('sort', None)
     if sort is None or sort == '':
