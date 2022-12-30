@@ -111,7 +111,7 @@ class EventType(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
     lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
 
-    visibility_settings = models.ManyToManyField(EventTypeVisibilitySetting, blank=True)
+    visibility_settings = models.ManyToManyField(EventTypeVisibilitySetting, blank=True, help_text="Visibility has to be configured every academy separately")
     allow_shared_creation = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
