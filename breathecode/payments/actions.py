@@ -142,7 +142,7 @@ class PlanFinder:
         additional_args = {}
 
         if on_boarding is not None:
-            additional_args['on_boarding'] = on_boarding
+            additional_args['is_onboarding'] = on_boarding
 
         if not self.cohort.syllabus_version:
             return Plan.objects.none()
@@ -151,15 +151,9 @@ class PlanFinder:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.cohort.syllabus_version.syllabus).exists()
 
-        fixtures = self.cohort.paymentservicescheduler_set.filter(cohorts__id=self.cohort.id,
-                                                                  cohorts__stage__in=['INACTIVE', 'PREWORK'])
-
-        plans = Plan.objects.none()
-
-        for fixture in fixtures:
-            plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
-
-        plans = plans.distinct()
+        plans = Plan.objects.filter(schedulers__plans__cohorts__id=self.cohort.id,
+                                    schedulers__plans__cohorts__stage__in=['INACTIVE', 'PREWORK'],
+                                    **additional_args).distinct()
 
         return plans
 
@@ -167,21 +161,15 @@ class PlanFinder:
         additional_args = {}
 
         if on_boarding is not None:
-            additional_args['on_boarding'] = on_boarding
+            additional_args['is_onboarding'] = on_boarding
 
         if not additional_args and auto:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.syllabus).exists()
 
-        fixtures = PaymentServiceScheduler.objects.filter(cohorts__syllabus_version__syllabus=self.syllabus,
-                                                          cohorts__stage__in=['INACTIVE', 'PREWORK'])
-
-        plans = Plan.objects.none()
-
-        for fixture in fixtures:
-            plans |= Plan.objects.filter(service_items__service=fixture.service, **additional_args)
-
-        plans = plans.distinct()
+        plans = Plan.objects.filter(schedulers__plans__cohorts__syllabus_version__syllabus=self.syllabus,
+                                    schedulers__plans__cohorts__stage__in=['INACTIVE', 'PREWORK'],
+                                    **additional_args).distinct()
 
         return plans
 
@@ -331,6 +319,15 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
         raise ValidationException(too_many_cohorts_error, code=400)
 
     for cohort in cohort_ids:
+        #FIXME: this is not working with two cohorts yet
+        if not bag.plans.filter(schedulers__cohorts__id=cohort).exists():
+            raise ValidationException(translation(
+                settings.lang,
+                en='The selected cohort is not available for the selected plan',
+                es='La cohorte seleccionada no está disponible para el plan seleccionado',
+                slug='cohort-not-available-for-plan'),
+                                      code=400)
+
         bag.selected_cohorts.add(cohort)
 
     if how_many_plans == 1 and bag.service_items.count():

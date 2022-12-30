@@ -201,6 +201,23 @@ def get_cohorts(request, id=None):
     if syllabus_slug:
         items = items.filter(syllabus_version__syllabus__slug=syllabus_slug)
 
+    plan = request.GET.get('plan', '')
+    if plan == 'true':
+        items = items.filter(academy__main_currency__isnull=False, paymentservicescheduler__plan__id__gte=1)
+
+    elif plan == 'false':
+        items = items.filter().exclude(paymentservicescheduler__plan__id__gte=1)
+
+    elif plan:
+        kwargs = {}
+
+        if isinstance(plan, int) or plan.isnumeric():
+            kwargs['paymentservicescheduler__plan__id'] = plan
+        else:
+            kwargs['paymentservicescheduler__plan__slug'] = plan
+
+        items = items.filter(**kwargs)
+
     sort = request.GET.get('sort', None)
     if sort is None or sort == '':
         sort = '-kickoff_date'
