@@ -72,6 +72,17 @@ class GetSmallAcademySerializer(serpy.Serializer):
     icon_url = serpy.Field()
 
 
+class GetAcademyWithHiddenOnPreworkSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    name = serpy.Field()
+    slug = serpy.Field()
+    white_labeled = serpy.Field()
+    icon_url = serpy.Field()
+    is_hidden_on_prework = serpy.Field()
+
+
 class GetProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -182,6 +193,7 @@ class GetBigAcademySerializer(serpy.Serializer):
     github_handle = serpy.Field()
     linkedin_url = serpy.Field()
     youtube_url = serpy.Field()
+    is_hidden_on_prework = serpy.Field()
 
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
@@ -314,10 +326,16 @@ class GetCohortSerializer(serpy.Serializer):
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
     timeslots = serpy.MethodField()
+    is_hidden_on_prework = serpy.MethodField()
 
     def get_timeslots(self, obj):
         timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
         return SmallCohortTimeSlotSerializer(timeslots, many=True).data
+
+    def get_is_hidden_on_prework(self, obj):
+        if obj.is_hidden_on_prework is not None:
+            return obj.is_hidden_on_prework
+        return obj.academy.is_hidden_on_prework
 
 
 class PublicCohortSerializer(serpy.Serializer):
@@ -402,8 +420,14 @@ class GetMeCohortSerializer(serpy.Serializer):
     current_day = serpy.Field()
     current_module = serpy.Field()
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
-    academy = GetSmallAcademySerializer()
+    academy = GetAcademyWithHiddenOnPreworkSerializer()
     stage = serpy.Field()
+    is_hidden_on_prework = serpy.MethodField()
+
+    def get_is_hidden_on_prework(self, obj):
+        if obj.is_hidden_on_prework is not None:
+            return obj.is_hidden_on_prework
+        return obj.academy.is_hidden_on_prework
 
 
 class GetPublicCohortUserSerializer(serpy.Serializer):
@@ -678,12 +702,13 @@ class CohortPUTSerializer(CohortSerializerMixin):
     current_module = serializers.IntegerField(required=False)
     stage = serializers.CharField(required=False)
     language = serializers.CharField(required=False)
+    is_hidden_on_prework = serializers.BooleanField(required=False)
 
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'remote_available', 'current_day',
                   'stage', 'language', 'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private',
-                  'online_meeting_url', 'timezone', 'current_module')
+                  'online_meeting_url', 'timezone', 'current_module', 'is_hidden_on_prework')
 
     def update(self, instance, validated_data):
         last_schedule = instance.schedule

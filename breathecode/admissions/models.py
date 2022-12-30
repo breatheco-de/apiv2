@@ -99,6 +99,10 @@ class Academy(models.Model):
     available_as_saas = models.BooleanField(
         default=False, help_text='Academies available as SAAS will be sold thru 4Geeks.com')
 
+    is_hidden_on_prework = models.BooleanField(
+        default=True,
+        help_text='Determines if the cohorts will be shown in the dashboard if it\'s status is \'PREWORK\'')
+
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
     main_currency = models.ForeignKey('payments.Currency',
                                       on_delete=models.CASCADE,
@@ -313,6 +317,12 @@ class Cohort(models.Model):
                                  default=None,
                                  null=True,
                                  blank=True)
+
+    is_hidden_on_prework = models.BooleanField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text='Determines if the cohort will be shown in the dashboard if it\'s status is \'PREWORK\'')
 
     language = models.CharField(max_length=2, default='en')
 
