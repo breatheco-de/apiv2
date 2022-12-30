@@ -151,8 +151,8 @@ class PlanFinder:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.cohort.syllabus_version.syllabus).exists()
 
-        plans = Plan.objects.filter(schedulers__plans__cohorts__id=self.cohort.id,
-                                    schedulers__plans__cohorts__stage__in=['INACTIVE', 'PREWORK'],
+        plans = Plan.objects.filter(schedulers__cohorts__id=self.cohort.id,
+                                    schedulers__cohorts__stage__in=['INACTIVE', 'PREWORK'],
                                     **additional_args).distinct()
 
         return plans
@@ -167,8 +167,8 @@ class PlanFinder:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.syllabus).exists()
 
-        plans = Plan.objects.filter(schedulers__plans__cohorts__syllabus_version__syllabus=self.syllabus,
-                                    schedulers__plans__cohorts__stage__in=['INACTIVE', 'PREWORK'],
+        plans = Plan.objects.filter(schedulers__cohorts__syllabus_version__syllabus=self.syllabus,
+                                    schedulers__cohorts__stage__in=['INACTIVE', 'PREWORK'],
                                     **additional_args).distinct()
 
         return plans
