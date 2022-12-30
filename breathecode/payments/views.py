@@ -58,10 +58,14 @@ class PlanView(APIView):
                                            select=request.GET.get('select'))
             return handler.response(serializer.data)
 
-        # The fixture of filter by cohort and syllabus are disabled
-        items = Plan.objects.filter()
+        filtering = 'cohort' in request.GET or 'syllabus' in request.GET
+        if 'cohort' in request.GET or 'syllabus' in request.GET:
+            items = PlanFinder(request).get_plans_belongs_from_request()
 
-        if is_onboarding := request.GET.get('is_onboarding', '').lower():
+        else:
+            items = Plan.objects.filter()
+
+        if not filtering and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
             items = items.filter(is_onboarding=is_onboarding == 'true')
 
         items = items.exclude(status='DELETED')
@@ -748,20 +752,33 @@ class PayView(APIView):
                                                           slug='bag-is-empty'),
                                               code=400)
 
+                how_many_installments = request.data.get('how_many_installments')
                 chosen_period = request.data.get('chosen_period', '').upper()
-                if not chosen_period:
+                if not how_many_installments and not chosen_period:
                     raise ValidationException(translation(lang,
                                                           en='Missing chosen period',
                                                           es='Falta el periodo elegido',
                                                           slug='missing-chosen-period'),
                                               code=400)
 
-                if chosen_period not in ['MONTH', 'QUARTER', 'HALF', 'YEAR']:
+                if not how_many_installments and chosen_period not in ['MONTH', 'QUARTER', 'HALF', 'YEAR']:
                     raise ValidationException(translation(lang,
                                                           en='Invalid chosen period',
                                                           es='Periodo elegido inválido',
                                                           slug='invalid-chosen-period'),
                                               code=400)
+
+                if not chosen_period and (not isinstance(how_many_installments, int)
+                                          or how_many_installments <= 0):
+                    raise ValidationException(translation(
+                        lang,
+                        en='how_many_installments must be a positive number greather than 0',
+                        es='how_many_installments debe ser un número positivo mayor a 0',
+                        slug='invalid-how-many-installments'),
+                                              code=400)
+
+                if not chosen_period and how_many_installments:
+                    bag.how_many_installments = how_many_installments
 
                 if bag.how_many_installments > 0:
                     try:
@@ -774,7 +791,7 @@ class PayView(APIView):
                             lang,
                             en='Bag bad configured, related to financing option',
                             es='La bolsa esta mal configurada, relacionado a la opción de financiamiento',
-                            slug='invalid-chosen-period'),
+                            slug='invalid-bag-configured-by-installments'),
                                                   code=500)
                 else:
                     amount = get_amount_by_chosen_period(bag, chosen_period)
@@ -795,7 +812,7 @@ class PayView(APIView):
 
                     invoice.save()
 
-                bag.chosen_period = chosen_period
+                bag.chosen_period = chosen_period or 'MONTH'
                 bag.status = 'PAID'
                 bag.is_recurrent = recurrent
                 bag.token = None

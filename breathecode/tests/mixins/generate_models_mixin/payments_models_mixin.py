@@ -31,13 +31,15 @@ class PaymentsModelsMixin(ModelsMixin):
             plan_service_item=False,
             plan_financing=False,
             service_item_feature=False,
+            financing_option=False,
             models={},
             **kwargs):
         """Generate models"""
         models = models.copy()
 
         if not 'currency' in models and (is_valid(currency) or is_valid(invoice) or is_valid(plan)
-                                         or is_valid(service) or is_valid(service_item)):
+                                         or is_valid(service) or is_valid(service_item)
+                                         or is_valid(financing_option)):
             kargs = {}
 
             if 'country' in models:
@@ -124,6 +126,14 @@ class PaymentsModelsMixin(ModelsMixin):
             models['service_item_feature'] = create_models(service_item_feature,
                                                            'payments.ServiceItemFeature', **kargs)
 
+        if not 'financing_option' in models and is_valid(financing_option):
+            kargs = {}
+
+            if 'currency' in models:
+                kargs['currency'] = just_one(models['currency'])
+
+            models['financing_option'] = create_models(financing_option, 'payments.FinancingOption', **kargs)
+
         if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation)
                                      or is_valid(plan_service_item)):
             kargs = {}
@@ -137,8 +147,11 @@ class PaymentsModelsMixin(ModelsMixin):
             # if 'service_item' in models:
             #     kargs['service_items'] = get_list(models['service_item'])
 
-            if 'cohort' in models:
-                kargs['cohorts'] = get_list(models['cohort'])
+            if 'payment_service_scheduler' in models:
+                kargs['schedulers'] = get_list(models['payment_service_scheduler'])
+
+            if 'financing_option' in models:
+                kargs['financing_options'] = get_list(models['financing_option'])
 
             if 'academy' in models:
                 kargs['owner'] = just_one(models['academy'])

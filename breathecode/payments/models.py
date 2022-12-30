@@ -287,7 +287,7 @@ class FinancingOption(models.Model):
     This model is used as referenced of units of a service can be used.
     """
 
-    monthly_price = models.IntegerField(default=1)
+    monthly_price = models.FloatField(default=1)
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
 
     how_many_months = models.IntegerField(default=1)
@@ -325,6 +325,7 @@ class Plan(AbstractPriceByTime):
         help_text='Is if true, it will create a reneweval subscription instead of a plan financing')
 
     status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT)
+    schedulers = models.ManyToManyField(PaymentServiceScheduler, blank=True)
 
     trial_duration = models.IntegerField(default=1)
     trial_duration_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)

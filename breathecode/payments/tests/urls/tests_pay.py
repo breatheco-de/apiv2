@@ -1,8 +1,9 @@
 from datetime import timedelta
+import math
 import random
 from unittest.mock import MagicMock, call, patch
 from rest_framework.authtoken.models import Token
-
+from breathecode.payments import tasks
 from django.urls import reverse_lazy
 from rest_framework import status
 
@@ -285,6 +286,7 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
     def test__without_bag__passing_token__passing_chosen_period__good_value(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -325,9 +327,12 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+        self.assertEqual(tasks.build_subscription.delay.call_args_list, [call(1, 1)])
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     def test__without_bag__passing_token__passing_chosen_period__good_value__amount_set(self):
@@ -352,7 +357,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         json = response.json()
-        expected = get_serializer(self, model.currency, model.user, data={'amount': amount})
+        expected = get_serializer(self, model.currency, model.user, data={'amount': math.ceil(amount)})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -367,7 +372,7 @@ class SignalTestSuite(PaymentsTestCase):
                          }])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
             format_invoice_item({
-                'amount': amount,
+                'amount': math.ceil(amount),
                 'stripe_id': '1',
             }),
         ])
@@ -377,9 +382,12 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+        self.assertEqual(tasks.build_subscription.delay.call_args_list, [call(1, 1)])
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     def test__without_bag__passing_token__passing_chosen_period__good_value__amount_set__(self):
@@ -484,7 +492,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         json = response.json()
-        expected = get_serializer(self, model.currency, model.user, data={'amount': amount})
+        expected = get_serializer(self, model.currency, model.user, data={'amount': math.ceil(amount)})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -499,7 +507,7 @@ class SignalTestSuite(PaymentsTestCase):
                          }])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
             format_invoice_item({
-                'amount': amount,
+                'amount': math.ceil(amount),
                 'stripe_id': '1',
             }),
         ])
@@ -509,3 +517,112 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+        self.assertEqual(tasks.build_subscription.delay.call_args_list, [call(1, 1)])
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
+    @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
+    def test__passing_token__passing_how_many_installments__not_found(self):
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+            **generate_amounts_by_time()
+        }
+        chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
+        amount = get_amount_per_period(chosen_period, bag)
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'how_many_installments': random.randint(1, 12),
+        }
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {'detail': 'invalid-bag-configured-by-installments', 'status_code': 500}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [{
+            **self.bc.format.to_dict(model.bag),
+        }])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
+    @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
+    def test__passing_token__passing_how_many_installments__found(self):
+        how_many_installments = random.randint(1, 12)
+        charge = random.random() * 99 + 1
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+            **generate_amounts_by_time()
+        }
+        financing_option = {'monthly_price': charge, 'how_many_months': how_many_installments}
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        currency=1,
+                                        plan=1,
+                                        service_item=1,
+                                        financing_option=financing_option)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'how_many_installments': how_many_installments,
+        }
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = get_serializer(self, model.currency, model.user, data={'amount': math.ceil(charge)})
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'),
+                         [{
+                             **self.bc.format.to_dict(model.bag),
+                             'token': None,
+                             'status': 'PAID',
+                             'expires_at': None,
+                             'how_many_installments': how_many_installments,
+                         }])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            format_invoice_item({
+                'amount': math.ceil(charge),
+                'stripe_id': '1',
+            }),
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [call(1, 1)])
