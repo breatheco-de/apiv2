@@ -17,7 +17,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from rest_framework.request import Request
 
-from .models import SERVICE_UNITS, Bag, Consumable, Currency, PaymentServiceScheduler, Plan, Service, ServiceItem, Subscription
+from .models import SERVICE_UNITS, Bag, Consumable, Currency, Plan, Service, ServiceItem, Subscription
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -55,23 +55,6 @@ def get_fixture(academy_id: int, cohort_id: str, patterns: dict):
             return patterns['id']
 
     return None
-
-
-@cache
-def get_fixture_patterns(academy_id: int):
-    """
-    Get the fixture patterns for the academy
-    """
-
-    fixtures = []
-
-    for fixture in PaymentServiceScheduler.objects.filter(cohort_pattern__isnull=False,
-                                                          academy__id=academy_id).values_list(
-                                                              'id', 'cohort_pattern'):
-
-        fixtures.append({'id': fixture[0], 'cohort': fixture[1]})
-
-    return fixtures
 
 
 class PlanFinder:
@@ -151,8 +134,8 @@ class PlanFinder:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.cohort.syllabus_version.syllabus).exists()
 
-        plans = Plan.objects.filter(schedulers__cohorts__id=self.cohort.id,
-                                    schedulers__cohorts__stage__in=['INACTIVE', 'PREWORK'],
+        plans = Plan.objects.filter(service_items__cohorts__id=self.cohort.id,
+                                    service_items__cohorts__stage__in=['INACTIVE', 'PREWORK'],
                                     **additional_args).distinct()
 
         return plans
@@ -167,8 +150,8 @@ class PlanFinder:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.syllabus).exists()
 
-        plans = Plan.objects.filter(schedulers__cohorts__syllabus_version__syllabus=self.syllabus,
-                                    schedulers__cohorts__stage__in=['INACTIVE', 'PREWORK'],
+        plans = Plan.objects.filter(service_items__cohorts__syllabus_version__syllabus=self.syllabus,
+                                    service_items__cohorts__stage__in=['INACTIVE', 'PREWORK'],
                                     **additional_args).distinct()
 
         return plans

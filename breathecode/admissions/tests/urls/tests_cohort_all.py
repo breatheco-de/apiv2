@@ -81,20 +81,6 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 0)
 
-    def test_with_cohort_but_without_profile_academy(self):
-        """Test /cohort/all without auth"""
-        url = reverse_lazy('admissions:cohort_all')
-        model = self.generate_models(authenticate=True, cohort=True)
-
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, [])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
-
     """
     🔽🔽🔽 Sort querystring
     """
@@ -724,7 +710,9 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
-                                     payment_service_scheduler=1,
+                                     plan_service_item=1,
+                                     mentorship_service=1,
+                                     mentorship_service_set=1,
                                      plan=1)
 
         base_url = reverse_lazy('admissions:cohort_all')
@@ -766,7 +754,9 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
-                                     payment_service_scheduler=1,
+                                     plan_service_item=1,
+                                     mentorship_service=1,
+                                     mentorship_service_set=1,
                                      plan=1)
 
         base_url = reverse_lazy('admissions:cohort_all')
@@ -810,7 +800,9 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
-                                     payment_service_scheduler=1,
+                                     plan_service_item=1,
+                                     mentorship_service=1,
+                                     mentorship_service_set=1,
                                      plan=plan)
 
         url = reverse_lazy('admissions:cohort_all') + f'?plan={slug}'

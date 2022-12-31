@@ -13,7 +13,6 @@ from ..mixins.new_events_tests_case import EventTestCase
 class AcademyCohortTestSuite(EventTestCase):
     """Test /academy/cohort"""
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__without_academy(self):
         """Test /academy/cohort without auth"""
         url = reverse_lazy('events:ical_events')
@@ -26,7 +25,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__without_events(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -53,7 +51,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__dont_get_status_draft(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -84,7 +81,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__dont_get_status_deleted(self):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'DELETED'}
@@ -117,7 +113,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__with_one(self):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE'}
@@ -164,7 +159,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__with_one_and_online_event(self):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE', 'online_event': True}
@@ -211,7 +205,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__with_one_and_venue(self):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE'}
@@ -269,7 +262,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__with_one_and_venue__upcoming_true__return_zero_events(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -313,7 +305,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__with_one_and_venue__upcoming_true(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -374,7 +365,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__with_two(self):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE'}
@@ -434,7 +424,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__with_two_and_venue(self):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE'}
@@ -515,7 +504,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__with_two_and_venue__with_two_academies_id(self):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE'}
@@ -645,7 +633,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_events__with_two_and_venue__with_two_academies_slug(self):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE'}
@@ -777,7 +764,7 @@ class AcademyCohortTestSuite(EventTestCase):
 
     # # this test is comment because is util to check and generate one example
     # # ical file
-    # @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
+    #
     # def test_generate_ical(self):
     #     """Test /academy/cohort without auth"""
     #     from faker import Faker
