@@ -506,6 +506,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        plan_service_item = {'cohorts': []}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
@@ -514,7 +515,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=service_item,
                                         service=service,
                                         plan=plan,
-                                        plan_service_item=1,
+                                        plan_service_item=plan_service_item,
                                         currency=currency)
         self.bc.request.authenticate(model.user)
 
@@ -588,6 +589,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        plan_service_item = {'cohorts': []}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
@@ -596,7 +598,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=service_item,
                                         service=service,
                                         plan=plan,
-                                        plan_service_item=1,
+                                        plan_service_item=plan_service_item,
                                         currency=currency)
         self.bc.request.authenticate(model.user)
 
@@ -692,6 +694,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        plan_service_item = {'cohorts': []}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
@@ -700,7 +703,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=service_item,
                                         service=service,
                                         plan=plan,
-                                        plan_service_item=1,
+                                        plan_service_item=plan_service_item,
                                         financing_option=1,
                                         currency=currency)
         self.bc.request.authenticate(model.user)

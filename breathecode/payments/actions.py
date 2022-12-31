@@ -17,7 +17,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from rest_framework.request import Request
 
-from .models import SERVICE_UNITS, Bag, Consumable, Currency, Plan, Service, ServiceItem, Subscription
+from .models import SERVICE_UNITS, Bag, Consumable, Currency, Plan, PlanServiceItem, Service, ServiceItem, Subscription
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -193,6 +193,8 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
     plans_not_found = set()
     cohorts_not_found = set()
 
+    plan_service_items = PlanServiceItem.objects.none()
+
     cohort_ids = []
 
     if isinstance(service_items, list):
@@ -295,23 +297,35 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
                 kwargs['slug'] = plan
 
             p = Plan.objects.filter(**kwargs).first()
+            plan_service_items |= PlanServiceItem.objects.filter(plan=p, cohorts__id__gte=1)
             bag.plans.add(p)
 
     how_many_plans = bag.plans.count()
     if how_many_plans > 1:
         raise ValidationException(too_many_cohorts_error, code=400)
 
+    plan_service_items = plan_service_items.distinct()
     for cohort in cohort_ids:
-        #FIXME: this is not working with two cohorts yet
-        if not bag.plans.filter(schedulers__cohorts__id=cohort).exists():
+        plan_service_item = plan_service_items.filter(cohorts__id=cohort).first()
+        if not plan_service_item:
             raise ValidationException(translation(
                 settings.lang,
-                en='The selected cohort is not available for the selected plan',
-                es='La cohorte seleccionada no está disponible para el plan seleccionado',
+                en='The selected cohort is not available for the selected plan items',
+                es='La cohorte seleccionada no está disponible para los items de plan seleccionados',
                 slug='cohort-not-available-for-plan'),
                                       code=400)
 
         bag.selected_cohorts.add(cohort)
+        plan_service_items = plan_service_items.exclude(id=plan_service_item.id)
+
+    #TODO: add the same for the service items
+    if plan_service_items:
+        slugs = ', '.join({plan_service_item.plan.slug for plan_service_item in plan_service_items})
+        raise ValidationException(translation(settings.lang,
+                                              en=f'The cohorts was not provided for the plans: {slugs}',
+                                              es=f'No se proporcionaron cohortes para los planes: {slugs}',
+                                              slug='plan-service-item-without-its-selected-cohort'),
+                                  code=400)
 
     if how_many_plans == 1 and bag.service_items.count():
         raise ValidationException(translation(settings.lang,
