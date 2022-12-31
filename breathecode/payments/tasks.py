@@ -301,3 +301,8 @@ def build_plan_financing(self, bag_id: int, invoice_id: int):
     build_service_stock_scheduler_from_plan_financing.delay(financing.id)
 
     logger.info(f'PlanFinancing was created with id {financing.id}')
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def build_free_trial(self, bag_id: int, invoice_id: int):
+    logger.info(f'Starting build_free_trial for bag {bag_id}')

@@ -287,6 +287,7 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_trial.delay', MagicMock())
     def test__without_bag__passing_token__passing_chosen_period__good_value(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -327,12 +328,14 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-        self.assertEqual(tasks.build_subscription.delay.call_args_list, [call(1, 1)])
+        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_trial.delay.call_args_list, [call(1, 1)])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_trial.delay', MagicMock())
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     def test__without_bag__passing_token__passing_chosen_period__good_value__amount_set(self):
@@ -384,10 +387,12 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(tasks.build_subscription.delay.call_args_list, [call(1, 1)])
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_trial.delay.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_trial.delay', MagicMock())
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     def test__without_bag__passing_token__passing_chosen_period__good_value__amount_set__(self):
@@ -519,10 +524,12 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(tasks.build_subscription.delay.call_args_list, [call(1, 1)])
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_trial.delay.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_trial.delay', MagicMock())
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     def test__passing_token__passing_how_many_installments__not_found(self):
@@ -564,6 +571,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_trial.delay.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())

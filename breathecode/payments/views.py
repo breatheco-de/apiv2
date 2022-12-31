@@ -16,8 +16,8 @@ from breathecode.payments import tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
-from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, Service,
-                                         ServiceItem, Subscription)
+from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, PlanFinancing,
+                                         Service, ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetCreditSerializer, GetInvoiceSerializer,
                                               GetInvoiceSmallSerializer, GetPlanSerializer,
                                               GetServiceItemSerializer, GetServiceItemWithFeaturesSerializer,
@@ -685,6 +685,18 @@ class CheckingView(APIView):
                     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
                         bag, bag.academy.main_currency)
 
+                amount = bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
+                plans = bag.plans.all()
+                if not amount and plans.filter(financing_options__id__gte=1):
+                    amount = 1
+
+                if amount == 0 and PlanFinancing.objects.filter(plans__in=plans).count():
+                    raise ValidationException(translation(settings.lang,
+                                                          en='Your free trial was already took',
+                                                          es='Tu prueba gratuita ya fue tomada',
+                                                          slug='your-free-trial-was-already-took'),
+                                              code=400)
+
                 bag.save()
                 transaction.savepoint_commit(sid)
 
@@ -796,6 +808,13 @@ class PayView(APIView):
                 else:
                     amount = get_amount_by_chosen_period(bag, chosen_period)
 
+                if amount == 0 and PlanFinancing.objects.filter(plans__in=bag.plans.all()).count():
+                    raise ValidationException(translation(lang,
+                                                          en='Your free trial was already took',
+                                                          es='Tu prueba gratuita ya fue tomada',
+                                                          slug='your-free-trial-was-already-took'),
+                                              code=500)
+
                 if amount > 0:
                     s = Stripe()
                     s.set_language(lang)
@@ -821,7 +840,11 @@ class PayView(APIView):
 
                 transaction.savepoint_commit(sid)
 
-                if bag.how_many_installments > 0:
+                if amount == 0:
+                    tasks.build_free_trial.delay(bag.id, invoice.id)
+
+                elif bag.how_many_installments > 0:
+
                     tasks.build_plan_financing.delay(bag.id, invoice.id)
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id)
