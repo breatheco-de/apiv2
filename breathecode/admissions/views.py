@@ -149,10 +149,6 @@ def get_cohorts(request, id=None):
     items = items.annotate(longitude=Value(None, output_field=FloatField()),
                            latitude=Value(None, output_field=FloatField()))
 
-    if isinstance(request.user, AnonymousUser) == False:
-        # filter only to the local academy
-        items = localize_query(items, request)
-
     upcoming = request.GET.get('upcoming', None)
     if upcoming == 'true':
         now = timezone.now()
@@ -165,6 +161,15 @@ def get_cohorts(request, id=None):
     location = request.GET.get('location', None)
     if location is not None:
         items = items.filter(academy__slug__in=location.split(','))
+        
+
+    ids = request.GET.get('id', None)
+    if ids is not None:
+        items = items.filter(id__in=ids.split(','))
+
+    slugs = request.GET.get('slug', None)
+    if slugs is not None:
+        items = items.filter(slug__in=slugs.split(','))
 
     stage = request.GET.get('stage')
     if stage:

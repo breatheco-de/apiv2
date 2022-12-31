@@ -102,6 +102,9 @@ class EventTypeVisibilitySetting(models.Model):
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, blank=True, null=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    
+    def __str__(self):
+        return f"{str(self.academy)}, {str(self.syllabus)}, {str(self.cohort)}"
 
 
 class EventType(models.Model):
@@ -111,7 +114,7 @@ class EventType(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
     lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
 
-    visibility_settings = models.ManyToManyField(EventTypeVisibilitySetting, blank=True)
+    visibility_settings = models.ManyToManyField(EventTypeVisibilitySetting, blank=True, help_text="Visibility has to be configured every academy separately")
     allow_shared_creation = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
