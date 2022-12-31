@@ -161,7 +161,6 @@ def get_cohorts(request, id=None):
     location = request.GET.get('location', None)
     if location is not None:
         items = items.filter(academy__slug__in=location.split(','))
-        
 
     ids = request.GET.get('id', None)
     if ids is not None:
