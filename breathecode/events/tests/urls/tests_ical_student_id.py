@@ -20,7 +20,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 Without student
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__without_student(self):
         url = reverse_lazy('events:ical_student_id', kwargs={'user_id': 1})
         args = {'academy': '1'}
@@ -39,7 +38,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 Without time slot
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__without_cohort_time_slot(self):
         device_id_kwargs = {'name': 'server'}
         model = self.generate_models(academy=True,
@@ -71,7 +69,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 One time slot and the Cohort never ends
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__cohort_never_ends(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
@@ -118,7 +115,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 One time slot and the Cohort with ending_date as None
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__cohort_without_ending_date(self):
         device_id_kwargs = {'name': 'server'}
 
@@ -160,7 +156,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 One time slot with ending_date in Cohort
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__with_ending_date(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
@@ -235,7 +230,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 One time slot it's not recurrent
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__not_recurrent(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
@@ -309,7 +303,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 One time slot without cohort ending date
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__without_ending_date(self):
         device_id_kwargs = {'name': 'server'}
 
@@ -369,7 +362,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 One time slot with cohort stage deleted
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__stage_deleted(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {'stage': 'DELETED'}
@@ -414,7 +406,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 One time slot with incoming true in querystring
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__with_incoming_true__return_zero_time_slots(self):
         device_id_kwargs = {'name': 'server'}
 
@@ -454,7 +445,6 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__with_incoming_true(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
@@ -533,7 +523,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 One time slot with teacher
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohorts__with_one__with_teacher(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
@@ -620,7 +609,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 Two time slot with teacher
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohort__with_two__with_teacher(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
@@ -745,7 +733,6 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 Two time slot with teacher
     """
 
-    @patch('breathecode.payments.receivers.manage_fixture_related_to_cohort_on_save', MagicMock())
     def test_ical_cohort__with_two__with_teacher__cohort_with_meeting_url(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {

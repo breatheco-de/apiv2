@@ -724,7 +724,9 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
-                                     payment_service_scheduler=1,
+                                     plan_service_item=1,
+                                     mentorship_service=1,
+                                     mentorship_service_set=1,
                                      plan=1)
 
         base_url = reverse_lazy('admissions:cohort_all')
@@ -766,7 +768,9 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
-                                     payment_service_scheduler=1,
+                                     plan_service_item=1,
+                                     mentorship_service=1,
+                                     mentorship_service_set=1,
                                      plan=1)
 
         base_url = reverse_lazy('admissions:cohort_all')
@@ -810,7 +814,9 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
-                                     payment_service_scheduler=1,
+                                     plan_service_item=1,
+                                     mentorship_service=1,
+                                     mentorship_service_set=1,
                                      plan=plan)
 
         url = reverse_lazy('admissions:cohort_all') + f'?plan={slug}'

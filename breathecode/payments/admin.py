@@ -1,11 +1,10 @@
 from django.contrib import admin
 
 from breathecode.payments.models import (Bag, Consumable, Currency, FinancialReputation, FinancingOption,
-                                         PaymentServiceScheduler, Invoice, PaymentContact, Plan,
-                                         PlanFinancing, PlanServiceItem, PlanServiceItemHandler,
-                                         PlanTranslation, Service, ServiceItem, ServiceItemFeature,
-                                         ServiceStockScheduler, ServiceTranslation, Subscription,
-                                         SubscriptionServiceItem)
+                                         Invoice, MentorshipServiceSet, PaymentContact, Plan, PlanFinancing,
+                                         PlanServiceItem, PlanServiceItemHandler, PlanTranslation, Service,
+                                         ServiceItem, ServiceItemFeature, ServiceStockScheduler,
+                                         ServiceTranslation, Subscription, SubscriptionServiceItem)
 
 # Register your models here.
 
@@ -56,16 +55,6 @@ class FinancingOptionAdmin(admin.ModelAdmin):
     list_filter = ['currency__code']
 
 
-@admin.register(PaymentServiceScheduler)
-class PaymentServiceSchedulerAdmin(admin.ModelAdmin):
-    list_display = ('id', 'academy', 'service', 'cohort_pattern', 'renew_every', 'renew_every_unit')
-    list_filter = ['academy', 'renew_every_unit']
-    search_fields = [
-        'service__slug', 'service__title', 'service__groups__name', 'service__cohorts__slug',
-        'service__mentorship_services__slug'
-    ]
-
-
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'status', 'trial_duration', 'trial_duration_unit', 'owner')
@@ -114,6 +103,13 @@ class PlanFinancingAdmin(admin.ModelAdmin):
     list_display = ('id', 'paid_at', 'pay_until', 'status', 'user')
     list_filter = ['status']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+
+
+@admin.register(MentorshipServiceSet)
+class MentorshipServiceSetAdmin(admin.ModelAdmin):
+    list_display = ('id', 'slug', 'name', 'academy')
+    list_filter = ['academy__slug']
+    search_fields = ['slug', 'name', 'academy__slug', 'academy__name']
 
 
 @admin.register(PlanServiceItem)
