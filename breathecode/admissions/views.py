@@ -161,7 +161,6 @@ def get_cohorts(request, id=None):
     location = request.GET.get('location', None)
     if location is not None:
         items = items.filter(academy__slug__in=location.split(','))
-        
 
     ids = request.GET.get('id', None)
     if ids is not None:
@@ -1159,6 +1158,9 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
 
         for key in request.data:
             data[key] = request.data.get(key)
+
+        if 'is_hidden_on_prework' not in data:
+            data['is_hidden_on_prework'] = academy.is_hidden_on_prework
 
         if 'timezone' not in data:
             data['timezone'] = academy.timezone

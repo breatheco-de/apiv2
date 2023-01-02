@@ -326,16 +326,11 @@ class GetCohortSerializer(serpy.Serializer):
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
     timeslots = serpy.MethodField()
-    is_hidden_on_prework = serpy.MethodField()
+    is_hidden_on_prework = serpy.Field()
 
     def get_timeslots(self, obj):
         timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
         return SmallCohortTimeSlotSerializer(timeslots, many=True).data
-
-    def get_is_hidden_on_prework(self, obj):
-        if obj.is_hidden_on_prework is not None:
-            return obj.is_hidden_on_prework
-        return obj.academy.is_hidden_on_prework
 
 
 class PublicCohortSerializer(serpy.Serializer):
@@ -422,12 +417,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademyWithHiddenOnPreworkSerializer()
     stage = serpy.Field()
-    is_hidden_on_prework = serpy.MethodField()
-
-    def get_is_hidden_on_prework(self, obj):
-        if obj.is_hidden_on_prework is not None:
-            return obj.is_hidden_on_prework
-        return obj.academy.is_hidden_on_prework
+    is_hidden_on_prework = serpy.Field()
 
 
 class GetPublicCohortUserSerializer(serpy.Serializer):
@@ -677,7 +667,8 @@ class CohortSerializer(CohortSerializerMixin):
         model = Cohort
         fields = ('id', 'slug', 'name', 'remote_available', 'kickoff_date', 'current_day', 'academy',
                   'syllabus', 'schedule', 'syllabus_version', 'ending_date', 'stage', 'language',
-                  'created_at', 'updated_at', 'never_ends', 'online_meeting_url', 'timezone')
+                  'created_at', 'updated_at', 'never_ends', 'online_meeting_url', 'timezone',
+                  'is_hidden_on_prework')
 
     def create(self, validated_data):
         del self.context['request']
