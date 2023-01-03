@@ -1159,7 +1159,7 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         for key in request.data:
             data[key] = request.data.get(key)
 
-        if 'is_hidden_on_prework' not in data:
+        if 'is_hidden_on_prework' not in data or data['is_hidden_on_prework'] == 'academy_default':
             data['is_hidden_on_prework'] = academy.is_hidden_on_prework
 
         if 'timezone' not in data:
@@ -1201,6 +1201,9 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
 
         if 'syllabus_version' in data:
             del data['syllabus_version']
+
+        if 'is_hidden_on_prework' in data and data['is_hidden_on_prework'] == 'academy_default':
+            data['is_hidden_on_prework'] = academy.is_hidden_on_prework
 
         serializer = CohortPUTSerializer(cohort,
                                          data=data,
