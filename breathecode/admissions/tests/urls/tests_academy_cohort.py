@@ -30,6 +30,7 @@ def post_serializer(self, academy, syllabus, syllabus_version, data={}):
         'schedule': 0,
         'online_meeting_url': None,
         'timezone': '',
+        'is_hidden_on_prework': True,
         'academy': {
             'id': academy.id,
             'slug': academy.slug,
@@ -68,6 +69,7 @@ def cohort_field(data={}):
         'stage': 'FINAL_PROJECT',
         'syllabus_version_id': 1,
         'timezone': 'America/Caracas',
+        'is_hidden_on_prework': True,
         **data,
     }
 
@@ -444,6 +446,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': cohort.timezone,
+            'is_hidden_on_prework': cohort.is_hidden_on_prework,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -567,6 +570,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': model.academy.timezone,
+            'is_hidden_on_prework': True,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -657,6 +661,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': 'Pacific/Pago_Pago',
+            'is_hidden_on_prework': True,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -746,7 +751,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                        'stage': stage,
                                        'slug': 'they-killed-kenny',
                                        'name': 'They killed kenny',
-                                       'schedule': 1,
+                                       'schedule': 1
                                    })
 
         self.assertEqual(json, expected)
@@ -964,6 +969,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1078,6 +1084,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1188,6 +1195,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_module': model['cohort'].current_module,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'timeslots': [],
             'schedule': {
                 'id': model['cohort'].schedule.id,
@@ -1268,6 +1276,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1356,6 +1365,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1443,6 +1453,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1553,6 +1564,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1632,6 +1644,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1720,6 +1733,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
