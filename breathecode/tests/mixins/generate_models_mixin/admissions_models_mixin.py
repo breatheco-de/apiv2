@@ -54,6 +54,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    bag=False,
                                    subscription=False,
                                    event_type_visibility_setting=False,
+                                   mentorship_service_set=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -70,14 +71,16 @@ class AdmissionsModelsMixin(ModelsMixin):
 
         if not 'country' in models and (is_valid(country) or is_valid(city) or is_valid(academy)
                                         or is_valid(profile_academy) or is_valid(event_type)
-                                        or is_valid(event_type_visibility_setting)):
+                                        or is_valid(event_type_visibility_setting)
+                                        or is_valid(mentorship_service_set)):
             kargs = {}
 
             models['country'] = create_models(country, 'admissions.Country', **{**kargs, **country_kwargs})
 
         if not 'city' in models and (is_valid(city) or is_valid(country) or is_valid(academy)
                                      or is_valid(profile_academy) or is_valid(event_type)
-                                     or is_valid(event_type_visibility_setting)):
+                                     or is_valid(event_type_visibility_setting)
+                                     or is_valid(mentorship_service_set)):
             kargs = {}
 
             if 'country' in models:
@@ -85,13 +88,12 @@ class AdmissionsModelsMixin(ModelsMixin):
 
             models['city'] = create_models(city, 'admissions.City', **{**kargs, **city_kwargs})
 
-        if not 'academy' in models and (is_valid(academy) or is_valid(profile_academy) or is_valid(syllabus)
-                                        or is_valid(cohort) or is_valid(monitor_script)
-                                        or is_valid(mentorship_service) or is_valid(mentor_profile)
-                                        or is_valid(user_specialty) or is_valid(asset_category)
-                                        or is_valid(keyword_cluster) or is_valid(asset_keyword)
-                                        or is_valid(bag) or is_valid(subscription) or is_valid(event_type)
-                                        or is_valid(event_type_visibility_setting)):
+        if not 'academy' in models and (
+                is_valid(academy) or is_valid(profile_academy) or is_valid(syllabus) or is_valid(cohort)
+                or is_valid(monitor_script) or is_valid(mentorship_service) or is_valid(mentor_profile)
+                or is_valid(user_specialty) or is_valid(asset_category) or is_valid(keyword_cluster)
+                or is_valid(asset_keyword) or is_valid(bag) or is_valid(subscription) or is_valid(event_type)
+                or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set)):
             kargs = {}
 
             if 'country' in models:

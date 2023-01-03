@@ -8,6 +8,7 @@ from breathecode.events.models import EventType
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
+from django.core.exceptions import ValidationError
 
 from breathecode.utils.validators.language import validate_language_code
 from . import signals
@@ -156,82 +157,6 @@ class ServiceTranslation(models.Model):
         return f'{self.lang}: {self.title}'
 
 
-# class PlanOffer(models.Model):
-#     original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
-#     from_syllabus = models.ManyToManyField(Syllabus, on_delete=models.CASCADE)
-#     suggested_plans = models.ManyToManyField(Plan, on_delete=models.CASCADE)
-#     description = models.CharField(max_length=255)
-#     short_description = models.CharField(max_length=255)
-
-# class PlanOfferTranslation(models.Model):
-#     offer = models.ForeignKey(PlanOffer, on_delete=models.CASCADE)
-#     lang = models.CharField(max_length=5, validators=[validate_language_code])
-#     title = models.CharField(max_length=60)
-#     description = models.CharField(max_length=255)
-
-
-class PaymentServiceScheduler(models.Model):
-    _lang = 'en'
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    service = models.ForeignKey(Service, on_delete=models.CASCADE)
-
-    # patterns
-    cohort_pattern = models.CharField(max_length=80, default=None, blank=True, null=True)
-    # mentorship_service_pattern = models.CharField(max_length=80, default=None, blank=True, null=True)
-
-    # this is used for the renovations of credits
-    renew_every = models.IntegerField(default=1)
-    renew_every_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
-
-    # section of cache, is a nightmare solve this problem without it
-    cohorts = models.ManyToManyField(Cohort, blank=True)
-    mentorship_services = models.ManyToManyField(MentorshipService, blank=True)
-
-    def _how_many(self):
-        how_many = 0
-        if self.cohort_pattern:
-            how_many += 1
-
-        # if self.mentorship_service_pattern:
-        #     how_many += 1
-
-        return how_many
-
-    # def set_language(self, lang):
-    #     self._lang = lang
-
-    # def set_language_from_settings(self, settings):
-    #     self._lang = settings.lang
-
-    @property
-    def cohort_regex(self):
-        if not self.cohort_pattern:
-            return None
-
-        return ast.literal_eval(self.cohort_pattern)
-
-    # @property
-    # def mentorship_service_regex(self):
-    #     if not self.mentorship_service_pattern:
-    #         return None
-
-    #     return ast.literal_eval(self.mentorship_service_pattern)
-
-    def save(self):
-        # if self._how_many() > 1:
-        #     raise Exception(
-        #         translation(self._lang,
-        #                     en='You can only set one regex per fixture',
-        #                     es='Solo puede establecer una expresión regular por fixture'))
-
-        self.full_clean()
-
-        super().save()
-
-    def __str__(self) -> str:
-        return f'{self.academy.slug} -> {self.service.slug} -> {self.cohort_pattern or "unset"}'
-
-
 UNIT = 'UNIT'
 SERVICE_UNITS = [
     (UNIT, 'Unit'),
@@ -300,7 +225,7 @@ class FinancingOption(models.Model):
     This model is used as referenced of units of a service can be used.
     """
 
-    monthly_price = models.IntegerField(default=1)
+    monthly_price = models.FloatField(default=1)
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
 
     how_many_months = models.IntegerField(default=1)
@@ -329,7 +254,13 @@ class Plan(AbstractPriceByTime):
     """
 
     slug = models.CharField(max_length=60, unique=True)
-    financing_options = models.ManyToManyField(FinancingOption, blank=True)
+    financing_options = models.ManyToManyField(FinancingOption,
+                                               blank=True,
+                                               help_text='If the plan is renew, it would be ignore')
+
+    is_renewable = models.BooleanField(
+        default=True,
+        help_text='Is if true, it will create a reneweval subscription instead of a plan financing')
 
     status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT)
 
@@ -363,10 +294,19 @@ class PlanTranslation(models.Model):
         return f'{self.lang} {self.title}: ({self.plan.slug})'
 
 
-# class Balance:
-#     id: int
-#     slug: int
-#     how_many: int
+class PlanOffer(models.Model):
+    original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
+    from_syllabus = models.ManyToManyField('admissions.Syllabus')
+    suggested_plans = models.ManyToManyField(Plan, related_name='+')
+
+
+class PlanOfferTranslation(models.Model):
+    offer = models.ForeignKey(PlanOffer, on_delete=models.CASCADE)
+    lang = models.CharField(max_length=5, validators=[validate_language_code])
+    title = models.CharField(max_length=60)
+    description = models.CharField(max_length=255)
+    short_description = models.CharField(max_length=255)
+
 
 # class MentorshipServiceSet:
 #     mentorship_services = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -458,6 +398,7 @@ class Bag(AbstractAmountByTime):
     status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
     type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG)
     chosen_period = models.CharField(max_length=7, choices=CHOSEN_PERIOD, default=MONTH)
+    how_many_installments = models.IntegerField(default=0)
 
     academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -617,13 +558,51 @@ class PlanFinancing(AbstractIOweYou):
         return f'{self.user.email} ({self.pay_until})'
 
 
+class MentorshipServiceSet(models.Model):
+    """
+    M2M between plan and ServiceItem
+    """
+
+    slug = models.SlugField(max_length=100, unique=True)
+    name = models.CharField(max_length=150)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    mentorship_services = models.ManyToManyField(MentorshipService, blank=True)
+
+
 class PlanServiceItem(models.Model):
     """
     M2M between plan and ServiceItem
     """
 
+    _lang = 'en'
+
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
+
+    # patterns
+    cohort_pattern = models.CharField(max_length=80, default=None, blank=True, null=True)
+
+    cohorts = models.ManyToManyField(Cohort, blank=True)
+    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
+                                               on_delete=models.CASCADE,
+                                               blank=True,
+                                               null=True)
+
+    def clean(self):
+        if self.id and self.mentorship_service_set and self.cohorts.count():
+            raise ValidationError(
+                translation(
+                    self._lang,
+                    en='You can not set cohorts and mentorship service set at the same time',
+                    es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
+
+        if self.mentorship_service_set and self.cohort_pattern:
+            raise ValidationError(
+                translation(
+                    self._lang,
+                    en='You can not set cohorts pattern and mentorship service set at the same time',
+                    es='No puedes establecer patrón de cohortes y conjunto de servicios de mentoría al '
+                    'mismo tiempo'))
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -672,6 +651,10 @@ class PlanServiceItemHandler(models.Model):
 
     def __str__(self) -> str:
         return str(self.subscription or self.plan_financing or 'Unset')
+
+
+#TODO during the renovation, if the ServiceStockScheduler valid_until is greather than subscription valid_until,
+# take it instead
 
 
 class ServiceStockScheduler(models.Model):

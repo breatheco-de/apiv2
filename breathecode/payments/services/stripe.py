@@ -167,7 +167,7 @@ class Stripe:
 
         utc_now = timezone.now()
         #TODO: think about ban a user if have bad reputation (FinancialReputation)
-        payment = Invoice(user=user, amount=amount, stripe_id=charge['id'], paid_at=utc_now)
+        payment = Invoice(user=user, amount=math.ceil(amount), stripe_id=charge['id'], paid_at=utc_now)
         payment.status = 'FULFILLED'
         payment.currency = currency
         payment.bag = bag

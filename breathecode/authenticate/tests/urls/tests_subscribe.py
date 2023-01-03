@@ -474,7 +474,7 @@ class SubscribeTestSuite(AuthTestCase):
 
         user = self.bc.database.get('auth.User', 1, dict=False)
         self.assertEqual(Token.get_or_create.call_args_list, [
-            call(user=user, token_type='login', hours_length=0.25),
+            call(user=user, token_type='login'),
         ])
 
     """
@@ -543,7 +543,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [
-            call(user=model.user, token_type='login', hours_length=0.25),
+            call(user=model.user, token_type='login'),
         ])
 
     #############################################################################################
@@ -770,7 +770,7 @@ class SubscribeTestSuite(AuthTestCase):
 
         user = self.bc.database.get('auth.User', 1, dict=False)
         self.assertEqual(Token.get_or_create.call_args_list, [
-            call(user=user, token_type='login', hours_length=0.25),
+            call(user=user, token_type='login'),
         ])
 
     """
@@ -844,5 +844,5 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [
-            call(user=model.user, token_type='login', hours_length=0.25),
+            call(user=model.user, token_type='login'),
         ])
