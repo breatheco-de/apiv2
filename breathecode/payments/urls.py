@@ -4,11 +4,14 @@ from .views import (AcademyPlanView, AcademyServiceView, AcademySubscriptionView
                     CheckingView, MeConsumableView, MeInvoiceView, AcademyInvoiceView, PayView, PlanView,
                     ServiceItemView, ServiceView, MeSubscriptionView)
 
+# /v1/payment/offer
+# /v1/payment/planoffer?original_plan=<>&from_syllabus=<>
+
 app_name = 'payments'
 urlpatterns = [
     #TODO generate plans and services from yml
     # create and renew, never delete
-    path('plan', PlanView.as_view()),
+    path('plan', PlanView.as_view(), name='plan'),
     path('plan/<slug:plan_slug>', PlanView.as_view()),
     path('academy/plan', AcademyPlanView.as_view()),
     path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view()),

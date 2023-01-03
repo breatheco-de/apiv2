@@ -81,20 +81,6 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 0)
 
-    def test_with_cohort_but_without_profile_academy(self):
-        """Test /cohort/all without auth"""
-        url = reverse_lazy('admissions:cohort_all')
-        model = self.generate_models(authenticate=True, cohort=True)
-
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, [])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
-
     """
     🔽🔽🔽 Sort querystring
     """
@@ -697,3 +683,135 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.format.to_dict(model.cohort))
+
+    """
+    🔽🔽🔽 GET with plan=true in querystring
+    """
+
+    def test_plan_true__without_scheduler(self):
+        """Test /cohort/all without auth"""
+        model = self.generate_models(authenticate=True, cohort=1, profile_academy=1)
+
+        base_url = reverse_lazy('admissions:cohort_all')
+        url = f'{base_url}?plan=true'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+
+    def test_plan_true__with_scheduler(self):
+        """Test /cohort/all without auth"""
+        model = self.generate_models(authenticate=True,
+                                     cohort=1,
+                                     profile_academy=1,
+                                     syllabus_version=1,
+                                     currency=1,
+                                     plan_service_item=1,
+                                     mentorship_service=1,
+                                     mentorship_service_set=1,
+                                     plan=1)
+
+        base_url = reverse_lazy('admissions:cohort_all')
+        url = f'{base_url}?plan=true'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+
+    """
+    🔽🔽🔽 GET with plan=false in querystring
+    """
+
+    def test_plan_false__without_scheduler(self):
+        """Test /cohort/all without auth"""
+        model = self.generate_models(authenticate=True, cohort=1, profile_academy=1, syllabus_version=1)
+
+        base_url = reverse_lazy('admissions:cohort_all')
+        url = f'{base_url}?plan=false'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+
+    def test_plan_false__with_scheduler(self):
+        """Test /cohort/all without auth"""
+        model = self.generate_models(authenticate=True,
+                                     cohort=1,
+                                     profile_academy=1,
+                                     syllabus_version=1,
+                                     currency=1,
+                                     plan_service_item=1,
+                                     mentorship_service=1,
+                                     mentorship_service_set=1,
+                                     plan=1)
+
+        base_url = reverse_lazy('admissions:cohort_all')
+        url = f'{base_url}?plan=false'
+        response = self.client.get(url)
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+
+    """
+    🔽🔽🔽 GET with plan as slug in querystring
+    """
+
+    def test_plan_is_slug__without_scheduler(self):
+        """Test /cohort/all without auth"""
+        model = self.generate_models(authenticate=True, cohort=1, profile_academy=1)
+        slug = self.bc.fake.slug()
+
+        url = reverse_lazy('admissions:cohort_all') + f'?plan={slug}'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+
+    def test_plan_is_slug__with_scheduler(self):
+        """Test /cohort/all without auth"""
+        slug = self.bc.fake.slug()
+        plan = {'slug': slug}
+
+        model = self.generate_models(authenticate=True,
+                                     cohort=1,
+                                     profile_academy=1,
+                                     syllabus_version=1,
+                                     currency=1,
+                                     plan_service_item=1,
+                                     mentorship_service=1,
+                                     mentorship_service_set=1,
+                                     plan=plan)
+
+        url = reverse_lazy('admissions:cohort_all') + f'?plan={slug}'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])

@@ -3,7 +3,7 @@ import os
 
 from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
-from breathecode.authenticate.actions import get_user_settings, server_id
+from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
 from breathecode.events.caches import EventCache
 from breathecode.utils import APIException
 from datetime import datetime, timedelta
@@ -276,12 +276,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_event')
     def post(self, request, format=None, academy_id=None):
-        handler = self.extensions(request)
-
-        lang = handler.language.get()
-        if not lang:
-            settings = get_user_settings(request.user.id)
-            lang = settings.lang
+        lang = get_user_language(request)
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
@@ -322,12 +317,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_event')
     def put(self, request, academy_id=None, event_id=None):
-        handler = self.extensions(request)
-
-        lang = handler.language.get()
-        if not lang:
-            settings = get_user_settings(request.user.id)
-            lang = settings.lang
+        lang = get_user_language(request)
 
         already = Event.objects.filter(id=event_id, academy__id=academy_id).first()
         if already is None:
@@ -488,11 +478,6 @@ class EventTypeVisibilitySettingView(APIView):
     @capable_of('read_event_type')
     def get(self, request, event_type_slug, academy_id=None):
         handler = self.extensions(request)
-
-        lang = handler.language.get()
-        if not lang:
-            settings = get_user_settings(request.user.id)
-            lang = settings.lang
 
         event_type = EventType.objects.filter(slug=event_type_slug).first()
         if not event_type:

@@ -268,3 +268,41 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     build_service_stock_scheduler_from_subscription.delay(subscription.id)
 
     logger.info(f'Subscription was created with id {subscription.id}')
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def build_plan_financing(self, bag_id: int, invoice_id: int):
+    logger.info(f'Starting build_financing for bag {bag_id}')
+
+    if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
+        logger.error(f'Bag with id {bag_id} not found')
+        return
+
+    if not (invoice := Invoice.objects.filter(id=invoice_id, status='FULFILLED').first()):
+        logger.error(f'Invoice with id {invoice_id} not found')
+        return
+
+    months = bag.how_many_installments
+
+    financing = PlanFinancing.objects.create(user=bag.user,
+                                             paid_at=invoice.paid_at,
+                                             academy=bag.academy,
+                                             paid_until=invoice.paid_at + relativedelta(months=months),
+                                             status='ACTIVE')
+
+    financing.plans.set(bag.plans.all())
+
+    financing.save()
+    financing.invoices.add(invoice)
+
+    bag.was_delivered = True
+    bag.save()
+
+    build_service_stock_scheduler_from_plan_financing.delay(financing.id)
+
+    logger.info(f'PlanFinancing was created with id {financing.id}')
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def build_free_trial(self, bag_id: int, invoice_id: int):
+    logger.info(f'Starting build_free_trial for bag {bag_id}')
