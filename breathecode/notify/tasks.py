@@ -70,6 +70,24 @@ def async_slack_action(post_data):
 
 
 @shared_task
+def async_slack_command(post_data):
+    logger.debug('Starting async_slack_command')
+    try:
+        client = Slack()
+        success = client.execute_command(context=post_data)
+        if success:
+            logger.debug('Successfully process slack command')
+            return True
+        else:
+            logger.error('Error processing slack command')
+            return False
+
+    except Exception as e:
+        logger.exception('Error processing slack command')
+        return False
+
+
+@shared_task
 def async_deliver_hook(target, payload, hook_id=None, **kwargs):
     logger.debug('Starting async_deliver_hook')
     from .utils.hook_manager import HookManager

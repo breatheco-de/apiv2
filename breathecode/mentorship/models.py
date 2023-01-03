@@ -379,3 +379,19 @@ class MentorshipSession(models.Model):
 
         if self.__old_status != self.status:
             signals.mentorship_session_status.send(instance=self, sender=MentorshipSession)
+
+
+class ChatBot(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    syllabus = models.ManyToManyField(Syllabus, blank=True)
+
+    description = models.TextField(blank=True, null=True, default=None)
+
+    api_key = models.CharField(max_length=250, blank=True)
+    api_organization = models.CharField(max_length=250, blank=True)
+
+    def __str__(self):
+        return self.name
