@@ -379,6 +379,7 @@ ROLES = [
             'read_mentorship_service',
             'read_mentorship_mentor',
             'read_freelancer_bill',
+            'read_keywordcluster',
         ],
     },
     {
