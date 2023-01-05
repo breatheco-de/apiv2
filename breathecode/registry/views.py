@@ -518,6 +518,61 @@ class AcademyAssetActionView(APIView):
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @capable_of('crud_asset')
+    def post(self, request, action_slug, academy_id=None):
+        if action_slug not in ['test', 'pull', 'push', 'analyze_seo']:
+            raise ValidationException(f'Invalid action {action_slug}')
+
+        if not request.data['assets']:
+            raise ValidationException(f'Assets not found in the body of the request.')
+
+        assets = request.data['assets']
+
+        if len(assets) < 1:
+            raise ValidationException(f'The list of Assets is empty.')
+
+        invalid_assets = []
+
+        for asset_slug in assets:
+            asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
+            if asset is None:
+                invalid_assets.append(asset_slug)
+                continue
+            try:
+                if action_slug == 'test':
+                    test_asset(asset)
+                elif action_slug == 'clean':
+                    clean_asset_readme(asset)
+                elif action_slug == 'pull':
+                    override_meta = False
+                    if request.data and 'override_meta' in request.data:
+                        override_meta = request.data['override_meta']
+                    pull_from_github(asset.slug, override_meta=override_meta)
+                elif action_slug == 'push':
+                    if asset.asset_type not in ['ARTICLE', 'LESSON']:
+                        raise ValidationException(
+                            f'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
+                        )
+
+                    push_to_github(asset.slug, author=request.user)
+                elif action_slug == 'analyze_seo':
+                    report = SEOAnalyzer(asset)
+                    report.start()
+
+            except Exception as e:
+                logger.exception(e)
+                invalid_assets.append(asset_slug)
+                pass
+
+        pulled_assets = list(set(assets).difference(set(invalid_assets)))
+
+        if len(pulled_assets) < 1:
+            raise ValidationException(f'Failed to {action_slug} for these assets: {invalid_assets}')
+
+        return Response(
+            f'These asset readmes were pulled correctly from GitHub: {pulled_assets}. {f"These assets {invalid_assets} do not exist for this academy {academy_id}" if len(invalid_assets) > 0 else ""}',
+            status=status.HTTP_200_OK)
+
 
 # Create your views here.
 class AcademyAssetSEOReportView(APIView, GenerateLookupsMixin):
