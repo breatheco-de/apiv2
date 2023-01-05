@@ -670,6 +670,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
+                             'is_hidden_on_prework': None
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
