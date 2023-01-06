@@ -2,6 +2,8 @@ import os, re, requests
 from typing import Optional
 from itertools import chain
 from django.utils import timezone
+
+from breathecode.utils.i18n import translation
 from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAlias
 from rest_framework.exceptions import APIException
 from breathecode.notify.actions import send_email_message
@@ -475,24 +477,45 @@ STARTS_WITH_COMMA_PATTERN = re.compile(r'^,')
 ENDS_WITH_COMMA_PATTERN = re.compile(r',$')
 
 
-def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = None) -> None:
+def validate_marketing_tags(tags: str,
+                            academy_id: int,
+                            types: Optional[list] = None,
+                            lang: str = 'en') -> None:
     if tags.find(',,') != -1:
-        raise ValidationException(f'You can\'t have two commas together on tags',
-                                  code=400,
-                                  slug='two-commas-together')
+        raise ValidationException(
+            translation(lang,
+                        en='You can\'t have two commas together on tags',
+                        es='No puedes tener dos comas seguidas en las etiquetas',
+                        slug='two-commas-together'))
 
     if tags.find(' ') != -1:
-        raise ValidationException(f'Spaces are not allowed on tags', code=400, slug='spaces-are-not-allowed')
+        raise ValidationException(
+            translation(lang,
+                        en='Spaces are not allowed on tags',
+                        es='No se permiten espacios en los tags',
+                        slug='spaces-are-not-allowed'))
 
     if STARTS_WITH_COMMA_PATTERN.search(tags):
-        raise ValidationException(f'Tags string cannot start with comma', code=400, slug='starts-with-comma')
+        raise ValidationException(
+            translation(lang,
+                        en='Tags text cannot start with comma',
+                        es='El texto de los tags no puede comenzar con una coma',
+                        slug='starts-with-comma'))
 
     if ENDS_WITH_COMMA_PATTERN.search(tags):
-        raise ValidationException(f'Tags string cannot ends with comma', code=400, slug='ends-with-comma')
+        raise ValidationException(
+            translation(lang,
+                        en='Tags text cannot ends with comma',
+                        es='El texto de los tags no puede terminar con una coma',
+                        slug='ends-with-comma'))
 
     tags = [x for x in tags.split(',') if x]
     if len(tags) < 2:
-        raise ValidationException(f'Event must have at least two tags', slug='have-less-two-tags')
+        raise ValidationException(
+            translation(lang,
+                        en='Event must have at least two tags',
+                        es='El evento debe tener al menos dos tags',
+                        slug='have-less-two-tags'))
 
     _tags = Tag.objects.filter(slug__in=tags, ac_academy__academy__id=academy_id)
     if types:
@@ -511,9 +534,11 @@ def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = 
         types = ['ANY']
 
     raise ValidationException(
-        f'Following tags not found with types {",".join(types)}: {",".join(not_founds)}',
-        code=400,
-        slug='tag-not-exist')
+        translation(lang,
+                    en=f'Following tags not found with types {",".join(types)}: {",".join(not_founds)}',
+                    es='Los siguientes tags no se encontraron con los tipos '
+                    f'{",".join(types)}: {",".join(not_founds)}',
+                    slug='tag-not-exist'))
 
 
 def delete_tag(tag, include_other_academies=False):

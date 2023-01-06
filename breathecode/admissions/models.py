@@ -100,6 +100,11 @@ class Academy(models.Model):
         default=False, help_text='Academies available as SAAS will be sold thru 4Geeks.com')
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
+    main_currency = models.ForeignKey('payments.Currency',
+                                      on_delete=models.CASCADE,
+                                      null=True,
+                                      blank=True,
+                                      related_name='+')
 
     timezone = models.CharField(max_length=50, null=True, default=None, blank=True)
 

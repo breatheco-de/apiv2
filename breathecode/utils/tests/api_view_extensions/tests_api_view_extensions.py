@@ -117,7 +117,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         view(request).render()
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     """
@@ -843,7 +843,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         view(request, id=1).render()
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     """

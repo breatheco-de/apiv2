@@ -1,6 +1,6 @@
-from django.core.management.base import BaseCommand
+from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import Permission, Group
+from django.core.management.base import BaseCommand
 
 CONTENT_TYPE_PROPS = {
     'app_label': 'breathecode',
@@ -39,6 +39,11 @@ PERMISSIONS = [
         'description': 'Get my mentoring sessions',
         'codename': 'get_my_mentoring_sessions',
     },
+    {
+        'name': 'Join mentorship',
+        'description': 'Join mentorship',
+        'codename': 'join_mentorship',
+    },
 ]
 
 GROUPS = [
@@ -61,6 +66,10 @@ GROUPS = [
     {
         'name': 'Mentor',
         'permissions': ['get_my_mentoring_sessions'],
+    },
+    {
+        'name': 'Mentorships',
+        'permissions': ['join_mentorship'],
     },
 ]
 

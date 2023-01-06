@@ -5,7 +5,6 @@ from django.core import serializers
 from django.conf import settings
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.models import CredentialsSlack
 
 __all__ = [
     'UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook'

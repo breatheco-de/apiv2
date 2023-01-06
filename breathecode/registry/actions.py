@@ -486,8 +486,6 @@ class AssetThumbnailGenerator:
             return None
 
         slug = self.asset.get_thumbnail_name().split('.')[0]
-        print('slug', slug)
-        print('allllll', Media.objects.all())
         return Media.objects.filter(slug=slug).first()
 
     def _get_media_resolution(self, hash: str) -> Optional[MediaResolution]:

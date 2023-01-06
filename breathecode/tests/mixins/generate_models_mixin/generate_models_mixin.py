@@ -2,23 +2,26 @@
 Collections of mixins used to login in authorize microservice
 """
 from django.db.models import Model
-from breathecode.utils import AttrDict
-from .events_models_mixin import EventsModelsMixin
-from .notify_models_mixin import NotifyModelsMixin
-from .certificate_models_mixin import CertificateModelsMixin
-from .assignments_models_mixin import AssignmentsModelsMixin
-from .authenticate_models_mixin import AuthenticateMixin
+
+from breathecode.utils.attr_dict import AttrDict
+
 from .admissions_models_mixin import AdmissionsModelsMixin
-from .feedback_models_mixin import FeedbackModelsMixin
-from .auth_mixin import AuthMixin
 from .assessment_models_mixin import AssessmentModelsMixin
+from .assignments_models_mixin import AssignmentsModelsMixin
+from .auth_mixin import AuthMixin
+from .authenticate_models_mixin import AuthenticateMixin
+from .career_models_mixin import CareerModelsMixin
+from .certificate_models_mixin import CertificateModelsMixin
+from .content_types_mixin import ContentTypesMixin
+from .events_models_mixin import EventsModelsMixin
+from .feedback_models_mixin import FeedbackModelsMixin
 from .freelance_models_mixin import FreelanceModelsMixin
 from .marketing_models_mixin import MarketingModelsMixin
-from .monitoring_models_mixin import MonitoringModelsMixin
 from .media_models_mixin import MediaModelsMixin
 from .mentorship_models_mixin import MentorshipModelsMixin
-from .career_models_mixin import CareerModelsMixin
-from .content_types_mixin import ContentTypesMixin
+from .monitoring_models_mixin import MonitoringModelsMixin
+from .notify_models_mixin import NotifyModelsMixin
+from .payments_models_mixin import PaymentsModelsMixin
 from .registry_models_mixin import RegistryModelsMixin
 
 __all__ = ['GenerateModelsMixin']
@@ -28,7 +31,7 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
                           CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
                           AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin,
                           MonitoringModelsMixin, MediaModelsMixin, MentorshipModelsMixin, CareerModelsMixin,
-                          ContentTypesMixin, RegistryModelsMixin):
+                          ContentTypesMixin, RegistryModelsMixin, PaymentsModelsMixin):
 
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
@@ -101,6 +104,7 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
             self.generate_authenticate_models,
             self.generate_freelance_models,
             self.generate_mentorship_models,
+            self.generate_payments_models,
             self.generate_feedback_models,
             self.generate_notify_models,
             self.generate_monitoring_models,

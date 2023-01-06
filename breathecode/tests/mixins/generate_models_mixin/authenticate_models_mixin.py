@@ -23,6 +23,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      credentials_quick_books=False,
                                      token=False,
                                      device_id=False,
+                                     user_setting=False,
                                      profile_kwargs={},
                                      device_id_kwargs={},
                                      capability_kwargs={},
@@ -45,6 +46,14 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 kargs['user'] = just_one(models['user'])
 
             models['profile'] = create_models(profile, 'authenticate.Profile', **{**kargs, **profile_kwargs})
+
+        if not 'user_setting' in models and is_valid(user_setting):
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            models['user_setting'] = create_models(user_setting, 'authenticate.UserSetting', **kargs)
 
         if not 'capability' in models and is_valid(capability):
             kargs = {

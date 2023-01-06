@@ -105,7 +105,8 @@ class AssetCategory(models.Model):
 
         if self.__old_slug != self.slug:
             # Prevent multiple keywords with same slug
-            cat = AssetCategory.objects.filter(slug=self.slug, academy=self.academy).first()
+            cat = AssetCategory.objects.filter(slug=self.slug,
+                                               academy=self.academy).exclude(id=self.id).first()
             if cat is not None:
                 raise Exception(f'Category with slug {self.slug} already exists on this academy')
 
@@ -720,10 +721,10 @@ class SEOReport(models.Model):
 
     # this data will be shared among all reports as they are
     # being calculated in real time
-    def get_state():
+    def get_state(self):
         return self.__shared_data
 
-    def set_state(key, value):
+    def set_state(self, key, value):
         attrs = ['words']
         if key in attrs:
             self.__shared_state[key]: value

@@ -1,25 +1,56 @@
+from datetime import datetime, timedelta
+from typing import Callable, Optional, TypedDict
+
 from django.contrib.auth.models import AnonymousUser
+from django.core.handlers.wsgi import WSGIRequest
+from django.db.models import Q, QuerySet
+from django.utils import timezone
 from rest_framework.views import APIView
+from django.db.models import Sum
 
-from ..validation_exception import ValidationException
-from ..exceptions import ProgramingError
 from breathecode.authenticate.models import Permission, User
+from breathecode.payments.signals import consume_service
+from django.db import models
 
-__all__ = ['has_permission', 'validate_permission']
+# from breathecode.payments.tasks import end_the_consumption_session
+
+from ..exceptions import ProgramingError
+from ..payment_exception import PaymentException
+from ..validation_exception import ValidationException
+
+__all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'PermissionContextType']
 
 
-def validate_permission(user: User, permission: str) -> bool:
+class PermissionContextType(TypedDict):
+    utc_now: datetime
+    consumer: bool
+    permission: str
+    request: WSGIRequest
+    consumables: QuerySet
+    # time_of_life: Optional[timedelta]
+
+
+HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple,
+                                                                             dict, Optional[timedelta]]]
+
+
+def validate_permission(user: User, permission: str, consumer: bool | HasPermissionCallback = False) -> bool:
+    if consumer:
+        return User.objects.filter(id=user.id, groups__permissions__codename=permission).exists()
+
     found = Permission.objects.filter(codename=permission).first()
     if not found:
         return False
 
-    return found.user_set.filter(id=user.id).count() or found.group_set.filter(user__id=user.id).count()
+    return found.user_set.filter(id=user.id).exists() or found.group_set.filter(user__id=user.id).exists()
 
 
-def has_permission(permission: str):
+def has_permission(permission: str, consumer: bool | HasPermissionCallback = False) -> callable:
     """This decorator check if the current user can access to the resource through of permissions"""
 
-    def decorator(function):
+    from breathecode.payments.models import Consumable, ConsumptionSession
+
+    def decorator(function: callable) -> callable:
 
         def wrapper(*args, **kwargs):
             if isinstance(permission, str) == False:
@@ -38,20 +69,86 @@ def has_permission(permission: str):
             except IndexError:
                 raise ProgramingError('Missing request information, use this decorator with DRF View')
 
-            if validate_permission(request.user, permission):
+            utc_now = timezone.now()
+            time_of_life = None
+            session = None
+            session = ConsumptionSession.get_session(request)
+            if session:
                 return function(*args, **kwargs)
 
-            elif isinstance(request.user, AnonymousUser):
+            if validate_permission(request.user, permission, consumer):
+                context = {
+                    'utc_now': utc_now,
+                    'consumer': consumer,
+                    'permission': permission,
+                    'request': request,
+                    'consumables': Consumable.objects.none(),
+                }
+
+                if consumer:
+                    items = Consumable.objects.filter(
+                        Q(valid_until__lte=utc_now) | Q(valid_until=None),
+                        user=request.user,
+                        service_item__service__groups__permissions__codename=permission).exclude(
+                            how_many=0).order_by('id')
+
+                    context['consumables'] = items
+
+                if callable(consumer):
+                    # context, args, kwargs, consume = consumer(context, args, kwargs)
+                    context, args, kwargs, time_of_life = consumer(context, args, kwargs)
+
+                if consumer and not context['consumables']:
+                    #TODO: send a url to recharge this service
+                    raise PaymentException(
+                        f'You do not have enough credits to access this service: {permission}',
+                        slug='not-enough-consumables')
+
+                if consumer and time_of_life and (consumable := context['consumables'].first()):
+                    session = ConsumptionSession.build_session(request, consumable, time_of_life)
+
+                time_of_life = timedelta(seconds=60)
+                if consumer and time_of_life:
+                    consumables = context['consumables']
+                    for item in consumables.filter(consumptionsession__status='PENDING', how_many__gt=0):
+
+                        sum = item.consumptionsession_set.filter(status='PENDING').aggregate(Sum('how_many'))
+
+                        if item.how_many - sum['how_many__sum'] == 0:
+                            context['consumables'] = context['consumables'].exclude(id=item.id)
+
+                response = function(*args, **kwargs)
+
+                it_will_consume = consumer and response.status_code < 400
+                if it_will_consume and session:
+                    session.will_consume(1)
+                    # end_the_consumption_session.apply_async(args=(session.id, 1), eta=utc_now + time_of_life)
+
+                elif it_will_consume:
+                    item = context['consumables'].first()
+                    consume_service.send(instance=item, sender=item.__class__, how_many=1)
+
+                return response
+
+            elif not consumer and isinstance(request.user, AnonymousUser):
                 raise ValidationException(f'Anonymous user don\'t have this permission: {permission}',
                                           code=403,
                                           slug='anonymous-user-without-permission')
 
-            else:
-
+            elif not consumer:
                 raise ValidationException((f'You (user: {request.user.id}) don\'t have this permission: '
                                            f'{permission}'),
                                           code=403,
                                           slug='without-permission')
+
+            elif consumer and isinstance(request.user, AnonymousUser):
+                raise PaymentException(
+                    f'Anonymous user do not have enough credits to access this service: {permission}',
+                    slug='anonymous-user-not-enough-consumables')
+
+            else:
+                raise PaymentException(f'You do not have enough credits to access this service: {permission}',
+                                       slug='not-enough-consumables')
 
         return wrapper
 

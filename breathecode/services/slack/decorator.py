@@ -1,7 +1,6 @@
-import re, sys, logging, inspect
+import logging
 from breathecode.services.slack import commands
 from breathecode.services.slack import actions
-from breathecode.authenticate.models import ProfileAcademy
 
 from .exceptions import SlackException
 
@@ -9,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def command(capable_of=None):
+    from breathecode.authenticate.models import ProfileAcademy
 
     def decorator(function):
 
