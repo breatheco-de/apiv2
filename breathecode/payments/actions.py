@@ -1,4 +1,5 @@
 import ast
+from datetime import datetime
 from functools import cache
 import re
 from typing import Optional, Type
@@ -38,23 +39,6 @@ def calculate_relative_delta(unit: float, unit_type: str):
         delta_args['years'] = unit
 
     return relativedelta(**delta_args)
-
-
-@cache
-def get_fixture(academy_id: int, cohort_id: str, patterns: dict):
-    cohorts = Cohort.objects.filter(Q(stage='INACTIVE') | Q(stage='PREWORK'),
-                                    id=cohort_id,
-                                    ending_date__gte=timezone.now(),
-                                    academy__id=academy_id)
-
-    # for pattern in [ast.literal_eval(p) for p in patterns['cohort'] if p]:
-    for pattern in [p for p in patterns['cohort'] if p]:
-        found = cohorts.filter(slug__regex=pattern)
-
-        if found.exists():
-            return patterns['id']
-
-    return None
 
 
 class PlanFinder:
@@ -523,3 +507,7 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
             'items': items,
         })
     return result
+
+
+def async_consume(bag_id: int, eta: datetime):
+    logger.info(f'Starting build_free_trial for bag {bag_id}')

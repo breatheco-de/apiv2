@@ -1,3 +1,4 @@
+from datetime import timedelta
 import json
 import random
 from unittest.mock import MagicMock, call, patch
@@ -10,6 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
 from rest_framework.views import APIView
+from breathecode.payments.models import ConsumptionSession
 
 import breathecode.utils.decorators as decorators
 from breathecode.payments import signals as payments_signals
@@ -38,7 +40,22 @@ def consumer(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple
         **context,
         'consumables': context['consumables'].exclude(service_item__service__groups__name='secret'),
     }
-    return (context, args, kwargs)
+
+    consumable = context['consumables'].first()
+    consume = None
+
+    if consumable:
+        consume = ConsumptionSession.build_session(
+            context['request'],
+            consumable,
+            #    'mentorship.MentorshipService',
+            timedelta(days=1),
+            #    id=kwargs.get('service_id'),
+            #    slug=kwargs.get('service_slug'),
+            # info='Join to a mentorship',
+        )
+
+    return (context, args, kwargs, None)
 
 
 CONSUMER_MOCK = MagicMock(wraps=consumer)
@@ -5304,3 +5321,4 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(payments_signals.consume_service.send.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
+        assert 0

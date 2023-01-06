@@ -25,7 +25,7 @@ permission2 = fake.slug()
 
 
 @ws_has_permission(permission1)
-class AsyncConsumer(AsyncJsonWebsocketConsumer):
+class ConsumptionSessionr(AsyncJsonWebsocketConsumer):
 
     async def connect(self):
         await self.setup()
@@ -43,7 +43,7 @@ class SyncConsumer(SyncJsonWebsocketConsumer):
 
 
 ROUTER = URLRouter([
-    path('testws/async/', AsyncConsumer.as_asgi()),
+    path('testws/async/', ConsumptionSessionr.as_asgi()),
     path('testws/sync/', SyncConsumer.as_asgi()),
 ])
 
