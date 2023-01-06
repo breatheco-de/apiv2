@@ -1,19 +1,17 @@
-from breathecode.activity.models import Activity
 from django.contrib.auth.models import User
 from django.db.models import Q
+from google.cloud.ndb.query import OR
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from breathecode.activity.models import Activity
 from breathecode.admissions.models import Cohort, CohortUser
-from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
-from breathecode.utils import getLogger
+from breathecode.utils import (HeaderLimitOffsetPagination, ValidationException, capable_of, getLogger)
 
 from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,
                     validate_require_activity_fields)
-
-from google.cloud.ndb.query import OR
 
 # Create your views here.
 

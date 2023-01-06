@@ -1,7 +1,6 @@
-import re, sys, logging, inspect
+import logging
 from breathecode.services.slack import commands
 from breathecode.services.slack import actions
-from breathecode.authenticate.models import ProfileAcademy
 
 from .exceptions import SlackException
 
@@ -9,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def command(capable_of=None):
+    from breathecode.authenticate.models import ProfileAcademy
 
     def decorator(function):
 
@@ -28,7 +28,7 @@ def command(capable_of=None):
 
                 if len(profiles) == 0:
                     raise SlackException(
-                        f"Your user {context['user_id']} don't have permissions to query this student/cohort, are you a staff on this academy?",
+                        f"Your user {context['user_id']} don't have permissions to use this command, are you a staff or student on this academy?",
                         slug='unauthorized-user')
 
             kwargs['academies'] = profiles

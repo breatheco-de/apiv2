@@ -1,6 +1,6 @@
 import requests, logging, re, os, json, inspect
 from .decorator import commands, actions
-from breathecode.services.slack.commands import student, cohort
+from breathecode.services.slack.commands import student, cohort, chat
 from breathecode.services.slack.actions import monitoring
 from .exceptions import SlackException
 
@@ -41,7 +41,7 @@ class Slack:
                                 headers=self.headers,
                                 params=params,
                                 json=json,
-                                timeout=2)
+                                timeout=10)
 
         if resp.status_code == 200:
             data = resp.json()
@@ -57,22 +57,26 @@ class Slack:
 
         patterns = {'users': r'\<@([^|]+)\|([^>]+)>', 'command': r'^(\w+)\s?'}
         content = context['text']
-        response = {}
+        payload = {}
 
         _commands = re.findall(patterns['command'], content)
         if len(_commands) != 1:
             raise SlackException('Impossible to determine command', slug='command-does-not-found')
 
         matches = re.findall(patterns['users'], content)
-        response['users'] = [u[0] for u in matches]
+        payload['users'] = [u[0] for u in matches]
 
-        response['context'] = context
-
+        payload['context'] = context
         if hasattr(commands, _commands[0]):
-            return self._execute_command(commands, _commands[0], response)
+            response = self._execute_command(commands, _commands[0], payload)
+            if 'response_url' in context and response:
+                resp = requests.post(context['response_url'], json=response, timeout=3)
+                return resp.status_code == 200
+            else:
+                return True
 
         else:
-            raise SlackException('No implementation has been found for this command',
+            raise SlackException(f'No implementation has been found for `{_commands[0]}` command',
                                  slug='command-does-not-exist')
 
     def _execute_command(self, module, command, response):
@@ -112,7 +116,7 @@ class Slack:
             response = getattr(_class, method)(payload=payload)  # call action method
 
             if 'response_url' in payload and response:
-                resp = requests.post(payload['response_url'], json=response, timeout=2)
+                resp = requests.post(payload['response_url'], json=response, timeout=3)
                 return resp.status_code == 200
             else:
                 return True

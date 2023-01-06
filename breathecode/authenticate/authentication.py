@@ -1,7 +1,6 @@
 # authentication.py
 
 from rest_framework.authentication import TokenAuthentication
-from .models import Token
 from rest_framework.exceptions import AuthenticationFailed
 from django.utils import timezone
 
@@ -14,6 +13,8 @@ class ExpiringTokenAuthentication(TokenAuthentication):
     '''
 
     def authenticate_credentials(self, key, request=None):
+        from .models import Token
+
         token = Token.objects.select_related('user').filter(key=key).first()
         if token is None:
             raise AuthenticationFailed({'error': 'Invalid or Inactive Token', 'is_authenticated': False})

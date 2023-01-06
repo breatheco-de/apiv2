@@ -11,8 +11,6 @@ Possible parameters for this command:
 import os
 import random
 
-from breathecode.admissions.models import CohortUser
-from breathecode.authenticate.models import Profile
 from ..decorator import command
 from ..utils import to_string, jump
 from ..exceptions import SlackException
@@ -20,6 +18,7 @@ from ..exceptions import SlackException
 
 @command(capable_of='read_student')
 def execute(users, academies, **context):
+    from breathecode.admissions.models import CohortUser
 
     if len(users) == 0:
         raise SlackException('No usernames found on the command', slug='users-not-provided')
@@ -44,6 +43,7 @@ def execute(users, academies, **context):
 
 
 def render_student(user, cohort_users):
+    from breathecode.authenticate.models import Profile
 
     avatar_number = random.randint(1, 21)
     avatar_url = os.getenv('API_URL', '') + f'/static/img/avatar-{avatar_number}.png'

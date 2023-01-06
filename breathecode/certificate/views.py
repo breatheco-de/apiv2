@@ -318,7 +318,7 @@ class CertificateMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
     def get(self, request):
         handler = self.extensions(request)
 
-        items = UserSpecialty.objects.filter(user=request.user)
+        items = UserSpecialty.objects.filter(user=request.user, status='PERSISTED')
         items = handler.queryset(items)
         serializer = UserSpecialtySerializer(items, many=True)
 

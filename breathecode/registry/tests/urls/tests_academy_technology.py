@@ -628,7 +628,7 @@ class RegistryTestSuite(RegistryTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [

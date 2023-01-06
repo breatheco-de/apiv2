@@ -1,8 +1,8 @@
-import os
 import logging
+import os
 from typing import Optional
+
 from rest_framework.exceptions import APIException
-from django.db.models import QuerySet
 
 __all__ = ['ValidationException', 'APIException']
 
@@ -21,6 +21,12 @@ class ValidationException(APIException):
         self.default_detail = details
         self.slug = slug
         self.detail = details
+
+        if isinstance(details, list) and isinstance(slug, list):
+            assert len(details) == len(self.slug)
+
+        elif isinstance(details, dict) and isinstance(slug, dict):
+            assert sorted(details.keys()) == sorted(slug.keys())
 
         if IS_TEST_ENV and slug:
             logger.error(f'Status {str(self.status_code)} - {slug}')

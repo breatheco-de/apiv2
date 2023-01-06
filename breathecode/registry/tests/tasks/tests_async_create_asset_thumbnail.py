@@ -66,7 +66,7 @@ class RegistryTestSuite(RegistryTestCase):
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
     def test__with_asset__bad_function_response(self):
         asset_category = {'preview_generation_url': self.bc.fake.url()}
-        model = self.bc.database.create_v2(asset=1, asset_category=asset_category)
+        model = self.bc.database.create_v2(asset=1, asset_category=asset_category, academy=1)
         async_create_asset_thumbnail.delay(model.asset.slug)
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [])
@@ -82,8 +82,8 @@ class RegistryTestSuite(RegistryTestCase):
             str(FunctionV1.call.call_args_list),
             str([
                 call(params={
-                    'url': model.asset_category.preview_generation_url,
-                    'name': f'learn-to-code-{model.asset.slug}.png',
+                    'url': model.asset_category.preview_generation_url + '?slug=' + model.asset.slug,
+                    'name': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}.png',
                     'dimension': '1200x630',
                     'delay': 1000,
                 },
@@ -119,21 +119,21 @@ class RegistryTestSuite(RegistryTestCase):
     def test__with_asset__good_function_response(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
         asset_category = {'preview_generation_url': self.bc.fake.url()}
-        model = self.bc.database.create_v2(asset=1, asset_category=asset_category)
+        model = self.bc.database.create_v2(asset=1, asset_category=asset_category, academy=1)
         async_create_asset_thumbnail.delay(model.asset.slug)
-
-        self.assertEqual(self.bc.database.list_of('media.Media'),
-                         [{
-                             'academy_id': None,
-                             'hash': hash,
-                             'hits': 0,
-                             'id': 1,
-                             'mime': 'image/png',
-                             'name': f'learn-to-code-{model.asset.slug}.png',
-                             'slug': f'asset-{model.asset.slug}',
-                             'thumbnail': f'https://storage.googleapis.com/random-bucket/{hash}-thumbnail',
-                             'url': f'https://storage.googleapis.com/random-bucket/{hash}',
-                         }])
+        self.assertEqual(
+            self.bc.database.list_of('media.Media'),
+            [{
+                'academy_id': model.asset.academy.id,
+                'hash': hash,
+                'hits': 0,
+                'id': 1,
+                'mime': 'image/png',
+                'name': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}.png',
+                'slug': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}',
+                'thumbnail': f'https://storage.googleapis.com/random-bucket/{hash}-thumbnail',
+                'url': f'https://storage.googleapis.com/random-bucket/{hash}',
+            }])
         self.assertEqual(Logger.warn.call_args_list, [
             call(f'Media was save with {hash} for academy {model.asset.academy}'),
         ])
@@ -145,8 +145,8 @@ class RegistryTestSuite(RegistryTestCase):
             str(FunctionV1.call.call_args_list),
             str([
                 call(params={
-                    'url': model.asset_category.preview_generation_url,
-                    'name': f'learn-to-code-{model.asset.slug}.png',
+                    'url': model.asset_category.preview_generation_url + '?slug=' + model.asset.slug,
+                    'name': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}.png',
                     'dimension': '1200x630',
                     'delay': 1000,
                 },
@@ -212,15 +212,9 @@ class RegistryTestSuite(RegistryTestCase):
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
     def test__with_asset__with_media__with_asset_category_with_url(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
-
-        academy_slug = 'unknown'
-        asset_slug = self.bc.fake.slug()
-        asset = {'hash': hash, 'slug': asset_slug}
-        asset_category_slug = 'default'
-        asset_category = {'slug': asset_category_slug, 'preview_generation_url': self.bc.fake.url()}
-        media = {'slug': f'{academy_slug}-{asset_category_slug}-{asset_slug}'}
-
-        model = self.bc.database.create_v2(asset=asset, media=media, asset_category=asset_category)
+        media = {'hash': hash}
+        asset_category = {'preview_generation_url': self.bc.fake.url()}
+        model = self.bc.database.create_v2(asset=1, media=media, asset_category=asset_category, academy=1)
 
         async_create_asset_thumbnail.delay(model.asset.slug)
 
@@ -250,8 +244,8 @@ class RegistryTestSuite(RegistryTestCase):
             str(FunctionV1.call.call_args_list),
             str([
                 call(params={
-                    'url': f'{model.asset_category.preview_generation_url}?slug={model.asset.slug}',
-                    'name': f'learn-to-code-{model.asset.slug}.png',
+                    'url': model.asset_category.preview_generation_url + '?slug=' + model.asset.slug,
+                    'name': f'{model.academy.slug}-{model.asset.category.slug}-{model.asset.slug}.png',
                     'dimension': '1200x630',
                     'delay': 1000,
                 },
@@ -282,7 +276,7 @@ class RegistryTestSuite(RegistryTestCase):
         asset = {'academy_id': 1}
         media = {'hash': hash, 'academy_id': 2}
         asset_category = {'preview_generation_url': self.bc.fake.url()}
-        model = self.bc.database.create_v2(asset=asset, media=media, academy=2, asset_category=asset_category)
+        model = self.bc.database.create(asset=asset, media=media, academy=2, asset_category=asset_category)
         async_create_asset_thumbnail.delay(model.asset.slug)
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [
@@ -290,7 +284,7 @@ class RegistryTestSuite(RegistryTestCase):
                 **self.bc.format.to_dict(model.media),
                 'id': 2,
                 'academy_id': 1,
-                'slug': f'asset-{model.asset.slug}',
+                'slug': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}',
             }
         ])
         self.assertEqual(Logger.warn.call_args_list, [
@@ -303,8 +297,8 @@ class RegistryTestSuite(RegistryTestCase):
             str(FunctionV1.call.call_args_list),
             str([
                 call(params={
-                    'url': model.asset_category.preview_generation_url,
-                    'name': f'learn-to-code-{model.asset.slug}.png',
+                    'url': model.asset_category.preview_generation_url + '?slug=' + model.asset.slug,
+                    'name': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}.png',
                     'dimension': '1200x630',
                     'delay': 1000,
                 },

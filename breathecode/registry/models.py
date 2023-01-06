@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.template.loader import get_template
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
+from django.utils import timezone
 from django.db.models import Q
 from .signals import asset_slug_modified, asset_readme_modified
 from slugify import slugify
@@ -104,7 +105,8 @@ class AssetCategory(models.Model):
 
         if self.__old_slug != self.slug:
             # Prevent multiple keywords with same slug
-            cat = AssetCategory.objects.filter(slug=self.slug, academy=self.academy).first()
+            cat = AssetCategory.objects.filter(slug=self.slug,
+                                               academy=self.academy).exclude(id=self.id).first()
             if cat is not None:
                 raise Exception(f'Category with slug {self.slug} already exists on this academy')
 
@@ -298,6 +300,8 @@ class Asset(models.Model):
     solution_video_url = models.URLField(null=True, blank=True, default=None)
     readme = models.TextField(null=True, blank=True, default=None)
     readme_raw = models.TextField(null=True, blank=True, default=None)
+    readme_updated_at = models.DateTimeField(null=True, blank=True, default=None)
+
     html = models.TextField(null=True, blank=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
@@ -385,6 +389,7 @@ class Asset(models.Model):
     seo_json_status = models.JSONField(null=True, blank=True, default=None)
 
     # clean status refers to the cleaning of the readme file
+
     last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None)
     cleaning_status_details = models.TextField(null=True, blank=True, default=None)
     cleaning_status = models.CharField(
@@ -422,6 +427,7 @@ class Asset(models.Model):
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
+            self.readme_updated_at = timezone.now()
             self.cleaning_status = 'PENDING'
 
         # only validate this on creation
@@ -519,10 +525,14 @@ class Asset(models.Model):
         return readme
 
     def get_thumbnail_name(self):
+
         slug1 = self.category.slug if self.category is not None else 'default'
         slug2 = self.slug
-        academy_slug = self.academy.slug if self.academy else 'unknown'
-        return f'{academy_slug}-{slug1}-{slug2}.png'
+
+        if self.academy is None:
+            raise Exception('Asset needs to belong to an academy to generate its thumbnail')
+
+        return f'{self.academy.slug}-{slug1}-{slug2}.png'
 
     @staticmethod
     def encode(content):
@@ -560,7 +570,7 @@ class Asset(models.Model):
         while len(findings) > 0:
             task_find = findings.pop(0)
             task = task_find.groupdict()
-            task['id'] = int(hashlib.sha1(task['label'].encode('utf-8')).hexdigest(), 16) % (10**8)
+            task['id'] = hashlib.md5(task['label'].encode('utf-8')).hexdigest()
             task['status'] = 'DONE' if 'status' in task and task['status'].strip().lower(
             ) == 'x' else 'PENDING'
 
@@ -711,10 +721,10 @@ class SEOReport(models.Model):
 
     # this data will be shared among all reports as they are
     # being calculated in real time
-    def get_state():
+    def get_state(self):
         return self.__shared_data
 
-    def set_state(key, value):
+    def set_state(self, key, value):
         attrs = ['words']
         if key in attrs:
             self.__shared_state[key]: value

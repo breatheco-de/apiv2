@@ -981,7 +981,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:cohort_user')
         response = self.client.get(url)
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension']),
         ])
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(cache=CohortUserCache, paginate=True),

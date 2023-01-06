@@ -106,6 +106,14 @@ CAPABILITIES = [
         'description': 'Create, update or delete event information'
     },
     {
+        'slug': 'read_event_type',
+        'description': 'List and retrieve event type information'
+    },
+    {
+        'slug': 'crud_event_type',
+        'description': 'Create, update or delete event type information'
+    },
+    {
         'slug': 'read_all_cohort',
         'description': 'List all the cohorts or single cohort information'
     },
@@ -339,6 +347,10 @@ CAPABILITIES = [
         'slug': 'read_lead_gen_app',
         'description': 'Read lead generation apps'
     },
+    {
+        'slug': 'chatbot_message',
+        'description': 'Speak with a chatbot'
+    },
 ]
 
 ROLES = [
@@ -399,6 +411,7 @@ ROLES = [
         'name':
         'Staff (Base)',
         'caps': [
+            'chatbot_message',
             'read_member',
             'read_syllabus',
             'read_student',
@@ -412,6 +425,7 @@ ROLES = [
             'read_tag',
             'read_layout',
             'read_event',
+            'read_event_type',
             'read_certificate',
             'academy_reporting',
             'read_won_lead',
@@ -432,6 +446,7 @@ ROLES = [
         'Student',
         'caps': [
             'crud_assignment',
+            'chatbot_message',
             'read_syllabus',
             'read_assignment',
             'read_single_cohort',
@@ -503,8 +518,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'read_assignment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers',
-            'classroom_activity', 'read_event', 'task_delivery_details', 'crud_cohort', 'read_cohort_log',
-            'crud_cohort_log'
+            'classroom_activity', 'read_event', 'read_event_type', 'task_delivery_details', 'crud_cohort',
+            'read_cohort_log', 'crud_cohort_log'
         ]
     })
     roles.append({
@@ -532,6 +547,11 @@ def extend_roles(roles: list[RoleType]) -> None:
         ]
     })
     roles.append({
+        'slug': 'career_support_head',
+        'name': 'Career Support Head',
+        'caps': extend(roles, ['career_support', 'content_writer']) + []
+    })
+    roles.append({
         'slug':
         'admissions_developer',
         'name':
@@ -557,9 +577,13 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps': extend(roles, ['staff']) + ['crud_member', 'crud_media']
     })
     roles.append({
-        'slug': 'graphic_designer',
-        'name': 'Graphic Designer',
-        'caps': extend(roles, ['staff']) + ['read_event', 'crud_media', 'read_asset', 'read_media']
+        'slug':
+        'graphic_designer',
+        'name':
+        'Graphic Designer',
+        'caps':
+        extend(roles, ['staff']) +
+        ['read_event', 'read_event_type', 'crud_media', 'read_asset', 'read_media']
     })
     roles.append({
         'slug':
@@ -568,8 +592,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Manage Syllabus, Exercises and all academy content',
         'caps':
         extend(roles, ['staff', 'graphic_designer']) + [
-            'crud_lead', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_all_cohort', 'crud_asset', 'read_keywordcluster', 'read_keyword'
+            'crud_lead', 'crud_event', 'crud_event_type', 'read_eventcheckin', 'read_nps_answers',
+            'read_lead', 'read_all_cohort', 'crud_asset', 'read_keywordcluster', 'read_keyword'
         ]
     })
     roles.append({

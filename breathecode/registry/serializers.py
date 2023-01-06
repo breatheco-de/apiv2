@@ -152,6 +152,7 @@ class AcademyAssetSerializer(AssetSerializer):
     last_synch_at = serpy.Field()
     status_text = serpy.Field()
     published_at = serpy.Field()
+    readme_updated_at = serpy.Field()
     authors_username = serpy.Field()
 
     requirements = serpy.Field()
@@ -518,6 +519,19 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
         return validated_data
 
 
+class AssetListSerializer(serializers.ListSerializer):
+
+    def update(self, instances, validated_data):
+
+        instance_hash = {index: instance for index, instance in enumerate(instances)}
+
+        result = [
+            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
+        ]
+
+        return result
+
+
 class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
     technologies = serializers.ListField(required=False)
@@ -527,6 +541,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         exclude = ('academy', )
+        list_serializer_class = AssetListSerializer
 
     def validate(self, data):
 
