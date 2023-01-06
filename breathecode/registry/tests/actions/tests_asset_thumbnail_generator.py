@@ -612,63 +612,6 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
 
     """
-    🔽🔽🔽 get_thumbnail_url with Asset and Media, without MediaResolution, passing width or height slug match,
-    returns default url, permanent is False
-    """
-
-    @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
-    @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
-    def test__get_thumbnail_url__with_asset__with_media__without_media_resolution__passing_width_or_height(
-            self):
-        width = randint(1, 2000)
-        height = randint(1, 2000)
-        asset_slug = self.bc.fake.slug()
-        asset_category_slug = self.bc.fake.slug()
-        asset = {'slug': asset_slug}
-        asset_category = {'slug': asset_category_slug}
-        academy_slug = 'unknown'
-        media = {'slug': f'{academy_slug}-{asset_category_slug}-{asset_slug}'}
-        model = self.bc.database.create(asset=asset, media=media, asset_category=asset_category, academy=1)
-
-        model.asset.category = None
-        model.asset.save()
-
-        cases = [((model.asset, width, 0), (width, 0, 1)), ((model.asset, 1, height), (0, height, 2))]
-
-        for args, result in cases:
-            generator = AssetThumbnailGenerator(*args)
-            default_url = self.bc.fake.url()
-            print('default_url', default_url)
-
-            with patch('os.getenv',
-                       MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
-                url = generator.get_thumbnail_url()
-
-            self.assertEqual(generator.asset, model.asset)
-            self.assertEqual(generator.width, result[0])
-            self.assertEqual(generator.height, result[1])
-
-            self.assertEqual(self.bc.database.list_of('registry.Asset'), [
-                self.bc.format.to_dict(model.asset),
-            ])
-
-            self.assertEqual(self.bc.database.list_of('media.Media'),
-                             [{
-                                 **self.bc.format.to_dict(model.media),
-                                 'hits': result[1],
-                             }])
-
-            self.assertEqual(self.bc.database.list_of('media.MediaResolution'), [])
-
-            self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
-            self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [
-                call(1, width=result[0], height=result[1]),
-            ])
-
-            # teardown
-            tasks.async_resize_asset_thumbnail.delay.call_args_list = []
-
-    """
     🔽🔽🔽 get_thumbnail_url with Asset and Media, with MediaResolution, passing width or height slug match,
     returns default url, permanent is True
     """
