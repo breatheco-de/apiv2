@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 
 import breathecode.events.tasks as tasks
-from .models import Event, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
+from .models import Event, EventTypeVisibilitySetting, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
 from .actions import sync_org_venues, sync_org_events
 from breathecode.utils import AdminExportCsvMixin
 import breathecode.marketing.tasks as marketing_tasks
@@ -114,3 +114,13 @@ class EventbriteWebhookAdmin(admin.ModelAdmin):
 
     def organization(self, obj):
         return Organization.objects.filter(eventbrite_id=obj.organization_id).first()
+
+
+@admin.register(EventTypeVisibilitySetting)
+class EventTypeVisibilitySettingAdmin(admin.ModelAdmin):
+    list_display = ('academy', 'cohort', 'syllabus')
+    list_filter = ['academy']
+    search_fields = [
+        'academy__slug', 'academy__name', 'syllabus__slug', 'syllabus__name', 'cohort__slug', 'cohort__name'
+    ]
+    actions = [reattempt_eventbrite_webhook]

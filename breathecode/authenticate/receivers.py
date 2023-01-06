@@ -1,8 +1,9 @@
 import logging
-from django.dispatch import receiver
-from django.db.models.signals import post_save, post_delete
-from django.contrib.auth.models import User, Group
+
+from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.mentorship.models import MentorProfile

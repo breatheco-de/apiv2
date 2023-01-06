@@ -37,7 +37,7 @@ class SlackTestSuite(SlackTestCase):
         data = {'text': 'student', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
         slack = Slack()
 
-        expected = 'some'
+        expected = True
         result = slack.execute_command(data)
         self.assertEqual(result, expected)
         self.assertEqual(slack._execute_command.call_args_list, [

@@ -486,8 +486,6 @@ class AssetThumbnailGenerator:
             return None
 
         slug = self.asset.get_thumbnail_name().split('.')[0]
-        print('slug', slug)
-        print('allllll', Media.objects.all())
         return Media.objects.filter(slug=slug).first()
 
     def _get_media_resolution(self, hash: str) -> Optional[MediaResolution]:
@@ -648,13 +646,15 @@ def test_asset(asset):
         asset.test_status = e.severity
         asset.last_test_at = timezone.now()
         asset.save()
-        raise e
+        # raise e
+        return False
     except Exception as e:
         asset.status_text = str(e)
         asset.test_status = 'ERROR'
         asset.last_test_at = timezone.now()
         asset.save()
-        raise e
+        # raise e
+        return False
 
 
 def upload_image_to_bucket(img, asset):

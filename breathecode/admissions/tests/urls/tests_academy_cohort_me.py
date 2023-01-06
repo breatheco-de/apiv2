@@ -841,9 +841,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'admissions:academy_cohort_me') + f'?location={model["academy"].slug},they-killed-kenny'
         self.client.get(url)
 
-        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
-        ])
+        self.assertEqual(
+            str(APIViewExtensionHandlers._spy_extensions.call_args_list),
+            str([
+                call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
+            ]))
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())

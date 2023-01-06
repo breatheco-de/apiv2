@@ -105,7 +105,8 @@ class AssetCategory(models.Model):
 
         if self.__old_slug != self.slug:
             # Prevent multiple keywords with same slug
-            cat = AssetCategory.objects.filter(slug=self.slug, academy=self.academy).first()
+            cat = AssetCategory.objects.filter(slug=self.slug,
+                                               academy=self.academy).exclude(id=self.id).first()
             if cat is not None:
                 raise Exception(f'Category with slug {self.slug} already exists on this academy')
 
@@ -198,7 +199,7 @@ class AssetKeyword(models.Model):
     def save(self, *args, **kwargs):
 
         if self.__old_slug != self.slug:
-            # Prevent multiple keywords with same slug
+            # Prevent multiple keywords with same slug and make category mandatory
             keyword = AssetKeyword.objects.filter(slug=self.slug, academy=self.academy).first()
             if keyword is not None:
                 raise Exception(f'Keyword with slug {self.slug} already exists on this academy')
@@ -271,11 +272,12 @@ class Asset(models.Model):
     all_translations = models.ManyToManyField('self', blank=True)
     technologies = models.ManyToManyField(AssetTechnology, blank=True)
 
-    category = models.ForeignKey(AssetCategory,
-                                 on_delete=models.SET_NULL,
-                                 default=None,
-                                 blank=True,
-                                 null=True)
+    category = models.ForeignKey(
+        AssetCategory,
+        on_delete=models.SET_NULL,
+        blank=False,
+        null=True,
+    )
 
     url = models.URLField(null=True, blank=True, default=None)
     solution_url = models.URLField(null=True, blank=True, default=None)
@@ -302,7 +304,7 @@ class Asset(models.Model):
 
     html = models.TextField(null=True, blank=True, default=None)
 
-    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
     config = models.JSONField(null=True, blank=True, default=None)
 
@@ -436,6 +438,7 @@ class Asset(models.Model):
                 raise Exception(
                     f'New slug {self.slug} for {self.__old_slug} is already taken by alias for asset {alias.asset.slug}'
                 )
+        self.full_clean()
 
         super().save(*args, **kwargs)
         self.__old_slug = self.slug
@@ -718,10 +721,10 @@ class SEOReport(models.Model):
 
     # this data will be shared among all reports as they are
     # being calculated in real time
-    def get_state():
+    def get_state(self):
         return self.__shared_data
 
-    def set_state(key, value):
+    def set_state(self, key, value):
         attrs = ['words']
         if key in attrs:
             self.__shared_state[key]: value

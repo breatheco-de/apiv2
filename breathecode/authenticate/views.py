@@ -28,7 +28,7 @@ from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, CohortUser
+from breathecode.admissions.models import Academy, CohortUser, Syllabus
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
@@ -39,6 +39,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import \
     APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
@@ -152,24 +153,56 @@ class LogoutView(APIView):
 
 class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     permission_classes = [AllowAny]
+    extensions = APIViewExtensions()
 
     def post(self, request):
-        serializer = UserInviteWaitingListSerializer(data=request.data)
+        handler = self.extensions(request)
+        data = {**request.data}
+        lang = handler.language.get() or 'en'
+
+        if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
+            try:
+                data['syllabus'] = Syllabus.objects.filter(slug=syllabus).values_list('id', flat=True).first()
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='The syllabus does not exist',
+                                es='El syllabus no existe',
+                                slug='syllabus-not-found'))
+
+        serializer = UserInviteWaitingListSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request):
+        handler = self.extensions(request)
+        lang = handler.language.get() or 'en'
+
         invite = UserInvite.objects.filter(email=request.data.get('email'),
                                            status='WAITING_LIST',
                                            token=request.data.get('token', 'empty')).first()
         if not invite:
-            raise ValidationException('The email does not exist in the waiting list',
-                                      code=404,
-                                      slug='not-found')
+            raise ValidationException(translation(lang,
+                                                  en='The email does not exist in the waiting list',
+                                                  es='El email no existe en la lista de espera',
+                                                  slug='not-found'),
+                                      code=404)
 
-        serializer = UserInviteWaitingListSerializer(invite, data=request.data)
+        data = {**request.data}
+
+        if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
+            try:
+                data['syllabus'] = Syllabus.objects.filter(slug=syllabus).values_list('id', flat=True).first()
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='The syllabus does not exist',
+                                es='El syllabus no existe',
+                                slug='syllabus-not-found'))
+
+        serializer = UserInviteWaitingListSerializer(invite, data=request.data, context={'lang': lang})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

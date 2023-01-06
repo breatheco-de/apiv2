@@ -206,6 +206,7 @@ class RegistryTestSuite(RegistryTestCase):
     @patch.multiple('breathecode.services.google_cloud.File',
                     __init__=MagicMock(return_value=None),
                     delete=MagicMock(),
+                    rename=MagicMock(),
                     download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
                     create=True)
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
@@ -228,6 +229,17 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(
             str(FunctionV1.__init__.call_args_list),
             str([call(region='us-central1', project_id='labor-day-story', name='screenshots', method='GET')]))
+
+        print(FunctionV1.call.call_args_list)
+        print([
+            call(params={
+                'url': f'{model.asset_category.preview_generation_url}?slug={model.asset.slug}',
+                'name': f'learn-to-code-{model.asset.slug}.png',
+                'dimension': '1200x630',
+                'delay': 1000,
+            },
+                 timeout=8)
+        ])
         self.assertEqual(
             str(FunctionV1.call.call_args_list),
             str([
@@ -264,7 +276,7 @@ class RegistryTestSuite(RegistryTestCase):
         asset = {'academy_id': 1}
         media = {'hash': hash, 'academy_id': 2}
         asset_category = {'preview_generation_url': self.bc.fake.url()}
-        model = self.bc.database.create_v2(asset=asset, media=media, academy=2, asset_category=asset_category)
+        model = self.bc.database.create(asset=asset, media=media, academy=2, asset_category=asset_category)
         async_create_asset_thumbnail.delay(model.asset.slug)
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [

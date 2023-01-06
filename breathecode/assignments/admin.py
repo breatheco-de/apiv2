@@ -11,6 +11,7 @@ from .actions import sync_student_tasks, sync_cohort_tasks
 logger = logging.getLogger(__name__)
 
 
+#FIXME: this maybe is a deadcode
 def sync_tasks(modeladmin, request, queryset):
 
     for u in queryset:
@@ -30,6 +31,7 @@ class UserAdmin(UserAdmin):
     actions = [sync_tasks]
 
 
+#FIXME: this maybe is a deadcode
 def sync_cohort_tasks(modeladmin, request, queryset):
 
     for c in queryset:

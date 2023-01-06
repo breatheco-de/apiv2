@@ -1,9 +1,11 @@
 from django.contrib import admin
-from django.urls import path, include
-from .views import (BillView, sync_user_issues, SingleBillView, get_latest_bill, get_issues, render_html_bill,
-                    render_html_all_bills, issue_webhook, AcademyProjectView, AcademyProjectMemberView,
-                    AcademyProjectInvoiceView, SingleInvoiceView, AcademyInvoiceMemberView, AcademyBillView)
+from django.urls import include, path
 from rest_framework.authtoken import views
+
+from .views import (AcademyBillView, AcademyInvoiceMemberView, AcademyProjectInvoiceView,
+                    AcademyProjectMemberView, AcademyProjectView, BillView, SingleBillView, SingleInvoiceView,
+                    get_issues, get_latest_bill, issue_webhook, render_html_all_bills, render_html_bill,
+                    sync_user_issues)
 
 app_name = 'freelance'
 urlpatterns = [
