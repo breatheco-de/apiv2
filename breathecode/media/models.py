@@ -31,7 +31,7 @@ class Media(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f'{self.name} ({self.id} - {self.slug})'
 
 
 class MediaResolution(models.Model):

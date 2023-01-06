@@ -28,11 +28,11 @@ class CategoryCache(Cache):
 
 class KeywordCache(Cache):
     model = AssetKeyword
-    depends = ['KeywordCluster']
-    parents = []
+    depends = []
+    parents = ['KeywordCluster']
 
 
 class KeywordClusterCache(Cache):
     model = KeywordCluster
-    depends = []
+    depends = ['KeywordCluster']
     parents = []

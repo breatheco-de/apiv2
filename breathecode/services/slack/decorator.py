@@ -28,7 +28,7 @@ def command(capable_of=None):
 
                 if len(profiles) == 0:
                     raise SlackException(
-                        f"Your user {context['user_id']} don't have permissions to query this student/cohort, are you a staff on this academy?",
+                        f"Your user {context['user_id']} don't have permissions to use this command, are you a staff or student on this academy?",
                         slug='unauthorized-user')
 
             kwargs['academies'] = profiles

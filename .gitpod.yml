@@ -31,7 +31,6 @@ vscode:
     - ms-azuretools.vscode-docker
     - github.vscode-pull-request-github
     - eamodio.gitlens
-    - tabnine.tabnine-vscode
     - gruntfuggly.todo-tree
     - redhat.vscode-yaml
     - bungcip.better-toml

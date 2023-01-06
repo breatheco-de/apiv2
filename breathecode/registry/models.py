@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.template.loader import get_template
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
+from django.utils import timezone
 from django.db.models import Q
 from .signals import asset_slug_modified, asset_readme_modified
 from slugify import slugify
@@ -198,7 +199,7 @@ class AssetKeyword(models.Model):
     def save(self, *args, **kwargs):
 
         if self.__old_slug != self.slug:
-            # Prevent multiple keywords with same slug
+            # Prevent multiple keywords with same slug and make category mandatory
             keyword = AssetKeyword.objects.filter(slug=self.slug, academy=self.academy).first()
             if keyword is not None:
                 raise Exception(f'Keyword with slug {self.slug} already exists on this academy')
@@ -271,11 +272,12 @@ class Asset(models.Model):
     all_translations = models.ManyToManyField('self', blank=True)
     technologies = models.ManyToManyField(AssetTechnology, blank=True)
 
-    category = models.ForeignKey(AssetCategory,
-                                 on_delete=models.SET_NULL,
-                                 default=None,
-                                 blank=True,
-                                 null=True)
+    category = models.ForeignKey(
+        AssetCategory,
+        on_delete=models.SET_NULL,
+        blank=False,
+        null=True,
+    )
 
     url = models.URLField(null=True, blank=True, default=None)
     solution_url = models.URLField(null=True, blank=True, default=None)
@@ -298,9 +300,11 @@ class Asset(models.Model):
     solution_video_url = models.URLField(null=True, blank=True, default=None)
     readme = models.TextField(null=True, blank=True, default=None)
     readme_raw = models.TextField(null=True, blank=True, default=None)
+    readme_updated_at = models.DateTimeField(null=True, blank=True, default=None)
+
     html = models.TextField(null=True, blank=True, default=None)
 
-    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
     config = models.JSONField(null=True, blank=True, default=None)
 
@@ -385,6 +389,7 @@ class Asset(models.Model):
     seo_json_status = models.JSONField(null=True, blank=True, default=None)
 
     # clean status refers to the cleaning of the readme file
+
     last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None)
     cleaning_status_details = models.TextField(null=True, blank=True, default=None)
     cleaning_status = models.CharField(
@@ -422,6 +427,7 @@ class Asset(models.Model):
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
+            self.readme_updated_at = timezone.now()
             self.cleaning_status = 'PENDING'
 
         # only validate this on creation
@@ -432,6 +438,7 @@ class Asset(models.Model):
                 raise Exception(
                     f'New slug {self.slug} for {self.__old_slug} is already taken by alias for asset {alias.asset.slug}'
                 )
+        self.full_clean()
 
         super().save(*args, **kwargs)
         self.__old_slug = self.slug
@@ -517,6 +524,16 @@ class Asset(models.Model):
             readme['html'] = body
         return readme
 
+    def get_thumbnail_name(self):
+
+        slug1 = self.category.slug if self.category is not None else 'default'
+        slug2 = self.slug
+
+        if self.academy is None:
+            raise Exception('Asset needs to belong to an academy to generate its thumbnail')
+
+        return f'{self.academy.slug}-{slug1}-{slug2}.png'
+
     @staticmethod
     def encode(content):
         if content is not None:
@@ -553,7 +570,7 @@ class Asset(models.Model):
         while len(findings) > 0:
             task_find = findings.pop(0)
             task = task_find.groupdict()
-            task['id'] = int(hashlib.sha1(task['label'].encode('utf-8')).hexdigest(), 16) % (10**8)
+            task['id'] = hashlib.md5(task['label'].encode('utf-8')).hexdigest()
             task['status'] = 'DONE' if 'status' in task and task['status'].strip().lower(
             ) == 'x' else 'PENDING'
 

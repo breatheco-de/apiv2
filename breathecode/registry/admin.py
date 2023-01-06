@@ -10,6 +10,7 @@ from breathecode.admissions.admin import CohortAdmin
 from breathecode.assessment.models import Assessment
 from breathecode.utils.admin import change_field
 from breathecode.services.seo import SEOAnalyzer
+
 from .models import (
     Asset,
     AssetTechnology,
@@ -25,7 +26,7 @@ from .models import (
 from .tasks import (async_pull_from_github, async_test_asset, async_execute_seo_report,
                     async_regenerate_asset_readme, async_download_readme_images, async_remove_img_from_cloud,
                     async_upload_image_to_bucket)
-from .actions import pull_from_github, get_user_from_github_username, test_asset
+from .actions import pull_from_github, get_user_from_github_username, test_asset, AssetThumbnailGenerator
 
 logger = logging.getLogger(__name__)
 lang_flags = {
@@ -113,6 +114,13 @@ def remove_dot_from_slug(modeladmin, request, queryset):
             a.save()
 
 
+def async_generate_thumbnail(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        generator = AssetThumbnailGenerator(a, '800', '600')
+        url, permanent = generator.get_thumbnail_url()
+
+
 def generate_spanish_translation(modeladmin, request, queryset):
     assets = queryset.all()
     for old in assets:
@@ -184,7 +192,9 @@ def load_readme_tasks(modeladmin, request, queryset):
     for a in assets:
         try:
             tasks = a.get_tasks()
-            print(f'{len(tasks)} tasks', [t['status'] + ': ' + t['label'] + '\n' for t in tasks])
+            print(f'{len(tasks)} tasks')
+            for t in tasks:
+                print(t['status'] + ': ' + t['slug'] + '\n')
         except Exception as e:
             messages.error(request, a.slug + ': ' + str(e))
 
@@ -306,6 +316,7 @@ class AssetAdmin(admin.ModelAdmin):
         remove_dot_from_slug,
         load_readme_tasks,
         async_regenerate_readme,
+        async_generate_thumbnail,
         download_and_replace_images,
     ] + change_field(['DRAFT', 'UNASSIGNED', 'PUBLISHED'], name='status') + change_field(['us', 'es'],
                                                                                          name='lang')

@@ -1,5 +1,4 @@
 from typing import Any
-from pyparsing import Literal
 import pytz
 import re
 import logging
