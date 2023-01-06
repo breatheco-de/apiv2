@@ -646,13 +646,15 @@ def test_asset(asset):
         asset.test_status = e.severity
         asset.last_test_at = timezone.now()
         asset.save()
-        raise e
+        # raise e
+        return False
     except Exception as e:
         asset.status_text = str(e)
         asset.test_status = 'ERROR'
         asset.last_test_at = timezone.now()
         asset.save()
-        raise e
+        # raise e
+        return False
 
 
 def upload_image_to_bucket(img, asset):

@@ -512,7 +512,8 @@ class AcademyAssetActionView(APIView):
 
         except Exception as e:
             logger.exception(e)
-            pass
+            raise ValidationException('; '.join(
+                [k.capitalize() + ': ' + ''.join(v) for k, v in e.message_dict.items()]))
 
         asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
         serializer = AcademyAssetSerializer(asset)
