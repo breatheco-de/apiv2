@@ -215,6 +215,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -645,6 +646,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -670,7 +672,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
-                             'is_hidden_on_prework': None
+                             'is_hidden_on_prework': True
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
@@ -804,6 +806,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -970,6 +973,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -1109,6 +1113,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -1214,6 +1219,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }
 
@@ -1318,6 +1324,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'country': model['cohort'].academy.country,
                 'city': model['cohort'].academy.city,
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework,
                 'country': {
                     'code': model['cohort'].academy.country.code,
                     'name': model['cohort'].academy.country.name,

@@ -72,17 +72,6 @@ class GetSmallAcademySerializer(serpy.Serializer):
     icon_url = serpy.Field()
 
 
-class GetAcademyWithHiddenOnPreworkSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    id = serpy.Field()
-    name = serpy.Field()
-    slug = serpy.Field()
-    white_labeled = serpy.Field()
-    icon_url = serpy.Field()
-    is_hidden_on_prework = serpy.Field()
-
-
 class GetProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -160,6 +149,7 @@ class GetAcademySerializer(serpy.Serializer):
     country = CountrySerializer(required=False)
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
+    is_hidden_on_prework = serpy.Field()
 
 
 class GetAcademyWithStatusSerializer(serpy.Serializer):
@@ -415,7 +405,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     current_day = serpy.Field()
     current_module = serpy.Field()
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
-    academy = GetAcademyWithHiddenOnPreworkSerializer()
+    academy = GetAcademySerializer()
     stage = serpy.Field()
     is_hidden_on_prework = serpy.Field()
 
@@ -543,7 +533,7 @@ class AcademySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Academy
-        fields = ['id', 'slug', 'name', 'street_address', 'country', 'city']
+        fields = ['id', 'slug', 'name', 'street_address', 'country', 'city', 'is_hidden_on_prework']
 
     def validate(self, data):
 

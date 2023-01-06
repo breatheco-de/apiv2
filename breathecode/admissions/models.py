@@ -101,6 +101,8 @@ class Academy(models.Model):
 
     is_hidden_on_prework = models.BooleanField(
         default=True,
+        null=False,
+        blank=False,
         help_text='Determines if the cohorts will be shown in the dashboard if it\'s status is \'PREWORK\'')
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
@@ -319,7 +321,7 @@ class Cohort(models.Model):
                                  blank=True)
 
     is_hidden_on_prework = models.BooleanField(
-        default=None,
+        default=True,
         null=True,
         blank=True,
         help_text='Determines if the cohort will be shown in the dashboard if it\'s status is \'PREWORK\'')

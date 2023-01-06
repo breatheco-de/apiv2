@@ -165,6 +165,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -283,6 +284,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -364,6 +366,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -445,6 +448,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -621,6 +625,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         } for model in ordened_models]
 
@@ -733,6 +738,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -814,6 +820,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
