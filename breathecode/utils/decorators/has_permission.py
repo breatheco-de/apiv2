@@ -1,14 +1,18 @@
-from datetime import datetime
-from typing import Callable, TypedDict
+from datetime import datetime, timedelta
+from typing import Callable, Optional, TypedDict
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 from rest_framework.views import APIView
+from django.db.models import Sum
 
 from breathecode.authenticate.models import Permission, User
 from breathecode.payments.signals import consume_service
+from django.db import models
+
+# from breathecode.payments.tasks import end_the_consumption_session
 
 from ..exceptions import ProgramingError
 from ..payment_exception import PaymentException
@@ -23,10 +27,11 @@ class PermissionContextType(TypedDict):
     permission: str
     request: WSGIRequest
     consumables: QuerySet
+    # time_of_life: Optional[timedelta]
 
 
 HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple,
-                                                                             dict]]
+                                                                             dict, Optional[timedelta]]]
 
 
 def validate_permission(user: User, permission: str, consumer: bool | HasPermissionCallback = False) -> bool:
@@ -40,11 +45,10 @@ def validate_permission(user: User, permission: str, consumer: bool | HasPermiss
     return found.user_set.filter(id=user.id).exists() or found.group_set.filter(user__id=user.id).exists()
 
 
-#TODO: check if required_payment is needed
 def has_permission(permission: str, consumer: bool | HasPermissionCallback = False) -> callable:
     """This decorator check if the current user can access to the resource through of permissions"""
 
-    from breathecode.payments.models import Consumable
+    from breathecode.payments.models import Consumable, ConsumptionSession
 
     def decorator(function: callable) -> callable:
 
@@ -65,8 +69,14 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
             except IndexError:
                 raise ProgramingError('Missing request information, use this decorator with DRF View')
 
+            utc_now = timezone.now()
+            time_of_life = None
+            session = None
+            session = ConsumptionSession.get_session(request)
+            if session:
+                return function(*args, **kwargs)
+
             if validate_permission(request.user, permission, consumer):
-                utc_now = timezone.now()
                 context = {
                     'utc_now': utc_now,
                     'consumer': consumer,
@@ -85,7 +95,8 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     context['consumables'] = items
 
                 if callable(consumer):
-                    context, args, kwargs = consumer(context, args, kwargs)
+                    # context, args, kwargs, consume = consumer(context, args, kwargs)
+                    context, args, kwargs, time_of_life = consumer(context, args, kwargs)
 
                 if consumer and not context['consumables']:
                     #TODO: send a url to recharge this service
@@ -93,13 +104,28 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                         f'You do not have enough credits to access this service: {permission}',
                         slug='not-enough-consumables')
 
+                if consumer and time_of_life and (consumable := context['consumables'].first()):
+                    session = ConsumptionSession.build_session(request, consumable, time_of_life)
+
+                time_of_life = timedelta(seconds=60)
+                if consumer and time_of_life:
+                    consumables = context['consumables']
+                    for item in consumables.filter(consumptionsession__status='PENDING', how_many__gt=0):
+
+                        sum = item.consumptionsession_set.filter(status='PENDING').aggregate(Sum('how_many'))
+
+                        if item.how_many - sum['how_many__sum'] == 0:
+                            context['consumables'] = context['consumables'].exclude(id=item.id)
+
                 response = function(*args, **kwargs)
 
-                if consumer and response.status_code < 400:
-                    item = context['consumables'].first()
+                it_will_consume = consumer and response.status_code < 400
+                if it_will_consume and session:
+                    session.will_consume(1)
+                    # end_the_consumption_session.apply_async(args=(session.id, 1), eta=utc_now + time_of_life)
 
-                    #TODO: can consume the resource per hours
-                    #TODO: pass it to celery
+                elif it_will_consume:
+                    item = context['consumables'].first()
                     consume_service.send(instance=item, sender=item.__class__, how_many=1)
 
                 return response

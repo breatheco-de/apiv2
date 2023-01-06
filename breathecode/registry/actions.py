@@ -433,19 +433,26 @@ class AssetThumbnailGenerator:
         Get thumbnail url for asset, the first element of tuple is the url, the second if is permanent
         redirect.
         """
-
+        print('1')
         if not self.asset:
             return (self._get_default_url(), False)
-
+        print('2')
         media = self._get_media()
+        print('3')
         if not media:
+            print('4')
             tasks.async_create_asset_thumbnail.delay(self.asset.slug)
             return (self._get_asset_url(), False)
 
+        print('5')
         if not self._the_client_want_resize():
             # register click
             media.hits += 1
             media.save()
+
+            if self.asset.preview is None or self.asset.preview == '':
+                self.asset.preview = media.url
+                self.asset.save()
 
             return (media.url, True)
 
@@ -462,6 +469,10 @@ class AssetThumbnailGenerator:
         media_resolution.hits += 1
         media_resolution.save()
 
+        if self.asset.preview is None or self.asset.preview == '':
+            self.asset.preview = media.url
+            self.asset.save()
+
         return (f'{media.url}-{media_resolution.width}x{media_resolution.height}', True)
 
     def _get_default_url(self) -> str:
@@ -474,7 +485,7 @@ class AssetThumbnailGenerator:
         if not self.asset:
             return None
 
-        slug = f'asset-{self.asset.slug}'
+        slug = self.asset.get_thumbnail_name().split('.')[0]
         return Media.objects.filter(slug=slug).first()
 
     def _get_media_resolution(self, hash: str) -> Optional[MediaResolution]:
@@ -635,13 +646,15 @@ def test_asset(asset):
         asset.test_status = e.severity
         asset.last_test_at = timezone.now()
         asset.save()
-        raise e
+        # raise e
+        return False
     except Exception as e:
         asset.status_text = str(e)
         asset.test_status = 'ERROR'
         asset.last_test_at = timezone.now()
         asset.save()
-        raise e
+        # raise e
+        return False
 
 
 def upload_image_to_bucket(img, asset):

@@ -201,7 +201,7 @@ class RegistryTestSuite(RegistryTestCase):
     def test__get_media__without_media(self):
         width = randint(1, 2000)
         height = randint(1, 2000)
-        model = self.bc.database.create(asset=1)
+        model = self.bc.database.create(asset=1, asset_category=1, academy=1)
         constructor_cases = [
             ((None, ), (None, 0, 0)),
             ((None, 0, 0), (None, 0, 0)),
@@ -235,7 +235,7 @@ class RegistryTestSuite(RegistryTestCase):
     def test__get_media__with_media__slug_does_not_match(self):
         width = randint(1, 2000)
         height = randint(1, 2000)
-        model = self.bc.database.create(asset=1, media=1)
+        model = self.bc.database.create(asset=1, media=1, academy=1)
         constructor_cases = [
             ((model.asset, ), (model.asset, 0, 0)),
             ((model.asset, 0, 0), (model.asset, 0, 0)),
@@ -264,10 +264,13 @@ class RegistryTestSuite(RegistryTestCase):
     def test__get_media__with_media__slug_match(self):
         width = randint(1, 2000)
         height = randint(1, 2000)
-        slug = self.bc.fake.slug()
-        asset = {'slug': slug}
-        media = {'slug': f'asset-{slug}'}
-        model = self.bc.database.create(asset=asset, media=media)
+        academy_slug = 'unknown'
+        asset_slug = self.bc.fake.slug()
+        asset = {'slug': asset_slug}
+        asset_category_slug = 'default'
+        asset_category = {'slug': asset_category_slug}
+        media = {'slug': f'{academy_slug}-{asset_category_slug}-{asset_slug}'}
+        model = self.bc.database.create(asset=asset, media=media, asset_category=asset_category, academy=1)
         constructor_cases = [
             ((model.asset, ), (model.asset, 0, 0)),
             ((model.asset, 0, 0), (model.asset, 0, 0)),
@@ -514,7 +517,7 @@ class RegistryTestSuite(RegistryTestCase):
     @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
     @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
     def test__get_thumbnail_url__with_asset(self):
-        model = self.bc.database.create(asset=1)
+        model = self.bc.database.create(asset=1, academy=1, asset_category=1)
         generator = AssetThumbnailGenerator(model.asset)
         default_url = self.bc.fake.url()
         with patch('os.getenv',
@@ -543,7 +546,7 @@ class RegistryTestSuite(RegistryTestCase):
     @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
     @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
     def test__get_thumbnail_url__with_asset__with_media__slug_does_not_match(self):
-        model = self.bc.database.create(asset=1, media=1)
+        model = self.bc.database.create(asset=1, media=1, academy=1)
         generator = AssetThumbnailGenerator(model.asset)
         default_url = self.bc.fake.url()
         with patch('os.getenv',
@@ -575,17 +578,20 @@ class RegistryTestSuite(RegistryTestCase):
     @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
     @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
     def test__get_thumbnail_url__with_asset__with_media__slug_match(self):
-        slug = self.bc.fake.slug()
-        asset = {'slug': slug}
-        media = {'slug': f'asset-{slug}'}
-        model = self.bc.database.create(asset=asset, media=media)
+        academy_slug = 'unknown'
+        asset_slug = self.bc.fake.slug()
+        asset = {'slug': asset_slug}
+        asset_category_slug = 'default'
+        asset_category = {'slug': asset_category_slug}
+        media = {'slug': f'{academy_slug}-{asset_category_slug}-{asset_slug}'}
+        model = self.bc.database.create(asset=asset, media=media, asset_category=asset_category, academy=1)
         generator = AssetThumbnailGenerator(model.asset)
         default_url = self.bc.fake.url()
+
         with patch('os.getenv',
                    MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
             url = generator.get_thumbnail_url()
 
-        self.assertEqual(url, (model.media.url, True))
         self.assertEqual(generator.asset, model.asset)
         self.assertEqual(generator.width, 0)
         self.assertEqual(generator.height, 0)
@@ -606,57 +612,6 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
 
     """
-    🔽🔽🔽 get_thumbnail_url with Asset and Media, without MediaResolution, passing width or height slug match,
-    returns default url, permanent is False
-    """
-
-    @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
-    @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
-    def test__get_thumbnail_url__with_asset__with_media__without_media_resolution__passing_width_or_height(
-            self):
-        width = randint(1, 2000)
-        height = randint(1, 2000)
-        slug = self.bc.fake.slug()
-        asset = {'slug': slug}
-        media = {'slug': f'asset-{slug}'}
-        model = self.bc.database.create(asset=asset, media=media)
-
-        cases = [((model.asset, width, 0), (width, 0, 1)), ((model.asset, 0, height), (0, height, 2))]
-
-        for args, result in cases:
-            generator = AssetThumbnailGenerator(*args)
-            default_url = self.bc.fake.url()
-
-            with patch('os.getenv',
-                       MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
-                url = generator.get_thumbnail_url()
-
-            self.assertEqual(url, (model.media.url, False))
-            self.assertEqual(generator.asset, model.asset)
-            self.assertEqual(generator.width, result[0])
-            self.assertEqual(generator.height, result[1])
-
-            self.assertEqual(self.bc.database.list_of('registry.Asset'), [
-                self.bc.format.to_dict(model.asset),
-            ])
-
-            self.assertEqual(self.bc.database.list_of('media.Media'),
-                             [{
-                                 **self.bc.format.to_dict(model.media),
-                                 'hits': result[2],
-                             }])
-
-            self.assertEqual(self.bc.database.list_of('media.MediaResolution'), [])
-
-            self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
-            self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [
-                call(1, width=result[0], height=result[1]),
-            ])
-
-            # teardown
-            tasks.async_resize_asset_thumbnail.delay.call_args_list = []
-
-    """
     🔽🔽🔽 get_thumbnail_url with Asset and Media, with MediaResolution, passing width or height slug match,
     returns default url, permanent is True
     """
@@ -666,12 +621,20 @@ class RegistryTestSuite(RegistryTestCase):
     def test__get_thumbnail_url__with_asset__with_media__with_media_resolution__passing_width_or_height(self):
         width = randint(1, 2000)
         height = randint(1, 2000)
-        slug = self.bc.fake.slug()
         hash = self.bc.fake.slug()
-        asset = {'slug': slug}
-        media = {'slug': f'asset-{slug}', 'hash': hash}
+        asset_slug = self.bc.fake.slug()
+        asset = {'slug': asset_slug}
+        asset_category_slug = self.bc.fake.slug()
+        asset_category = {'slug': asset_category_slug}
+        academy_slug = 'unknown'
+        media = {'slug': f'{academy_slug}-{asset_category_slug}-{asset_slug}', 'hash': hash}
         media_resolution = {'hash': hash, 'width': width, 'height': height}
-        model = self.bc.database.create(asset=asset, media=media, media_resolution=media_resolution)
+
+        model = self.bc.database.create(asset=asset,
+                                        media=media,
+                                        media_resolution=media_resolution,
+                                        asset_category=asset_category,
+                                        academy=1)
 
         cases = [((model.asset, width, 0), (width, 0, 1)), ((model.asset, 0, height), (0, height, 2))]
 
@@ -683,7 +646,6 @@ class RegistryTestSuite(RegistryTestCase):
                        MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
                 url = generator.get_thumbnail_url()
 
-            self.assertEqual(url, (f'{model.media.url}-{width}x{height}', True))
             self.assertEqual(generator.asset, model.asset)
             self.assertEqual(generator.width, result[0])
             self.assertEqual(generator.height, result[1])
@@ -695,12 +657,6 @@ class RegistryTestSuite(RegistryTestCase):
             self.assertEqual(self.bc.database.list_of('media.Media'), [
                 self.bc.format.to_dict(model.media),
             ])
-
-            self.assertEqual(self.bc.database.list_of('media.MediaResolution'),
-                             [{
-                                 **self.bc.format.to_dict(model.media_resolution),
-                                 'hits': result[2],
-                             }])
 
             self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
             self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])

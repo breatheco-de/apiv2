@@ -50,7 +50,7 @@ class AssetException(Exception):
 
 class AssetValidator():
     base_warns = ['translations', 'technologies']
-    base_errors = ['lang', 'urls']
+    base_errors = ['lang', 'urls', 'category']
     warns = []
     errors = []
 
@@ -114,6 +114,11 @@ class AssetValidator():
     def readme(self):
         if self.asset.readme is None or self.asset.readme == '' and not self.asset.external:
             raise Exception('Empty readme')
+
+    def category(self):
+
+        if self.asset.category is None:
+            raise Exception('Empty category')
 
 
 class LessonValidator(AssetValidator):

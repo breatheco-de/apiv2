@@ -1,7 +1,11 @@
 import ast
+from datetime import timedelta
 import os
+from typing import Optional
 from django.contrib.auth.models import Group, User
 from django.db import models
+from django.utils import timezone
+# from breathecode.payments.signals import consume_service
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
 from breathecode.events.models import EventType
@@ -9,6 +13,8 @@ from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
 from django.core.exceptions import ValidationError
+from django import forms
+from django.core.handlers.wsgi import WSGIRequest
 
 from breathecode.utils.validators.language import validate_language_code
 from . import signals
@@ -189,18 +195,19 @@ class ServiceItem(AbstractServiceItem):
     renew_at = models.IntegerField(default=1)
     renew_at_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
-    def save(self, *args, **kwargs):
+    def clean(self):
         is_test_env = os.getenv('ENV') == 'test'
         inside_mixer = hasattr(self, '__mixer__')
         if self.id and (not inside_mixer or (inside_mixer and not is_test_env)):
-            raise Exception('You cannot update a service item')
+            raise forms.ValidationError('You cannot update a service item')
 
+    def save(self, *args, **kwargs):
         self.full_clean()
 
         super().save()
 
     def delete(self):
-        raise Exception('You cannot delete a service item')
+        raise forms.ValidationError('You cannot delete a service item')
 
     def __str__(self) -> str:
         return f'{self.service.slug} ({self.how_many})'
@@ -341,13 +348,13 @@ class Consumable(AbstractServiceItem):
         settings = get_user_settings(self.user.id)
 
         if how_many_resources_are_set > 1:
-            raise Exception(
+            raise forms.ValidationError(
                 translation(settings.lang,
                             en='A consumable can only be associated with one resource',
                             es='Un consumible solo se puede asociar con un recurso'))
 
         if not self.service_item:
-            raise Exception(
+            raise forms.ValidationError(
                 translation(settings.lang,
                             en='A consumable must be associated with a service item',
                             es='Un consumible debe estar asociado con un artículo de un servicio'))
@@ -361,6 +368,117 @@ class Consumable(AbstractServiceItem):
 
     def __str__(self):
         return f'{self.user.email}: {self.service_item.service.slug} ({self.how_many})'
+
+
+PENDING = 'PENDING'
+DONE = 'DONE'
+CANCELLED = 'CANCELLED'
+CONSUMPTION_SESSION_STATUS = [
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (CANCELLED, 'Cancelled'),
+]
+
+
+class ConsumptionSession(models.Model):
+    consumable = models.ForeignKey(Consumable, on_delete=models.CASCADE)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    eta = models.DateTimeField()
+    duration = models.DurationField()
+    how_many = models.FloatField(default=0)
+    status = models.CharField(max_length=12, choices=CONSUMPTION_SESSION_STATUS, default=PENDING)
+    was_discounted = models.BooleanField(default=False)
+
+    request = models.JSONField()
+
+    # this should be used to get
+    path = models.CharField(max_length=200, blank=True)
+    # related_info = models.CharField(max_length=255, default=None, blank=True, null=True)
+    related_id = models.IntegerField(max_length=200, default=None, blank=True, null=True)
+    related_slug = models.CharField(max_length=200, default=None, blank=True, null=True)
+
+    # created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    # def clean(self) -> None:
+    #     if not self.related_id and not self.related_slug:
+    #         raise forms.ValidationError('You must provide a related_id or a related_slug')
+
+    #     if self.related_id and self.related_slug:
+    #         raise forms.ValidationError('You must provide a related_id or a related_slug, not both')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def build_session(
+        cls,
+        request: WSGIRequest,
+        consumable: Consumable,
+        delta: timedelta,
+        # info: Optional[str] = None,
+    ) -> 'ConsumptionSession':
+        assert request, 'You must provide a request'
+        assert consumable, 'You must provide a consumable'
+        assert delta, 'You must provide a delta'
+
+        utc_now = timezone.now()
+
+        resource = consumable.cohort or consumable.mentorship_service or consumable.event_type
+        id = resource.id if resource else 0
+        slug = resource.slug if resource else ''
+
+        path = resource.__class__._meta.app_label + '.' + resource.__class__.__name__ if resource else ''
+
+        data = {
+            'args': request.parser_context['args'],
+            'kwargs': request.parser_context['kwargs'],
+            'headers': {
+                'academy': request.META.get('HTTP_ACADEMY')
+            },
+            'user': request.user.id,
+        }
+
+        # assert path, 'You must provide a path'
+        assert delta, 'You must provide a delta'
+
+        return cls.objects.create(
+            request=data,
+            consumable=consumable,
+            eta=utc_now + delta,
+            path=path,
+            duration=delta,
+            related_id=id,
+            related_slug=slug,
+            #   related_info=info,
+            user=request.user)
+
+    @classmethod
+    def get_session(cls, request: WSGIRequest) -> 'ConsumptionSession':
+        if not request.user.id:
+            return None
+
+        utc_now = timezone.now()
+        data = {
+            'args': request.parser_context['args'],
+            'kwargs': request.parser_context['kwargs'],
+            'headers': {
+                'academy': request.META.get('HTTP_ACADEMY')
+            },
+            'user': request.user.id,
+        }
+        return cls.objects.filter(eta__gte=utc_now, request=data, user=request.user).first()
+
+    def will_consume(self, how_many: float = 1.0) -> None:
+        # avoid dependency circle
+        from breathecode.payments.tasks import end_the_consumption_session
+
+        self.how_many = how_many
+        self.save()
+
+        # consume_service.send(instance=self, sender=self.__class__, how_many=how_many)
+        end_the_consumption_session.apply_async(args=(self.id, how_many), eta=self.eta)
 
 
 RENEWAL = 'RENEWAL'
@@ -590,14 +708,14 @@ class PlanServiceItem(models.Model):
 
     def clean(self):
         if self.id and self.mentorship_service_set and self.cohorts.count():
-            raise ValidationError(
+            raise forms.ValidationError(
                 translation(
                     self._lang,
                     en='You can not set cohorts and mentorship service set at the same time',
                     es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
 
         if self.mentorship_service_set and self.cohort_pattern:
-            raise ValidationError(
+            raise forms.ValidationError(
                 translation(
                     self._lang,
                     en='You can not set cohorts pattern and mentorship service set at the same time',
@@ -637,10 +755,10 @@ class PlanServiceItemHandler(models.Model):
         how_many_resources_are_set = len([r for r in resources if r is not None])
 
         if how_many_resources_are_set == 0:
-            raise Exception('A PlanServiceItem must be associated with one resource')
+            raise forms.ValidationError('A PlanServiceItem must be associated with one resource')
 
         if how_many_resources_are_set != 1:
-            raise Exception('A PlanServiceItem can only be associated with one resource')
+            raise forms.ValidationError('A PlanServiceItem can only be associated with one resource')
 
         return super().clean()
 
@@ -687,10 +805,10 @@ class ServiceStockScheduler(models.Model):
         how_many_resources_are_set = len([r for r in resources if r is not None])
 
         if how_many_resources_are_set == 0:
-            raise Exception('A ServiceStockScheduler must be associated with one resource')
+            raise forms.ValidationError('A ServiceStockScheduler must be associated with one resource')
 
         if how_many_resources_are_set != 1:
-            raise Exception('A ServiceStockScheduler can only be associated with one resource')
+            raise forms.ValidationError('A ServiceStockScheduler can only be associated with one resource')
 
         return super().clean()
 

@@ -12,8 +12,9 @@ from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from dateutil.relativedelta import relativedelta
 from django.db.models import Q
+from breathecode.payments.signals import consume_service
 
-from .models import Bag, Consumable, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, ServiceStockScheduler, Subscription, SubscriptionServiceItem
+from .models import Bag, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, ServiceStockScheduler, Subscription, SubscriptionServiceItem
 
 logger = logging.getLogger(__name__)
 
@@ -306,3 +307,20 @@ def build_plan_financing(self, bag_id: int, invoice_id: int):
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def build_free_trial(self, bag_id: int, invoice_id: int):
     logger.info(f'Starting build_free_trial for bag {bag_id}')
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+# def async_consume(self, bag_id: int, eta: datetime):
+def end_the_consumption_session(self, consumption_session_id: int, how_many: float = 1.0):
+    logger.info(f'Starting end_the_consumption_session for ConsumptionSession {consumption_session_id}')
+
+    session = ConsumptionSession.objects.filter(id=consumption_session_id).first()
+    if not session:
+        logger.error(f'ConsumptionSession with id {consumption_session_id} not found')
+        return
+
+    consumable = session.consumable
+    consume_service.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
+
+    session.was_discounted = True
+    session.status = 'DONE'

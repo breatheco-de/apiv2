@@ -13,6 +13,7 @@ from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
+from breathecode.utils.views import set_query_parameter
 from .models import Asset, AssetImage
 from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
                       upload_image_to_bucket, asset_images_bucket)
@@ -99,14 +100,13 @@ def async_execute_seo_report(asset_slug):
 
 @shared_task
 def async_create_asset_thumbnail(asset_slug: str):
+
     asset = Asset.objects.filter(slug=asset_slug).first()
     if asset is None:
         logger.error(f'Asset with slug {asset_slug} not found')
         return
 
-    slug1 = 'learn-to-code'
-    slug2 = asset_slug
-
+    print('aaaaaaaaaaaa', google_project_id())
     func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
 
     preview_url = asset.get_preview_generation_url()
@@ -114,21 +114,30 @@ def async_create_asset_thumbnail(asset_slug: str):
         logger.warn(f'Not able to retrieve a preview generation')
         return False
 
-    name = f'{slug1}-{slug2}.png'
-    response = func.call(
-        params={
-            'url': preview_url,
-            'name': name,
-            'dimension': '1200x630',
-            # this should be fixed if the screenshots is taken without load the content properly
-            'delay': 1000,
-        },
-        timeout=5)
+    name = asset.get_thumbnail_name()
+    print('preview_url', preview_url)
+    url = set_query_parameter(preview_url, 'slug', asset_slug)
+
+    response = None
+    try:
+        response = func.call(
+            params={
+                'url': url,
+                'name': name,
+                'dimension': '1200x630',
+                # this should be fixed if the screenshots is taken without load the content properly
+                'delay': 1000,
+            },
+            timeout=8)
+
+    except Exception as e:
+        logger.error('Error calling service to generate thumbnail screenshot: ' + str(e))
+        return False
 
     if response.status_code >= 400:
         logger.error('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
                      f'returns status code {response.status_code}')
-        return
+        return False
 
     json = response.json()
     json = json[0]
@@ -151,9 +160,15 @@ def async_create_asset_thumbnail(asset_slug: str):
         break
 
     # file already exists for this academy
-    if Media.objects.filter(hash=hash, academy=asset.academy).exists():
+    media = Media.objects.filter(hash=hash, academy=asset.academy).first()
+    if media is not None:
         # this prevent a screenshots duplicated
         cloud_file.delete()
+
+        if asset.preview is None or asset.preview == '':
+            asset.preview = media.url
+            asset.save()
+
         logger.warn(f'Media with hash {hash} already exists, skipping')
         return
 
@@ -162,7 +177,7 @@ def async_create_asset_thumbnail(asset_slug: str):
     if media:
         # this prevent a screenshots duplicated
         cloud_file.delete()
-        media = Media(slug=f'asset-{asset_slug}',
+        media = Media(slug=name.split('.')[0],
                       name=media.name,
                       url=media.url,
                       thumbnail=media.thumbnail,
@@ -170,6 +185,10 @@ def async_create_asset_thumbnail(asset_slug: str):
                       mime=media.mime,
                       hash=media.hash)
         media.save()
+
+        if asset.preview is None or asset.preview == '':
+            asset.preview = media.url
+            asset.save()
 
         logger.warn(f'Media was save with {hash} for academy {asset.academy}')
         return
@@ -179,7 +198,7 @@ def async_create_asset_thumbnail(asset_slug: str):
     url = f'https://storage.googleapis.com/{screenshots_bucket()}/{hash}'
 
     media = Media(
-        slug=f'asset-{asset_slug}',
+        slug=name.split('.')[0],
         name=name,
         url=url,
         thumbnail=f'{url}-thumbnail',
@@ -187,6 +206,10 @@ def async_create_asset_thumbnail(asset_slug: str):
         mime='image/png',  # this should change in a future, check the cloud function
         hash=hash)
     media.save()
+
+    if asset.preview is None or asset.preview == '':
+        asset.preview = url
+        asset.save()
 
     logger.warn(f'Media was save with {hash} for academy {asset.academy}')
 

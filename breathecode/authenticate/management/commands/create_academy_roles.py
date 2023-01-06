@@ -347,6 +347,10 @@ CAPABILITIES = [
         'slug': 'read_lead_gen_app',
         'description': 'Read lead generation apps'
     },
+    {
+        'slug': 'chatbot_message',
+        'description': 'Speak with a chatbot'
+    },
 ]
 
 ROLES = [
@@ -383,6 +387,7 @@ ROLES = [
             'read_mentorship_service',
             'read_mentorship_mentor',
             'read_freelancer_bill',
+            'read_keywordcluster',
         ],
     },
     {
@@ -407,6 +412,7 @@ ROLES = [
         'name':
         'Staff (Base)',
         'caps': [
+            'chatbot_message',
             'read_member',
             'read_syllabus',
             'read_student',
@@ -441,6 +447,7 @@ ROLES = [
         'Student',
         'caps': [
             'crud_assignment',
+            'chatbot_message',
             'read_syllabus',
             'read_assignment',
             'read_single_cohort',
@@ -539,6 +546,11 @@ def extend_roles(roles: list[RoleType]) -> None:
             'classroom_activity',
             'read_asset',
         ]
+    })
+    roles.append({
+        'slug': 'career_support_head',
+        'name': 'Career Support Head',
+        'caps': extend(roles, ['career_support', 'content_writer']) + []
     })
     roles.append({
         'slug':

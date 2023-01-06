@@ -130,6 +130,14 @@ class AcademyBillView(APIView):
     @capable_of('read_freelancer_bill')
     def get(self, request, academy_id, bill_id=None):
 
+        def get_freelancer_by_name_or_email(query_name, query):
+            for term in query_name.split():
+                query = query.filter(
+                    Q(freelancer__user__first_name__icontains=term)
+                    | Q(freelancer__user__last_name__icontains=term)
+                    | Q(freelancer__user__email__icontains=term))
+            return query
+
         if bill_id is not None:
             item = Bill.objects.filter(id=id).first()
             if item is None:
@@ -142,13 +150,17 @@ class AcademyBillView(APIView):
         items = Bill.objects.filter(academy__id=academy_id)
         lookup = {}
 
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = get_freelancer_by_name_or_email(like, items)
+
         freelancer = self.request.GET.get('freelancer', None)
         if freelancer is not None:
             lookup['freelancer__id'] = freelancer.id
 
         status = self.request.GET.get('status', '')
         if status != '':
-            lookup['status__in'] = status.lower().split(',')
+            lookup['status__in'] = status.split(',')
 
         user_id = self.request.GET.get('user', None)
         if user_id is not None:
@@ -167,6 +179,31 @@ class AcademyBillView(APIView):
 
     @capable_of('crud_freelancer_bill')
     def put(self, request, bill_id=None, academy_id=None):
+        # Bulk Action to Modify Status
+        if bill_id is None:
+            billStatus = request.data['status']
+            bills = request.data['bills']
+
+            if billStatus is None or billStatus == '':
+                raise ValidationException('Status not found in the body of the request', code=404)
+
+            if billStatus not in ['DUE', 'APPROVED', 'PAID', 'IGNORED']:
+                raise ValidationException(f'Status provided ({billStatus}) is not a valid status', code=404)
+
+            if bills is None or len(bills) == 0:
+                raise ValidationException('Bills not found in the body of the request', code=404)
+
+            for bill in bills:
+                item = Bill.objects.filter(id=bill, academy__id=academy_id).first()
+                if item is None:
+                    raise ValidationException('Bill not found for this academy', code=404)
+                item.status = billStatus
+                item.save()
+                bill = item
+
+            return Response(f"Bills' status successfully updated to {billStatus}",
+                            status=status.HTTP_201_CREATED)
+
         item = Bill.objects.filter(id=bill_id, academy__id=academy_id).first()
         if item is None:
             raise ValidationException('Bill not found for this academy', code=404)

@@ -1,7 +1,8 @@
 import pytz, logging, requests, re
 from django.contrib import admin, messages
 from django import forms
-from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill, SupportAgent, SupportChannel
+from .models import (MentorProfile, MentorshipService, MentorshipSession, MentorshipBill, SupportAgent,
+                     SupportChannel, ChatBot)
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
@@ -261,3 +262,11 @@ class MentorshipBillAdmin(admin.ModelAdmin):
         return format_html(
             "<a rel='noopener noreferrer' target='_blank' href='/v1/mentorship/academy/bill/{id}/html'>open</a>",
             id=obj.id)
+
+
+@admin.register(ChatBot)
+class ChatBotAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name', 'academy')
+    list_filter = ['academy']
+    # actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID', 'IGNORED'],
+    #                                                       name='status')

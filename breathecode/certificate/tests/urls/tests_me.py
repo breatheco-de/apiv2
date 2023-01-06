@@ -107,11 +107,11 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     """
-    🔽🔽🔽 GET with one UserSpecialty
+    🔽🔽🔽 GET with one UserSpecialty and status 'PENDING'
     """
 
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    def test__get__with_one_user_specialty(self):
+    def test__get__with_one_user_specialty_status_pending(self):
         permission = {'codename': 'get_my_certificate'}
         model = self.bc.database.create(user=1, permission=permission, user_specialty=1)
 
@@ -120,7 +120,33 @@ class CertificateTestSuite(CertificateTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [get_serializer(self, model.user_specialty, model.academy, model.specialty, model.user)]
+        expected = [get_serializer(self, model.user_specialty, model.academy, model.specialty, model.user)
+                    ] if model.user_specialty.status == 'PERSISTED' else []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    """
+    🔽🔽🔽 GET with one UserSpecialty and status 'PERSISTED'
+    """
+
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    def test__get__with_one_user_specialty_status_persisted(self):
+        permission = {'codename': 'get_my_certificate'}
+        model = self.bc.database.create(user=1,
+                                        permission=permission,
+                                        user_specialty={
+                                            'token': 'xyz1',
+                                            'status': 'PERSISTED'
+                                        })
+
+        self.bc.request.authenticate(model.user)
+        url = reverse_lazy('certificate:me')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [get_serializer(self, model.user_specialty, model.academy, model.specialty, model.user)
+                    ] if model.user_specialty.status == 'PERSISTED' else []
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -132,7 +158,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test__get__with_two_user_specialty(self):
         permission = {'codename': 'get_my_certificate'}
-        user_specialties = [{'token': 'xyz1'}, {'token': 'xyz2'}]
+        user_specialties = [{'token': 'xyz1', 'status': 'PERSISTED'}, {'token': 'xyz2'}]
         model = self.bc.database.create(user=1, permission=permission, user_specialty=user_specialties)
 
         self.bc.request.authenticate(model.user)
@@ -143,7 +169,7 @@ class CertificateTestSuite(CertificateTestCase):
         user_specialties = sorted(model.user_specialty, key=lambda x: x.created_at, reverse=True)
         expected = [
             get_serializer(self, user_specialty, model.academy, model.specialty, model.user)
-            for user_specialty in user_specialties
+            for user_specialty in user_specialties if user_specialty.status == 'PERSISTED'
         ]
 
         self.assertEqual(json, expected)
