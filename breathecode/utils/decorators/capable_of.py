@@ -1,5 +1,4 @@
 from rest_framework.exceptions import PermissionDenied
-from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import AnonymousUser
 
 from breathecode.utils.exceptions import ProgramingError
@@ -47,6 +46,7 @@ def capable_of(capability=None):
 
 
 def get_academy_from_capability(kwargs, request, capability):
+    from breathecode.authenticate.models import ProfileAcademy
 
     academy_id = None
 

@@ -1046,14 +1046,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'kickoff_date': timezone.now() + timedelta(days=1),
         }
         model = self.bc.database.create(authenticate=True,
-                                        cohort=True,
                                         profile_academy=True,
                                         capability='read_all_cohort',
                                         role='potato',
                                         syllabus=True,
                                         syllabus_version=True,
                                         syllabus_schedule=True,
-                                        cohort_kwargs=cohort_kwargs)
+                                        cohort=cohort_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1835,13 +1834,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         for field in many_fields:
             cohort_kwargs = {
-                'kickoff_date': datetime.now(),
-                'ending_date': datetime.now(),
+                'kickoff_date': timezone.now(),
+                'ending_date': timezone.now(),
                 'timezone': choice(['-1', '-2', '-3', '-4', '-5']),
             }
             model = self.bc.database.create(authenticate=True,
                                             profile_academy=True,
-                                            cohort_kwargs=cohort_kwargs,
+                                            cohort=cohort_kwargs,
                                             models=base)
 
             # reset because this call are coming from mixer
@@ -1870,24 +1869,24 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         for field in many_fields:
             cohort_kwargs = {
-                'kickoff_date': datetime.now(),
-                'ending_date': datetime.now(),
+                'kickoff_date': timezone.now(),
+                'ending_date': timezone.now(),
                 'timezone': choice(['-1', '-2', '-3', '-4', '-5']),
             }
             model1 = self.bc.database.create(authenticate=True,
                                              profile_academy=True,
                                              syllabus=True,
-                                             cohort_kwargs=cohort_kwargs,
+                                             cohort=cohort_kwargs,
                                              models=base)
 
             cohort_kwargs = {
-                'kickoff_date': datetime.now(),
-                'ending_date': datetime.now(),
+                'kickoff_date': timezone.now(),
+                'ending_date': timezone.now(),
                 'timezone': choice(['-1', '-2', '-3', '-4', '-5']),
             }
             model2 = self.bc.database.create(profile_academy=True,
                                              syllabus=True,
-                                             cohort_kwargs=cohort_kwargs,
+                                             cohort=cohort_kwargs,
                                              models=base)
 
             # reset because this call are coming from mixer
@@ -1907,8 +1906,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
             self.assertEqual(self.count_cohort_stage(model1['cohort'].id), 'DELETED')
             self.assertEqual(self.count_cohort_stage(model2['cohort'].id), 'DELETED')
-            self.assertEqual(cohort_saved.send.call_args_list,
-                             [call(instance=model1.cohort, sender=model1.cohort.__class__, created=False)])
+            self.assertEqual(cohort_saved.send.call_args_list, [
+                call(instance=model1.cohort, sender=model1.cohort.__class__, created=False),
+                call(instance=model2.cohort, sender=model2.cohort.__class__, created=False),
+            ])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
@@ -1931,7 +1932,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

@@ -2,11 +2,13 @@
 Test /academy/cohort
 """
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
 import urllib
 from django.urls.base import reverse_lazy
 import pytz
 from rest_framework import status
 from breathecode.events.actions import fix_datetime_weekday
+from django.utils import timezone
 
 from breathecode.utils.datetime_interger import DatetimeInteger
 from ..mixins.new_events_tests_case import EventTestCase
@@ -70,7 +72,8 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_one__cohort_never_ends(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0),
+            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0,
+                                    tzinfo=pytz.UTC),
             'never_ends': True,
         }
 
@@ -155,7 +158,9 @@ class AcademyCohortTestSuite(EventTestCase):
 
     def test_ical_cohorts__with_one__with_ending_date(self):
         device_id_kwargs = {'name': 'server'}
-        cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
+        cohort_kwargs = {
+            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0, tzinfo=pytz.UTC)
+        }
 
         # don't forget 🦾 2021 - 1010
         datetime_interger = 202109111330
@@ -207,9 +212,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{model.cohort.name}',
-            f'DTSTART;TZID=America/Bogota;VALUE=DATE-TIME:{starting_at}',
-            f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc}',
+            f'DTSTART;TZID=America/Bogota:{starting_at}',
+            f'DTEND;TZID=America/Bogota:{ending_at}',
+            f'DTSTAMP:{starting_at_utc}',
             f'UID:breathecode_cohort_time_slot_{model.cohort_time_slot.id}_{key}',
             f'RRULE:FREQ=WEEKLY;UNTIL=20601231T212600Z',
             f'LOCATION:{model.academy.name}',
@@ -227,7 +232,9 @@ class AcademyCohortTestSuite(EventTestCase):
 
     def test_ical_cohorts__with_one__not_recurrent(self):
         device_id_kwargs = {'name': 'server'}
-        cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
+        cohort_kwargs = {
+            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0, tzinfo=pytz.UTC)
+        }
 
         # don't forget 🦾 2021 - 1010
         datetime_interger = 202109111330
@@ -279,9 +286,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{model.cohort.name}',
-            f'DTSTART;TZID=America/Bogota;VALUE=DATE-TIME:{starting_at}',
-            f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc}',
+            f'DTSTART;TZID=America/Bogota:{starting_at}',
+            f'DTEND;TZID=America/Bogota:{ending_at}',
+            f'DTSTAMP:{starting_at_utc}',
             f'UID:breathecode_cohort_time_slot_{model.cohort_time_slot.id}_{key}',
             f'LOCATION:{model.academy.name}',
             'END:VEVENT',
@@ -442,7 +449,7 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
             'kickoff_date':
-            datetime.now() + timedelta(days=2),
+            timezone.now() + timedelta(days=2),
             'ending_date':
             datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0, tzinfo=pytz.timezone('UTC')),
         }
@@ -498,9 +505,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{model.cohort.name}',
-            f'DTSTART;TZID=America/Bogota;VALUE=DATE-TIME:{starting_at}',
-            f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc}',
+            f'DTSTART;TZID=America/Bogota:{starting_at}',
+            f'DTEND;TZID=America/Bogota:{ending_at}',
+            f'DTSTAMP:{starting_at_utc}',
             f'UID:breathecode_cohort_time_slot_{model.cohort_time_slot.id}_{key}',
             f'RRULE:FREQ=WEEKLY;UNTIL=20601231T212600Z',
             f'LOCATION:{model.academy.name}',
@@ -518,7 +525,9 @@ class AcademyCohortTestSuite(EventTestCase):
 
     def test_ical_cohorts__with_one__with_teacher(self):
         device_id_kwargs = {'name': 'server'}
-        cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
+        cohort_kwargs = {
+            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0, tzinfo=pytz.UTC)
+        }
         teacher_kwargs = {'role': 'TEACHER'}
 
         # don't forget 🦾 2021 - 1010
@@ -580,9 +589,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{model1.cohort.name}',
-            f'DTSTART;TZID=America/Bogota;VALUE=DATE-TIME:{starting_at}',
-            f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc}',
+            f'DTSTART;TZID=America/Bogota:{starting_at}',
+            f'DTEND;TZID=America/Bogota:{ending_at}',
+            f'DTSTAMP:{starting_at_utc}',
             f'UID:breathecode_cohort_time_slot_{model1.cohort_time_slot.id}_{key}',
             f'RRULE:FREQ=WEEKLY;UNTIL=20601231T212600Z',
             f'LOCATION:{model1.academy.name}',
@@ -602,7 +611,9 @@ class AcademyCohortTestSuite(EventTestCase):
 
     def test_ical_cohort__with_two__with_teacher(self):
         device_id_kwargs = {'name': 'server'}
-        cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
+        cohort_kwargs = {
+            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0, tzinfo=pytz.UTC)
+        }
         teacher_kwargs = {'role': 'TEACHER'}
 
         # don't forget 🦾 2021 - 1010
@@ -690,9 +701,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{model1.cohort.name}',
-            f'DTSTART;TZID=America/Bogota;VALUE=DATE-TIME:{starting_at1}',
-            f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at1}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc1}',
+            f'DTSTART;TZID=America/Bogota:{starting_at1}',
+            f'DTEND;TZID=America/Bogota:{ending_at1}',
+            f'DTSTAMP:{starting_at_utc1}',
             f'UID:breathecode_cohort_time_slot_{model1.cohort_time_slot.id}_{key}',
             f'RRULE:FREQ=WEEKLY;UNTIL=20601231T212600Z',
             f'LOCATION:{model1.academy.name}',
@@ -702,9 +713,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{model3.cohort.name}',
-            f'DTSTART;TZID=America/Bogota;VALUE=DATE-TIME:{starting_at3}',
-            f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at3}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc3}',
+            f'DTSTART;TZID=America/Bogota:{starting_at3}',
+            f'DTEND;TZID=America/Bogota:{ending_at3}',
+            f'DTSTAMP:{starting_at_utc3}',
             f'UID:breathecode_cohort_time_slot_{model3.cohort_time_slot.id}_{key}',
             f'RRULE:FREQ=WEEKLY;UNTIL=20601231T212600Z',
             f'LOCATION:{model3.academy.name}',
@@ -725,7 +736,8 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohort__with_two__with_teacher__cohort_with_meeting_url(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0),
+            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0,
+                                    tzinfo=pytz.UTC),
             'online_meeting_url': self.bc.fake.url(),
         }
         teacher_kwargs = {'role': 'TEACHER'}
@@ -815,9 +827,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{model1.cohort.name}',
-            f'DTSTART;TZID=America/Bogota;VALUE=DATE-TIME:{starting_at1}',
-            f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at1}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc1}',
+            f'DTSTART;TZID=America/Bogota:{starting_at1}',
+            f'DTEND;TZID=America/Bogota:{ending_at1}',
+            f'DTSTAMP:{starting_at_utc1}',
             f'UID:breathecode_cohort_time_slot_{model1.cohort_time_slot.id}_{key}',
             f'RRULE:FREQ=WEEKLY;UNTIL=20601231T212600Z',
             f'LOCATION:{model1.cohort.online_meeting_url}',
@@ -827,9 +839,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{model3.cohort.name}',
-            f'DTSTART;TZID=America/Bogota;VALUE=DATE-TIME:{starting_at3}',
-            f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at3}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc3}',
+            f'DTSTART;TZID=America/Bogota:{starting_at3}',
+            f'DTEND;TZID=America/Bogota:{ending_at3}',
+            f'DTSTAMP:{starting_at_utc3}',
             f'UID:breathecode_cohort_time_slot_{model3.cohort_time_slot.id}_{key}',
             f'RRULE:FREQ=WEEKLY;UNTIL=20601231T212600Z',
             f'LOCATION:{model3.cohort.online_meeting_url}',

@@ -311,10 +311,12 @@ class TaskMeAttachmentView(APIView):
         if not allowed:
             # request user belongs to the same academy as the cohort
             allowed = item.cohort.academy.id == int(academy_id)
-        
+
         if not allowed:
-            raise PermissionDenied('Attachments can only be reviewed by their authors or the academy staff with read_assignment capability')
-            
+            raise PermissionDenied(
+                'Attachments can only be reviewed by their authors or the academy staff with read_assignment capability'
+            )
+
         serializer = TaskAttachmentSerializer(item.attachments.all(), many=True)
         return Response(serializer.data)
 

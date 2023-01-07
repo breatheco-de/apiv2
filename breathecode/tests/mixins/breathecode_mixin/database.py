@@ -16,6 +16,8 @@ from django.db.models.fields.related_descriptors import (ReverseManyToOneDescrip
 
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
+from django.db import reset_queries
+from django.db import connection
 
 __all__ = ['Database']
 
@@ -26,10 +28,17 @@ class Database:
     _cache: dict[str, Model] = {}
     _parent: APITestCase
     _bc: interfaces.BreathecodeInterface
+    how_many = 0
 
     def __init__(self, parent, bc: interfaces.BreathecodeInterface) -> None:
         self._parent = parent
         self._bc = bc
+
+    def reset_queries(self):
+        reset_queries()
+
+    def get_queries(self):
+        return connection.queries
 
     @classmethod
     def get_model(cls, path: str) -> Model:
@@ -226,14 +235,24 @@ class Database:
         attr = getattr(model, key)
         meta = vars(attr)['field'].related_model._meta
         model = vars(attr)['field'].related_model
+        blank = attr.field.blank
+        null = attr.field.null
 
-        return {
+        result = {
             'field': key,
+            'blank': blank,
+            'null': null,
             'app_name': meta.app_label,
             'model_name': meta.object_name,
             'handler': attr,
             'model': model,
         }
+
+        if hasattr(attr, 'through'):
+            result['custom_through'] = '_' not in attr.through.__name__
+            result['through_fields'] = attr.rel.through_fields
+
+        return result
 
     @cache
     def _get_models_descriptors(self) -> list[Model]:
@@ -274,37 +293,105 @@ class Database:
                 if app_key not in values:
                     values[app_key] = set()
 
+                primary_values = values[app_key]['primary'] if 'primary' in values[app_key] else []
+                secondary_values = values[app_key]['secondary'] if 'secondary' in values[app_key] else []
+
                 values[app_key] = {
-                    *values[app_key],
-                    *[x['app_name'] for x in descriptor['to_one'] if x['app_name'] != app_key],
-                    *[x['app_name'] for x in descriptor['to_many'] if x['app_name'] != app_key]
+                    'primary': {
+                        *primary_values, *[
+                            x['app_name']
+                            for x in descriptor['to_one'] if x['app_name'] != app_key and x['null'] == False
+                        ], *[
+                            x['app_name']
+                            for x in descriptor['to_many'] if x['app_name'] != app_key and x['null'] == False
+                        ]
+                    },
+                    'secondary': {
+                        *secondary_values, *[
+                            x['app_name']
+                            for x in descriptor['to_one'] if x['app_name'] != app_key and x['null'] == True
+                        ], *[
+                            x['app_name']
+                            for x in descriptor['to_many'] if x['app_name'] != app_key and x['null'] == True
+                        ]
+                    },
                 }
 
         return values
 
-    def _sort_models_handlers(self, values=None, dependencies=None) -> list[Model]:
-        values = values or []
-        dependencies = dependencies or self._get_models_dependencies()
-        found = [x for x in dependencies if len(dependencies[x]) == 0]
-        values.append(found)
+    def _sort_models_handlers(self,
+                              dependencies_resolved=None,
+                              primary_values=None,
+                              secondary_values=None,
+                              primary_dependencies=None,
+                              secondary_dependencies=None,
+                              consume_primary=True) -> list[Model]:
 
-        for x in found:
-            del dependencies[x]
+        dependencies_resolved = dependencies_resolved or set()
+        primary_values = primary_values or []
+        secondary_values = secondary_values or []
 
-            for dependency in dependencies:
-                if x in dependencies[dependency]:
-                    dependencies[dependency].remove(x)
+        if not primary_dependencies and not secondary_dependencies:
+            dependencies = self._get_models_dependencies()
 
-        if dependencies:
-            return self._sort_models_handlers(values, dependencies)
+            primary_dependencies = {}
+            for x in dependencies:
+                primary_dependencies[x] = dependencies[x]['primary']
 
-        return values
+            secondary_dependencies = {}
+            for x in dependencies:
+                secondary_dependencies[x] = dependencies[x]['secondary']
+
+        for dependency in dependencies_resolved:
+            for key in primary_dependencies:
+
+                if dependency in primary_dependencies[key]:
+                    primary_dependencies[key].remove(dependency)
+
+        primary_found = [
+            x for x in [y for y in primary_dependencies if y not in dependencies_resolved]
+            if len(primary_dependencies[x]) == 0
+        ]
+
+        for x in primary_found:
+            dependencies_resolved.add(x)
+
+        secondary_found = [
+            x for x in [y for y in secondary_dependencies if y not in dependencies_resolved]
+            if len(secondary_dependencies[x]) == 0
+        ]
+
+        if consume_primary and primary_found:
+            primary_values.append(primary_found)
+
+        elif not consume_primary and secondary_found:
+            secondary_values.append(secondary_found)
+
+        for x in primary_found:
+            del primary_dependencies[x]
+
+            for dependency in primary_dependencies:
+                if x in primary_dependencies[dependency]:
+                    primary_dependencies[dependency].remove(x)
+
+        if primary_dependencies:
+            return self._sort_models_handlers(dependencies_resolved,
+                                              primary_values,
+                                              secondary_values,
+                                              primary_dependencies,
+                                              secondary_dependencies,
+                                              consume_primary=True)
+
+        if secondary_dependencies:
+            return primary_values, [x for x in secondary_dependencies if len(secondary_dependencies[x])]
+
+        return primary_values, secondary_values
 
     @cache
     def _get_models_handlers(self) -> list[Model]:
         arguments = {}
         arguments_banned = set()
-        order = self._sort_models_handlers()
+        order, deferred = self._sort_models_handlers()
         descriptors = self._get_models_descriptors()
 
         def manage_model(models, descriptor, *args, **kwargs):
@@ -331,12 +418,66 @@ class Database:
                     if related_model_field_name in models:
                         kargs[x['field']] = just_one(models[related_model_field_name])
 
-                for x in descriptor['to_many']:
+                without_through = [x for x in descriptor['to_many'] if x['custom_through'] == False]
+                for x in without_through:
                     related_model_field_name = self.camel_case_to_snake_case(x['model_name'])
+
                     if related_model_field_name in models:
                         kargs[x['field']] = get_list(models[related_model_field_name])
 
                 models[model_field_name] = create_models(arg, f'{app_name}.{model_name}', **kargs)
+
+                with_through = [
+                    x for x in descriptor['to_many']
+                    if x['custom_through'] == True and not x['field'].endswith('_set')
+                ]
+                for x in with_through:
+                    related_model_field_name = self.camel_case_to_snake_case(x['model_name'])
+                    if related_model_field_name in models:
+
+                        for item in get_list(models[related_model_field_name]):
+                            through_current = x['through_fields'][0]
+                            through_related = x['through_fields'][1]
+                            through_args = {through_current: models[model_field_name], through_related: item}
+
+                            x['handler'].through.objects.create(**through_args)
+
+            return models
+
+        def link_deferred_model(models, descriptor, *args, **kwargs):
+            model_field_name = self.camel_case_to_snake_case(descriptor['meta']['model_name'])
+            app_name = descriptor['meta']['app_name']
+            model_name = descriptor['meta']['model_name']
+
+            if model_field_name in kwargs and f'{app_name}__{model_field_name}' in kwargs:
+                raise Exception(f'Exists many apps with the same model name `{model_name}`, please use '
+                                f'`{app_name}__{model_field_name}` instead of `{model_field_name}`')
+
+            if model_field_name in models:
+                items = models[model_field_name] if isinstance(models[model_field_name],
+                                                               list) else [models[model_field_name]]
+                for m in items:
+
+                    for x in descriptor['to_one']:
+                        related_model_field_name = self.camel_case_to_snake_case(x['model_name'])
+                        model_exists = related_model_field_name in models
+                        is_list = isinstance(models[model_field_name], list) if model_exists else False
+                        if model_exists and not is_list and not getattr(models[model_field_name], x['field']):
+                            setattr(m, x['field'], just_one(models[related_model_field_name]))
+
+                        if model_exists and is_list:
+                            for y in models[model_field_name]:
+                                if getattr(y, x['field']):
+                                    setattr(m, x['field'], just_one(models[related_model_field_name]))
+
+                    for x in descriptor['to_many']:
+                        related_model_field_name = self.camel_case_to_snake_case(x['model_name'])
+                        if related_model_field_name in models and not getattr(
+                                models[model_field_name], x['field']):
+                            setattr(m, x['field'], get_list(models[related_model_field_name]))
+
+                    setattr(m, '__mixer__', None)
+                    m.save()
 
             return models
 
@@ -359,11 +500,31 @@ class Database:
 
                         arguments[f'{app_key}__{attr}'] = ...
 
+            for generation_round in order:
+                for app_key in generation_round:
+                    for descriptor_key in descriptors[app_key]:
+                        descriptor = descriptors[app_key][descriptor_key]
+                        attr = self.camel_case_to_snake_case(descriptor['meta']['model_name'])
+
+                        models = link_deferred_model(models, descriptor, *args, **kwargs)
+
+                        if app_key not in arguments:
+                            arguments[app_key] = {}
+                            arguments[attr] = ...
+
+                        else:
+                            arguments_banned.add(attr)
+
+                        arguments[f'{app_key}__{attr}'] = ...
+
             return AttrDict(**models)
 
         return wrapper
 
     def create_v2(self, *args, **kwargs) -> dict[str, Model | list[Model]]:
+        """
+        Unstable version of mixin that create all models, do not use this.
+        """
         models = self._get_models_handlers()(*args, **kwargs)
         return models
 

@@ -176,7 +176,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         import logging, os
 
         answer_kwargs = {'score': 7}
-        model = self.generate_models(answer=answer_kwargs, survey=1, academy=1, user=1)
+        model = self.generate_models(answer=answer_kwargs, survey=1, academy=1, user=1, cohort=1)
         survey_db = self.model_to_dict(model, 'survey')
 
         process_answer_received.delay(1)

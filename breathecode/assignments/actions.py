@@ -52,6 +52,7 @@ def deliver_task(github_url, live_url=None, task_id=None, task=None):
     return task
 
 
+#FIXME: this maybe is a deadcode
 def sync_student_tasks(user, cohort=None):
 
     if cohort is None:
@@ -105,7 +106,6 @@ def sync_student_tasks(user, cohort=None):
             task.revision_status = revision_status[str(_task['revision_status'])]
             task.description = _task['description']
             task.cohort = cohort
-            task.save()
             task.save()
         syncronized.append(task)
     logger.debug(f'Added {len(syncronized)} tasks for student {user.email}')

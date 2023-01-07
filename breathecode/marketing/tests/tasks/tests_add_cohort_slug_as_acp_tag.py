@@ -97,6 +97,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
         model = self.generate_models(academy=True,
+                                     cohort=1,
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
@@ -130,6 +131,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
         model = self.generate_models(academy=True,
+                                     cohort=1,
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
@@ -163,7 +165,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs,
                                      tag_kwargs=tag_kwargs,
-                                     cohort_kwargs=cohort_kwargs)
+                                     cohort=cohort_kwargs)
 
         add_cohort_slug_as_acp_tag.delay(1, 1)
 
@@ -188,6 +190,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
         model = self.generate_models(academy=True,
+                                     cohort=1,
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 

@@ -23,6 +23,7 @@ if len(pending_leads) > 0:
         status='CRITICAL',
         title=f'{str(len(pending_leads))} leads from {academy.name} could not be added to CRM',
         slug='pending-academy-leads',
-        btn_url=ADMIN_URL + '/growth/leads?location=' + academy.slug + '&limit=10&offset=0&storage_status=PENDING')
+        btn_url=ADMIN_URL + '/growth/leads?location=' + academy.slug +
+        '&limit=10&offset=0&storage_status=PENDING')
 
 print(f'No pending leads for {academy.name}')

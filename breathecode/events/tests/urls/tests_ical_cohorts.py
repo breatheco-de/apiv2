@@ -1,14 +1,17 @@
 """
 Test /academy/cohort
 """
+from unittest.mock import MagicMock, patch
 import urllib
 from datetime import timedelta
 from dateutil.tz import gettz
 from django.utils import timezone
 from datetime import datetime
 from django.urls.base import reverse_lazy
+import pytz
 from rest_framework import status
 from breathecode.events.actions import fix_datetime_weekday
+from django.utils import timezone
 
 from breathecode.utils import DatetimeInteger
 from ..mixins.new_events_tests_case import EventTestCase
@@ -119,9 +122,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -250,9 +253,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -266,7 +269,7 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_one__with_teacher__with_ending_date(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
-        cohort_kwargs = {'ending_date': datetime.now()}
+        cohort_kwargs = {'ending_date': timezone.now()}
         device_id_kwargs = {'name': 'server'}
         model = self.generate_models(academy=True,
                                      cohort=True,
@@ -298,9 +301,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
             self.line_limit(
@@ -350,9 +353,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort1.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort1.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort1.created_at)}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
             'END:VEVENT',
@@ -361,9 +364,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort2.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort1.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort2.created_at)}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
             'END:VEVENT',
@@ -377,7 +380,7 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_two__with_teacher__with_ending_date(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
-        cohort_kwargs = {'ending_date': datetime.now()}
+        cohort_kwargs = {'ending_date': timezone.now()}
         device_id_kwargs = {'name': 'server'}
         base = self.generate_models(academy=True,
                                     device_id=True,
@@ -425,9 +428,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort1.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort1.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort1.created_at)}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
             self.line_limit(
@@ -438,9 +441,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort2.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort2.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort2.created_at)}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
             self.line_limit(
@@ -456,7 +459,7 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_id(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
-        cohort_kwargs = {'ending_date': datetime.now()}
+        cohort_kwargs = {'ending_date': timezone.now()}
         device_id_kwargs = {'name': 'server'}
         base = self.generate_models(device_id=True, device_id_kwargs=device_id_kwargs)
         base1 = self.generate_models(academy=True, skip_cohort=True, models=base)
@@ -527,9 +530,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort1.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort1.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort1.created_at)}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
             self.line_limit(
@@ -540,9 +543,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort2.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort2.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort2.created_at)}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
             self.line_limit(
@@ -553,9 +556,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort3.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort3.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort3.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort3.created_at)}',
             f'UID:breathecode_cohort_{cohort3.id}_{key}',
             f'LOCATION:{academy3.name}',
             self.line_limit(
@@ -566,9 +569,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort4.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort4.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort4.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort4.created_at)}',
             f'UID:breathecode_cohort_{cohort4.id}_{key}',
             f'LOCATION:{academy4.name}',
             self.line_limit(
@@ -584,7 +587,7 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_slug(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
-        cohort_kwargs = {'ending_date': datetime.now()}
+        cohort_kwargs = {'ending_date': timezone.now()}
 
         device_id_kwargs = {'name': 'server'}
         base = self.generate_models(device_id=True, device_id_kwargs=device_id_kwargs)
@@ -658,9 +661,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort1.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort1.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort1.created_at)}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
             self.line_limit(
@@ -671,9 +674,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort2.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort2.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort2.created_at)}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
             self.line_limit(
@@ -684,9 +687,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort3.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort3.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort3.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort3.created_at)}',
             f'UID:breathecode_cohort_{cohort3.id}_{key}',
             f'LOCATION:{academy3.name}',
             self.line_limit(
@@ -697,9 +700,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort4.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort4.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort4.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort4.created_at)}',
             f'UID:breathecode_cohort_{cohort4.id}_{key}',
             f'LOCATION:{academy4.name}',
             self.line_limit(
@@ -720,8 +723,8 @@ class AcademyCohortTestSuite(EventTestCase):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'kickoff_date': datetime(year=2029, month=1, day=10),
-            'ending_date': datetime(year=2030, month=10, day=10),
+            'kickoff_date': datetime(year=2029, month=1, day=10, tzinfo=pytz.timezone('UTC')),
+            'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         }
 
         starting_datetime_interger = 202810080030
@@ -791,9 +794,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # First event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name} - First day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{starting_at_fixed}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{ending_at_fixed}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
+            f'DTSTART;TZID=Europe/Madrid:{starting_at_fixed}',
+            f'DTEND;TZID=Europe/Madrid:{ending_at_fixed}',
+            f'DTSTAMP:{self.datetime_to_ical(timeslot.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_first_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -801,9 +804,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -811,9 +814,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Last event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name} - Last day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_starting_at, utc=False)}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{self.datetime_to_ical(last_timeslot_ending_at, utc=False)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
+            f'DTSTART;TZID=Europe/Madrid:{self.datetime_to_ical(last_timeslot_starting_at, utc=False)}',
+            f'DTEND;TZID=Europe/Madrid:{self.datetime_to_ical(last_timeslot_ending_at, utc=False)}',
+            f'DTSTAMP:{self.datetime_to_ical(timeslot.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_last_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -828,8 +831,8 @@ class AcademyCohortTestSuite(EventTestCase):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'kickoff_date': datetime(year=2020, month=10, day=10),
-            'ending_date': datetime(year=2030, month=10, day=10),
+            'kickoff_date': datetime(year=2020, month=10, day=10, tzinfo=pytz.timezone('UTC')),
+            'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         }
 
         starting_datetime_interger = 202510080030
@@ -882,9 +885,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # First event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name} - First day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
+            f'DTSTART;TZID=Europe/Madrid:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{first_timeslot_ending_at}',
+            f'DTSTAMP:{self.datetime_to_ical(timeslot.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_first_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -892,9 +895,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
+            f'DTSTART:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND:{self.datetime_to_ical(cohort.ending_date)}',
+            f'DTSTAMP:{self.datetime_to_ical(cohort.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -902,9 +905,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Last event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name} - Last day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(timeslot.created_at)}',
+            f'DTSTART;TZID=Europe/Madrid:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{last_timeslot_ending_at}',
+            f'DTSTAMP:{self.datetime_to_ical(timeslot.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_last_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -919,8 +922,8 @@ class AcademyCohortTestSuite(EventTestCase):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'kickoff_date': datetime(year=2020, month=10, day=10),
-            'ending_date': datetime(year=2030, month=10, day=10),
+            'kickoff_date': datetime(year=2020, month=10, day=10, tzinfo=pytz.timezone('UTC')),
+            'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         }
 
         first_cohort_time_slot_kwargs = {
@@ -1021,9 +1024,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # First event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name} - First day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'DTSTART;TZID=Europe/Madrid:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{first_timeslot_ending_at}',
+            f'DTSTAMP:{first_timeslot_starting_at_utc}',
             f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -1031,9 +1034,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
-            f'DTSTART;VALUE=DATE-TIME:{starting_at1}',
-            f'DTEND;VALUE=DATE-TIME:{ending_at1}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc1}',
+            f'DTSTART:{starting_at1}',
+            f'DTEND:{ending_at1}',
+            f'DTSTAMP:{starting_at_utc1}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -1041,9 +1044,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Last event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name} - Last day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'DTSTART;TZID=Europe/Madrid:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{last_timeslot_ending_at}',
+            f'DTSTAMP:{last_timeslot_starting_at_utc}',
             f'UID:breathecode_cohort_{cohort1.id}_last_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -1052,9 +1055,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # First event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name} - First day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'DTSTART;TZID=Europe/Madrid:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{first_timeslot_ending_at}',
+            f'DTSTAMP:{first_timeslot_starting_at_utc}',
             f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -1062,9 +1065,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
-            f'DTSTART;VALUE=DATE-TIME:{starting_at2}',
-            f'DTEND;VALUE=DATE-TIME:{ending_at2}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc2}',
+            f'DTSTART:{starting_at2}',
+            f'DTEND:{ending_at2}',
+            f'DTSTAMP:{starting_at_utc2}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -1072,9 +1075,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Last event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name} - Last day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'DTSTART;TZID=Europe/Madrid:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{last_timeslot_ending_at}',
+            f'DTSTAMP:{last_timeslot_starting_at_utc}',
             f'UID:breathecode_cohort_{cohort2.id}_last_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -1090,8 +1093,8 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = [{
             'online_meeting_url': self.bc.fake.url(),
-            'kickoff_date': datetime(year=2020, month=10, day=10),
-            'ending_date': datetime(year=2030, month=10, day=10),
+            'kickoff_date': datetime(year=2020, month=10, day=10, tzinfo=pytz.timezone('UTC')),
+            'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         } for _ in range(0, 2)]
 
         first_cohort_time_slot_kwargs = {
@@ -1191,9 +1194,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # First event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name} - First day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'DTSTART;TZID=Europe/Madrid:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{first_timeslot_ending_at}',
+            f'DTSTAMP:{first_timeslot_starting_at_utc}',
             f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
             f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
             'END:VEVENT',
@@ -1201,9 +1204,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
-            f'DTSTART;VALUE=DATE-TIME:{starting_at1}',
-            f'DTEND;VALUE=DATE-TIME:{ending_at1}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc1}',
+            f'DTSTART:{starting_at1}',
+            f'DTEND:{ending_at1}',
+            f'DTSTAMP:{starting_at_utc1}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
             'END:VEVENT',
@@ -1211,9 +1214,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Last event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name} - Last day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'DTSTART;TZID=Europe/Madrid:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{last_timeslot_ending_at}',
+            f'DTSTAMP:{last_timeslot_starting_at_utc}',
             f'UID:breathecode_cohort_{cohort1.id}_last_{key}',
             f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
             'END:VEVENT',
@@ -1222,9 +1225,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # First event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name} - First day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{first_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{first_timeslot_starting_at_utc}',
+            f'DTSTART;TZID=Europe/Madrid:{first_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{first_timeslot_ending_at}',
+            f'DTSTAMP:{first_timeslot_starting_at_utc}',
             f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
             f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
             'END:VEVENT',
@@ -1232,9 +1235,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
-            f'DTSTART;VALUE=DATE-TIME:{starting_at2}',
-            f'DTEND;VALUE=DATE-TIME:{ending_at2}',
-            f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc2}',
+            f'DTSTART:{starting_at2}',
+            f'DTEND:{ending_at2}',
+            f'DTSTAMP:{starting_at_utc2}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
             'END:VEVENT',
@@ -1242,9 +1245,9 @@ class AcademyCohortTestSuite(EventTestCase):
             # Last event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name} - Last day',
-            f'DTSTART;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_starting_at}',
-            f'DTEND;TZID=Europe/Madrid;VALUE=DATE-TIME:{last_timeslot_ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{last_timeslot_starting_at_utc}',
+            f'DTSTART;TZID=Europe/Madrid:{last_timeslot_starting_at}',
+            f'DTEND;TZID=Europe/Madrid:{last_timeslot_ending_at}',
+            f'DTSTAMP:{last_timeslot_starting_at_utc}',
             f'UID:breathecode_cohort_{cohort2.id}_last_{key}',
             f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
             'END:VEVENT',

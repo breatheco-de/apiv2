@@ -512,11 +512,67 @@ class AcademyAssetActionView(APIView):
 
         except Exception as e:
             logger.exception(e)
-            pass
+            raise ValidationException('; '.join(
+                [k.capitalize() + ': ' + ''.join(v) for k, v in e.message_dict.items()]))
 
         asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_asset')
+    def post(self, request, action_slug, academy_id=None):
+        if action_slug not in ['test', 'pull', 'push', 'analyze_seo']:
+            raise ValidationException(f'Invalid action {action_slug}')
+
+        if not request.data['assets']:
+            raise ValidationException(f'Assets not found in the body of the request.')
+
+        assets = request.data['assets']
+
+        if len(assets) < 1:
+            raise ValidationException(f'The list of Assets is empty.')
+
+        invalid_assets = []
+
+        for asset_slug in assets:
+            asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
+            if asset is None:
+                invalid_assets.append(asset_slug)
+                continue
+            try:
+                if action_slug == 'test':
+                    test_asset(asset)
+                elif action_slug == 'clean':
+                    clean_asset_readme(asset)
+                elif action_slug == 'pull':
+                    override_meta = False
+                    if request.data and 'override_meta' in request.data:
+                        override_meta = request.data['override_meta']
+                    pull_from_github(asset.slug, override_meta=override_meta)
+                elif action_slug == 'push':
+                    if asset.asset_type not in ['ARTICLE', 'LESSON']:
+                        raise ValidationException(
+                            f'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
+                        )
+
+                    push_to_github(asset.slug, author=request.user)
+                elif action_slug == 'analyze_seo':
+                    report = SEOAnalyzer(asset)
+                    report.start()
+
+            except Exception as e:
+                logger.exception(e)
+                invalid_assets.append(asset_slug)
+                pass
+
+        pulled_assets = list(set(assets).difference(set(invalid_assets)))
+
+        if len(pulled_assets) < 1:
+            raise ValidationException(f'Failed to {action_slug} for these assets: {invalid_assets}')
+
+        return Response(
+            f'These asset readmes were pulled correctly from GitHub: {pulled_assets}. {f"These assets {invalid_assets} do not exist for this academy {academy_id}" if len(invalid_assets) > 0 else ""}',
+            status=status.HTTP_200_OK)
 
 
 # Create your views here.
@@ -682,48 +738,72 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_asset')
     def put(self, request, asset_slug=None, academy_id=None):
-        if asset_slug is None:
-            raise ValidationException('Missing asset_slug')
 
-        asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
-        if asset is None:
-            raise ValidationException(f'This asset {asset_slug} does not exist for this academy {academy_id}',
-                                      404)
+        many = isinstance(request.data, list)
+        if not many:
+            if asset_slug is None:
+                raise ValidationException('Missing asset_slug')
 
-        data = {
-            **request.data,
-        }
-
-        if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
-                data['technologies'][0], str):
-            technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
-                'pk', flat=True)
-            delta = len(data['technologies']) - len(technology_ids)
-            if delta != 0:
+            asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
+            if asset is None:
                 raise ValidationException(
-                    f'{delta} of the assigned technologies for this lesson are not found')
+                    f'This asset {asset_slug} does not exist for this academy {academy_id}', 404)
 
-            data['technologies'] = technology_ids
+            data = {
+                **request.data,
+            }
 
-        if 'seo_keywords' in data and len(data['seo_keywords']) > 0:
-            if isinstance(data['seo_keywords'][0], str):
-                data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list(
+            if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
+                    data['technologies'][0], str):
+                technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
                     'pk', flat=True)
+                delta = len(data['technologies']) - len(technology_ids)
+                if delta != 0:
+                    raise ValidationException(
+                        f'{delta} of the assigned technologies for this lesson are not found')
 
-        if 'all_translations' in data and len(data['all_translations']) > 0 and isinstance(
-                data['all_translations'][0], str):
-            data['all_translations'] = Asset.objects.filter(slug__in=data['all_translations']).values_list(
-                'pk', flat=True)
+                data['technologies'] = technology_ids
+
+            if 'seo_keywords' in data and len(data['seo_keywords']) > 0:
+                if isinstance(data['seo_keywords'][0], str):
+                    data['seo_keywords'] = AssetKeyword.objects.filter(
+                        slug__in=data['seo_keywords']).values_list('pk', flat=True)
+
+            if 'all_translations' in data and len(data['all_translations']) > 0 and isinstance(
+                    data['all_translations'][0], str):
+                data['all_translations'] = Asset.objects.filter(
+                    slug__in=data['all_translations']).values_list('pk', flat=True)
+
+        else:
+            data = request.data
+            asset = []
+            index = -1
+            for x in request.data:
+                index = index + 1
+
+                if 'id' not in x:
+                    raise ValidationException('Cannot determine asset in '
+                                              f'index {index}',
+                                              slug='without-id')
+
+                instance = Asset.objects.filter(id=x['id'], academy__id=academy_id).first()
+
+                if not instance:
+                    raise ValidationException(f'Asset({x["id"]}) does not exist on this academy',
+                                              code=404,
+                                              slug='not-found')
+                asset.append(instance)
 
         serializer = AssetPUTSerializer(asset,
                                         data=data,
                                         context={
                                             'request': request,
                                             'academy_id': academy_id
-                                        })
+                                        },
+                                        many=many)
         if serializer.is_valid():
             serializer.save()
-            serializer = AcademyAssetSerializer(asset, many=False)
+            serializer = AcademyAssetSerializer(asset, many=many)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
