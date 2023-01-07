@@ -80,6 +80,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
                 'timezone': model['cohort'].timezone,
+                'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -200,6 +201,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].online_meeting_url,
                 'timezone':
                 model['cohort'].timezone,
+                'is_hidden_on_prework':
+                model['cohort'].is_hidden_on_prework,
                 'timeslots': [{
                     'ending_at':
                     self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
@@ -242,6 +245,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                         'name': model['cohort'].academy.city.name,
                     },
                     'logo_url': model['cohort'].academy.logo_url,
+                    'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
                 },
             } for model in models]
 
@@ -322,6 +326,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].online_meeting_url,
                 'timezone':
                 model['cohort'].timezone,
+                'is_hidden_on_prework':
+                model['cohort'].is_hidden_on_prework,
                 'timeslots': [{
                     'ending_at':
                     self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
@@ -364,6 +370,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                         'name': model['cohort'].academy.city.name,
                     },
                     'logo_url': model['cohort'].academy.logo_url,
+                    'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
                 },
             } for model in models]
 

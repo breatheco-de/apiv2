@@ -15,6 +15,7 @@ def get_serializer(academy, country, city, data={}):
         'street_address': academy.street_address,
         'country': country.code,
         'city': city.id,
+        'is_hidden_on_prework': academy.is_hidden_on_prework,
         **data,
     }
 
