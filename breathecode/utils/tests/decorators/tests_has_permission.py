@@ -5321,4 +5321,3 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(payments_signals.consume_service.send.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
-        assert 0
