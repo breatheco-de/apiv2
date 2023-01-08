@@ -134,7 +134,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
                      'parse':
                      'full'
                  },
-                 timeout=2)
+                 timeout=10)
         ]
 
         self.assertEqual(args_list, expected)
