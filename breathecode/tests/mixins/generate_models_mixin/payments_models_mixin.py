@@ -32,6 +32,7 @@ class PaymentsModelsMixin(ModelsMixin):
             plan_financing=False,
             service_item_feature=False,
             financing_option=False,
+            consumption_session=False,
             models={},
             **kwargs):
         """Generate models"""
@@ -148,7 +149,7 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['plan_translation'] = create_models(plan_translation, 'payments.PlanTranslation', **kargs)
 
-        if not 'consumable' in models and is_valid(consumable):
+        if not 'consumable' in models and (is_valid(consumable) or is_valid(consumption_session)):
             kargs = {}
 
             if 'service_item' in models:
@@ -164,6 +165,18 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['mentorship_service'] = just_one(models['mentorship_service'])
 
             models['consumable'] = create_models(consumable, 'payments.Consumable', **kargs)
+
+        if not 'consumption_session' in models and is_valid(consumption_session):
+            kargs = {}
+
+            if 'consumable' in models:
+                kargs['consumable'] = just_one(models['consumable'])
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            models['consumption_session'] = create_models(consumption_session, 'payments.ConsumptionSession',
+                                                          **kargs)
 
         if not 'bag' in models and (is_valid(bag) or is_valid(invoice)):
             kargs = {}

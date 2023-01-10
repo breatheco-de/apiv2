@@ -49,6 +49,7 @@ def get_serializer(cohort, syllabus, syllabus_version, data={}):
                 'name': cohort.academy.city.name,
             },
             'logo_url': cohort.academy.logo_url,
+            'is_hidden_on_prework': cohort.academy.is_hidden_on_prework
         },
         'schedule': None,
         'timeslots': [],

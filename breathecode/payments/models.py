@@ -384,27 +384,17 @@ class ConsumptionSession(models.Model):
     consumable = models.ForeignKey(Consumable, on_delete=models.CASCADE)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     eta = models.DateTimeField()
-    duration = models.DurationField()
+    duration = models.DurationField(blank=False, default=timedelta)
     how_many = models.FloatField(default=0)
     status = models.CharField(max_length=12, choices=CONSUMPTION_SESSION_STATUS, default=PENDING)
     was_discounted = models.BooleanField(default=False)
 
-    request = models.JSONField()
+    request = models.JSONField(default=dict, blank=True)
 
     # this should be used to get
     path = models.CharField(max_length=200, blank=True)
-    # related_info = models.CharField(max_length=255, default=None, blank=True, null=True)
     related_id = models.IntegerField(max_length=200, default=None, blank=True, null=True)
     related_slug = models.CharField(max_length=200, default=None, blank=True, null=True)
-
-    # created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    # def clean(self) -> None:
-    #     if not self.related_id and not self.related_slug:
-    #         raise forms.ValidationError('You must provide a related_id or a related_slug')
-
-    #     if self.related_id and self.related_slug:
-    #         raise forms.ValidationError('You must provide a related_id or a related_slug, not both')
 
     def save(self, *args, **kwargs):
         self.full_clean()
