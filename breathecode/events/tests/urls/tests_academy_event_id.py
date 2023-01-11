@@ -463,6 +463,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'currency': 'USD',
             'tags': '',
             'slug': None,
+            'live_stream_url': None,
             **data,
         }
 
@@ -660,6 +661,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'sync_with_eventbrite': False,
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
+            'live_stream_url': None,
             **data,
         }
 
@@ -748,6 +750,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'sync_with_eventbrite': False,
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
+            'live_stream_url': None,
             **data,
         }
 
