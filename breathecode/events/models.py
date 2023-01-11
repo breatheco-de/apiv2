@@ -1,7 +1,7 @@
 import os
 from django.db import models
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy, Cohort, Syllabus
+from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Syllabus
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
 
@@ -272,3 +272,18 @@ class EventbriteWebhook(models.Model):
 
     def __str__(self):
         return f'Action {self.action} {self.status} => {self.api_url}'
+
+
+class LiveClass(models.Model):
+    cohort_time_slot = models.ForeignKey(CohortTimeSlot, on_delete=models.CASCADE)
+    log = models.JSONField(default=dict)
+    remote_meeting_url = models.URLField()
+
+    started_at = models.DateTimeField(default=None, blank=True, null=True)
+    ended_at = models.DateTimeField(default=None, blank=True, null=True)
+
+    starting_at = models.DateTimeField()
+    ending_at = models.DateTimeField()
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)

@@ -470,6 +470,7 @@ class TimeSlot(models.Model):
     recurrent = models.BooleanField(default=True)
     recurrency_type = models.CharField(max_length=10, choices=RECURRENCY_TYPE, default=WEEKLY)
 
+    removed_at = models.DateTimeField(null=True, default=None, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

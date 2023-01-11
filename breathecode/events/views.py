@@ -5,11 +5,13 @@ from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
 from breathecode.events.caches import EventCache
+from breathecode.payments.consumers import cohort_schedule_by_url_param
 from breathecode.utils import APIException
 from datetime import datetime, timedelta
 import logging
 import re
 import pytz
+from django.core.exceptions import FieldError
 
 from django.http.response import HttpResponse
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -18,16 +20,19 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from .models import Event, EventType, EventCheckin, EventTypeVisibilitySetting, Organization, Venue, EventbriteWebhook, Organizer
+from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibilitySetting, Organization,
+                     Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
-                          EventSmallSerializerNoAcademy, EventTypeVisibilitySettingSerializer,
-                          PostEventTypeSerializer, VenueSerializer, OrganizationBigSerializer,
-                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
+from .serializers import (LiveClassSerializer, EventSerializer, EventSmallSerializer, EventTypeSerializer,
+                          EventCheckinSerializer, EventSmallSerializerNoAcademy,
+                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer, VenueSerializer,
+                          OrganizationBigSerializer, OrganizationSerializer, EventbriteWebhookSerializer,
+                          OrganizerSmallSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -217,6 +222,173 @@ class EventMeView(APIView):
         items = Event.objects.filter(event_type__in=items).order_by('-created_at')
 
         serializer = EventSerializer(items, many=True)
+        return Response(serializer.data)
+
+
+class MeLiveClassView(APIView):
+    extensions = APIViewExtensions(sort='-starting_at', paginate=True)
+
+    def _get_lookup(self, pk: str, prefix: str = ''):
+        if pk.isnumeric():
+            return {f'{prefix}id': int(pk)}
+
+        else:
+            return {f'{prefix}slug': pk}
+
+    def get(self, request, format=None):
+        handler = self.extensions(request)
+
+        items = LiveClass.objects.filter(cohort__cohortuser__user=request.user)
+        lookup = {}
+
+        if cohort := self.request.GET.get('cohort', ''):
+            lookup.update(self._get_lookup(cohort, 'cohort__'))
+
+        if academy := self.request.GET.get('academy', ''):
+            lookup.update(self._get_lookup(academy, 'cohort__academy__'))
+
+        if syllabus := self.request.GET.get('syllabus', ''):
+            lookup.update(self._get_lookup(syllabus, 'cohort__syllabus_version__syllabus__'))
+
+        upcoming = self.request.GET.get('upcoming', '')
+        if upcoming == 'true':
+            lookup['ended_at__isnull'] = True
+
+        elif upcoming == 'false':
+            lookup['ended_at__isnull'] = False
+
+        start = self.request.GET.get('start', '')
+        if start:
+            lookup['starting_at__gte'] = start
+
+        end = self.request.GET.get('end', '')
+        if end:
+            lookup['ending_at__lte'] = end
+
+        items = items.filter(**lookup)
+
+        items = handler.queryset(items)
+        serializer = EventSmallSerializerNoAcademy(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class AcademyLiveClassView(APIView):
+    extensions = APIViewExtensions(sort='-starting_at', paginate=True)
+
+    def _get_lookup(self, pk: str, prefix: str = ''):
+        if pk.isnumeric():
+            return {f'{prefix}id': int(pk)}
+
+        elif '@' in pk:
+            return {f'{prefix}email': int(pk)}
+
+        else:
+            return {f'{prefix}slug': pk}
+
+    @capable_of('start_or_end_class')
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+
+        lang = get_user_language(request)
+
+        items = LiveClass.objects.filter(cohort__academy__id=academy_id)
+        lookup = {}
+
+        if user := self.request.GET.get('user', ''):
+            lookup.update(self._get_lookup(user, 'cohort__cohortuser__user__'))
+
+        if cohort := self.request.GET.get('cohort', ''):
+            lookup.update(self._get_lookup(cohort, 'cohort__'))
+
+        if syllabus := self.request.GET.get('syllabus', ''):
+            lookup.update(self._get_lookup(syllabus, 'cohort__syllabus_version__syllabus__'))
+
+        upcoming = self.request.GET.get('upcoming', '')
+        if upcoming == 'true':
+            lookup['ended_at__isnull'] = True
+
+        elif upcoming == 'false':
+            lookup['ended_at__isnull'] = False
+
+        start = self.request.GET.get('start', '')
+        if start:
+            lookup['starting_at__gte'] = start
+
+        end = self.request.GET.get('end', '')
+        if end:
+            lookup['ending_at__lte'] = end
+
+        try:
+            items = items.filter(**lookup)
+        except FieldError:
+            raise ValidationException(
+                translation(lang,
+                            en='Some querystring have a ilogic value',
+                            es='Algunos parametros en el querystring tienen un valor ilógico',
+                            slug='querystring-with-ilogic-value'))
+
+        items = handler.queryset(items)
+        serializer = EventSmallSerializerNoAcademy(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of('start_or_end_class')
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        serializer = LiveClassSerializer(data=request.data,
+                                         context={
+                                             'lang': lang,
+                                             'academy_id': academy_id,
+                                         })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('start_or_end_class')
+    def put(self, request, cohort_schedule_id, academy_id=None):
+        lang = get_user_language(request)
+
+        already = LiveClass.objects.filter(id=cohort_schedule_id, cohort__academy__id=academy_id).first()
+        if already is None:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Schedule not found for this academy {academy_id}',
+                            es=f'No se encontró el horario para esta academia {academy_id}',
+                            slug='not-found'))
+
+        # data = {}
+        # for key in request.data.keys():
+        #     data[key] = request.data.get(key)
+
+        serializer = LiveClassSerializer(already,
+                                         data=request.data,
+                                         context={
+                                             'lang': lang,
+                                             'academy_id': academy_id,
+                                         })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MeLiveClassJoinView(APIView):
+
+    @has_permission('cohort_classroom', consumer=cohort_schedule_by_url_param)
+    def get(self, request, cohort_schedule_id):
+        lang = get_user_language(request)
+
+        schedule = LiveClass.objects.filter(id=cohort_schedule_id).first()
+        if not schedule:
+            raise ValidationException(lang,
+                                      en='Schedule not found',
+                                      es='Horario no encontrado',
+                                      slug='schedule_not_found')
+
+        serializer = EventSmallSerializer(schedule, many=False)
         return Response(serializer.data)
 
 

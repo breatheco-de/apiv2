@@ -70,7 +70,6 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                 raise ProgramingError('Missing request information, use this decorator with DRF View')
 
             utc_now = timezone.now()
-            session = None
             session = ConsumptionSession.get_session(request)
             if session:
                 return function(*args, **kwargs)
@@ -102,7 +101,8 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     consumables = context['consumables']
                     for item in consumables.filter(consumptionsession__status='PENDING', how_many__gt=0):
 
-                        sum = item.consumptionsession_set.filter(status='PENDING').aggregate(Sum('how_many'))
+                        sum = item.consumptionsession_set.filter(status='PENDING').aggregate(
+                            Sum('consumptionsession__how_many'))
 
                         if item.how_many - sum['how_many__sum'] == 0:
                             context['consumables'] = context['consumables'].exclude(id=item.id)
