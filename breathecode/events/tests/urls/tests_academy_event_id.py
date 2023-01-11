@@ -96,6 +96,7 @@ class AcademyEventIdTestSuite(EventTestCase):
                 }
             },
             'sync_with_eventbrite': False,
+            'live_stream_url': model['event'].live_stream_url,
             'eventbrite_sync_status': 'PENDING',
             'eventbrite_sync_description': None,
         }

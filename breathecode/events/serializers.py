@@ -133,6 +133,7 @@ class EventSmallSerializer(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
+    live_stream_url = serpy.Field()
     tags = serpy.Field()
 
 
@@ -154,6 +155,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
+    live_stream_url = serpy.Field()
     tags = serpy.Field()
 
 
