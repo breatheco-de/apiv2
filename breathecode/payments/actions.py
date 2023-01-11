@@ -166,7 +166,15 @@ class PlanFinder:
 def add_items_to_bag(request, settings: UserSetting, bag: Bag):
     service_items = request.data.get('service_items')
     plans = request.data.get('plans')
-    cohorts = request.data.get('cohort')
+    cohort = request.data.get('cohort')
+
+    if cohort and not isinstance(cohort, int) and not isinstance(cohort, int):
+        raise ValidationException(translation(settings.lang,
+                                              en='The cohort needs to be a id or slug',
+                                              es='El cohort debe ser un id o slug'),
+                                  slug='cohort-not-id-or-slug')
+
+    cohorts = [cohort] if cohort else []
 
     bag.service_items.clear()
     bag.plans.clear()
