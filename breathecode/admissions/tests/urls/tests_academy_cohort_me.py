@@ -134,6 +134,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -164,6 +165,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -251,6 +253,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -281,6 +284,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -331,6 +335,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -361,6 +366,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -411,6 +417,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -441,6 +448,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -586,6 +594,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -616,6 +625,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         } for model in ordened_models]
 
@@ -697,6 +707,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -727,6 +738,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -777,6 +789,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -807,6 +820,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 

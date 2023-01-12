@@ -27,7 +27,7 @@ class PermissionContextType(TypedDict):
     permission: str
     request: WSGIRequest
     consumables: QuerySet
-    # time_of_life: Optional[timedelta]
+    time_of_life: Optional[timedelta]
 
 
 HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple,
@@ -70,7 +70,6 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                 raise ProgramingError('Missing request information, use this decorator with DRF View')
 
             utc_now = timezone.now()
-            time_of_life = None
             session = None
             session = ConsumptionSession.get_session(request)
             if session:
@@ -83,6 +82,7 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     'permission': permission,
                     'request': request,
                     'consumables': Consumable.objects.none(),
+                    'time_of_life': None,
                 }
 
                 if consumer:
@@ -96,19 +96,9 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
 
                 if callable(consumer):
                     # context, args, kwargs, consume = consumer(context, args, kwargs)
-                    context, args, kwargs, time_of_life = consumer(context, args, kwargs)
+                    context, args, kwargs = consumer(context, args, kwargs)
 
-                if consumer and not context['consumables']:
-                    #TODO: send a url to recharge this service
-                    raise PaymentException(
-                        f'You do not have enough credits to access this service: {permission}',
-                        slug='not-enough-consumables')
-
-                if consumer and time_of_life and (consumable := context['consumables'].first()):
-                    session = ConsumptionSession.build_session(request, consumable, time_of_life)
-
-                time_of_life = timedelta(seconds=60)
-                if consumer and time_of_life:
+                if consumer and context['time_of_life']:
                     consumables = context['consumables']
                     for item in consumables.filter(consumptionsession__status='PENDING', how_many__gt=0):
 
@@ -116,6 +106,15 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
 
                         if item.how_many - sum['how_many__sum'] == 0:
                             context['consumables'] = context['consumables'].exclude(id=item.id)
+
+                if consumer and not context['consumables']:
+                    #TODO: send a url to recharge this service
+                    raise PaymentException(
+                        f'You do not have enough credits to access this service: {permission}',
+                        slug='not-enough-consumables')
+
+                if consumer and context['time_of_life'] and (consumable := context['consumables'].first()):
+                    session = ConsumptionSession.build_session(request, consumable, context['time_of_life'])
 
                 response = function(*args, **kwargs)
 

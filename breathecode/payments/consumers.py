@@ -12,17 +12,20 @@ def cohort_by_url_param(context: PermissionContextType, args: tuple,
         Q(cohort__id=kwargs.get('cohort_id'))
         | Q(cohort__slug=kwargs.get('cohort_slug')))
 
-    context['request'].headers['Content-Type']
-
     return (context, args, kwargs)
 
 
 def cohort_by_header(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
-    context['consumables'] = context['consumables'].filter(
-        Q(cohort__id=kwargs.get('cohort_id'))
-        | Q(cohort__slug=kwargs.get('cohort_slug')))
+    cohort = context['request'].META.get('HTTP_COHORT', '')
+    kwargs = {}
 
-    context['request'].headers['Content-Type']
+    if cohort.isnumeric():
+        kwargs['cohort__id'] = int(cohort)
+
+    else:
+        kwargs['cohort__slug'] = cohort
+
+    context['consumables'] = context['consumables'].filter(**kwargs)
 
     return (context, args, kwargs)
 
@@ -33,17 +36,6 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
         Q(mentorship_services__id=kwargs.get('service_id'))
         | Q(mentorship_services__slug=kwargs.get('service_slug')))
 
-    consumable = context['consumables'].first()
-    consume = None
+    context['time_of_life'] = timedelta(hours=2)
 
-    if consumable:
-        consume = ConsumptionSession.build_session(
-            context['request'],
-            consumable,
-            #    'mentorship.MentorshipService',
-            timedelta(days=1),
-            #    id=kwargs.get('service_id'),
-            #    slug=kwargs.get('service_slug'),
-            info='Join to a mentorship')
-
-    return (context, args, kwargs, consume)
+    return (context, args, kwargs)
