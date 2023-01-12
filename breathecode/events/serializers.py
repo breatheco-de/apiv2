@@ -220,7 +220,7 @@ class EventSerializer(serializers.ModelSerializer):
                             es=f'El slug {slug} ya está en uso, prueba con otro slug',
                             slug='slug-taken'))
 
-        if 'event_type' in data and 'lang' in data and data['event_type'].academy.lang != data['lang']:
+        if 'event_type' in data and 'lang' in data and data['event_type'].lang != data['lang']:
             raise ValidationException(
                 translation(lang,
                             en='Event type and event language must match',
