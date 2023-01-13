@@ -271,6 +271,28 @@ class MemberView(APIView, GenerateLookupsMixin):
     @capable_of('crud_member')
     def put(self, request, academy_id=None, user_id_or_email=None):
 
+        mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
+
+        if mentor is None:
+            raise ValidationException('This mentor does not exist for this academy',
+                                      code=404,
+                                      slug='not-found')
+        user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id)
+
+        if user.first_name is None:
+            raise ValidationException('This mentor does not have a first name', code=404, slug='not-found')
+
+        if user.last_name is None:
+            raise ValidationException('This mentor does not have a last name', code=404, slug='not-found')
+
+        if user.email is None:
+            raise ValidationException('This mentor does not have an email address',
+                                      code=404,
+                                      slug='not-found')
+
+        if user.phone is None:
+            raise ValidationException('This mentor does not have a phone', code=404, slug='not-found')
+
         already = None
         if user_id_or_email.isnumeric():
             already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()

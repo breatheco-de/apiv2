@@ -6,6 +6,7 @@ from .actions import generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from breathecode.utils.datetime_interger import duration_to_str
+from breathecode.authenticate.models import ProfileAcademy
 
 
 class GetAcademySmallSerializer(serpy.Serializer):
@@ -471,6 +472,68 @@ class MentorSerializer(serializers.ModelSerializer):
         model = MentorProfile
         exclude = ('created_at', 'updated_at')
 
+    def validate(self, data):
+        profile_academy = ProfileAcademy.objects.filter(user__id=data['user'].id,
+                                                        academy__id=data['academy'].id).first()
+
+        if 'first_name' not in data:
+            data['first_name'] = ''
+
+        if not data['first_name'] and profile_academy:
+
+            data['first_name'] = profile_academy.first_name
+
+        if not data['first_name']:
+
+            data['first_name'] = data['user'].first_name
+
+        if not data['first_name']:
+            raise ValidationException('Unable to find first name on this user', code=400)
+
+        if 'last_name' not in data:
+            data['last_name'] = ''
+
+        if not data['last_name'] and profile_academy:
+
+            data['last_name'] = profile_academy.last_name
+
+        if not data['last_name']:
+
+            data['last_name'] = data['user'].last_name
+
+        if not data['last_name']:
+            raise ValidationException('Unable to find last name on this user', code=400)
+
+        if 'email' not in data:
+            data['email'] = ''
+
+        if not data['email'] and profile_academy:
+
+            data['email'] = profile_academy.email
+
+        if not data['email']:
+
+            data['email'] = data['user'].email
+
+        if not data['email']:
+            raise ValidationException('Unable to find email on this user', code=400)
+
+        if 'phone' not in data:
+            data['phone'] = ''
+
+        if not data['phone'] and profile_academy:
+
+            data['phone'] = profile_academy.phone
+
+        if not data['phone']:
+
+            data['phone'] = data['user'].phone
+
+        if not data['phone']:
+            raise ValidationException('Unable to find first phone on this user', code=400)
+
+        return data
+
 
 class MentorUpdateSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False)
@@ -491,6 +554,65 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
                 actions.mentor_is_ready(self.instance)
             except Exception as e:
                 raise ValidationException(str(e))
+
+        profile_academy = ProfileAcademy.objects.filter(user__id=data['user'].id,
+                                                        academy__id=data['academy'].id).first()
+
+        if 'first_name' not in data:
+            data['first_name'] = self.instance.first_name
+
+        if not data['first_name'] and profile_academy:
+
+            data['first_name'] = profile_academy.first_name
+
+        if not data['first_name']:
+
+            data['first_name'] = data['user'].first_name
+
+        if not data['first_name']:
+            raise ValidationException('Unable to find first name on this user', code=400)
+
+        if 'last_name' not in data:
+            data['last_name'] = self.instance.last_name
+
+        if not data['last_name'] and profile_academy:
+
+            data['last_name'] = profile_academy.last_name
+
+        if not data['last_name']:
+
+            data['last_name'] = data['user'].last_name
+
+        if not data['last_name']:
+            raise ValidationException('Unable to find last name on this user', code=400)
+
+        if 'email' not in data:
+            data['email'] = self.instance.email
+
+        if not data['email'] and profile_academy:
+
+            data['email'] = profile_academy.email
+
+        if not data['email']:
+
+            data['email'] = data['user'].email
+
+        if not data['email']:
+            raise ValidationException('Unable to find email on this user', code=400)
+
+        if 'phone' not in data:
+            data['phone'] = self.instance.phone
+
+        if not data['phone'] and profile_academy:
+
+            data['phone'] = profile_academy.phone
+
+        if not data['phone']:
+
+            data['phone'] = data['user'].phone
+
+        if not data['phone']:
+            raise ValidationException('Unable to find first phone on this user', code=400)
 
         return data
 

@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.authenticate.models import Token
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.payments.consumers import mentorship_service_by_url_param
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -742,10 +743,26 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
             raise ValidationException('Missing mentor ID on the URL', 404)
 
         mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
+
         if mentor is None:
             raise ValidationException('This mentor does not exist for this academy',
                                       code=404,
                                       slug='not-found')
+        user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id)
+
+        if user.first_name is None:
+            raise ValidationException('This mentor does not have a first name', code=404, slug='not-found')
+
+        if user.last_name is None:
+            raise ValidationException('This mentor does not have a last name', code=404, slug='not-found')
+
+        if user.email is None:
+            raise ValidationException('This mentor does not have an email address',
+                                      code=404,
+                                      slug='not-found')
+
+        if user.phone is None:
+            raise ValidationException('This mentor does not have a phone', code=404, slug='not-found')
 
         if 'user' in request.data:
             raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',
