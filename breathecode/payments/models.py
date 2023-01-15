@@ -271,6 +271,13 @@ class Plan(AbstractPriceByTime):
 
     status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT)
 
+    duration = models.IntegerField(default=1, blank=True, null=True)
+    duration_unit = models.CharField(max_length=10,
+                                     choices=PAY_EVERY_UNIT,
+                                     blank=True,
+                                     null=True,
+                                     default=MONTH)
+
     trial_duration = models.IntegerField(default=1)
     trial_duration_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
@@ -284,6 +291,21 @@ class Plan(AbstractPriceByTime):
 
     def __str__(self) -> str:
         return self.slug
+
+    def clean(self) -> None:
+        if self.is_renewable and (not self.duration or not self.duration_unit):
+            raise forms.ValidationError('If the plan is renewable, you must set duration and duration_unit')
+
+        if not self.is_renewable and (self.duration or self.duration_unit):
+            raise forms.ValidationError(
+                'If the plan is not renewable, you must not set duration and duration_unit')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+
+        super().save(*args, **kwargs)
 
 
 class PlanTranslation(models.Model):

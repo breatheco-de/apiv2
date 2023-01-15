@@ -188,6 +188,8 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
     slug = serpy.Field()
     # description = serpy.Field()
     status = serpy.Field()
+    duration = serpy.Field()
+    duration_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
     service_items = serpy.MethodField()
@@ -197,6 +199,9 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
 
     def get_financing_options(self, obj):
+        if not obj.is_renewable:
+            return []
+
         return GetFinancingOptionSerializer(obj.financing_options.all(), many=True).data
 
 

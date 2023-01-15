@@ -682,8 +682,8 @@ class CheckingView(APIView):
 
                 #FIXME: the service items should be bought without renewals
                 if not plan or plan.is_renewable:
-                    bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-                        bag, bag.academy.main_currency)
+                    bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = \
+                        get_amount(bag, bag.academy.main_currency)
 
                 amount = bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
                 plans = bag.plans.all()
@@ -844,8 +844,8 @@ class PayView(APIView):
                     tasks.build_free_trial.delay(bag.id, invoice.id)
 
                 elif bag.how_many_installments > 0:
-
                     tasks.build_plan_financing.delay(bag.id, invoice.id)
+
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id)
 

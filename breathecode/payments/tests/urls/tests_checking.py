@@ -42,6 +42,10 @@ def plan_serializer(plan, service_items, service, cohorts=[], financing_options=
         plan.slug,
         'status':
         plan.status,
+        'duration':
+        plan.duration,
+        'duration_unit':
+        plan.duration_unit,
         'trial_duration':
         plan.trial_duration,
         'trial_duration_unit':
