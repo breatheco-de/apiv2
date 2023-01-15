@@ -30,6 +30,7 @@ def get_serializer(self, event, event_type, academy, user, data={}):
         'id': event.id,
         'lang': event.lang,
         'online_event': event.online_event,
+        'live_stream_url': event.live_stream_url,
         'organization': event.organization,
         'published_at': event.published_at,
         'slug': event.slug,
