@@ -174,6 +174,14 @@ class Event(models.Model):
     )
     banner = models.URLField(max_length=255)
     capacity = models.IntegerField()
+    live_stream_url = models.URLField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=
+        'This URL should have the URL of the meeting if it is an online event, if it\'s not online it should be empty.'
+    )
 
     starting_at = models.DateTimeField(blank=False)
     ending_at = models.DateTimeField(blank=False)

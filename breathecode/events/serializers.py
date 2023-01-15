@@ -134,6 +134,7 @@ class EventSmallSerializer(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
+    live_stream_url = serpy.Field()
     tags = serpy.Field()
 
 
@@ -155,6 +156,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
+    live_stream_url = serpy.Field()
     tags = serpy.Field()
 
 
@@ -213,6 +215,15 @@ class EventSerializer(serializers.ModelSerializer):
         elif slug:
             slug = f'{data["slug"].lower()}'
 
+        online_event = data.get('online_event')
+        live_stream_url = data.get('live_stream_url')
+        if online_event == True and (live_stream_url is None or live_stream_url == ''):
+            raise ValidationException(
+                translation(lang,
+                            en=f'live_stream_url cannot be empty if the event is online.',
+                            es=f'Si el evento es online, entonces live_stream_url no puede estar vacío.',
+                            slug='live-stream-url-empty'))
+
         existing_events = Event.objects.filter(slug=slug)
         if slug and not self.instance and existing_events.exists():
             raise ValidationException(
@@ -221,7 +232,7 @@ class EventSerializer(serializers.ModelSerializer):
                             es=f'El slug {slug} ya está en uso, prueba con otro slug',
                             slug='slug-taken'))
 
-        if 'event_type' in data and 'lang' in data and data['event_type'].academy.lang != data['lang']:
+        if 'event_type' in data and 'lang' in data and data['event_type'].lang != data['lang']:
             raise ValidationException(
                 translation(lang,
                             en='Event type and event language must match',
