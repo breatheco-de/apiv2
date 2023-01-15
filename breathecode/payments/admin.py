@@ -84,8 +84,8 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'paid_at', 'status', 'is_refundable', 'valid_until', 'pay_every', 'pay_every_unit',
-                    'user')
+    list_display = ('id', 'paid_at', 'status', 'is_refundable', 'next_payment_at', 'pay_every',
+                    'pay_every_unit', 'user')
     list_filter = ['status', 'is_refundable', 'pay_every_unit']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
 
