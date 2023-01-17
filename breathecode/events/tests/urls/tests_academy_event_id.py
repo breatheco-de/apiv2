@@ -96,6 +96,7 @@ class AcademyEventIdTestSuite(EventTestCase):
                 }
             },
             'sync_with_eventbrite': False,
+            'live_stream_url': model['event'].live_stream_url,
             'eventbrite_sync_status': 'PENDING',
             'eventbrite_sync_description': None,
         }
@@ -463,6 +464,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'currency': 'USD',
             'tags': '',
             'slug': None,
+            'live_stream_url': None,
             **data,
         }
 
@@ -660,6 +662,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'sync_with_eventbrite': False,
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
+            'live_stream_url': None,
             **data,
         }
 
@@ -748,6 +751,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'sync_with_eventbrite': False,
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
+            'live_stream_url': None,
             **data,
         }
 
@@ -776,7 +780,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())

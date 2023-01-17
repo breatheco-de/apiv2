@@ -435,7 +435,6 @@ class AssetThumbnailGenerator:
         """
         if not self.asset:
             return (self._get_default_url(), False)
-
         media = self._get_media()
         if not media:
             tasks.async_create_asset_thumbnail.delay(self.asset.slug)
@@ -459,7 +458,6 @@ class AssetThumbnailGenerator:
             media.save()
 
             tasks.async_resize_asset_thumbnail.delay(media.id, width=self.width, height=self.height)
-            print('33333')
             return (media.url, False)
 
         # register click
@@ -482,7 +480,7 @@ class AssetThumbnailGenerator:
         if not self.asset:
             return None
 
-        slug = self.asset.get_thumbnail_name().split()[0]
+        slug = self.asset.get_thumbnail_name().split('.')[0]
         return Media.objects.filter(slug=slug).first()
 
     def _get_media_resolution(self, hash: str) -> Optional[MediaResolution]:
@@ -643,13 +641,15 @@ def test_asset(asset):
         asset.test_status = e.severity
         asset.last_test_at = timezone.now()
         asset.save()
-        raise e
+        # raise e
+        return False
     except Exception as e:
         asset.status_text = str(e)
         asset.test_status = 'ERROR'
         asset.last_test_at = timezone.now()
         asset.save()
-        raise e
+        # raise e
+        return False
 
 
 def upload_image_to_bucket(img, asset):

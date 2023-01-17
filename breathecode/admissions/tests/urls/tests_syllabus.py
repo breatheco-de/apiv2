@@ -80,7 +80,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'name': model.syllabus.academy_owner.name,
                 'slug': model.syllabus.academy_owner.slug,
                 'white_labeled': model.syllabus.academy_owner.white_labeled,
-                'icon_url': model.syllabus.academy_owner.icon_url,
+                'icon_url': model.syllabus.academy_owner.icon_url
             },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
@@ -207,7 +207,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['PaginationExtension']),
+            call(['LanguageExtension', 'PaginationExtension']),
         ])
 
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())

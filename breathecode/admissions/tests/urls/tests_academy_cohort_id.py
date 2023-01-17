@@ -2,14 +2,17 @@
 Test /cohort
 """
 from datetime import timedelta
-from django.utils import timezone
-from breathecode.admissions.caches import CohortCache
 from unittest.mock import MagicMock, call, patch
-from django.urls.base import reverse_lazy
-from rest_framework import status
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
+from django.urls.base import reverse_lazy
+from django.utils import timezone
+from rest_framework import status
+
+from breathecode.admissions.caches import CohortCache
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import \
+    APIViewExtensionHandlers
 from breathecode.utils.datetime_interger import DatetimeInteger
+
 from ..mixins import AdmissionsTestCase
 
 
@@ -199,6 +202,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'academy': {
                 'id': model.academy.id,
                 'slug': model.academy.slug,
@@ -211,6 +215,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -596,6 +601,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             model['cohort'].online_meeting_url,
             'timezone':
             model['cohort'].timezone,
+            'is_hidden_on_prework':
+            model['cohort'].is_hidden_on_prework,
             'timeslots': [{
                 'ending_at':
                 DatetimeInteger.to_iso_string(model.academy.timezone, syllabus_schedule_time_slot.ending_at),
@@ -639,6 +646,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -664,6 +672,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
+                             'is_hidden_on_prework': True
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
@@ -753,6 +762,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             model['cohort'].online_meeting_url,
             'timezone':
             model['cohort'].timezone,
+            'is_hidden_on_prework':
+            model['cohort'].is_hidden_on_prework,
             'timeslots': [{
                 'ending_at':
                 DatetimeInteger.to_iso_string(model.cohort.timezone, syllabus_schedule_time_slot.ending_at),
@@ -795,6 +806,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -820,6 +832,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': 'Europe/Monaco',
+                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
@@ -915,6 +928,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             model['cohort'].online_meeting_url,
             'timezone':
             model['cohort'].timezone,
+            'is_hidden_on_prework':
+            model['cohort'].is_hidden_on_prework,
             'timeslots': [{
                 'ending_at':
                 DatetimeInteger.to_iso_string(model.academy.timezone, syllabus_schedule_time_slot.ending_at),
@@ -958,6 +973,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -983,6 +999,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
+                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
@@ -1065,6 +1082,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model2.syllabus_schedule.id,
                 'name': model2.syllabus_schedule.name,
@@ -1095,6 +1113,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -1120,6 +1139,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
+                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
@@ -1168,6 +1188,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1198,6 +1219,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }
 
@@ -1276,6 +1298,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1301,6 +1324,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'country': model['cohort'].academy.country,
                 'city': model['cohort'].academy.city,
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework,
                 'country': {
                     'code': model['cohort'].academy.country.code,
                     'name': model['cohort'].academy.country.name,
@@ -1436,7 +1460,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

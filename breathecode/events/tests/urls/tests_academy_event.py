@@ -84,6 +84,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'live_stream_url': model['event'].live_stream_url,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -148,6 +149,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'live_stream_url': model['event'].live_stream_url,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -212,6 +214,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'live_stream_url': model['event'].live_stream_url,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -259,6 +262,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'live_stream_url': None,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -584,6 +588,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
@@ -619,6 +624,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
@@ -720,6 +726,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
@@ -759,6 +766,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
         }])
@@ -821,6 +829,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
@@ -857,6 +866,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
         }])
@@ -949,6 +959,7 @@ class AcademyEventTestSuite(EventTestCase):
             'venue': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
+            'live_stream_url': None,
             **data,
         }
 
@@ -982,6 +993,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
         }])
@@ -1055,6 +1067,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
@@ -1090,77 +1103,119 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
         }])
 
-    def test_academy_event_type_no_results(self):
+    """
+    🔽🔽🔽 Post bad slug
+    """
+
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    def test_all_academy_events__post__bad_slug____(self):
         self.headers(academy=1)
-        # TODO: this is bad placed
-        url = reverse_lazy('events:type')
-        self.generate_models(authenticate=True)
 
-        response = self.client.get(url)
-        json = response.json()
-        expected = []
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 200)
-
-    def test_academy_event_type_with_results(self):
-        self.headers(academy=1)
-        # TODO: this is bad placed
-        url = reverse_lazy('events:type')
-        event_type_kwargs = {
-            'slug': 'potato',
-            'name': 'Potato',
-            'created_at': timezone.now(),
-            'updated_at': timezone.now()
-        }
+        tags = [{
+            'slug': self.bc.random.string(lower=True, size=10),
+            'tag_type': 'DISCOVERY'
+        } for _ in range(2)]
+        event_type = {'lang': self.bc.random.string(lower=True, size=2)}
         model = self.generate_models(authenticate=True,
-                                     event=True,
-                                     event_type=True,
-                                     event_type_kwargs=event_type_kwargs)
+                                     organization=True,
+                                     profile_academy=True,
+                                     tag=tags,
+                                     event_type=event_type,
+                                     capability='crud_event',
+                                     active_campaign_academy=True,
+                                     role='potato')
 
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'academy': model['event_type'].academy,
-            'id': model['event_type'].id,
-            'name': model['event_type'].name,
-            'slug': model['event_type'].slug,
-        }]
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 200)
-
-        self.assertEqual(self.all_event_type_dict(), [{
-            **self.model_to_dict(model, 'event_type'),
-        }])
-
-    def test_academy_event_type_no_match_slug(self):
-        self.headers(academy=1)
-        url = reverse_lazy('events:type') + '?academy=banana'
-        event_type_kwargs = {
-            'slug': 'potato',
-            'name': 'Potato',
-            'created_at': timezone.now(),
-            'updated_at': timezone.now()
+        url = reverse_lazy('events:academy_event')
+        current_date = self.datetime_now()
+        data = {
+            # 'slug': 'they-killed-kenny',
+            'tags': f'{tags[0]["slug"]},{tags[1]["slug"]}',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+            'event_type': 1,
         }
-        model = self.generate_models(authenticate=True,
-                                     event=True,
-                                     event_type=True,
-                                     event_type_kwargs=event_type_kwargs)
 
-        response = self.client.get(url)
+        response = self.client.post(url, data)
         json = response.json()
-        expected = []
+
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+
+        del json['created_at']
+        del json['updated_at']
+
+        expected = {
+            'academy': 1,
+            'author': None,
+            'description': None,
+            'event_type': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'tags': '',
+            'slug': None,
+            'excerpt': None,
+            'host': None,
+            'id': 1,
+            'slug': None,
+            'lang': model.event_type.lang,
+            'online_event': False,
+            'organization': 1,
+            'published_at': None,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'venue': None,
+            'live_stream_url': None,
+            'sync_with_eventbrite': False,
+            'currency': 'USD',
+            **data,
+        }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 200)
-
-        self.assertEqual(self.all_event_type_dict(), [{
-            **self.model_to_dict(model, 'event_type'),
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(self.all_event_dict(), [{
+            'academy_id': 1,
+            'author_id': None,
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'description': None,
+            'ending_at': current_date,
+            'event_type_id': 1,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'excerpt': None,
+            'tags': '',
+            'slug': None,
+            'host': None,
+            'id': 1,
+            'lang': model.event_type.lang,
+            'online_event': False,
+            'organization_id': 1,
+            'published_at': None,
+            'starting_at': current_date,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'url': 'https://www.google.com/',
+            'venue_id': None,
+            'live_stream_url': None,
+            'sync_with_eventbrite': False,
+            'currency': 'USD',
+            'tags': ','.join([x.slug for x in model.tag]),
         }])
 
     """
@@ -1182,7 +1237,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())

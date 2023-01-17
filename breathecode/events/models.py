@@ -1,7 +1,9 @@
 import os
 from django.db import models
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort, Syllabus
+from breathecode.utils.validation_exception import ValidationException
+from breathecode.utils.validators.language import validate_language_code
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
@@ -90,16 +92,43 @@ class Venue(models.Model):
         return self.title or 'No title'
 
 
+class EventTypeVisibilitySetting(models.Model):
+    """
+    This will be used to show the workshops, this table point to the resource the user have access, if he/she
+    have access, he/she can watch this collection of workshops, the requires hierarchy to see the content
+    will be implemented in the view.
+    """
+
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, blank=True, null=True)
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'{str(self.academy)}, {str(self.syllabus)}, {str(self.cohort)}'
+
+
 class EventType(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
+    description = models.CharField(max_length=255, default='', null=False)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
+    lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
+
+    visibility_settings = models.ManyToManyField(
+        EventTypeVisibilitySetting,
+        blank=True,
+        help_text='Visibility has to be configured every academy separately')
+    allow_shared_creation = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name or 'Nameless'
+        return self.name
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 EVENT_STATUS = (
@@ -127,7 +156,11 @@ class Event(models.Model):
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
-    lang = models.CharField(max_length=2, blank=True, default=None, null=True)
+    lang = models.CharField(max_length=5,
+                            blank=True,
+                            default=None,
+                            null=True,
+                            validators=[validate_language_code])
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
 
@@ -141,6 +174,14 @@ class Event(models.Model):
     )
     banner = models.URLField(max_length=255)
     capacity = models.IntegerField()
+    live_stream_url = models.URLField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=
+        'This URL should have the URL of the meeting if it is an online event, if it\'s not online it should be empty.'
+    )
 
     starting_at = models.DateTimeField(blank=False)
     ending_at = models.DateTimeField(blank=False)

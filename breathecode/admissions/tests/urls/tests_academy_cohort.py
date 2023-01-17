@@ -30,6 +30,7 @@ def post_serializer(self, academy, syllabus, syllabus_version, data={}):
         'schedule': 0,
         'online_meeting_url': None,
         'timezone': '',
+        'is_hidden_on_prework': True,
         'academy': {
             'id': academy.id,
             'slug': academy.slug,
@@ -37,6 +38,7 @@ def post_serializer(self, academy, syllabus, syllabus_version, data={}):
             'street_address': academy.street_address,
             'country': academy.country.code,
             'city': academy.city.id,
+            'is_hidden_on_prework': True,
         },
         'syllabus_version': syllabus.slug + '.v' + str(syllabus_version.version),
         'ending_date': None,
@@ -68,6 +70,7 @@ def cohort_field(data={}):
         'stage': 'FINAL_PROJECT',
         'syllabus_version_id': 1,
         'timezone': 'America/Caracas',
+        'is_hidden_on_prework': True,
         **data,
     }
 
@@ -444,6 +447,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': cohort.timezone,
+            'is_hidden_on_prework': cohort.is_hidden_on_prework,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -451,6 +455,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'street_address': cohort.academy.street_address,
                 'country': cohort.academy.country.code,
                 'city': cohort.academy.city.id,
+                'is_hidden_on_prework': cohort.academy.is_hidden_on_prework
             },
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
@@ -567,6 +572,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': model.academy.timezone,
+            'is_hidden_on_prework': True,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -574,6 +580,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'street_address': cohort.academy.street_address,
                 'country': cohort.academy.country.code,
                 'city': cohort.academy.city.id,
+                'city': cohort.academy.city.id,
+                'is_hidden_on_prework': cohort.academy.is_hidden_on_prework
             },
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
@@ -657,6 +665,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': 'Pacific/Pago_Pago',
+            'is_hidden_on_prework': cohort.is_hidden_on_prework,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -664,6 +673,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'street_address': cohort.academy.street_address,
                 'country': cohort.academy.country.code,
                 'city': cohort.academy.city.id,
+                'is_hidden_on_prework': cohort.academy.is_hidden_on_prework,
             },
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
@@ -746,7 +756,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                        'stage': stage,
                                        'slug': 'they-killed-kenny',
                                        'name': 'They killed kenny',
-                                       'schedule': 1,
+                                       'schedule': 1
                                    })
 
         self.assertEqual(json, expected)
@@ -964,6 +974,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -994,6 +1005,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -1046,14 +1058,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'kickoff_date': timezone.now() + timedelta(days=1),
         }
         model = self.bc.database.create(authenticate=True,
-                                        cohort=True,
                                         profile_academy=True,
                                         capability='read_all_cohort',
                                         role='potato',
                                         syllabus=True,
                                         syllabus_version=True,
                                         syllabus_schedule=True,
-                                        cohort_kwargs=cohort_kwargs)
+                                        cohort=cohort_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1079,6 +1090,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1109,6 +1121,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -1189,6 +1202,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_module': model['cohort'].current_module,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'timeslots': [],
             'schedule': {
                 'id': model['cohort'].schedule.id,
@@ -1220,6 +1234,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -1269,6 +1284,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1299,6 +1315,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -1357,6 +1374,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1387,6 +1405,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         } for model in models]
 
@@ -1444,6 +1463,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1474,6 +1494,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         } for model in ordened_models]
 
@@ -1554,6 +1575,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1584,6 +1606,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -1633,6 +1656,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1663,6 +1687,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }]
 
@@ -1721,6 +1746,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1751,6 +1777,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         } for model in models]
 
@@ -1835,13 +1862,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         for field in many_fields:
             cohort_kwargs = {
-                'kickoff_date': datetime.now(),
-                'ending_date': datetime.now(),
+                'kickoff_date': timezone.now(),
+                'ending_date': timezone.now(),
                 'timezone': choice(['-1', '-2', '-3', '-4', '-5']),
             }
             model = self.bc.database.create(authenticate=True,
                                             profile_academy=True,
-                                            cohort_kwargs=cohort_kwargs,
+                                            cohort=cohort_kwargs,
                                             models=base)
 
             # reset because this call are coming from mixer
@@ -1870,24 +1897,24 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         for field in many_fields:
             cohort_kwargs = {
-                'kickoff_date': datetime.now(),
-                'ending_date': datetime.now(),
+                'kickoff_date': timezone.now(),
+                'ending_date': timezone.now(),
                 'timezone': choice(['-1', '-2', '-3', '-4', '-5']),
             }
             model1 = self.bc.database.create(authenticate=True,
                                              profile_academy=True,
                                              syllabus=True,
-                                             cohort_kwargs=cohort_kwargs,
+                                             cohort=cohort_kwargs,
                                              models=base)
 
             cohort_kwargs = {
-                'kickoff_date': datetime.now(),
-                'ending_date': datetime.now(),
+                'kickoff_date': timezone.now(),
+                'ending_date': timezone.now(),
                 'timezone': choice(['-1', '-2', '-3', '-4', '-5']),
             }
             model2 = self.bc.database.create(profile_academy=True,
                                              syllabus=True,
-                                             cohort_kwargs=cohort_kwargs,
+                                             cohort=cohort_kwargs,
                                              models=base)
 
             # reset because this call are coming from mixer
@@ -1907,8 +1934,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
             self.assertEqual(self.count_cohort_stage(model1['cohort'].id), 'DELETED')
             self.assertEqual(self.count_cohort_stage(model2['cohort'].id), 'DELETED')
-            self.assertEqual(cohort_saved.send.call_args_list,
-                             [call(instance=model1.cohort, sender=model1.cohort.__class__, created=False)])
+            self.assertEqual(cohort_saved.send.call_args_list, [
+                call(instance=model1.cohort, sender=model1.cohort.__class__, created=False),
+                call(instance=model2.cohort, sender=model2.cohort.__class__, created=False),
+            ])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
@@ -1931,7 +1960,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

@@ -23,7 +23,7 @@ SYNC_RESPONSE = {fake.slug(): fake.slug()}
 
 
 @ws_can_auth
-class AsyncConsumer(AsyncJsonWebsocketConsumer):
+class ConsumptionSessionr(AsyncJsonWebsocketConsumer):
 
     async def connect(self):
         await self.setup()
@@ -41,7 +41,7 @@ class SyncConsumer(SyncJsonWebsocketConsumer):
 
 
 ROUTER = URLRouter([
-    path('testws/async/', AsyncConsumer.as_asgi()),
+    path('testws/async/', ConsumptionSessionr.as_asgi()),
     path('testws/sync/', SyncConsumer.as_asgi()),
 ])
 

@@ -25,6 +25,7 @@ def database_item(academy, category, data={}):
         'config': None,
         'delivery_formats': 'url',
         'delivery_instructions': None,
+        'readme_updated_at': None,
         'delivery_regex_url': None,
         'description': None,
         'difficulty': None,
@@ -120,6 +121,59 @@ def post_serializer(academy, category, data={}):
     }
 
 
+def put_serializer(academy, category, asset, data={}):
+
+    return {
+        'asset_type': asset.asset_type,
+        'author': asset.author,
+        'authors_username': None,
+        'category': {
+            'id': category.id,
+            'slug': category.slug
+        },
+        'cleaning_status': asset.cleaning_status,
+        'cleaning_status_details': None,
+        'clusters': [],
+        'description': None,
+        'difficulty': None,
+        'readme_updated_at': None,
+        'duration': None,
+        'external': False,
+        'gitpod': False,
+        'graded': False,
+        'id': asset.id,
+        'intro_video_url': None,
+        'is_seo_tracked': True,
+        'lang': None,
+        'last_synch_at': None,
+        'last_test_at': None,
+        'last_cleaning_at': None,
+        'last_seo_scan_at': None,
+        'optimization_rating': None,
+        'owner': None,
+        'preview': None,
+        'published_at': None,
+        'readme_url': None,
+        'requirements': None,
+        'seo_json_status': None,
+        'seo_keywords': [],
+        'slug': asset.slug,
+        'solution_video_url': None,
+        'status': 'UNASSIGNED',
+        'status_text': None,
+        'sync_status': None,
+        'technologies': [],
+        'test_status': None,
+        'title': asset.title,
+        'translations': {
+            'null': asset.slug,
+        },
+        'url': None,
+        'visibility': 'PUBLIC',
+        **data,
+    }
+
+
 class RegistryTestAsset(RegistryTestCase):
 
     def test__without_auth(self):
@@ -198,3 +252,103 @@ class RegistryTestAsset(RegistryTestCase):
         self.assertEqual(tasks.async_pull_from_github.delay.call_args_list, [call('model_slug')])
         self.assertEqual(self.bc.database.list_of('registry.Asset'),
                          [database_item(model.academy, model.asset_category, data)])
+
+    def test_asset__put_many_without_id(self):
+        """Test Asset bulk update"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_asset',
+                                     role='potato',
+                                     asset_category=True,
+                                     asset={
+                                         'category_id': 1,
+                                         'academy_id': 1,
+                                         'slug': 'asset-1'
+                                     })
+
+        url = reverse_lazy('registry:academy_asset')
+        data = [{
+            'category': 1,
+        }]
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'without-id', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_asset__put_many_with_wrong_id(self):
+        """Test Asset bulk update"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_asset',
+                                     role='potato',
+                                     asset_category=True,
+                                     asset={
+                                         'category_id': 1,
+                                         'academy_id': 1,
+                                         'slug': 'asset-1'
+                                     })
+
+        url = reverse_lazy('registry:academy_asset')
+        data = [{
+            'category': 1,
+            'id': 2,
+        }]
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_asset__put_many(self):
+        """Test Asset bulk update"""
+        self.headers(academy=1)
+
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability='crud_asset',
+            role='potato',
+            asset_category=True,
+            asset=[{
+                'category_id': 1,
+                'academy_id': 1,
+                'slug': 'asset-1'
+            }, {
+                'category_id': 1,
+                'academy_id': 1,
+                'slug': 'asset-2'
+            }],
+        )
+
+        url = reverse_lazy('registry:academy_asset')
+        data = [{
+            'id': 1,
+            'category': 1,
+        }, {
+            'id': 2,
+            'category': 1,
+        }]
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+        for item in json:
+            del item['created_at']
+            del item['updated_at']
+
+        expected = [
+            put_serializer(model.academy, model.asset_category, asset) for i, asset in enumerate(model.asset)
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

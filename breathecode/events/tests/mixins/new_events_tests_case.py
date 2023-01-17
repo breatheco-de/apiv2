@@ -53,6 +53,7 @@ class EventTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQuerie
             'url': model['event'].url,
             'venue': model['event'].venue,
             'host': model['event'].host,
+            'live_stream_url': model['event'].live_stream_url,
             'sync_with_eventbrite': model['event'].sync_with_eventbrite,
             'eventbrite_sync_description': model['event'].eventbrite_sync_description,
             'eventbrite_sync_status': model['event'].eventbrite_sync_status,

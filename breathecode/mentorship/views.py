@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.authenticate.models import Token
 from breathecode.mentorship.exceptions import ExtendSessionException
+from breathecode.payments.consumers import mentorship_service_by_url_param
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
@@ -76,6 +77,44 @@ def render_html_bill(request, token, id=None):
 
 @private_view()
 def forward_booking_url(request, mentor_slug, token):
+    # now = timezone.now()
+    if isinstance(token, HttpResponseRedirect):
+        return token
+
+    mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
+    if mentor is None:
+        return render_message(request, f'No mentor found with slug {mentor_slug}')
+
+    # add academy to session, will be available on html templates
+    request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
+
+    if mentor.status not in ['ACTIVE', 'UNLISTED']:
+        return render_message(request, f'This mentor is not active')
+
+    try:
+        actions.mentor_is_ready(mentor)
+
+    except Exception as e:
+        logger.exception(e)
+        return render_message(
+            request,
+            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
+
+    booking_url = mentor.booking_url
+    if '?' not in booking_url:
+        booking_url += '?'
+
+    return render(request, 'book_session.html', {
+        'SUBJECT': 'Mentoring Session',
+        'mentor': mentor,
+        'mentee': token.user,
+        'booking_url': booking_url,
+    })
+
+
+@private_view()
+@has_permission('join_mentorship')
+def forward_booking_url_by_service(request, mentor_slug, token):
     # now = timezone.now()
     if isinstance(token, HttpResponseRedirect):
         return token
@@ -385,7 +424,9 @@ def forward_meet_url(request, mentor_slug, service_slug, token):
     return handler()
 
 
+#FIXME: create a endpoint to consume the service, split the function in two
 @private_view()
+# @has_permission('get_mentorship_session', consumer=mentorship_service_by_url_param)
 def end_mentoring_session(request, session_id, token):
     now = timezone.now()
     if request.method == 'POST':

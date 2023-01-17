@@ -15,7 +15,7 @@ from breathecode.admissions.models import Cohort, CohortUser, Academy
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile, CredentialsSlack
 from .actions import get_template, get_template_content
 from .models import Device, Hook
-from .tasks import async_slack_action
+from .tasks import async_slack_action, async_slack_command
 from .serializers import DeviceSerializer, HookSerializer
 from breathecode.services.slack.client import Slack
 import traceback
@@ -51,7 +51,7 @@ def process_interaction(request):
     try:
         async_slack_action.delay(request.POST)
         logger.debug('Slack action enqueued')
-        return Response(None, status=status.HTTP_200_OK)
+        return Response('Processing...', status=status.HTTP_200_OK)
     except Exception as e:
         logger.exception('Error processing slack action')
         return Response(str(e), status=status.HTTP_200_OK)
@@ -62,13 +62,11 @@ def process_interaction(request):
 def slack_command(request):
 
     try:
-        client = Slack()
-        response = client.execute_command(context=request.data)
-        logger.debug('Slack reponse')
-        logger.debug(response)
-        return Response(response, status=status.HTTP_200_OK)
+        async_slack_command.delay(request.data)
+        logger.debug('Slack command enqueued')
+        return Response('Processing...', status=status.HTTP_200_OK)
     except Exception as e:
-
+        logger.exception('Error processing slack command')
         return Response(str(e), status=status.HTTP_200_OK)
 
 

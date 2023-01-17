@@ -22,7 +22,7 @@ class NotifyTestSuite(NotifyTestCase):
         data = {'text': ''}
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = 'potato'
+        expected = 'Processing...'
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -39,7 +39,7 @@ class NotifyTestSuite(NotifyTestCase):
         data = {'text': ''}
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = 'pokemon'
+        expected = 'Processing...'
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

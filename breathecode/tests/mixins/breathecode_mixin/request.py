@@ -1,8 +1,4 @@
-from __future__ import annotations
 from rest_framework.test import APITestCase
-
-from breathecode.authenticate.models import Token, User
-from . import interfaces
 
 __all__ = ['Request']
 
@@ -11,9 +7,8 @@ class Request:
     """Mixin with the purpose of cover all the related with the request"""
 
     _parent: APITestCase
-    _bc: interfaces.BreathecodeInterface
 
-    def __init__(self, parent, bc: interfaces.BreathecodeInterface) -> None:
+    def __init__(self, parent, bc) -> None:
         self._parent = parent
         self._bc = bc
 
@@ -40,7 +35,7 @@ class Request:
 
         self._parent.client.credentials(**headers)
 
-    def authenticate(self, user: User) -> None:
+    def authenticate(self, user) -> None:
         """
         Forces authentication in a request inside a APITestCase.
 
@@ -60,7 +55,7 @@ class Request:
         """
         self._parent.client.force_authenticate(user=user)
 
-    def manual_authentication(self, user: User) -> None:
+    def manual_authentication(self, user) -> None:
         """
         Generate a manual authentication using a token, this method is more slower than `authenticate`.
 
@@ -76,5 +71,7 @@ class Request:
 
         - user: a instance of user model `breathecode.authenticate.models.User`.
         """
+        from breathecode.authenticate.models import Token
+
         token = Token.objects.create(user=user)
         self._parent.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
