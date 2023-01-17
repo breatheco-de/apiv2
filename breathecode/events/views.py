@@ -375,8 +375,8 @@ class AcademyLiveClassView(APIView):
         if already is None:
             raise ValidationException(
                 translation(lang,
-                            en=f'Schedule not found for this academy {academy_id}',
-                            es=f'No se encontró el horario para esta academia {academy_id}',
+                            en=f'Live class not found for this academy {academy_id}',
+                            es=f'Clase en vivo no encontrada para esta academia {academy_id}',
                             slug='not-found'))
 
         serializer = LiveClassSerializer(already,
