@@ -351,6 +351,14 @@ CAPABILITIES = [
         'slug': 'chatbot_message',
         'description': 'Speak with a chatbot'
     },
+    {
+        'slug': 'chatbot_message',
+        'description': 'Speak with a chatbot'
+    },
+    {
+        'slug': 'start_or_end_class',
+        'description': 'start or end a class'
+    },
 ]
 
 ROLES = [
@@ -627,7 +635,7 @@ def extend_roles(roles: list[RoleType]) -> None:
     roles.append({
         'slug': 'teacher',
         'name': 'Teacher',
-        'caps': extend(roles, ['assistant']) + ['crud_cohort']
+        'caps': extend(roles, ['assistant']) + ['crud_cohort', 'start_or_end_class']
     })
     roles.append({
         'slug':

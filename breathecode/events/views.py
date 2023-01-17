@@ -12,6 +12,7 @@ import logging
 import re
 import pytz
 from django.core.exceptions import FieldError
+from django.contrib.auth.hashers import check_password, make_password
 
 from django.http.response import HttpResponse
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -28,11 +29,11 @@ from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibil
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (LiveClassSerializer, EventSerializer, EventSmallSerializer, EventTypeSerializer,
-                          EventCheckinSerializer, EventSmallSerializerNoAcademy,
-                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer, VenueSerializer,
-                          OrganizationBigSerializer, OrganizationSerializer, EventbriteWebhookSerializer,
-                          OrganizerSmallSerializer)
+from .serializers import (GetLiveClassJoinSerializer, GetLiveClassSerializer, LiveClassSerializer,
+                          EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
+                          EventSmallSerializerNoAcademy, EventTypeVisibilitySettingSerializer,
+                          PostEventTypeSerializer, VenueSerializer, OrganizationBigSerializer,
+                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -238,7 +239,7 @@ class MeLiveClassView(APIView):
     def get(self, request, format=None):
         handler = self.extensions(request)
 
-        items = LiveClass.objects.filter(cohort__cohortuser__user=request.user)
+        items = LiveClass.objects.filter(cohort_time_slot__cohort__cohortuser__user=request.user)
         lookup = {}
 
         if cohort := self.request.GET.get('cohort', ''):
@@ -268,9 +269,27 @@ class MeLiveClassView(APIView):
         items = items.filter(**lookup)
 
         items = handler.queryset(items)
-        serializer = EventSmallSerializerNoAcademy(items, many=True)
+        serializer = GetLiveClassSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+
+class MeLiveClassJoinView(APIView):
+
+    def get(self, request, hash):
+        lang = get_user_language(request)
+
+        live_class = LiveClass.objects.filter(cohort_time_slot__cohort__cohortuser__user=request.user,
+                                              hash=hash).first()
+        if not live_class:
+            raise ValidationException(lang,
+                                      en='Live class not found',
+                                      es='Clase en vivo no encontrada',
+                                      slug='not-found')
+
+        serializer = GetLiveClassJoinSerializer(live_class, many=False)
+
+        return Response(serializer.data)
 
 
 class AcademyLiveClassView(APIView):
@@ -292,7 +311,7 @@ class AcademyLiveClassView(APIView):
 
         lang = get_user_language(request)
 
-        items = LiveClass.objects.filter(cohort__academy__id=academy_id)
+        items = LiveClass.objects.filter(cohort_time_slot__cohort__academy__id=academy_id)
         lookup = {}
 
         if user := self.request.GET.get('user', ''):
@@ -329,7 +348,7 @@ class AcademyLiveClassView(APIView):
                             slug='querystring-with-ilogic-value'))
 
         items = handler.queryset(items)
-        serializer = EventSmallSerializerNoAcademy(items, many=True)
+        serializer = GetLiveClassSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -351,17 +370,14 @@ class AcademyLiveClassView(APIView):
     def put(self, request, cohort_schedule_id, academy_id=None):
         lang = get_user_language(request)
 
-        already = LiveClass.objects.filter(id=cohort_schedule_id, cohort__academy__id=academy_id).first()
+        already = LiveClass.objects.filter(id=cohort_schedule_id,
+                                           cohort_time_slot__cohort__academy__id=academy_id).first()
         if already is None:
             raise ValidationException(
                 translation(lang,
                             en=f'Schedule not found for this academy {academy_id}',
                             es=f'No se encontró el horario para esta academia {academy_id}',
                             slug='not-found'))
-
-        # data = {}
-        # for key in request.data.keys():
-        #     data[key] = request.data.get(key)
 
         serializer = LiveClassSerializer(already,
                                          data=request.data,
@@ -375,20 +391,22 @@ class AcademyLiveClassView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MeLiveClassJoinView(APIView):
+class AcademyLiveClassJoinView(APIView):
 
-    @has_permission('cohort_classroom', consumer=cohort_schedule_by_url_param)
-    def get(self, request, cohort_schedule_id):
+    @capable_of('start_or_end_class')
+    def get(self, request, hash):
         lang = get_user_language(request)
 
-        schedule = LiveClass.objects.filter(id=cohort_schedule_id).first()
-        if not schedule:
+        live_class = LiveClass.objects.filter(cohort_time_slot__cohort__cohortuser__user=request.user,
+                                              hash=hash).first()
+        if not live_class:
             raise ValidationException(lang,
-                                      en='Schedule not found',
-                                      es='Horario no encontrado',
-                                      slug='schedule_not_found')
+                                      en='Live class not found',
+                                      es='Clase en vivo no encontrada',
+                                      slug='not-found')
 
-        serializer = EventSmallSerializer(schedule, many=False)
+        serializer = GetLiveClassJoinSerializer(live_class, many=False)
+
         return Response(serializer.data)
 
 
@@ -942,7 +960,7 @@ class ICalStudentView(APIView):
             event.add('dtstart', starting_at)
             event.add('dtstamp', stamp)
 
-            until_date = item.cohort.ending_date
+            until_date = item.removed_at or item.cohort.ending_date
 
             if not until_date:
                 until_date = timezone.make_aware(

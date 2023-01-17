@@ -160,6 +160,22 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     tags = serpy.Field()
 
 
+class GetLiveClassSerializer(serpy.Serializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+
+
+class GetLiveClassJoinSerializer(GetLiveClassSerializer):
+    url = serpy.MethodField()
+
+    def get_url(self, obj):
+        return obj.cohort_time_slot.cohort.online_meeting_url
+
+
 class EventCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()

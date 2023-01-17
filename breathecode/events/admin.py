@@ -1,9 +1,10 @@
+from datetime import timedelta
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
 
 import breathecode.events.tasks as tasks
-from .models import Event, EventTypeVisibilitySetting, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
+from .models import Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
 from .actions import sync_org_venues, sync_org_events
 from breathecode.utils import AdminExportCsvMixin
 import breathecode.marketing.tasks as marketing_tasks
@@ -124,3 +125,17 @@ class EventTypeVisibilitySettingAdmin(admin.ModelAdmin):
         'academy__slug', 'academy__name', 'syllabus__slug', 'syllabus__name', 'cohort__slug', 'cohort__name'
     ]
     actions = [reattempt_eventbrite_webhook]
+
+
+@admin.register(LiveClass)
+class LiveClassAdmin(admin.ModelAdmin):
+    list_display = ('cohort_time_slot', 'remote_meeting_url', 'starting_at', 'ending_at', 'started_at',
+                    'ended_at', 'did_it_close_automatically')
+    list_filter = ['cohort_time_slot__recurrent', 'cohort_time_slot__recurrency_type']
+    search_fields = ['id', 'remote_meeting_url']
+
+    def did_it_close_automatically(self, obj: LiveClass):
+        if not obj.ended_at:
+            return False
+
+        return obj.ending_at + timedelta(minutes=30) == obj.ended_at
