@@ -507,6 +507,11 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             param = self.request.GET.get('status')
             lookup['status'] = param
 
+        name = request.GET.get('name', None)
+        if name is not None:
+            lookup['name__icontains'] = name
+            items = items.filter(name__icontains=name)
+
         items = items.filter(**lookup)
 
         items = handler.queryset(items)
@@ -666,6 +671,10 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         if 'syllabus' in self.request.GET:
             param = self.request.GET.get('syllabus')
             lookup['syllabus__slug'] = param
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like=like, items=items, prefix='user__')
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
