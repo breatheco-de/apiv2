@@ -7,6 +7,7 @@ from .models import Event, EventType, LiveClass, Organization, EventbriteWebhook
 from slugify import slugify
 from rest_framework import serializers
 import serpy, logging
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -310,6 +311,8 @@ class LiveClassSerializer(serializers.ModelSerializer):
         exclude = ()
 
     def _validate_started_at(self, data: dict[str, Any]):
+        utc_now = timezone.now()
+
         if not self.instance and 'started_at' in data:
             raise ValidationException(
                 translation(self.context['lang'],
@@ -331,15 +334,17 @@ class LiveClassSerializer(serializers.ModelSerializer):
                             es='Esta clase ya ha sido iniciada.',
                             slug='started-at-already-set'))
 
-        # if self.instance and 'started_at' in data and self.instance.starting_at < data[
-        #         'started_at'] - timedelta(minutes=10):
-        #     raise ValidationException(
-        #         translation(self.context['lang'],
-        #                     en='Started at cannot be so earlier than starting at',
-        #                     es='La fecha de inicio no puede ser tan anterior a la fecha de inicio',
-        #                     slug='started-at-too-early'))
+        if self.instance and 'started_at' in data and (data['started_at'] < utc_now - timedelta(minutes=2) or
+                                                       data['started_at'] > utc_now + timedelta(minutes=2)):
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='Started at cannot be so different from the current time.',
+                            es='La fecha de inicio no puede ser tan diferente de la hora actual.',
+                            slug='started-at-too-different'))
 
     def _validate_ended_at(self, data: dict[str, Any]):
+        utc_now = timezone.now()
+
         if not self.instance and 'ended_at' in data:
             raise ValidationException(
                 translation(self.context['lang'],
@@ -374,6 +379,14 @@ class LiveClassSerializer(serializers.ModelSerializer):
                             en='The live class cannot have ended before starting.',
                             es='La clase en vivo no puede haber finalizado antes de comenzar.',
                             slug='ended-at-cannot-be-less-than-started-at'))
+
+        if self.instance and 'ended_at' in data and (data['ended_at'] < utc_now - timedelta(minutes=2)
+                                                     or data['ended_at'] > utc_now + timedelta(minutes=2)):
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='Ended at at cannot be so different from the current time.',
+                            es='La fecha de finalización no puede ser tan diferente de la hora actual.',
+                            slug='ended-at-too-different'))
 
     def _validate_cohort(self, data: dict[str, Any]):
         if 'cohort' in data and data['cohort'].academy.id != int(self.context['academy_id']):
