@@ -168,7 +168,7 @@ def add_items_to_bag(request, settings: UserSetting, bag: Bag):
     plans = request.data.get('plans')
     cohort = request.data.get('cohort')
 
-    if cohort and not isinstance(cohort, int) and not isinstance(cohort, int):
+    if cohort and not isinstance(cohort, int) and not isinstance(cohort, str):
         raise ValidationException(translation(settings.lang,
                                               en='The cohort needs to be a id or slug',
                                               es='El cohort debe ser un id o slug'),
