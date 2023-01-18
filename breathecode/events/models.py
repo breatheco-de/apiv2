@@ -304,7 +304,7 @@ class LiveClass(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def save(self, *args, **kwargs):
-        if not self.key:
+        if not self.hash:
             self.hash = binascii.hexlify(os.urandom(20)).decode()
 
         return super().save(*args, **kwargs)
