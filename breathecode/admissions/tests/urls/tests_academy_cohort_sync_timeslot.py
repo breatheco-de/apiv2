@@ -175,6 +175,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                          [{
                              'id': 1,
                              'cohort_id': model.cohort.id,
+                             'removed_at': model.syllabus_schedule_time_slot.removed_at,
                              'starting_at': model.syllabus_schedule_time_slot.starting_at,
                              'ending_at': model.syllabus_schedule_time_slot.ending_at,
                              'recurrent': model.syllabus_schedule_time_slot.recurrent,
@@ -215,6 +216,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             [{
                 'id': model.syllabus_schedule_time_slot.id,
                 'cohort_id': model.cohort.id,
+                'removed_at': model.syllabus_schedule_time_slot.removed_at,
                 'starting_at': model.syllabus_schedule_time_slot.starting_at,
                 'ending_at': model.syllabus_schedule_time_slot.ending_at,
                 'recurrent': model.syllabus_schedule_time_slot.recurrent,
@@ -272,6 +274,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_time_slot_dict(), [{
             'id': schedule_time_slot.id,
             'cohort_id': 1,
+            'removed_at': schedule_time_slot.removed_at,
             'starting_at': schedule_time_slot.starting_at,
             'ending_at': schedule_time_slot.ending_at,
             'recurrent': schedule_time_slot.recurrent,
@@ -280,6 +283,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         } for schedule_time_slot in certificate_timeslots] + [{
             'id': schedule_time_slot.id + 2,
             'cohort_id': 2,
+            'removed_at': schedule_time_slot.removed_at,
             'starting_at': schedule_time_slot.starting_at,
             'ending_at': schedule_time_slot.ending_at,
             'recurrent': schedule_time_slot.recurrent,
@@ -325,6 +329,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             [{
                 'id': 2,
                 'cohort_id': model.cohort.id,
+                'removed_at': model.syllabus_schedule_time_slot.removed_at,
                 'starting_at': model.syllabus_schedule_time_slot.starting_at,
                 'ending_at': model.syllabus_schedule_time_slot.ending_at,
                 'recurrent': model.syllabus_schedule_time_slot.recurrent,
