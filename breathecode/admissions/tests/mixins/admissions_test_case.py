@@ -186,7 +186,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'private':
                 model['cohort'].private,
                 'kickoff_date':
-                re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
+                model['cohort'].kickoff_date,
                 'ending_date':
                 model['cohort'].ending_date,
                 'stage':
