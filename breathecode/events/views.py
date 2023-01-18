@@ -172,7 +172,10 @@ class EventMeView(APIView):
 
         for cohort_user in cohort_users_with_syllabus:
             if cohort_user.cohort.syllabus_version.syllabus not in cohorts:
-                syllabus.append(cohort_user.cohort.syllabus_version.syllabus)
+                syllabus.append({
+                    'syllabus': cohort_user.cohort.syllabus_version.syllabus,
+                    'academy': cohort_user.cohort.academy,
+                })
 
         for cohort_user in cohort_users:
             if cohort_user.cohort.academy not in cohorts:
@@ -208,11 +211,11 @@ class EventMeView(APIView):
 
         # shared with a specific syllabus
         for s in syllabus:
-            kwargs = self.build_query_params(academy=cohort.academy, syllabus=s)
+            kwargs = self.build_query_params(academy=s['academy'], syllabus=s['syllabus'])
             if query:
-                query |= Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
+                query |= Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
             else:
-                query = Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
+                query = Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
 
         if query:
             items = EventType.objects.filter(query)

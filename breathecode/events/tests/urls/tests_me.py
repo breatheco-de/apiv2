@@ -344,6 +344,7 @@ class AcademyEventTestSuite(EventTestCase):
                                             syllabus=1,
                                             syllabus_version=1,
                                             event_type_visibility_setting=event_type_visibility_setting)
+
             self.bc.request.authenticate(model.user)
 
             response = self.client.get(url)
