@@ -1750,6 +1750,7 @@ class AcademyCohortHistoryView(APIView):
         return Response(cohort_log.serialize())
 
 
+#TODO: remove it
 class CohortClassRoomView(APIView, HeaderLimitOffsetPagination):
 
     @has_permission('cohort_classroom', consumer=cohort_by_url_param)
