@@ -205,7 +205,7 @@ class EventMeView(APIView):
 
         # shared with a specific syllabus
         for s in syllabus:
-            kwargs = self.build_query_params(academy=cohort.academy, syllabus=s['syllabus'])
+            kwargs = self.build_query_params(academy=s['academy'], syllabus=s['syllabus'])
             if query:
                 query |= Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
             else:
