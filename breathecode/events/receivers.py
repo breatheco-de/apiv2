@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(event_saved, sender=Event)
-def post_save_event(sender: Type[CohortTimeSlot], instance: Event, **kwargs: Any):
+def post_save_event(sender: Type[Event], instance: Event, **kwargs: Any):
     logger.debug('Procesing event save')
     if instance.sync_with_eventbrite and instance.eventbrite_sync_status == 'PENDING':
         async_export_event_to_eventbrite.delay(instance.id)
