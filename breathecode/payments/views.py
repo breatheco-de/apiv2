@@ -203,7 +203,7 @@ class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
                                                   slug='not-found'),
                                       code=404)
 
-        if not (cohort := Cohort.objects.filter(**lookups).first()):
+        if not (cohorts := Cohort.objects.filter(**lookups)):
             raise ValidationException(translation(lang,
                                                   en='Cohort not found',
                                                   es='Cohort no encontrada',
@@ -213,7 +213,7 @@ class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
         items = PlanServiceItem.objects.filter(plan=plan)
 
         for item in items:
-            item.cohorts.add(cohort)
+            item.cohorts.add(cohorts)
 
         return Response({'status': 'ok'}, status=status.HTTP_200_OK)
 
