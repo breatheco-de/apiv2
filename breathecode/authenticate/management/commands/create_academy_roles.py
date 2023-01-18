@@ -352,10 +352,6 @@ CAPABILITIES = [
         'description': 'Speak with a chatbot'
     },
     {
-        'slug': 'chatbot_message',
-        'description': 'Speak with a chatbot'
-    },
-    {
         'slug': 'start_or_end_class',
         'description': 'start or end a class'
     },
