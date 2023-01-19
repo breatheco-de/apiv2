@@ -652,6 +652,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                          [{
                              'id': 1,
                              'cohort_id': 1,
+                             'removed_at': model.syllabus_schedule_time_slot.removed_at,
                              'starting_at': model.syllabus_schedule_time_slot.starting_at,
                              'ending_at': model.syllabus_schedule_time_slot.ending_at,
                              'recurrent': model.syllabus_schedule_time_slot.recurrent,
@@ -747,6 +748,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                          [{
                              'id': 1,
                              'cohort_id': 1,
+                             'removed_at': model.syllabus_schedule_time_slot.removed_at,
                              'starting_at': model.syllabus_schedule_time_slot.starting_at,
                              'ending_at': model.syllabus_schedule_time_slot.ending_at,
                              'recurrent': model.syllabus_schedule_time_slot.recurrent,
@@ -821,6 +823,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                          [{
                              'id': 1,
                              'cohort_id': 1,
+                             'removed_at': model.syllabus_schedule_time_slot.removed_at,
                              'starting_at': model.syllabus_schedule_time_slot.starting_at,
                              'ending_at': model.syllabus_schedule_time_slot.ending_at,
                              'recurrent': model.syllabus_schedule_time_slot.recurrent,
@@ -899,6 +902,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                          [{
                              'id': 1,
                              'cohort_id': 1,
+                             'removed_at': model.syllabus_schedule_time_slot.removed_at,
                              'starting_at': model.syllabus_schedule_time_slot.starting_at,
                              'ending_at': model.syllabus_schedule_time_slot.ending_at,
                              'recurrent': model.syllabus_schedule_time_slot.recurrent,

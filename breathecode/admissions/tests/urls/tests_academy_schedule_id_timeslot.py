@@ -291,6 +291,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.all_syllabus_schedule_time_slot_dict(),
             [{
                 'schedule_id': 1,
+                'removed_at': None,
                 'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
                 'id': 1,
                 'recurrent': True,
@@ -337,6 +338,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.all_syllabus_schedule_time_slot_dict(),
             [{
                 'schedule_id': 1,
+                'removed_at': None,
                 'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
                 'id': 1,
                 'recurrent': True,

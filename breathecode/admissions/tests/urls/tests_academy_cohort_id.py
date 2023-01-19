@@ -679,6 +679,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
                          [{
                              'cohort_id': 1,
+                             'removed_at': syllabus_schedule_time_slot.removed_at,
                              'ending_at': syllabus_schedule_time_slot.ending_at,
                              'id': syllabus_schedule_time_slot.id,
                              'timezone': model.academy.timezone,
@@ -840,6 +841,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
                          [{
                              'cohort_id': 1,
+                             'removed_at': syllabus_schedule_time_slot.removed_at,
                              'ending_at': syllabus_schedule_time_slot.ending_at,
                              'id': syllabus_schedule_time_slot.id,
                              'timezone': model.cohort.timezone,
@@ -1008,6 +1010,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
                          [{
                              'cohort_id': 1,
+                             'removed_at': syllabus_schedule_time_slot.removed_at,
                              'ending_at': syllabus_schedule_time_slot.ending_at,
                              'id': syllabus_schedule_time_slot.id,
                              'timezone': model.academy.timezone,
