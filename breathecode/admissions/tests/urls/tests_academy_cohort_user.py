@@ -18,12 +18,19 @@ UTC_NOW = timezone.now()
 def post_serializer(self, cohort, user, profile_academy=None, data={}):
     return {
         'cohort': {
-            'ending_date': cohort.ending_date,
-            'id': cohort.id,
-            'kickoff_date': self.bc.datetime.to_iso_string(cohort.kickoff_date),
-            'name': cohort.name,
-            'slug': cohort.slug,
-            'stage': cohort.stage,
+            'ending_date':
+            cohort.ending_date,
+            'id':
+            cohort.id,
+            'kickoff_date':
+            self.bc.datetime.to_iso_string(cohort.kickoff_date)
+            if cohort.kickoff_date else cohort.kickoff_date,
+            'name':
+            cohort.name,
+            'slug':
+            cohort.slug,
+            'stage':
+            cohort.stage,
         },
         'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
         'educational_status': None,
@@ -51,12 +58,19 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
 def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={}):
     return {
         'cohort': {
-            'ending_date': cohort.ending_date,
-            'id': cohort.id,
-            'kickoff_date': self.bc.datetime.to_iso_string(cohort.kickoff_date),
-            'name': cohort.name,
-            'slug': cohort.slug,
-            'stage': cohort.stage,
+            'ending_date':
+            cohort.ending_date,
+            'id':
+            cohort.id,
+            'kickoff_date':
+            self.bc.datetime.to_iso_string(cohort.kickoff_date)
+            if cohort.kickoff_date else cohort.kickoff_date,
+            'name':
+            cohort.name,
+            'slug':
+            cohort.slug,
+            'stage':
+            cohort.stage,
         },
         'created_at': self.bc.datetime.to_iso_string(cohort_user.created_at),
         'educational_status': cohort_user.educational_status,
@@ -146,8 +160,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
@@ -222,8 +235,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
@@ -281,8 +293,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
@@ -349,8 +360,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
@@ -412,8 +422,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
@@ -489,8 +498,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
@@ -540,8 +548,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
@@ -594,8 +601,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
@@ -644,8 +650,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
@@ -717,8 +722,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': model['cohort_user'].cohort.kickoff_date,
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
             },
