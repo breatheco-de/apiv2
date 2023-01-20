@@ -163,6 +163,7 @@ class Stripe:
                                         currency=currency.code.lower(),
                                         description=description)
 
+        # https://stripe.com/docs/currencies
         decimals = 1
 
         for _ in range(currency.decimals):
@@ -170,16 +171,6 @@ class Stripe:
 
         # https://stripe.com/docs/api/charges/create
         amount = math.ceil(amount * decimals)
-
-        print('ooo')
-        print(math.ceil(amount))
-        print(amount)
-        print(currency)
-        logger.info('ooo')
-        logger.info(math.ceil(amount))
-        logger.info(amount)
-        logger.info(currency)
-
         charge = self._i18n_validations(callback)
 
         utc_now = timezone.now()
