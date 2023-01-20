@@ -816,19 +816,11 @@ class PayView(APIView):
                                               code=500)
 
                 if amount >= 0.50:
-                    print('amount >= 0.50')
-                    print(amount)
-                    logger.info('amount >= 0.50')
-                    logger.info(amount)
                     s = Stripe()
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
 
                 elif amount == 0:
-                    print('amount == 0')
-                    print(amount)
-                    logger.info('amount == 0')
-                    logger.info(amount)
                     invoice = Invoice(amount=0,
                                       paid_at=utc_now,
                                       user=request.user,
@@ -840,10 +832,6 @@ class PayView(APIView):
                     invoice.save()
 
                 else:
-                    print('amount < 0.50')
-                    print(amount)
-                    logger.info('amount < 0.50')
-                    logger.info(amount)
                     raise ValidationException(translation(lang,
                                                           en='Amount is too low',
                                                           es='El monto es muy bajo',
