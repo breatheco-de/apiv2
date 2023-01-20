@@ -166,9 +166,11 @@ class Stripe:
         print('ooo')
         print(math.ceil(amount))
         print(amount)
+        print(currency)
         logger.info('ooo')
         logger.info(math.ceil(amount))
         logger.info(amount)
+        logger.info(currency)
 
         charge = self._i18n_validations(callback)
 
