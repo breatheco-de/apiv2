@@ -34,6 +34,7 @@ class Currency(models.Model):
 
     code = models.CharField(max_length=3, unique=True)
     name = models.CharField(max_length=20, unique=True)
+    decimals = models.IntegerField(default=0)
 
     countries = models.ManyToManyField(Country,
                                        blank=True,

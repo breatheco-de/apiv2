@@ -163,6 +163,14 @@ class Stripe:
                                         currency=currency.code.lower(),
                                         description=description)
 
+        decimals = 1
+
+        for _ in range(currency.decimals):
+            decimals *= 10
+
+        # https://stripe.com/docs/api/charges/create
+        amount = math.ceil(amount * decimals)
+
         print('ooo')
         print(math.ceil(amount))
         print(amount)
@@ -176,7 +184,7 @@ class Stripe:
 
         utc_now = timezone.now()
         #TODO: think about ban a user if have bad reputation (FinancialReputation)
-        payment = Invoice(user=user, amount=math.ceil(amount), stripe_id=charge['id'], paid_at=utc_now)
+        payment = Invoice(user=user, amount=amount, stripe_id=charge['id'], paid_at=utc_now)
         payment.status = 'FULFILLED'
         payment.currency = currency
         payment.bag = bag
