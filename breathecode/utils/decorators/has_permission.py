@@ -10,9 +10,6 @@ from django.db.models import Sum
 
 from breathecode.authenticate.models import Permission, User
 from breathecode.payments.signals import consume_service
-from django.db import models
-
-# from breathecode.payments.tasks import end_the_consumption_session
 
 from ..exceptions import ProgramingError
 from ..payment_exception import PaymentException
@@ -28,6 +25,7 @@ class PermissionContextType(TypedDict):
     request: WSGIRequest
     consumables: QuerySet
     time_of_life: Optional[timedelta]
+    will_consume: bool
 
 
 HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple,
@@ -82,6 +80,7 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     'request': request,
                     'consumables': Consumable.objects.none(),
                     'time_of_life': None,
+                    'will_consume': True,
                 }
 
                 if consumer:
@@ -94,7 +93,6 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     context['consumables'] = items
 
                 if callable(consumer):
-                    # context, args, kwargs, consume = consumer(context, args, kwargs)
                     context, args, kwargs = consumer(context, args, kwargs)
 
                 if consumer and context['time_of_life']:
@@ -107,21 +105,21 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                         if item.how_many - sum['how_many__sum'] == 0:
                             context['consumables'] = context['consumables'].exclude(id=item.id)
 
-                if consumer and not context['consumables']:
+                if consumer and context['will_consume'] and not context['consumables']:
                     #TODO: send a url to recharge this service
                     raise PaymentException(
                         f'You do not have enough credits to access this service: {permission}',
                         slug='not-enough-consumables')
 
-                if consumer and context['time_of_life'] and (consumable := context['consumables'].first()):
+                if consumer and context['will_consume'] and context['time_of_life'] and (
+                        consumable := context['consumables'].first()):
                     session = ConsumptionSession.build_session(request, consumable, context['time_of_life'])
 
                 response = function(*args, **kwargs)
 
-                it_will_consume = consumer and response.status_code < 400
+                it_will_consume = context['will_consume'] and consumer and response.status_code < 400
                 if it_will_consume and session:
                     session.will_consume(1)
-                    # end_the_consumption_session.apply_async(args=(session.id, 1), eta=utc_now + time_of_life)
 
                 elif it_will_consume:
                     item = context['consumables'].first()

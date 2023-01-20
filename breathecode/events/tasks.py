@@ -101,17 +101,17 @@ def build_live_classes_from_timeslot(self, timeslot_id, utc_now=None):
 
     delta = relativedelta(0)
 
-    if timeslot.recurrent_type == 'DAILY':
+    if timeslot.recurrency_type == 'DAILY':
         delta += relativedelta(days=1)
 
-    if timeslot.recurrent_type == 'WEEKLY':
+    if timeslot.recurrency_type == 'WEEKLY':
         delta += relativedelta(weeks=7)
 
-    if timeslot.recurrent_type == 'MONTHLY':
+    if timeslot.recurrency_type == 'MONTHLY':
         delta += relativedelta(months=1)
 
     if not delta:
-        logger.error(f'{timeslot.recurrent_type} is not a valid or not implemented recurrent_type')
+        logger.error(f'{timeslot.recurrency_type} is not a valid or not implemented recurrency_type')
         return
 
     while True:

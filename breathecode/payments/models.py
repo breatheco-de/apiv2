@@ -467,7 +467,6 @@ class ConsumptionSession(models.Model):
         self.how_many = how_many
         self.save()
 
-        # consume_service.send(instance=self, sender=self.__class__, how_many=how_many)
         end_the_consumption_session.apply_async(args=(self.id, how_many), eta=self.eta)
 
 
