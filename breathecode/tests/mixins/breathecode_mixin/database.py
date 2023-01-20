@@ -10,14 +10,15 @@ from django.db.models import Model
 from breathecode.tests.mixins.generate_models_mixin.utils import create_models, get_list, is_valid, just_one
 from breathecode.utils.attr_dict import AttrDict
 from . import interfaces
-from django.db.models.query_utils import DeferredAttribute
+# from django.db.models.query_utils import DeferredAttribute
 from django.db.models.fields.related_descriptors import (ReverseManyToOneDescriptor, ManyToManyDescriptor,
                                                          ForwardManyToOneDescriptor)
 
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
 from django.db import reset_queries
-from django.db import connection
+from django.db import connections
+# from django.test.utils import override_settings
 
 __all__ = ['Database']
 
@@ -37,8 +38,14 @@ class Database:
     def reset_queries(self):
         reset_queries()
 
-    def get_queries(self):
-        return connection.queries
+    # @override_settings(DEBUG=True)
+    def get_queries(self, db='default'):
+        return [query['sql'] for query in connections[db].queries]
+
+    # @override_settings(DEBUG=True)
+    def print_queries(self, db='default'):
+        for query in connections[db].queries:
+            print(f'{query["time"]} {query["sql"]}\n')
 
     @classmethod
     def get_model(cls, path: str) -> Model:

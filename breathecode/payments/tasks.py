@@ -89,7 +89,7 @@ def renew_subscription(self, subscription_id: int, from_datetime: Optional[datet
         subscription.save()
         return
 
-    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period)
+    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
     try:
         s = Stripe()
