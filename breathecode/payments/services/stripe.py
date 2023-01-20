@@ -163,14 +163,14 @@ class Stripe:
                                         currency=currency.code.lower(),
                                         description=description)
 
-        charge = self._i18n_validations(callback)
-
         print('ooo')
         print(math.ceil(amount))
         print(amount)
         logger.info('ooo')
         logger.info(math.ceil(amount))
         logger.info(amount)
+
+        charge = self._i18n_validations(callback)
 
         utc_now = timezone.now()
         #TODO: think about ban a user if have bad reputation (FinancialReputation)
