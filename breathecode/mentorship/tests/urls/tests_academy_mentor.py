@@ -679,3 +679,33 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         mentor_profile = self.bc.database.get('mentorship.MentorProfile', 1, dict=False)
         self.bc.check.queryset_with_pks(mentor_profile.services.all(), [1])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__post__creating_a_element_without_phone_number(self):
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_mentor',
+                                        profile_academy=1,
+                                        mentorship_service=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        data = {
+            'slug': 'mirai-nikki',
+            'name': 'Mirai Nikki',
+            'price_per_hour': 20,
+            'services': [1],
+            'user': 1
+        }
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'Unable to find phone for this user', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        mentor_profile = self.bc.database.get('mentorship.MentorProfile', 1, dict=False)
+        self.bc.check.queryset_with_pks(mentor_profile.services.all(), [1])

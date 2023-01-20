@@ -748,21 +748,25 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
             raise ValidationException('This mentor does not exist for this academy',
                                       code=404,
                                       slug='not-found')
-        user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id)
+        user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id).first()
 
         if user.first_name is None:
-            raise ValidationException('This mentor does not have a first name', code=404, slug='not-found')
+            raise ValidationException('This mentor does not have a first name',
+                                      code=400,
+                                      slug='without first-name')
 
         if user.last_name is None:
-            raise ValidationException('This mentor does not have a last name', code=404, slug='not-found')
+            raise ValidationException('This mentor does not have a last name',
+                                      code=400,
+                                      slug='without last-name')
 
         if user.email is None:
             raise ValidationException('This mentor does not have an email address',
-                                      code=404,
-                                      slug='not-found')
+                                      code=400,
+                                      slug='without email')
 
         if user.phone is None:
-            raise ValidationException('This mentor does not have a phone', code=404, slug='not-found')
+            raise ValidationException('This mentor does not have a phone', code=400, slug='without phone')
 
         if 'user' in request.data:
             raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',

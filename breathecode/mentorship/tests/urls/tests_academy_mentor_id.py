@@ -404,12 +404,18 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
     def test__post__with_one_mentor_profile(self):
+        profile_academy = {
+            'first_name': self.bc.fake.name(),
+            'last_name': self.bc.fake.name(),
+            'phone': self.bc.fake.phone_number(),
+            'email': self.bc.fake.email()
+        }
         model = self.bc.database.create(user=1,
                                         role=1,
                                         academy=1,
                                         capability='crud_mentorship_mentor',
                                         mentorship_service=1,
-                                        profile_academy=1,
+                                        profile_academy=profile_academy,
                                         mentor_profile=1)
 
         self.bc.request.set_headers(academy=1)
@@ -419,13 +425,20 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.put(url)
 
         json = response.json()
-        expected = put_serializer(self, model.mentor_profile, model.mentorship_service, model.user)
+        expected = put_serializer(self,
+                                  model.mentor_profile,
+                                  model.mentorship_service,
+                                  model.user,
+                                  data={'email': model.profile_academy.email})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
-            self.bc.format.to_dict(model.mentor_profile),
-        ])
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'),
+                         [{
+                             **self.bc.format.to_dict(model.mentor_profile),
+                             'email': model.profile_academy.email,
+                             'name': model.profile_academy.first_name + ' ' + model.profile_academy.last_name,
+                         }])
 
     """
     🔽🔽🔽 PUT with one MentorProfile passing readonly fields
@@ -433,13 +446,19 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    def test__post__with_one_mentor_profile__passing_readonly_fields(self):
+    def test__post__with_one_mentor_profile__passing_randomly_fields(self):
+        profile_academy = {
+            'first_name': self.bc.fake.name(),
+            'last_name': self.bc.fake.name(),
+            'phone': self.bc.fake.phone_number(),
+            'email': self.bc.fake.email()
+        }
         model = self.bc.database.create(user=1,
                                         role=1,
                                         academy=1,
                                         capability='crud_mentorship_mentor',
                                         mentorship_service=1,
-                                        profile_academy=1,
+                                        profile_academy=profile_academy,
                                         mentor_profile=1)
 
         self.bc.request.set_headers(academy=1)
@@ -467,9 +486,15 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    def test__post__with_one_mentor_profile__changing_to_a_success_status(self):
+    def test__post__with_one_mentor_profile__changing_to_a_success_statuss(self):
         statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
         valid_statuses = ['ACTIVE', 'UNLISTED']
+        profile_academy = {
+            'first_name': self.bc.fake.name(),
+            'last_name': self.bc.fake.name(),
+            'phone': self.bc.fake.phone_number(),
+            'email': self.bc.fake.email()
+        }
         for db_status in statuses:
             mentor_profile = {'status': db_status}
             model = self.bc.database.create(user=1,
@@ -477,7 +502,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             academy=1,
                                             capability='crud_mentorship_mentor',
                                             mentorship_service=1,
-                                            profile_academy=1,
+                                            profile_academy=profile_academy,
                                             mentor_profile=mentor_profile)
 
             self.bc.request.set_headers(academy=model.academy.id)
@@ -498,14 +523,18 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                           model.mentor_profile,
                                           model.mentorship_service,
                                           model.user,
-                                          data=data)
+                                          data={'email': model.profile_academy.email})
 
                 self.assertEqual(json, expected)
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [{
-                    **self.bc.format.to_dict(model.mentor_profile),
-                    **data,
-                }])
+                self.assertEqual(
+                    self.bc.database.list_of('mentorship.MentorProfile'),
+                    [{
+                        **self.bc.format.to_dict(model.mentor_profile),
+                        **data,
+                        'email': model.profile_academy.email,
+                        'name': model.profile_academy.first_name + ' ' + model.profile_academy.last_name,
+                    }])
                 self.assertEqual(actions.mentor_is_ready.call_args_list, [call(model.mentor_profile)])
 
                 # teardown
