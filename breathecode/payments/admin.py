@@ -11,7 +11,7 @@ from breathecode.payments.models import (Bag, Consumable, Currency, FinancialRep
 
 @admin.register(Currency)
 class CurrencyAdmin(admin.ModelAdmin):
-    list_display = ('id', 'code', 'name')
+    list_display = ('id', 'code', 'name', 'decimals')
     search_fields = ['code', 'code']
 
 
