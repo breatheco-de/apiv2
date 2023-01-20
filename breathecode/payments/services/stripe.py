@@ -165,6 +165,13 @@ class Stripe:
 
         charge = self._i18n_validations(callback)
 
+        print('ooo')
+        print(math.ceil(amount))
+        print(amount)
+        logger.info('ooo')
+        logger.info(math.ceil(amount))
+        logger.info(amount)
+
         utc_now = timezone.now()
         #TODO: think about ban a user if have bad reputation (FinancialReputation)
         payment = Invoice(user=user, amount=math.ceil(amount), stripe_id=charge['id'], paid_at=utc_now)
