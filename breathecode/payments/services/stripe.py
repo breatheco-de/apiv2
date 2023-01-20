@@ -163,6 +163,7 @@ class Stripe:
                                         currency=currency.code.lower(),
                                         description=description)
 
+        # https://stripe.com/docs/currencies
         decimals = 1
 
         for _ in range(currency.decimals):
