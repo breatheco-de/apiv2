@@ -649,7 +649,10 @@ class Subscription(AbstractIOweYou):
     is_refundable = models.BooleanField(default=True)
 
     # in this day the subscription needs being paid again
-    valid_until = models.DateTimeField()
+    next_payment_at = models.DateTimeField()
+
+    # in this moment the subscription will be expired
+    valid_until = models.DateTimeField(default=None, null=True, blank=True)
 
     # this reminds the service items to change the stock scheduler on change
     service_items = models.ManyToManyField(ServiceItem,
