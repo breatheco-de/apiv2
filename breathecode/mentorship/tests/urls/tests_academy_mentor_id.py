@@ -486,7 +486,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    def test__post__with_one_mentor_profile__changing_to_a_success_statuss(self):
+    def test__post__with_one_mentor_profile__changing_to_a_success_status(self):
         statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
         valid_statuses = ['ACTIVE', 'UNLISTED']
         profile_academy = {
@@ -548,6 +548,12 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     def test__post__with_one_mentor_profile__changing_to_a_success_status__raise_a_exception(self):
         statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
         valid_statuses = ['ACTIVE', 'UNLISTED']
+        profile_academy = {
+            'first_name': self.bc.fake.name(),
+            'last_name': self.bc.fake.name(),
+            'phone': self.bc.fake.phone_number(),
+            'email': self.bc.fake.email()
+        }
         for db_status in statuses:
             mentor_profile = {'status': db_status}
             model = self.bc.database.create(user=1,
@@ -555,7 +561,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             academy=1,
                                             capability='crud_mentorship_mentor',
                                             mentorship_service=1,
-                                            profile_academy=1,
+                                            profile_academy=profile_academy,
                                             mentor_profile=mentor_profile)
 
             self.bc.request.set_headers(academy=model.academy.id)
@@ -597,6 +603,12 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     def test__post__with_one_mentor_profile__changing_to_a_failure_status(self):
         statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
         valid_statuses = ['ACTIVE', 'UNLISTED']
+        profile_academy = {
+            'first_name': self.bc.fake.name(),
+            'last_name': self.bc.fake.name(),
+            'phone': self.bc.fake.phone_number(),
+            'email': self.bc.fake.email()
+        }
         for db_status in statuses:
             mentor_profile = {'status': db_status}
             model = self.bc.database.create(user=1,
@@ -604,7 +616,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             academy=1,
                                             capability='crud_mentorship_mentor',
                                             mentorship_service=1,
-                                            profile_academy=1,
+                                            profile_academy=profile_academy,
                                             mentor_profile=mentor_profile)
 
             self.bc.request.set_headers(academy=model.academy.id)
@@ -625,15 +637,21 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                           model.mentor_profile,
                                           model.mentorship_service,
                                           model.user,
-                                          data={'status': current_status})
+                                          data={
+                                              'status': current_status,
+                                              'email': model.profile_academy.email
+                                          })
 
                 self.assertEqual(json, expected)
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'),
-                                 [{
-                                     **self.bc.format.to_dict(model.mentor_profile),
-                                     'status': current_status,
-                                 }])
+                self.assertEqual(
+                    self.bc.database.list_of('mentorship.MentorProfile'),
+                    [{
+                        **self.bc.format.to_dict(model.mentor_profile),
+                        'status': current_status,
+                        'email': model.profile_academy.email,
+                        'name': model.profile_academy.first_name + ' ' + model.profile_academy.last_name,
+                    }])
 
                 self.assertEqual(actions.mentor_is_ready.call_args_list, [])
 
@@ -651,6 +669,12 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
     def test__post__with_one_mentor_profile__changing_all_the_values(self):
         bad_statuses = ['INVITED', 'INNACTIVE']
+        profile_academy = {
+            'first_name': self.bc.fake.name(),
+            'last_name': self.bc.fake.name(),
+            'phone': self.bc.fake.phone_number(),
+            'email': self.bc.fake.email()
+        }
 
         model = self.bc.database.create(user=1,
                                         role=1,
@@ -658,7 +682,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         capability='crud_mentorship_mentor',
                                         mentorship_service=2,
                                         syllabus=2,
-                                        profile_academy=1,
+                                        profile_academy=profile_academy,
                                         mentor_profile=1)
 
         self.bc.request.set_headers(academy=model.academy.id)

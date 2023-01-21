@@ -635,10 +635,16 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__post__creating_a_element(self):
+        profile_academy = {
+            'first_name': self.bc.fake.name(),
+            'last_name': self.bc.fake.name(),
+            'phone': self.bc.fake.phone_number(),
+            'email': self.bc.fake.email()
+        }
         model = self.bc.database.create(user=1,
                                         role=1,
                                         capability='crud_mentorship_mentor',
-                                        profile_academy=1,
+                                        profile_academy=profile_academy,
                                         mentorship_service=1)
 
         self.bc.request.set_headers(academy=1)
@@ -682,10 +688,15 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__post__creating_a_element_without_phone_number(self):
+        profile_academy = {
+            'first_name': self.bc.fake.name(),
+            'last_name': self.bc.fake.name(),
+            'email': self.bc.fake.email()
+        }
         model = self.bc.database.create(user=1,
                                         role=1,
                                         capability='crud_mentorship_mentor',
-                                        profile_academy=1,
+                                        profile_academy=profile_academy,
                                         mentorship_service=1)
 
         self.bc.request.set_headers(academy=1)
