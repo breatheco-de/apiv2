@@ -19,12 +19,19 @@ UTC_NOW = timezone.now()
 def post_serializer(self, cohort, user, profile_academy=None, data={}):
     return {
         'cohort': {
-            'ending_date': cohort.ending_date,
-            'id': cohort.id,
-            'kickoff_date': self.bc.datetime.to_iso_string(cohort.kickoff_date),
-            'name': cohort.name,
-            'slug': cohort.slug,
-            'stage': cohort.stage,
+            'ending_date':
+            cohort.ending_date,
+            'id':
+            cohort.id,
+            'kickoff_date':
+            self.bc.datetime.to_iso_string(cohort.kickoff_date)
+            if cohort.kickoff_date else cohort.kickoff_date,
+            'name':
+            cohort.name,
+            'slug':
+            cohort.slug,
+            'stage':
+            cohort.stage,
         },
         'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
         'educational_status': None,

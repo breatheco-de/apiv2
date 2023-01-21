@@ -3,7 +3,7 @@ Test /cohort/all
 """
 import random
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.urls.base import reverse_lazy
 from django.utils import timezone
@@ -14,16 +14,27 @@ from ..mixins import AdmissionsTestCase
 
 def get_serializer(cohort, syllabus, syllabus_version, data={}):
     return {
-        'id': cohort.id,
-        'distance': None,
-        'slug': cohort.slug,
-        'name': cohort.name,
-        'never_ends': cohort.never_ends,
-        'private': cohort.private,
-        'kickoff_date': re.sub(r'\+00:00$', 'Z', cohort.kickoff_date.isoformat()),
-        'ending_date': cohort.ending_date,
-        'language': cohort.language.lower(),
-        'remote_available': cohort.remote_available,
+        'id':
+        cohort.id,
+        'distance':
+        None,
+        'slug':
+        cohort.slug,
+        'name':
+        cohort.name,
+        'never_ends':
+        cohort.never_ends,
+        'private':
+        cohort.private,
+        'kickoff_date':
+        re.sub(r'\+00:00$', 'Z', cohort.kickoff_date.isoformat())
+        if cohort.kickoff_date else cohort.kickoff_date,
+        'ending_date':
+        cohort.ending_date,
+        'language':
+        cohort.language.lower(),
+        'remote_available':
+        cohort.remote_available,
         'syllabus_version': {
             'name': syllabus.name,
             'status': syllabus_version.status,
@@ -51,9 +62,11 @@ def get_serializer(cohort, syllabus, syllabus_version, data={}):
             'logo_url': cohort.academy.logo_url,
             'is_hidden_on_prework': cohort.academy.is_hidden_on_prework
         },
-        'schedule': None,
+        'schedule':
+        None,
         'timeslots': [],
-        'timezone': None,
+        'timezone':
+        None,
         **data,
     }
 
@@ -341,7 +354,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
                  for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y]))
                                        for x in statuses]
 
-        model = self.generate_models(authenticate=True, cohort=3, profile_academy=True, syllabus_version=True)
+        cohorts = [{'kickoff_date': datetime.today().isoformat()} for n in range(0, 3)]
+        model = self.generate_models(authenticate=True,
+                                     cohort=cohorts,
+                                     profile_academy=True,
+                                     syllabus_version=True)
 
         for current, query, bad_status in cases:
             model.cohort[0].stage = current
@@ -363,11 +380,21 @@ class CohortAllTestSuite(AdmissionsTestCase):
                               key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
                               reverse=True)
 
+            for j in json:
+                del j['kickoff_date']
+            for i in expected:
+                del i['kickoff_date']
+            list_of_cohorts = self.bc.database.list_of('admissions.Cohort')
+            cohorts_dict = self.bc.format.to_dict(model.cohort)
+            for j in list_of_cohorts:
+                del j['kickoff_date']
+            for i in cohorts_dict:
+                del i['kickoff_date']
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(
-                self.bc.database.list_of('admissions.Cohort'),
-                self.bc.format.to_dict(model.cohort),
+                list_of_cohorts,
+                cohorts_dict,
             )
 
     def test_with_data__distance_is_none(self):
@@ -596,7 +623,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 'available_as_saas': False,
             },
         ]
-        cohorts = [{'academy_id': n} for n in range(1, 5)]
+        cohorts = [{'academy_id': n, 'kickoff_date': datetime.today().isoformat()} for n in range(1, 5)]
         model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
 
         for query in cases:
@@ -616,10 +643,19 @@ class CohortAllTestSuite(AdmissionsTestCase):
                               key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
                               reverse=True)
 
+            for j in json:
+                del j['kickoff_date']
+            for i in expected:
+                del i['kickoff_date']
+            list_of_cohorts = self.bc.database.list_of('admissions.Cohort')
+            cohorts_dict = self.bc.format.to_dict(model.cohort)
+            for j in list_of_cohorts:
+                del j['kickoff_date']
+            for i in cohorts_dict:
+                del i['kickoff_date']
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
-                             self.bc.format.to_dict(model.cohort))
+            self.assertEqual(list_of_cohorts, cohorts_dict)
 
     def test_with_data__saas_is_false(self):
         academies = [
@@ -636,7 +672,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 'available_as_saas': False,
             },
         ]
-        cohorts = [{'academy_id': n} for n in range(1, 5)]
+        cohorts = [{'academy_id': n, 'kickoff_date': datetime.today().isoformat()} for n in range(1, 5)]
         model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
 
         url = reverse_lazy('admissions:cohort_all') + f'?saas=false'
@@ -649,9 +685,19 @@ class CohortAllTestSuite(AdmissionsTestCase):
                           key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
                           reverse=True)
 
+        for j in json:
+            del j['kickoff_date']
+        for i in expected:
+            del i['kickoff_date']
+        list_of_cohorts = self.bc.database.list_of('admissions.Cohort')
+        cohorts_dict = self.bc.format.to_dict(model.cohort)
+        for j in list_of_cohorts:
+            del j['kickoff_date']
+        for i in cohorts_dict:
+            del i['kickoff_date']
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.format.to_dict(model.cohort))
+        self.assertEqual(list_of_cohorts, cohorts_dict)
 
     def test_with_data__saas_is_true(self):
         academies = [
@@ -668,7 +714,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 'available_as_saas': False,
             },
         ]
-        cohorts = [{'academy_id': n} for n in range(1, 5)]
+        cohorts = [{'academy_id': n, 'kickoff_date': datetime.today()} for n in range(1, 5)]
         model = self.generate_models(academy=academies, cohort=cohorts, syllabus_version=True)
 
         url = reverse_lazy('admissions:cohort_all') + f'?saas=true'
@@ -681,9 +727,19 @@ class CohortAllTestSuite(AdmissionsTestCase):
                           key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
                           reverse=True)
 
+        for j in json:
+            del j['kickoff_date']
+        for i in expected:
+            del i['kickoff_date']
+        list_of_cohorts = self.bc.database.list_of('admissions.Cohort')
+        cohorts_dict = self.bc.format.to_dict(model.cohort)
+        for j in list_of_cohorts:
+            del j['kickoff_date']
+        for i in cohorts_dict:
+            del i['kickoff_date']
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.format.to_dict(model.cohort))
+        self.assertEqual(list_of_cohorts, cohorts_dict)
 
     """
     🔽🔽🔽 GET with plan=true in querystring

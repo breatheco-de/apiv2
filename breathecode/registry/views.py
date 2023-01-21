@@ -382,8 +382,8 @@ class AssetView(APIView, GenerateLookupsMixin):
                 Q(slug__icontains=like) | Q(title__icontains=like)
                 | Q(assetalias__slug__icontains=like))
 
-        if 'type' in self.request.GET:
-            param = self.request.GET.get('type')
+        if 'asset_type' in self.request.GET:
+            param = self.request.GET.get('asset_type')
             lookup['asset_type__iexact'] = param
 
         if 'category' in self.request.GET:
@@ -399,7 +399,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             lookup['sync_status__iexact'] = param
 
         if 'slug' in self.request.GET:
-            asset_type = self.request.GET.get('type', None)
+            asset_type = self.request.GET.get('asset_type', None)
             param = self.request.GET.get('slug')
             asset = Asset.get_by_slug(param, request, asset_type=asset_type)
             if asset is not None:
@@ -643,8 +643,8 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 Q(slug__icontains=like) | Q(title__icontains=like)
                 | Q(assetalias__slug__icontains=like))
 
-        if 'type' in self.request.GET:
-            param = self.request.GET.get('type')
+        if 'asset_type' in self.request.GET:
+            param = self.request.GET.get('asset_type')
             lookup['asset_type__iexact'] = param
 
         if 'category' in self.request.GET:
@@ -660,7 +660,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             lookup['sync_status'] = param.upper()
 
         if 'slug' in self.request.GET:
-            asset_type = self.request.GET.get('type', None)
+            asset_type = self.request.GET.get('asset_type', None)
             param = self.request.GET.get('slug')
             asset = Asset.get_by_slug(param, request, asset_type=asset_type)
             if asset is not None:

@@ -1,7 +1,8 @@
+import binascii
 import os
 from django.db import models
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy, Cohort, Syllabus
+from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Syllabus
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
 
@@ -280,3 +281,30 @@ class EventbriteWebhook(models.Model):
 
     def __str__(self):
         return f'Action {self.action} {self.status} => {self.api_url}'
+
+
+class LiveClass(models.Model):
+    """
+    It represents a live class that will be built from a CohortTimeSlot
+    """
+    cohort_time_slot = models.ForeignKey(CohortTimeSlot, on_delete=models.CASCADE)
+    log = models.JSONField(default=dict)
+    remote_meeting_url = models.URLField()
+
+    # this should be use in the future to create automatically the permalinks
+    hash = models.CharField(max_length=40, unique=True)
+
+    started_at = models.DateTimeField(default=None, blank=True, null=True)
+    ended_at = models.DateTimeField(default=None, blank=True, null=True)
+
+    starting_at = models.DateTimeField()
+    ending_at = models.DateTimeField()
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.hash = binascii.hexlify(os.urandom(20)).decode()
+
+        return super().save(*args, **kwargs)
