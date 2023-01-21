@@ -254,7 +254,8 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     subscription = Subscription.objects.create(user=bag.user,
                                                paid_at=invoice.paid_at,
                                                academy=bag.academy,
-                                               valid_until=invoice.paid_at + relativedelta(months=months),
+                                               valid_until=None,
+                                               next_payment_at=invoice.paid_at + relativedelta(months=months),
                                                status='ACTIVE')
 
     subscription.plans.set(bag.plans.all())
