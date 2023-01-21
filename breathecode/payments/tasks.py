@@ -273,7 +273,7 @@ def build_subscription(self, bag_id: int, invoice_id: int):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def build_plan_financing(self, bag_id: int, invoice_id: int):
-    logger.info(f'Starting build_financing for bag {bag_id}')
+    logger.info(f'Starting build_plan_financing for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
         logger.error(f'Bag with id {bag_id} not found')
