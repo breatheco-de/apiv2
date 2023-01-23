@@ -279,7 +279,7 @@ class Cohort(models.Model):
     slug = models.CharField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
 
-    kickoff_date = models.DateTimeField()
+    kickoff_date = models.DateTimeField(blank=True, null=True)
     ending_date = models.DateTimeField(blank=True, null=True)
     current_day = models.IntegerField(
         help_text='Each day the teacher takes attendancy and increases the day in one', default=1)
@@ -470,6 +470,10 @@ class TimeSlot(models.Model):
     recurrent = models.BooleanField(default=True)
     recurrency_type = models.CharField(max_length=10, choices=RECURRENCY_TYPE, default=WEEKLY)
 
+    removed_at = models.DateTimeField(null=True,
+                                      default=None,
+                                      blank=True,
+                                      help_text='This will be available until this date')
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
