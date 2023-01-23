@@ -290,6 +290,37 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET passing name in querystring
     """
 
+    def test__get__mentorship_service__passing_name_wrong(self):
+
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='read_mentorship_service',
+                                        mentorship_service=[{
+                                            'name': 'first'
+                                        }, {
+                                            'name': 'second'
+                                        }],
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=model.academy.id)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_service') + f'?name=g'
+        response = self.client.get(url)
+
+        json = response.json()
+        mentorship_service = sorted(model.mentorship_service, key=lambda x: x.created_at, reverse=True)
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of('mentorship.MentorshipService'),
+            self.bc.format.to_dict(model.mentorship_service),
+        )
+
+        self.bc.database.delete('mentorship.MentorshipService')
+
     def test__get__mentorship_service__passing_name(self):
 
         model = self.bc.database.create(user=1,
