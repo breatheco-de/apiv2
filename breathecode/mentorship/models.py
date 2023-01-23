@@ -75,7 +75,11 @@ class MentorshipService(models.Model):
 
 class SupportChannel(models.Model):
     slug = models.SlugField(max_length=150)
-    slack_channel = models.ForeignKey(SlackChannel, on_delete=models.CASCADE, blank=True)
+    slack_channel = models.ForeignKey(SlackChannel,
+                                      on_delete=models.CASCADE,
+                                      blank=True,
+                                      default=None,
+                                      null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     syllabis = models.ManyToManyField(Syllabus, related_name='support_channels')
 
