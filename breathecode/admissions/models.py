@@ -279,7 +279,7 @@ class Cohort(models.Model):
     slug = models.CharField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
 
-    kickoff_date = models.DateTimeField()
+    kickoff_date = models.DateTimeField(blank=True, null=True)
     ending_date = models.DateTimeField(blank=True, null=True)
     current_day = models.IntegerField(
         help_text='Each day the teacher takes attendancy and increases the day in one', default=1)

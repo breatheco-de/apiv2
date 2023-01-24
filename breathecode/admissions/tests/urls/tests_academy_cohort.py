@@ -17,6 +17,8 @@ from ..mixins import AdmissionsTestCase
 
 UTC_NOW = timezone.now()
 
+future_date = datetime.today() + timedelta(days=18)
+
 
 def post_serializer(self, academy, syllabus, syllabus_version, data={}):
     return {
@@ -176,7 +178,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         expected = {
             'slug': ['This field is required.'],
             'name': ['This field is required.'],
-            'kickoff_date': ['This field is required.'],
         }
 
         self.assertEqual(json, expected)
@@ -292,7 +293,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
-            'kickoff_date': datetime.today().isoformat(),
             'ending_date': datetime.today().isoformat(),
             'never_ends': True,
             'schedule': 1,
@@ -301,6 +301,51 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'detail': 'cohort-with-ending-date-and-never-ends',
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+        self.assertEqual(cohort_saved.send.call_args_list, [])
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    def test_academy_cohort__post__with_kickoff_date_and_never_ends_true(self):
+        """Test /academy/cohort without auth"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        url = reverse_lazy('admissions:academy_cohort')
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': datetime.today().isoformat(),
+            'never_ends': True,
+            'schedule': 1,
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {
+            'detail': 'kickoff-date-with-never-ends-true',
             'status_code': 400,
         }
 
@@ -386,7 +431,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
-            'kickoff_date': datetime.today().isoformat(),
             'never_ends': True,
             'schedule': 1,
         }
@@ -428,7 +472,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
-            'kickoff_date': datetime.today().isoformat(),
+            # 'kickoff_date': datetime.today().isoformat(),
             'never_ends': True,
             'remote_available': True,
             'schedule': 1,
@@ -442,7 +486,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'name': cohort.name,
             'never_ends': True,
             'remote_available': True,
-            'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
+            'kickoff_date': cohort.kickoff_date,
             'current_day': cohort.current_day,
             'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
@@ -465,7 +509,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'updated_at': self.datetime_to_iso(cohort.updated_at),
         }
 
-        del data['kickoff_date']
         cohort_two = cohort.__dict__.copy()
         cohort_two.update(data)
         del cohort_two['syllabus']
@@ -549,12 +592,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         models_dict = self.all_cohort_dict()
         url = reverse_lazy('admissions:academy_cohort')
+        ending_date = datetime.today() + timedelta(days=18)
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
-            'never_ends': True,
+            'ending_date': ending_date.isoformat(),
+            'never_ends': False,
             'remote_available': True,
             'schedule': 1,
         }
@@ -565,7 +610,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': cohort.id,
             'slug': cohort.slug,
             'name': cohort.name,
-            'never_ends': True,
+            'never_ends': False,
             'remote_available': True,
             'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
             'current_day': cohort.current_day,
@@ -584,7 +629,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'is_hidden_on_prework': cohort.academy.is_hidden_on_prework
             },
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
-            'ending_date': cohort.ending_date,
+            'ending_date': self.datetime_to_iso(cohort.ending_date),
             'stage': cohort.stage,
             'language': cohort.language.lower(),
             'created_at': self.datetime_to_iso(cohort.created_at),
@@ -592,6 +637,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         }
 
         del data['kickoff_date']
+        del data['ending_date']
         cohort_two = cohort.__dict__.copy()
         cohort_two.update(data)
         del cohort_two['syllabus']
@@ -642,12 +688,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         models_dict = self.all_cohort_dict()
         url = reverse_lazy('admissions:academy_cohort')
+        ending_date = datetime.today() + timedelta(days=18)
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
-            'never_ends': True,
+            'ending_date': ending_date.isoformat(),
+            'never_ends': False,
             'remote_available': True,
             'schedule': 1,
             'timezone': 'Pacific/Pago_Pago',
@@ -659,7 +707,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': cohort.id,
             'slug': cohort.slug,
             'name': cohort.name,
-            'never_ends': True,
+            'never_ends': False,
             'remote_available': True,
             'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
             'current_day': cohort.current_day,
@@ -677,7 +725,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'is_hidden_on_prework': cohort.academy.is_hidden_on_prework,
             },
             'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
-            'ending_date': cohort.ending_date,
+            'ending_date': self.datetime_to_iso(cohort.ending_date),
             'stage': cohort.stage,
             'language': cohort.language.lower(),
             'created_at': self.datetime_to_iso(cohort.created_at),
@@ -685,6 +733,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         }
 
         del data['kickoff_date']
+        del data['ending_date']
         cohort_two = cohort.__dict__.copy()
         cohort_two.update(data)
         del cohort_two['syllabus']
@@ -741,7 +790,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'stage': stage,
-            'kickoff_date': UTC_NOW.isoformat(),
+            # 'kickoff_date': UTC_NOW.isoformat(),
             'never_ends': True,
             'remote_available': True,
             'schedule': 1,
@@ -758,7 +807,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                        'stage': stage,
                                        'slug': 'they-killed-kenny',
                                        'name': 'They killed kenny',
-                                       'schedule': 1
+                                       'schedule': 1,
+                                       'kickoff_date': None,
                                    })
 
         self.assertEqual(json, expected)
@@ -766,7 +816,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
-                'kickoff_date': UTC_NOW,
+                'kickoff_date': None,
             }),
         ])
         self.assertEqual(self.all_cohort_time_slot_dict(),
@@ -819,7 +869,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'stage': stage.lower(),
-            'kickoff_date': UTC_NOW.isoformat(),
+            # 'kickoff_date': UTC_NOW.isoformat(),
             'never_ends': True,
             'remote_available': True,
             'schedule': 1,
@@ -837,6 +887,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                        'slug': 'they-killed-kenny',
                                        'name': 'They killed kenny',
                                        'schedule': 1,
+                                       'kickoff_date': None,
                                    })
 
         self.assertEqual(json, expected)
@@ -844,7 +895,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
-                'kickoff_date': UTC_NOW,
+                'kickoff_date': None,
             }),
         ])
         self.assertEqual(self.all_cohort_time_slot_dict(),
@@ -944,9 +995,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
+        cohort_kwargs = {
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': future_date.isoformat(),
+        }
         self.headers(academy=1)
         model = self.bc.database.create(authenticate=True,
-                                        cohort=True,
+                                        cohort=cohort_kwargs,
                                         profile_academy=True,
                                         capability='read_all_cohort',
                                         role='potato',
@@ -958,10 +1013,15 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         model_dict = self.remove_dinamics_fields(model['cohort'].__dict__)
+        del model_dict['ending_date']
+        del model_dict['kickoff_date']
         base_url = reverse_lazy('admissions:academy_cohort')
         url = f'{base_url}?upcoming=false'
         response = self.client.get(url)
         json = response.json()
+        for j in json:
+            del j['ending_date']
+            del j['kickoff_date']
         expected = [{
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
@@ -969,8 +1029,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'never_ends': model['cohort'].never_ends,
             'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
-            'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
-            'ending_date': model['cohort'].ending_date,
+            # 'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
+            # 'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
@@ -1016,7 +1076,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
-        self.assertEqual(self.get_cohort_dict(1), model_dict)
+        cohort_dict = self.get_cohort_dict(1)
+        del cohort_dict['ending_date']
+        del cohort_dict['kickoff_date']
+        self.assertEqual(cohort_dict, model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -1173,9 +1236,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
+        cohort_kwargs = {
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': future_date.isoformat(),
+        }
         self.headers(academy=1)
         model = self.bc.database.create(authenticate=True,
-                                        cohort=True,
+                                        cohort=cohort_kwargs,
                                         profile_academy=True,
                                         capability='read_all_cohort',
                                         role='potato',
@@ -1199,7 +1266,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date': model['cohort'].ending_date,
+            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
@@ -1254,9 +1321,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
+        cohort_kwargs = {
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': future_date.isoformat(),
+        }
         self.headers(academy=1)
         model = self.bc.database.create(authenticate=True,
-                                        cohort=True,
+                                        cohort=cohort_kwargs,
                                         profile_academy=True,
                                         capability='read_all_cohort',
                                         role='potato',
@@ -1280,7 +1351,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date': model['cohort'].ending_date,
+            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
@@ -1335,10 +1406,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
+        cohort_kwargs = {
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': future_date.isoformat(),
+        }
         self.headers(academy=1)
         models = [
             self.bc.database.create(authenticate=True,
-                                    cohort=True,
+                                    cohort=cohort_kwargs,
                                     profile_academy=True,
                                     capability='read_all_cohort',
                                     role='potato',
@@ -1350,7 +1425,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         base = models[0].copy()
         del base['cohort']
 
-        models = models + [self.bc.database.create(cohort=True, models=base) for index in range(0, 9)]
+        models = models + [
+            self.bc.database.create(cohort=cohort_kwargs, models=base) for index in range(0, 9)
+        ]
         models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
         # reset because this call are coming from mixer
@@ -1371,7 +1448,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'private': model['cohort'].private,
             'language': model['cohort'].language,
             'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
-            'ending_date': model['cohort'].ending_date,
+            'ending_date': datetime_to_iso_format(model['cohort'].ending_date),
             'stage': model['cohort'].stage,
             'current_day': model['cohort'].current_day,
             'current_module': None,
@@ -1415,7 +1492,15 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
+        self_all_cohort = self.all_cohort_dict()
+        for j in self_all_cohort:
+            del j['ending_date']
+            del j['kickoff_date']
+        self_all_model = self.all_model_dict([x.cohort for x in models])
+        for j in self_all_model:
+            del j['ending_date']
+            del j['kickoff_date']
+        self.assertEqual(self_all_cohort, self_all_model)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -1428,6 +1513,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
+        cohort_kwargs = {
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': future_date.isoformat(),
+        }
         self.headers(academy=1)
         base = self.bc.database.create(authenticate=True,
                                        profile_academy=True,
@@ -1436,7 +1525,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                        skip_cohort=True)
 
         models = [
-            self.bc.database.create(cohort=True,
+            self.bc.database.create(cohort=cohort_kwargs,
                                     syllabus=True,
                                     syllabus_version=True,
                                     syllabus_schedule=True,
@@ -1461,7 +1550,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date': model['cohort'].ending_date,
+            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'online_meeting_url': model['cohort'].online_meeting_url,
@@ -1504,9 +1593,15 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), [{
-            **self.model_to_dict(model, 'cohort')
-        } for model in models])
+        all_cohort_dict = self.all_cohort_dict()
+        for cohort_dict in all_cohort_dict:
+            del cohort_dict['ending_date']
+            del cohort_dict['kickoff_date']
+        models_dict = [{**self.model_to_dict(model, 'cohort')} for model in models]
+        for dict in models_dict:
+            del dict['ending_date']
+            del dict['kickoff_date']
+        self.assertEqual(all_cohort_dict, models_dict)
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
@@ -1545,9 +1640,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
+        cohort_kwargs = {
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': future_date.isoformat(),
+        }
         self.headers(academy=1)
         model = self.bc.database.create(authenticate=True,
-                                        cohort=True,
+                                        cohort=cohort_kwargs,
                                         profile_academy=True,
                                         capability='read_all_cohort',
                                         role='potato',
@@ -1571,7 +1670,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date': model['cohort'].ending_date,
+            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
@@ -1626,9 +1725,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
+        cohort_kwargs = {
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': future_date.isoformat(),
+        }
         self.headers(academy=1)
         model = self.bc.database.create(authenticate=True,
-                                        cohort=True,
+                                        cohort=cohort_kwargs,
                                         profile_academy=True,
                                         capability='read_all_cohort',
                                         role='potato',
@@ -1652,7 +1755,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date': model['cohort'].ending_date,
+            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
@@ -1707,10 +1810,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
+        cohort_kwargs = {
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': future_date.isoformat(),
+        }
         self.headers(academy=1)
         models = [
             self.bc.database.create(authenticate=True,
-                                    cohort=True,
+                                    cohort={
+                                        'kickoff_date': datetime.today().isoformat(),
+                                        'ending_date': future_date.isoformat(),
+                                    },
                                     profile_academy=True,
                                     capability='read_all_cohort',
                                     role='potato',
@@ -1722,7 +1832,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         base = models[0].copy()
         del base['cohort']
 
-        models = models + [self.bc.database.create(cohort=True, models=base) for index in range(0, 9)]
+        models = models + [
+            self.bc.database.create(cohort=cohort_kwargs, models=base) for index in range(0, 9)
+        ]
         models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
         # reset because this call are coming from mixer
@@ -1742,8 +1854,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'language': model['cohort'].language,
-            'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
-            'ending_date': model['cohort'].ending_date,
+            'kickoff_date': self.bc.datetime.to_iso_string(model['cohort'].kickoff_date),
+            'ending_date': self.bc.datetime.to_iso_string(model['cohort'].ending_date),
             'stage': model['cohort'].stage,
             'current_day': model['cohort'].current_day,
             'current_module': None,
@@ -1787,7 +1899,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
+
+        self_all_cohort = self.all_cohort_dict()
+        for j in self_all_cohort:
+            del j['ending_date']
+            del j['kickoff_date']
+        self_all_model = self.all_model_dict([x.cohort for x in models])
+        for j in self_all_model:
+            del j['ending_date']
+            del j['kickoff_date']
+
+        self.assertEqual(self_all_cohort, self_all_model)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 

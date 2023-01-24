@@ -191,7 +191,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'never_ends': True,
             'remote_available': True,
             'private': False,
-            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
+            'kickoff_date': model['cohort'].kickoff_date,
             'ending_date': model['cohort'].ending_date,
             'current_day': model['cohort'].current_day,
             'current_module': model['cohort'].current_module,
@@ -588,7 +588,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'language':
             data['language'],
             'kickoff_date':
-            self.datetime_to_iso(model['cohort'].kickoff_date),
+            self.datetime_to_iso(model['cohort'].kickoff_date)
+            if model['cohort'].kickoff_date else model['cohort'].kickoff_date,
             'ending_date':
             self.datetime_to_iso(model['cohort'].ending_date),
             'current_day':
@@ -750,7 +751,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'language':
             data['language'],
             'kickoff_date':
-            self.datetime_to_iso(model['cohort'].kickoff_date),
+            self.datetime_to_iso(model['cohort'].kickoff_date)
+            if model['cohort'].kickoff_date else model['cohort'].kickoff_date,
             'ending_date':
             self.datetime_to_iso(model['cohort'].ending_date),
             'current_day':
@@ -917,7 +919,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'language':
             data['language'],
             'kickoff_date':
-            self.datetime_to_iso(model['cohort'].kickoff_date),
+            self.datetime_to_iso(model['cohort'].kickoff_date)
+            if model['cohort'].kickoff_date else model['cohort'].kickoff_date,
             'ending_date':
             self.datetime_to_iso(model['cohort'].ending_date),
             'current_day':
@@ -1070,22 +1073,38 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         json = response.json()
 
         expected = {
-            'id': model['cohort'].id,
-            'slug': data['slug'],
-            'name': data['name'],
-            'never_ends': False,
-            'remote_available': True,
-            'private': False,
-            'language': data['language'],
-            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
-            'current_day': data['current_day'],
-            'current_module': None,
-            'stage': model['cohort'].stage,
-            'online_meeting_url': model['cohort'].online_meeting_url,
-            'timezone': model['cohort'].timezone,
+            'id':
+            model['cohort'].id,
+            'slug':
+            data['slug'],
+            'name':
+            data['name'],
+            'never_ends':
+            False,
+            'remote_available':
+            True,
+            'private':
+            False,
+            'language':
+            data['language'],
+            'kickoff_date':
+            self.datetime_to_iso(model['cohort'].kickoff_date)
+            if model['cohort'].kickoff_date else model['cohort'].kickoff_date,
+            'ending_date':
+            self.datetime_to_iso(model['cohort'].ending_date),
+            'current_day':
+            data['current_day'],
+            'current_module':
+            None,
+            'stage':
+            model['cohort'].stage,
+            'online_meeting_url':
+            model['cohort'].online_meeting_url,
+            'timezone':
+            model['cohort'].timezone,
             'timeslots': [],
-            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'is_hidden_on_prework':
+            model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model2.syllabus_schedule.id,
                 'name': model2.syllabus_schedule.name,
@@ -1182,7 +1201,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'never_ends': model['cohort'].never_ends,
             'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
-            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
+            'kickoff_date': model['cohort'].kickoff_date,
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
@@ -1292,7 +1311,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'never_ends': model['cohort'].never_ends,
             'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
-            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
+            'kickoff_date': model['cohort'].kickoff_date,
             'ending_date': model['cohort'].ending_date,
             'language': model['cohort'].language,
             'stage': model['cohort'].stage,

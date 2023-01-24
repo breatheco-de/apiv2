@@ -363,37 +363,30 @@ def get_amount(bag: Bag, currency: Currency) -> tuple[float, float, float, float
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
 
-def get_amount_by_chosen_period(bag: Bag, chosen_period: str):
+def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> float:
+    amount = 0
 
-    if chosen_period == 'MONTH':
+    if chosen_period == 'MONTH' and bag.amount_per_month:
         amount = bag.amount_per_month
 
-    if chosen_period == 'QUARTER':
+    elif chosen_period == 'QUARTER' and bag.amount_per_quarter:
         amount = bag.amount_per_quarter
 
-        if not amount:
-            amount = bag.amount_per_month * 3
-
-    if chosen_period == 'HALF':
+    elif chosen_period == 'HALF' and bag.amount_per_half:
         amount = bag.amount_per_half
 
-        if not amount:
-            amount = bag.amount_per_quarter * 2
-
-        if not amount:
-            amount = bag.amount_per_month * 6
-
-    if chosen_period == 'YEAR':
+    elif chosen_period == 'YEAR' and bag.amount_per_year:
         amount = bag.amount_per_year
 
-        if not amount:
-            amount = bag.amount_per_half * 2
-
-        if not amount:
-            amount = bag.amount_per_quarter * 4
-
-        if not amount:
-            amount = bag.amount_per_month * 12
+    # free trial
+    if not amount and (bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half
+                       or bag.amount_per_year):
+        raise ValidationException(translation(
+            lang,
+            en=f'The period {chosen_period} is disabled for this bag',
+            es=f'El periodo {chosen_period} está deshabilitado para esta bolsa',
+            slug='period-disabled-for-bag'),
+                                  code=400)
 
     return amount
 
