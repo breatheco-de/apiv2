@@ -100,7 +100,7 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
 
 @admin.register(PlanFinancing)
 class PlanFinancingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'paid_at', 'pay_until', 'status', 'user')
+    list_display = ('id', 'next_payment_at', 'valid_until', 'status', 'user')
     list_filter = ['status']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
 

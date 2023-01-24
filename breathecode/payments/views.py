@@ -359,10 +359,11 @@ class MeConsumableView(APIView):
                                           user=request.user)
 
         mentorship_services = MentorshipService.objects.none()
-        mentorship_services = filter_consumables(request, items, mentorship_services, 'mentorship_service')
+        mentorship_services = filter_consumables(request, items, mentorship_services,
+                                                 'mentorship_service_set__mentorship_services')
 
         cohorts = Cohort.objects.none()
-        cohorts = filter_consumables(request, items, cohorts, 'cohort')
+        cohorts = filter_consumables(request, items, cohorts, 'cohorts')
 
         event_types = EventType.objects.none()
         event_types = filter_consumables(request, items, event_types, 'event_type')
@@ -422,9 +423,118 @@ class MeSubscriptionView(APIView):
 
         return handler.response(serializer.data)
 
-    def post(self, request):
+
+class MeSubscriptionChargeView(APIView):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    def put(self, request, subscription_id):
+        utc_now = timezone.now()
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id, user=request.user).first()):
+            raise ValidationException(translation(request.user.language,
+                                                  en='Subscription not found',
+                                                  es='No existe la suscripción',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if subscription.status != 'PAYMENT_ISSUE' and subscription.status == 'ERROR':
+            raise ValidationException(translation(request.user.language,
+                                                  en='Nothing to charge too',
+                                                  es='No hay nada que cobrar',
+                                                  slug='nothing-to-charge'),
+                                      code=400)
+
+        if subscription.next_payment_at - timedelta(days=1) > utc_now:
+            raise ValidationException(translation(request.user.language,
+                                                  en='The subscription time is not over',
+                                                  es='El tiempo de la suscripción no ha terminado',
+                                                  slug='time-not-over'),
+                                      code=400)
+
+        tasks.charge_subscription.delay(subscription_id)
+
+        return Response({'status': 'loading'}, status=status.HTTP_202_ACCEPTED)
+
+
+class MePlanFinancingView(APIView):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    def get(self, request, plan_financing_id=None):
         handler = self.extensions(request)
+        lang = get_user_language(request)
+
         now = timezone.now()
+
+        if plan_financing_id:
+            item = PlanFinancing.objects.filter(
+                Q(valid_until__gte=now) | Q(valid_until=None), id=plan_financing_id,
+                user=request.user).exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(
+                    status='PAYMENT_ISSUE').first()
+
+            if not item:
+                raise ValidationException(translation(lang,
+                                                      en='Subscription not found',
+                                                      es='No existe el suscripción',
+                                                      slug='not-found'),
+                                          code=404)
+
+            serializer = GetCreditSerializer(items, many=True)
+            return handler.response(serializer.data)
+
+        items = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None), user=request.user)
+
+        if status := request.GET.get('status'):
+            items = items.filter(status__in=status.split(','))
+        else:
+            items = items.exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(
+                status='PAYMENT_ISSUE')
+
+        if invoice_ids := request.GET.get('invoice_ids'):
+            items = items.filter(invoices__id__in=invoice_ids.split(','))
+
+        if service_slugs := request.GET.get('service_slugs'):
+            items = items.filter(services__slug__in=service_slugs.split(','))
+
+        if plan_slugs := request.GET.get('plan_slugs'):
+            items = items.filter(plans__slug__in=plan_slugs.split(','))
+
+        items = handler.queryset(items)
+        serializer = GetPlanFinancingSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class MePlanFinancingChargeView(APIView):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    def put(self, request, plan_financing_id):
+        utc_now = timezone.now()
+
+        if not (subscription := PlanFinancing.objects.filter(id=plan_financing_id,
+                                                             user=request.user).first()):
+            raise ValidationException(translation(request.user.language,
+                                                  en='Subscription not found',
+                                                  es='No existe la suscripción',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if subscription.status != 'PAYMENT_ISSUE' and subscription.status == 'ERROR':
+            raise ValidationException(translation(request.user.language,
+                                                  en='Nothing to charge too',
+                                                  es='No hay nada que cobrar',
+                                                  slug='nothing-to-charge'),
+                                      code=400)
+
+        if subscription.next_payment_at - timedelta(days=1) > utc_now:
+            raise ValidationException(translation(request.user.language,
+                                                  en='Your current installment is not due yet',
+                                                  es='Tu cuota actual no está vencida',
+                                                  slug='installment-is-not-due'),
+                                      code=400)
+
+        tasks.charge_plan_financing.delay(plan_financing_id)
+
+        return Response({'status': 'loading'}, status=status.HTTP_202_ACCEPTED)
 
 
 class AcademySubscriptionView(APIView):

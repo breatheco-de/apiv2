@@ -174,15 +174,12 @@ class Stripe:
         charge = self._i18n_validations(callback)
 
         utc_now = timezone.now()
-        #TODO: think about ban a user if have bad reputation (FinancialReputation)
-        payment = Invoice(user=user, amount=amount, stripe_id=charge['id'], paid_at=utc_now)
-        payment.status = 'FULFILLED'
-        payment.currency = currency
-        payment.bag = bag
-        payment.academy = bag.academy
-        #   status='FULFILLED' if successfully else 'REJECTED',
+        invoice = Invoice(user=user, amount=amount, stripe_id=charge['id'], paid_at=utc_now)
+        invoice.status = 'FULFILLED'
+        invoice.currency = currency
+        invoice.bag = bag
+        invoice.academy = bag.academy
 
-        payment.save()
+        invoice.save()
 
-        # return a json with the payment data
-        return payment
+        return invoice

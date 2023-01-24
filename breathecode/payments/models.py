@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 from datetime import timedelta
 import os
@@ -338,61 +340,6 @@ class PlanOfferTranslation(models.Model):
     short_description = models.CharField(max_length=255)
 
 
-# class MentorshipServiceSet:
-#     mentorship_services = models.ForeignKey(User, on_delete=models.CASCADE)
-
-
-class Consumable(AbstractServiceItem):
-    """
-    This model is used to represent the units of a service that can be consumed.
-    """
-
-    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
-
-    # if null, this is valid until resources are exhausted
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
-    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, default=None, blank=True, null=True)
-    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE, default=None, blank=True, null=True)
-    mentorship_service = models.ForeignKey(MentorshipService,
-                                           on_delete=models.CASCADE,
-                                           default=None,
-                                           blank=True,
-                                           null=True)
-
-    # if null, this is valid until resources are exhausted
-    valid_until = models.DateTimeField(null=True, blank=True, default=None)
-
-    def clean(self) -> None:
-        resources = [self.cohort, self.mentorship_service, self.event_type]
-        how_many_resources_are_set = len([r for r in resources if r is not None])
-
-        settings = get_user_settings(self.user.id)
-
-        if how_many_resources_are_set > 1:
-            raise forms.ValidationError(
-                translation(settings.lang,
-                            en='A consumable can only be associated with one resource',
-                            es='Un consumible solo se puede asociar con un recurso'))
-
-        if not self.service_item:
-            raise forms.ValidationError(
-                translation(settings.lang,
-                            en='A consumable must be associated with a service item',
-                            es='Un consumible debe estar asociado con un artículo de un servicio'))
-
-        return super().clean()
-
-    def save(self):
-        self.full_clean()
-
-        super().save()
-
-    def __str__(self):
-        return f'{self.user.email}: {self.service_item.service.slug} ({self.how_many})'
-
-
 PENDING = 'PENDING'
 DONE = 'DONE'
 CANCELLED = 'CANCELLED'
@@ -401,97 +348,6 @@ CONSUMPTION_SESSION_STATUS = [
     (DONE, 'Done'),
     (CANCELLED, 'Cancelled'),
 ]
-
-
-class ConsumptionSession(models.Model):
-    consumable = models.ForeignKey(Consumable, on_delete=models.CASCADE)
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-    eta = models.DateTimeField()
-    duration = models.DurationField(blank=False, default=timedelta)
-    how_many = models.FloatField(default=0)
-    status = models.CharField(max_length=12, choices=CONSUMPTION_SESSION_STATUS, default=PENDING)
-    was_discounted = models.BooleanField(default=False)
-
-    request = models.JSONField(default=dict, blank=True)
-
-    # this should be used to get
-    path = models.CharField(max_length=200, blank=True)
-    related_id = models.IntegerField(max_length=200, default=None, blank=True, null=True)
-    related_slug = models.CharField(max_length=200, default=None, blank=True, null=True)
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-
-        super().save(*args, **kwargs)
-
-    @classmethod
-    def build_session(
-        cls,
-        request: WSGIRequest,
-        consumable: Consumable,
-        delta: timedelta,
-        # info: Optional[str] = None,
-    ) -> 'ConsumptionSession':
-        assert request, 'You must provide a request'
-        assert consumable, 'You must provide a consumable'
-        assert delta, 'You must provide a delta'
-
-        utc_now = timezone.now()
-
-        resource = consumable.cohort or consumable.mentorship_service or consumable.event_type
-        id = resource.id if resource else 0
-        slug = resource.slug if resource else ''
-
-        path = resource.__class__._meta.app_label + '.' + resource.__class__.__name__ if resource else ''
-
-        data = {
-            'args': request.parser_context['args'],
-            'kwargs': request.parser_context['kwargs'],
-            'headers': {
-                'academy': request.META.get('HTTP_ACADEMY')
-            },
-            'user': request.user.id,
-        }
-
-        # assert path, 'You must provide a path'
-        assert delta, 'You must provide a delta'
-
-        return cls.objects.create(
-            request=data,
-            consumable=consumable,
-            eta=utc_now + delta,
-            path=path,
-            duration=delta,
-            related_id=id,
-            related_slug=slug,
-            #   related_info=info,
-            user=request.user)
-
-    @classmethod
-    def get_session(cls, request: WSGIRequest) -> 'ConsumptionSession':
-        if not request.user.id:
-            return None
-
-        utc_now = timezone.now()
-        data = {
-            'args': request.parser_context['args'],
-            'kwargs': request.parser_context['kwargs'],
-            'headers': {
-                'academy': request.META.get('HTTP_ACADEMY')
-            },
-            'user': request.user.id,
-        }
-        return cls.objects.filter(eta__gte=utc_now, request=data, user=request.user).first()
-
-    def will_consume(self, how_many: float = 1.0) -> None:
-        # avoid dependency circle
-        from breathecode.payments.tasks import end_the_consumption_session
-
-        self.how_many = how_many
-        self.save()
-
-        end_the_consumption_session.apply_async(args=(self.id, how_many), eta=self.eta)
-
 
 RENEWAL = 'RENEWAL'
 CHECKING = 'CHECKING'
@@ -503,16 +359,20 @@ BAG_STATUS = [
 ]
 
 BAG = 'BAG'
+CHARGE = 'CHARGE'
 PREVIEW = 'PREVIEW'
 BAG_TYPE = [
     (BAG, 'Bag'),
+    (CHARGE, 'Charge'),
     (PREVIEW, 'Preview'),
 ]
 
+NO_SET = 'NO_SET'
 QUARTER = 'QUARTER'
 HALF = 'HALF'
 YEAR = 'YEAR'
 CHOSEN_PERIOD = [
+    (NO_SET, 'No set'),
     (MONTH, 'Month'),
     (QUARTER, 'Quarter'),
     (HALF, 'Half'),
@@ -527,7 +387,7 @@ class Bag(AbstractAmountByTime):
 
     status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING)
     type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG)
-    chosen_period = models.CharField(max_length=7, choices=CHOSEN_PERIOD, default=MONTH)
+    chosen_period = models.CharField(max_length=7, choices=CHOSEN_PERIOD, default=NO_SET)
     how_many_installments = models.IntegerField(default=0)
 
     academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE)
@@ -681,14 +541,30 @@ class PlanFinancing(AbstractIOweYou):
     Allows to financing a plan
     """
 
-    # last time the subscription was paid
-    paid_at = models.DateTimeField()
+    # in this day the financing needs being paid again
+    next_payment_at = models.DateTimeField()
 
-    # in this day the subscription needs being paid again
-    pay_until = models.DateTimeField()
+    # in this moment the subscription will be expired
+    valid_until = models.DateTimeField()
+
+    # this remember the current price per month
+    monthly_price = models.FloatField(default=1)
 
     def __str__(self) -> str:
-        return f'{self.user.email} ({self.pay_until})'
+        return f'{self.user.email} ({self.valid_until})'
+
+    def clean(self) -> None:
+        settings = get_user_settings(self.user)
+
+        if not self.monthly_price:
+            raise forms.ValidationError(settings.lang,
+                                        en='Monthly price is required',
+                                        es='Precio mensual es requerido')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        return super().save(*args, **kwargs)
 
 
 class MentorshipServiceSet(models.Model):
@@ -700,6 +576,153 @@ class MentorshipServiceSet(models.Model):
     name = models.CharField(max_length=150)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     mentorship_services = models.ManyToManyField(MentorshipService, blank=True)
+
+
+class Consumable(AbstractServiceItem):
+    """
+    This model is used to represent the units of a service that can be consumed.
+    """
+
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
+
+    # if null, this is valid until resources are exhausted
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
+    cohorts = models.ManyToManyField(Cohort, blank=True)
+    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE, default=None, blank=True, null=True)
+    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
+                                               on_delete=models.CASCADE,
+                                               default=None,
+                                               blank=True,
+                                               null=True)
+
+    # if null, this is valid until resources are exhausted
+    valid_until = models.DateTimeField(null=True, blank=True, default=None)
+
+    def clean(self) -> None:
+        resources = [self.event_type, self.mentorship_service_set]
+        if self.id:
+            resources.append(self.cohorts)
+
+        how_many_resources_are_set = len([
+            r for r in resources
+            if ((not hasattr(r, 'exists') and r is not None) or (r and hasattr(r, 'exists') and r.exists()))
+        ])
+
+        settings = get_user_settings(self.user.id)
+
+        if how_many_resources_are_set > 1:
+            raise forms.ValidationError(
+                translation(settings.lang,
+                            en='A consumable can only be associated with one resource',
+                            es='Un consumible solo se puede asociar con un recurso'))
+
+        if not self.service_item:
+            raise forms.ValidationError(
+                translation(settings.lang,
+                            en='A consumable must be associated with a service item',
+                            es='Un consumible debe estar asociado con un artículo de un servicio'))
+
+        return super().clean()
+
+    def save(self):
+        self.full_clean()
+
+        super().save()
+
+    def __str__(self):
+        return f'{self.user.email}: {self.service_item.service.slug} ({self.how_many})'
+
+
+class ConsumptionSession(models.Model):
+    consumable = models.ForeignKey(Consumable, on_delete=models.CASCADE)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    eta = models.DateTimeField()
+    duration = models.DurationField(blank=False, default=timedelta)
+    how_many = models.FloatField(default=0)
+    status = models.CharField(max_length=12, choices=CONSUMPTION_SESSION_STATUS, default=PENDING)
+    was_discounted = models.BooleanField(default=False)
+
+    request = models.JSONField(default=dict, blank=True)
+
+    # this should be used to get
+    path = models.CharField(max_length=200, blank=True)
+    related_id = models.IntegerField(max_length=200, default=None, blank=True, null=True)
+    related_slug = models.CharField(max_length=200, default=None, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def build_session(
+        cls,
+        request: WSGIRequest,
+        consumable: Consumable,
+        delta: timedelta,
+        # info: Optional[str] = None,
+    ) -> 'ConsumptionSession':
+        assert request, 'You must provide a request'
+        assert consumable, 'You must provide a consumable'
+        assert delta, 'You must provide a delta'
+
+        utc_now = timezone.now()
+
+        resource = consumable.cohort or consumable.mentorship_service or consumable.event_type
+        id = resource.id if resource else 0
+        slug = resource.slug if resource else ''
+
+        path = resource.__class__._meta.app_label + '.' + resource.__class__.__name__ if resource else ''
+
+        data = {
+            'args': request.parser_context['args'],
+            'kwargs': request.parser_context['kwargs'],
+            'headers': {
+                'academy': request.META.get('HTTP_ACADEMY')
+            },
+            'user': request.user.id,
+        }
+
+        # assert path, 'You must provide a path'
+        assert delta, 'You must provide a delta'
+
+        return cls.objects.create(
+            request=data,
+            consumable=consumable,
+            eta=utc_now + delta,
+            path=path,
+            duration=delta,
+            related_id=id,
+            related_slug=slug,
+            #   related_info=info,
+            user=request.user)
+
+    @classmethod
+    def get_session(cls, request: WSGIRequest) -> 'ConsumptionSession':
+        if not request.user.id:
+            return None
+
+        utc_now = timezone.now()
+        data = {
+            'args': request.parser_context['args'],
+            'kwargs': request.parser_context['kwargs'],
+            'headers': {
+                'academy': request.META.get('HTTP_ACADEMY')
+            },
+            'user': request.user.id,
+        }
+        return cls.objects.filter(eta__gte=utc_now, request=data, user=request.user).first()
+
+    def will_consume(self, how_many: float = 1.0) -> None:
+        # avoid dependency circle
+        from breathecode.payments.tasks import end_the_consumption_session
+
+        self.how_many = how_many
+        self.save()
+
+        end_the_consumption_session.apply_async(args=(self.id, how_many), eta=self.eta)
 
 
 class PlanServiceItem(models.Model):
@@ -811,9 +834,10 @@ class ServiceStockScheduler(models.Model):
     # this reminds which scheduler generated the consumable
     consumables = models.ManyToManyField(Consumable, blank=True)
 
-    last_renew = models.DateTimeField(null=True, blank=True, default=None)
+    # last_renew = models.DateTimeField(null=True, blank=True, default=None)
 
-    # valid_until = models.DateTimeField(null=True, blank=False, default=None)
+    valid_until = models.DateTimeField(null=True, blank=True, default=None)
+    plan_expiration = models.DateTimeField(null=True, blank=True, default=None)
 
     def clean(self) -> None:
         resources = [self.subscription_handler, self.plan_handler]

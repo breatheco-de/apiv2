@@ -18,7 +18,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from rest_framework.request import Request
 
-from .models import SERVICE_UNITS, Bag, Consumable, Currency, Plan, PlanServiceItem, Service, ServiceItem, Subscription
+from .models import SERVICE_UNITS, Bag, Consumable, Currency, Plan, PlanFinancing, PlanServiceItem, Service, ServiceItem, Subscription
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -431,15 +431,14 @@ def get_bag_from_subscription(subscription: Subscription, settings: Optional[Use
                         es='Suscripción invalida, esta no tiene facturas',
                         slug='subscription-has-no-invoices'))
 
-    chosen_period = get_chosen_period_from_subscription(subscription, settings)
+    # chosen_period = get_chosen_period_from_subscription(subscription, settings)
 
     bag.status = 'RENEWAL'
-    bag.type = 'BAG'
+    bag.type = 'CHARGE'
     bag.academy = subscription.academy
     bag.currency = last_invoice.currency
     bag.user = subscription.user
     bag.is_recurrent = True
-    bag.chosen_period = chosen_period
     bag.save()
 
     for service_item in subscription.service_items.all():
@@ -451,24 +450,58 @@ def get_bag_from_subscription(subscription: Subscription, settings: Optional[Use
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
         bag, last_invoice.currency)
 
-    #
     bag.save()
 
     return bag
 
 
-def filter_consumables(request: WSGIRequest, items: QuerySet[Consumable], queryset: QuerySet, key: str):
+def get_bag_from_plan_financing(plan_financing: PlanFinancing, settings: Optional[UserSetting] = None) -> Bag:
+    bag = Bag()
+
+    if not settings:
+        settings = get_user_settings(plan_financing.user.id)
+
+    last_invoice = plan_financing.invoices.filter().last()
+    if not last_invoice:
+        raise Exception(
+            translation(settings.lang,
+                        en='Invalid plan financing, this has not charge',
+                        es='Plan financing es invalido, este no tiene cargos',
+                        slug='plan-financing-has-no-invoices'))
+
+    bag.status = 'RENEWAL'
+    bag.type = 'CHARGE'
+    bag.academy = plan_financing.academy
+    bag.currency = last_invoice.currency
+    bag.user = plan_financing.user
+    bag.is_recurrent = True
+    bag.save()
+
+    for plan in plan_financing.plans.all():
+        bag.plans.add(plan)
+
+    return bag
+
+
+def filter_consumables(request: WSGIRequest,
+                       items: QuerySet[Consumable],
+                       queryset: QuerySet,
+                       key: str,
+                       custom_query_key: Optional[str] = None):
     if ids := request.GET.get(key):
         try:
             ids = [int(x) for x in ids.split(',')]
         except:
             raise ValidationException(f'{key} param must be integer')
 
-        queryset |= items.filter(**{f'{key}__id__in': ids})
+        query_key = custom_query_key or key
+        queryset |= items.filter(**{f'{query_key}__id__in': ids})
 
     if slugs := request.GET.get(f'{key}_slug'):
         slugs = slugs.split(',')
-        queryset |= items.filter(**{f'{key}__slug__in': slugs})
+
+        query_key = custom_query_key or key
+        queryset |= items.filter(**{f'{query_key}__slug__in': slugs})
 
     queryset = queryset.distinct()
     return queryset

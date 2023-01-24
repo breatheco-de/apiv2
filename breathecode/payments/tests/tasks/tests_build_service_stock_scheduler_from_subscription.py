@@ -52,7 +52,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     def test_subscription_exists(self):
         model = self.bc.database.create(subscription=1)
 
@@ -72,7 +72,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             self.bc.format.to_dict(model.subscription),
         ])
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1)])
+        self.assertEqual(tasks.renew_subscription_consumables.delay.call_args_list, [call(1)])
         self.bc.check.queryset_with_pks(model.subscription.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.subscription.plans.all(), [])
         # self.bc.check.queryset_with_pks(model.subscription.service_stock_schedulers.all(), [])
@@ -85,7 +85,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_with_service_item(self):
         model = self.bc.database.create(subscription=1, service_item=1, subscription_service_item=1)
@@ -106,7 +106,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             self.bc.format.to_dict(model.subscription),
         ])
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1)])
+        self.assertEqual(tasks.renew_subscription_consumables.delay.call_args_list, [call(1)])
         self.bc.check.queryset_with_pks(model.subscription.service_items.all(), [1])
         self.bc.check.queryset_with_pks(model.subscription.plans.all(), [])
 
@@ -123,7 +123,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_with_plan(self):
         subscription = {'service_items': []}
@@ -146,7 +146,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             self.bc.format.to_dict(model.subscription),
         ])
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1)])
+        self.assertEqual(tasks.renew_subscription_consumables.delay.call_args_list, [call(1)])
         self.bc.check.queryset_with_pks(model.subscription.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.subscription.plans.all(), [1])
 
@@ -163,7 +163,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_with_plan_and_service_item(self):
         model = self.bc.database.create(subscription=1,
@@ -187,7 +187,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             self.bc.format.to_dict(model.subscription),
         ])
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1)])
+        self.assertEqual(tasks.renew_subscription_consumables.delay.call_args_list, [call(1)])
         self.bc.check.queryset_with_pks(model.subscription.service_items.all(), [1])
         self.bc.check.queryset_with_pks(model.subscription.plans.all(), [1])
 
