@@ -634,12 +634,13 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__post__creating_a_element(self):
+    def test__post__creating_a_elements(self):
+        email = self.bc.fake.email()
         profile_academy = {
             'first_name': self.bc.fake.name(),
             'last_name': self.bc.fake.name(),
             'phone': self.bc.fake.phone_number(),
-            'email': self.bc.fake.email()
+            'email': email
         }
         model = self.bc.database.create(user=1,
                                         role=1,
@@ -666,7 +667,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                    model.user,
                                    data={
                                        'id': 1,
-                                       'slug': 'mirai-nikki'
+                                       'slug': 'mirai-nikki',
+                                       'email': email,
                                    })
 
         self.assertEqual(json, expected)
@@ -680,6 +682,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                 'user_id': 1,
                 'academy_id': 1,
                 'price_per_hour': 20.0,
+                'email': email,
             }),
         ])
 
@@ -687,11 +690,10 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.check.queryset_with_pks(mentor_profile.services.all(), [1])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__post__creating_a_element_without_phone_number(self):
+    def test__post__creating_a_element_without_email(self):
         profile_academy = {
             'first_name': self.bc.fake.name(),
             'last_name': self.bc.fake.name(),
-            'email': self.bc.fake.email()
         }
         model = self.bc.database.create(user=1,
                                         role=1,
@@ -713,10 +715,14 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.post(url, data, format='json')
 
         json = response.json()
-        expected = {'detail': 'Unable to find phone for this user', 'status_code': 400}
+        expected = post_serializer(self,
+                                   model.mentorship_service,
+                                   model.user,
+                                   data={
+                                       'id': 1,
+                                       'slug': 'mirai-nikki',
+                                       'email': model.user.email
+                                   })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        mentor_profile = self.bc.database.get('mentorship.MentorProfile', 1, dict=False)
-        self.bc.check.queryset_with_pks(mentor_profile.services.all(), [1])
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

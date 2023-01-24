@@ -523,7 +523,10 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                           model.mentor_profile,
                                           model.mentorship_service,
                                           model.user,
-                                          data={'email': model.profile_academy.email})
+                                          data={
+                                              'email': model.profile_academy.email,
+                                              'status': current_status
+                                          })
 
                 self.assertEqual(json, expected)
                 self.assertEqual(response.status_code, status.HTTP_200_OK)

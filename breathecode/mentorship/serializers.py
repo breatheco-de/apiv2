@@ -473,36 +473,24 @@ class MentorSerializer(serializers.ModelSerializer):
         exclude = ('created_at', 'updated_at')
 
     def validate(self, data):
+        academy_id = data['academy'].id if 'academy' in data else 0
+        user = data['user']
         profile_academy = ProfileAcademy.objects.filter(user__id=data['user'].id,
                                                         academy__id=data['academy'].id).first()
 
-        if 'first_name' not in data:
-            data['first_name'] = ''
+        if 'name' not in data:
+            data['name'] = ''
 
-        if not data['first_name'] and profile_academy:
+        if not data['name'] and profile_academy:
 
-            data['first_name'] = profile_academy.first_name
+            data['name'] = profile_academy.first_name + ' ' + profile_academy.last_name
 
-        if not data['first_name']:
+        if not data['name']:
 
-            data['first_name'] = data['user'].first_name
-
-        if not data['first_name']:
-            raise ValidationException('Unable to find first name on this user', code=400)
-
-        if 'last_name' not in data:
-            data['last_name'] = ''
-
-        if not data['last_name'] and profile_academy:
-
-            data['last_name'] = profile_academy.last_name
-
-        if not data['last_name']:
-
-            data['last_name'] = data['user'].last_name
-
-        if not data['last_name']:
-            raise ValidationException('Unable to find last name on this user', code=400)
+            data['name'] = user.first_name + ' ' + user.last_name
+        data['name'] = data['name'].strip()
+        if not data['name']:
+            raise ValidationException('Unable to find name on this user', code=400)
 
         if 'email' not in data:
             data['email'] = ''
@@ -517,16 +505,6 @@ class MentorSerializer(serializers.ModelSerializer):
 
         if not data['email']:
             raise ValidationException('Unable to find email on this user', code=400)
-
-        if 'phone' not in data:
-            data['phone'] = ''
-
-        if not data['phone'] and profile_academy:
-
-            data['phone'] = profile_academy.phone
-
-        if not data['phone']:
-            raise ValidationException('Unable to find phone for this user', code=400)
 
         return data
 
@@ -556,7 +534,7 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
         profile_academy = ProfileAcademy.objects.filter(user__id=user.id, academy=academy).first()
 
         if 'name' not in data:
-            data['name'] = self.instance.name
+            data['name'] = ''
 
         if not data['name'] and profile_academy:
 
@@ -575,12 +553,10 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
         if not data['email'] and profile_academy:
 
             data['email'] = profile_academy.email
-            print('22222222222222222222222', profile_academy.email)
 
         if not data['email']:
 
             data['email'] = data['user'].email
-            print('33333333333333333333333')
 
         if not data['email']:
             raise ValidationException('Unable to find email on this user', code=400)
