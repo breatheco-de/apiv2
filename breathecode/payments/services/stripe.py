@@ -157,12 +157,6 @@ class Stripe:
 
         customer = self.add_contact(user)
 
-        def callback():
-            return stripe.Charge.create(customer=customer.stripe_id,
-                                        amount=math.ceil(amount),
-                                        currency=currency.code.lower(),
-                                        description=description)
-
         # https://stripe.com/docs/currencies
         decimals = 1
 
@@ -170,12 +164,20 @@ class Stripe:
             decimals *= 10
 
         # https://stripe.com/docs/api/charges/create
-        amount = math.ceil(amount * decimals)
+        stripe_amount = math.ceil(amount * decimals)
+        invoice_amount = math.ceil(amount)
+
+        def callback():
+            return stripe.Charge.create(customer=customer.stripe_id,
+                                        amount=math.ceil(stripe_amount),
+                                        currency=currency.code.lower(),
+                                        description=description)
+
         charge = self._i18n_validations(callback)
 
         utc_now = timezone.now()
         #TODO: think about ban a user if have bad reputation (FinancialReputation)
-        payment = Invoice(user=user, amount=amount, stripe_id=charge['id'], paid_at=utc_now)
+        payment = Invoice(user=user, amount=invoice_amount, stripe_id=charge['id'], paid_at=utc_now)
         payment.status = 'FULFILLED'
         payment.currency = currency
         payment.bag = bag
