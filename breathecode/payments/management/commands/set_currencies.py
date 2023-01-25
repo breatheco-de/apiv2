@@ -47,6 +47,7 @@ currencies = [
     {
         'code': 'USD',
         'name': 'United States dollar',
+        'decimals': 2,
         'countries': {
             'main': [usa, online, venezuela, uruguay, chile, canada, costa_rica],
         },
@@ -54,6 +55,7 @@ currencies = [
     {
         'code': 'EUR',
         'name': 'Euro',
+        'decimals': 2,
         'countries': {
             'main': [spain],
         },
@@ -61,6 +63,7 @@ currencies = [
     {
         'code': 'CLP',
         'name': 'peso chileno',
+        'decimals': 0,
         'countries': {
             'main': [chile],
         },
@@ -73,7 +76,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for currency in currencies:
-            c, _ = Currency.objects.get_or_create(code=currency['code'], name=currency['name'])
+            c, _ = Currency.objects.get_or_create(code=currency['code'],
+                                                  name=currency['name'],
+                                                  decimals=currency['decimals'])
             for country in currency['countries']['main']:
                 Academy.objects.filter(country__code=country['code'],
                                        country__name=country['name']).update(main_currency=c)
