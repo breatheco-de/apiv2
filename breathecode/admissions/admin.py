@@ -63,7 +63,7 @@ mark_as_unavailable_as_saas.short_description = 'Mark as unavailable as SAAS'
 @admin.register(Academy)
 class AcademyAdmin(admin.ModelAdmin):
     form = AcademyForm
-    list_display = ('slug', 'name', 'city')
+    list_display = ('id', 'slug', 'name', 'city')
     actions = [mark_as_available_as_saas, mark_as_unavailable_as_saas]
 
 

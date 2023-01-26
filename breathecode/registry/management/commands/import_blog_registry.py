@@ -89,7 +89,7 @@ class Command(BaseCommand):
             # replace title and description only
             readme = fetch_article(post['fileName'])
             asset.title = post['title']
-            asset.description = post['excerpt']
+            asset.description = post['excerpt'] or post['subtitle']
             asset.readme_raw = Asset.encode(readme)
 
             _data = frontmatter.loads(readme)
