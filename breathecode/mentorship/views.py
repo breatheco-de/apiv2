@@ -903,7 +903,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
 
         service = request.GET.get('service', None)
         if service is not None:
-            lookup['service__name__icontains'] = service
+            lookup['service__slug__icontains'] = service
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
