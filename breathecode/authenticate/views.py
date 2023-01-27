@@ -271,12 +271,6 @@ class MemberView(APIView, GenerateLookupsMixin):
     @capable_of('crud_member')
     def put(self, request, academy_id=None, user_id_or_email=None):
 
-        mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
-
-        if mentor is None:
-            raise ValidationException('This mentor does not exist for this academy',
-                                      code=404,
-                                      slug='not-found')
         user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id)
 
         if user.first_name is None:

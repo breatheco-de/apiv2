@@ -726,3 +726,15 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+            mentor_profile_columns({
+                'id': 1,
+                'name': 'Mirai Nikki',
+                'slug': 'mirai-nikki',
+                'bio': None,
+                'user_id': 1,
+                'academy_id': 1,
+                'price_per_hour': 20.0,
+                'email': model.user.email,
+            }),
+        ])

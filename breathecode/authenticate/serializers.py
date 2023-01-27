@@ -464,7 +464,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     slug='already-exists')
 
         profile_academy = ProfileAcademy.objects.filter(user__id=data['user'].id,
-                                                        academy__id=data['academy'].id).first()
+                                                            academy__id=data['academy'].id, first_name__is_null=False, \
+                                                            last_name__is_null=False).exclude(first_name='', last_name='')
 
         if 'first_name' not in data:
             data['first_name'] = ''
