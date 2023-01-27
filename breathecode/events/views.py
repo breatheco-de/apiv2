@@ -246,13 +246,13 @@ class MeLiveClassView(APIView):
         lookup = {}
 
         if cohort := self.request.GET.get('cohort', ''):
-            lookup.update(self._get_lookup(cohort, 'cohort__'))
+            lookup.update(self._get_lookup(cohort, 'cohort_time_slot__cohort__'))
 
         if academy := self.request.GET.get('academy', ''):
-            lookup.update(self._get_lookup(academy, 'cohort__academy__'))
+            lookup.update(self._get_lookup(academy, 'cohort_time_slot__cohort__academy__'))
 
         if syllabus := self.request.GET.get('syllabus', ''):
-            lookup.update(self._get_lookup(syllabus, 'cohort__syllabus_version__syllabus__'))
+            lookup.update(self._get_lookup(syllabus, 'cohort_time_slot__cohort__syllabus_version__syllabus__'))
 
         upcoming = self.request.GET.get('upcoming', '')
         if upcoming == 'true':

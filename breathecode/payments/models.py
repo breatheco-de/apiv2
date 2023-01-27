@@ -465,6 +465,7 @@ CANCELLED = 'CANCELLED'
 DEPRECATED = 'DEPRECATED'
 PAYMENT_ISSUE = 'PAYMENT_ISSUE'
 ERROR = 'ERROR'
+FULLY_PAID = 'FULLY_PAID'
 SUBSCRIPTION_STATUS = [
     (FREE_TRIAL, 'Free trial'),
     (ACTIVE, 'Active'),
@@ -472,6 +473,7 @@ SUBSCRIPTION_STATUS = [
     (DEPRECATED, 'Deprecated'),
     (PAYMENT_ISSUE, 'Payment issue'),
     (ERROR, 'Error'),
+    (FULLY_PAID, 'Fully Paid'),
 ]
 
 
@@ -547,6 +549,9 @@ class PlanFinancing(AbstractIOweYou):
     # in this moment the subscription will be expired
     valid_until = models.DateTimeField()
 
+    # in this moment the subscription will be expired
+    plan_expires_at = models.DateTimeField(default=None, null=True, blank=False)
+
     # this remember the current price per month
     monthly_price = models.FloatField(default=1)
 
@@ -556,10 +561,15 @@ class PlanFinancing(AbstractIOweYou):
     def clean(self) -> None:
         settings = get_user_settings(self.user)
 
-        if not self.monthly_price:
+        # if not self.monthly_price:
+        #     raise forms.ValidationError(settings.lang,
+        #                                 en='Monthly price is required',
+        #                                 es='Precio mensual es requerido')
+
+        if not self.plan_expires_at:
             raise forms.ValidationError(settings.lang,
-                                        en='Monthly price is required',
-                                        es='Precio mensual es requerido')
+                                        en='Plan expires at is required',
+                                        es='Plan expires at es requerido')
 
         return super().clean()
 
@@ -589,21 +599,19 @@ class Consumable(AbstractServiceItem):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
-    cohorts = models.ManyToManyField(Cohort, blank=True)
-    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE, default=None, blank=True, null=True)
-    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
-                                               on_delete=models.CASCADE,
-                                               default=None,
-                                               blank=True,
-                                               null=True)
+    cohort = models.ForeignKey(Cohort, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    mentorship_service = models.ForeignKey(MentorshipService,
+                                           on_delete=models.CASCADE,
+                                           default=None,
+                                           blank=True,
+                                           null=True)
 
     # if null, this is valid until resources are exhausted
     valid_until = models.DateTimeField(null=True, blank=True, default=None)
 
     def clean(self) -> None:
-        resources = [self.event_type, self.mentorship_service_set]
-        if self.id:
-            resources.append(self.cohorts)
+        resources = [self.event_type, self.mentorship_service, self.cohort]
 
         how_many_resources_are_set = len([
             r for r in resources

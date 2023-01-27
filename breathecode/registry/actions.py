@@ -90,7 +90,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         if author_id is None:
             raise Exception(
-                f'System does not know what github credentials to use to retrive asset info for: {asset_slug}'
+                f'System does not know what github credentials to use to retrieve asset info for: {asset_slug}'
             )
 
         if asset.readme_url is None or 'github.com' not in asset.readme_url:
@@ -301,6 +301,11 @@ def pull_github_lesson(github, asset, override_meta=False):
         if 'slug' in fm and fm['slug'] != asset.slug:
             logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
             asset.slug = fm['slug']
+
+        if 'excerpt' in fm:
+            asset.description = fm['excerpt']
+        elif 'subtitle' in fm:
+            asset.description = fm['subtitle']
 
         if 'title' in fm and fm['title'] != '':
             asset.title = fm['title']
