@@ -54,42 +54,58 @@ def renew_consumables(self, scheduler_id: int):
         return
 
     # it needs to be paid
-    elif (scheduler.plan_handler and scheduler.plan_handler.subscription
-          and scheduler.plan_handler.subscription.next_payment_at < utc_now):
+    if (scheduler.plan_handler and scheduler.plan_handler.subscription
+            and scheduler.plan_handler.subscription.next_payment_at < utc_now):
         logger.error(
             f'The subscription {scheduler.plan_handler.subscription.id} needs to be paid to renew the '
             'consumables')
         return
 
     # is over
-    elif (scheduler.plan_handler and scheduler.plan_handler.plan_financing
-          and scheduler.plan_handler.plan_financing.valid_until < utc_now):
+    if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
+            and scheduler.plan_handler.plan_financing.valid_until < utc_now):
         logger.error(f'The plan financing {scheduler.plan_handler.plan_financing.id} is over')
         return
 
     # it needs to be paid
-    elif (scheduler.plan_handler and scheduler.plan_handler.plan_financing
-          and scheduler.plan_handler.plan_financing.next_payment_at < utc_now):
+    if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
+            and scheduler.plan_handler.plan_financing.next_payment_at < utc_now):
         logger.error(
             f'The plan financing {scheduler.plan_handler.plan_financing.id} needs to be paid to renew '
             'the consumables')
         return
 
+    # if (scheduler.plan_handler.plan_financing.plan_expires_at
+    #         and scheduler.plan_handler.plan_financing.plan_expires_at < utc_now):
+    #     logger.info(
+    #         f'The services related to PlanFinancing {scheduler.plan_handler.plan_financing.id} is over')
+    #     return
+
+    if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
+            and scheduler.plan_handler.handler.plan.time_of_life
+            and scheduler.plan_handler.handler.plan.time_of_life_unit
+            and scheduler.plan_handler.plan_financing.created_at + actions.calculate_relative_delta(
+                scheduler.plan_handler.handler.plan.time_of_life,
+                scheduler.plan_handler.handler.plan.time_of_life_unit) < utc_now):
+        logger.info(
+            f'The services related to PlanFinancing {scheduler.plan_handler.plan_financing.id} is over')
+        return
+
     # is over
-    elif (scheduler.subscription_handler and scheduler.subscription_handler.subscription
-          and scheduler.subscription_handler.subscription.valid_until < utc_now):
+    if (scheduler.subscription_handler and scheduler.subscription_handler.subscription
+            and scheduler.subscription_handler.subscription.valid_until < utc_now):
         logger.error(f'The subscription {scheduler.subscription_handler.subscription.id} is over')
         return
 
     # it needs to be paid
-    elif (scheduler.subscription_handler and scheduler.subscription_handler.subscription
-          and scheduler.subscription_handler.subscription.next_payment_at < utc_now):
+    if (scheduler.subscription_handler and scheduler.subscription_handler.subscription
+            and scheduler.subscription_handler.subscription.next_payment_at < utc_now):
         logger.error(
             f'The subscription {scheduler.subscription_handler.subscription.id} needs to be paid to renew '
             'the consumables')
         return
 
-    elif (scheduler.valid_until and scheduler.valid_until - timedelta(days=1) < utc_now):
+    if (scheduler.valid_until and scheduler.valid_until - timedelta(days=1) < utc_now):
         logger.info(f'The scheduler {scheduler.id} don\'t needs to be renewed')
         return
 
@@ -103,8 +119,8 @@ def renew_consumables(self, scheduler_id: int):
         plan_service_item = scheduler.plan_handler.handler
         resource_valid_until = scheduler.plan_handler.subscription.valid_until
 
-        unit = scheduler.plan_handler.handler.plan.duration
-        unit_type = scheduler.plan_handler.handler.plan.duration_unit
+        unit = scheduler.plan_handler.handler.plan.time_of_life
+        unit_type = scheduler.plan_handler.handler.plan.time_of_life_unit
         if unit and unit_type:
             plan_delta = actions.calculate_relative_delta(unit, unit_type)
 
@@ -114,8 +130,8 @@ def renew_consumables(self, scheduler_id: int):
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.plan_financing.valid_until
 
-        unit = scheduler.plan_handler.handler.plan.duration
-        unit_type = scheduler.plan_handler.handler.plan.duration_unit
+        unit = scheduler.plan_handler.handler.plan.time_of_life
+        unit_type = scheduler.plan_handler.handler.plan.time_of_life_unit
         if unit and unit_type:
             plan_delta = actions.calculate_relative_delta(unit, unit_type)
 
@@ -211,7 +227,11 @@ def renew_plan_financing_consumables(self, plan_financing_id: int):
         return
 
     if plan_financing.next_payment_at < utc_now:
-        logger.error(f'The subscription {plan_financing.id} needs to be paid to renew the consumables')
+        logger.error(f'The PlanFinancing {plan_financing.id} needs to be paid to renew the consumables')
+        return
+
+    if plan_financing.plan_expires_at and plan_financing.plan_expires_at < utc_now:
+        logger.info(f'The services related to PlanFinancing {plan_financing.id} is over')
         return
 
     for scheduler in ServiceStockScheduler.objects.filter(plan_handler__plan_financing=plan_financing):
@@ -438,22 +458,45 @@ def build_service_stock_scheduler_from_subscription(self,
         logger.error(f'Subscription with id {subscription_id} not found')
         return
 
-    service_items = SubscriptionServiceItem.objects.filter(subscription=subscription)
-    # plans = PlanServiceItemHandler.objects.filter(subscription=subscription)
     utc_now = timezone.now()
 
-    for subscription_handler in service_items:
-        ServiceStockScheduler.objects.get_or_create(subscription_handler=subscription_handler)
-
     for handler in SubscriptionServiceItem.objects.filter(subscription=subscription):
-        ServiceStockScheduler.objects.get_or_create(subscription_handler=handler)
+        unit = handler.service_item.renew_at
+        unit_type = handler.service_item.renew_at_unit
+        delta = actions.calculate_relative_delta(unit, unit_type)
+        valid_until = utc_now + delta
+
+        if subscription.next_payment_at and valid_until > subscription.next_payment_at:
+            valid_until = subscription.next_payment_at
+
+        if subscription.valid_until and valid_until > subscription.valid_until:
+            valid_until = subscription.valid_until
+
+        ServiceStockScheduler.objects.get_or_create(subscription_handler=handler,
+                                                    defaults={
+                                                        'valid_until': valid_until,
+                                                    })
 
     for plan in subscription.plans.all():
         for handler in PlanServiceItem.objects.filter(plan=plan):
+            unit = handler.service_item.renew_at
+            unit_type = handler.service_item.renew_at_unit
+            delta = actions.calculate_relative_delta(unit, unit_type)
+            valid_until = utc_now + delta
+
+            if valid_until > subscription.next_payment_at:
+                valid_until = subscription.next_payment_at
+
+            if subscription.valid_until and valid_until > subscription.valid_until:
+                valid_until = subscription.valid_until
+
             handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription,
                                                                       handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(subscription_handler=handler)
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler,
+                                                        defaults={
+                                                            'valid_until': valid_until,
+                                                        })
 
     renew_subscription_consumables.delay(subscription.id)
 
@@ -560,15 +603,35 @@ def build_plan_financing(self, bag_id: int, invoice_id: int):
         logger.error(f'Invoice with id {invoice_id} not found')
         return
 
+    if not invoice.amount:
+        logger.error(f'An invoice without amount is prohibited (id: {invoice_id})')
+        return
+
+    utc_now = timezone.now()
     months = bag.how_many_installments
+    plans = bag.plans.all()
+    delta = relativedelta(0)
+
+    for plan in plans:
+        unit = plan.time_of_life
+        unit_type = plan.time_of_life_unit
+
+        if not unit or not unit_type:
+            continue
+
+        new_delta = actions.calculate_relative_delta(unit, unit_type)
+        if utc_now + new_delta > utc_now + delta:
+            delta = new_delta
 
     financing = PlanFinancing.objects.create(user=bag.user,
                                              next_payment_at=invoice.paid_at + relativedelta(months=1),
                                              academy=bag.academy,
                                              valid_until=invoice.paid_at + relativedelta(months=months),
+                                             plan_expires_at=invoice.paid_at + delta,
+                                             monthly_price=invoice.amount,
                                              status='ACTIVE')
 
-    financing.plans.set(bag.plans.all())
+    financing.plans.set(plans)
 
     financing.save()
     financing.invoices.add(invoice)

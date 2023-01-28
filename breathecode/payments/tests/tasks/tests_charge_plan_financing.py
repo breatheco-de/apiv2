@@ -123,8 +123,12 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_plan_financing_without_invoices(self):
-        plan_financing = {'valid_until': UTC_NOW + relativedelta(minutes=1)}
-        model = self.bc.database.create_v2(plan_financing=plan_financing, plan=1)
+        plan_financing = {
+            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'monthly_price': (random.random() * 99) + 1,
+            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        }
+        model = self.bc.database.create(plan_financing=plan_financing, plan=1, user=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -169,6 +173,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_process_to_charge(self):
         plan_financing = {
             'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'monthly_price': (random.random() * 99) + 1,
+            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
         model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=1, plan=1)
 
@@ -238,6 +244,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_error_when_try_to_charge(self):
         plan_financing = {
             'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'monthly_price': (random.random() * 99) + 1,
+            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
         model = self.bc.database.create(plan_financing=plan_financing, invoice=1)
 
@@ -291,7 +299,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_plan_financing_is_over(self):
         plan_financing = {
-            'valid_until': UTC_NOW - relativedelta(seconds=1),
+            'valid_until': UTC_NOW - relativedelta(minutes=1),
+            'monthly_price': (random.random() * 99) + 1,
+            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
         model = self.bc.database.create(plan_financing=plan_financing, invoice=1)
 

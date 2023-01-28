@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
 from breathecode.payments import tasks
+from breathecode.payments.actions import calculate_relative_delta
 
 from ...tasks import build_service_stock_scheduler_from_subscription
 
@@ -19,9 +20,9 @@ UTC_NOW = timezone.now()
 def service_stock_scheduler_item(data={}):
     return {
         'id': 1,
-        'last_renew': None,
         'plan_handler_id': None,
         'subscription_handler_id': None,
+        'valid_until': None,
         **data,
     }
 
@@ -88,7 +89,13 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_with_service_item(self):
-        model = self.bc.database.create(subscription=1, service_item=1, subscription_service_item=1)
+        subscription = {
+            'next_payment_at': UTC_NOW + relativedelta(months=1),
+            'valid_until': UTC_NOW + relativedelta(months=2),
+        }
+        model = self.bc.database.create(subscription=subscription,
+                                        service_item=1,
+                                        subscription_service_item=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -112,8 +119,11 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [
             service_stock_scheduler_item({
-                'last_renew': UTC_NOW,
-                'subscription_handler_id': 1,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item.renew_at, model.service_item.renew_at_unit),
+                'subscription_handler_id':
+                1,
             }),
         ])
 
@@ -126,9 +136,12 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_with_plan(self):
-        subscription = {'service_items': []}
+        subscription = {
+            'next_payment_at': UTC_NOW + relativedelta(months=1),
+            'valid_until': UTC_NOW + relativedelta(months=2),
+        }
 
-        model = self.bc.database.create_v2(subscription=1, plan=1, plan_service_item_handler=1)
+        model = self.bc.database.create(subscription=subscription, plan=1, plan_service_item=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -152,8 +165,11 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [
             service_stock_scheduler_item({
-                'plan_handler_id': 1,
-                'last_renew': UTC_NOW,
+                'plan_handler_id':
+                1,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item.renew_at, model.service_item.renew_at_unit),
             }),
         ])
 
@@ -166,10 +182,16 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_with_plan_and_service_item(self):
-        model = self.bc.database.create(subscription=1,
-                                        subscription_service_item=1,
-                                        plan=1,
-                                        plan_service_item_handler=1)
+        subscription = {
+            'next_payment_at': UTC_NOW + relativedelta(months=1),
+            'valid_until': UTC_NOW + relativedelta(months=2),
+        }
+        model = self.bc.database.create(
+            subscription=subscription,
+            subscription_service_item=1,
+            plan=1,
+            plan_service_item=1,
+        )
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -193,13 +215,21 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [
             service_stock_scheduler_item({
-                'id': 1,
-                'subscription_handler_id': 1,
-                'last_renew': UTC_NOW,
+                'id':
+                1,
+                'subscription_handler_id':
+                1,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item.renew_at, model.service_item.renew_at_unit),
             }),
             service_stock_scheduler_item({
-                'id': 2,
-                'plan_handler_id': 1,
-                'last_renew': UTC_NOW,
+                'id':
+                2,
+                'plan_handler_id':
+                1,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item.renew_at, model.service_item.renew_at_unit),
             }),
         ])

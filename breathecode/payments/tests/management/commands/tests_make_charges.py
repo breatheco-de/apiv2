@@ -1,9 +1,12 @@
+import random
 from unittest.mock import patch, MagicMock, call
 from breathecode.payments import tasks
 from breathecode.payments.management.commands.make_charges import Command
 from breathecode.payments.tests.mixins import PaymentsTestCase
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
+
+UTC_NOW = timezone.now()
 
 
 class SlackTestSuite(PaymentsTestCase):
@@ -111,7 +114,12 @@ class SlackTestSuite(PaymentsTestCase):
             (utc_now - relativedelta(days=1, seconds=1), 'DEPRECATED'),
         ]
         for valid_until, status in cases:
-            plan_financing = {'valid_until': valid_until, 'status': status}
+            plan_financing = {
+                'valid_until': valid_until,
+                'status': status,
+                'monthly_price': (random.random() * 99) + 1,
+                'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+            }
 
             model = self.bc.database.create(plan_financing=(2, plan_financing))
 
@@ -138,7 +146,12 @@ class SlackTestSuite(PaymentsTestCase):
             (utc_now - relativedelta(days=1, seconds=1), 'PAYMENT_ISSUE'),
         ]
         for valid_until, status in cases:
-            plan_financing = {'valid_until': valid_until, 'status': status}
+            plan_financing = {
+                'valid_until': valid_until,
+                'status': status,
+                'monthly_price': (random.random() * 99) + 1,
+                'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+            }
 
             model = self.bc.database.create(plan_financing=(2, plan_financing))
 

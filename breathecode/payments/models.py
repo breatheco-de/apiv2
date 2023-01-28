@@ -274,12 +274,19 @@ class Plan(AbstractPriceByTime):
 
     status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT)
 
-    duration = models.IntegerField(default=1, blank=True, null=True)
-    duration_unit = models.CharField(max_length=10,
-                                     choices=PAY_EVERY_UNIT,
-                                     blank=True,
-                                     null=True,
-                                     default=MONTH)
+    time_of_life = models.IntegerField(default=1, blank=True, null=True)
+    time_of_life_unit = models.CharField(max_length=10,
+                                         choices=PAY_EVERY_UNIT,
+                                         blank=True,
+                                         null=True,
+                                         default=MONTH)
+
+    # expires_after = models.IntegerField(default=1, blank=True, null=True)
+    # expires_after_unit = models.CharField(max_length=10,
+    #                                       choices=PAY_EVERY_UNIT,
+    #                                       blank=True,
+    #                                       null=True,
+    #                                       default=MONTH)
 
     trial_duration = models.IntegerField(default=1)
     trial_duration_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
@@ -296,12 +303,13 @@ class Plan(AbstractPriceByTime):
         return self.slug
 
     def clean(self) -> None:
-        if self.is_renewable and (not self.duration or not self.duration_unit):
-            raise forms.ValidationError('If the plan is renewable, you must set duration and duration_unit')
-
-        if not self.is_renewable and (self.duration or self.duration_unit):
+        if self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
             raise forms.ValidationError(
-                'If the plan is not renewable, you must not set duration and duration_unit')
+                'If the plan is renewable, you must set time_of_life and time_of_life_unit')
+
+        if not self.is_renewable and (self.time_of_life or self.time_of_life_unit):
+            raise forms.ValidationError(
+                'If the plan is not renewable, you must not set time_of_life and time_of_life_unit')
 
         return super().clean()
 
@@ -553,27 +561,28 @@ class PlanFinancing(AbstractIOweYou):
     plan_expires_at = models.DateTimeField(default=None, null=True, blank=False)
 
     # this remember the current price per month
-    monthly_price = models.FloatField(default=1)
+    monthly_price = models.FloatField(default=0)
 
     def __str__(self) -> str:
         return f'{self.user.email} ({self.valid_until})'
 
     def clean(self) -> None:
-        settings = get_user_settings(self.user)
+        settings = get_user_settings(self.user.id)
 
-        # if not self.monthly_price:
-        #     raise forms.ValidationError(settings.lang,
-        #                                 en='Monthly price is required',
-        #                                 es='Precio mensual es requerido')
+        if not self.monthly_price:
+            raise forms.ValidationError(
+                translation(settings.lang, en='Monthly price is required', es='Precio mensual es requerido'))
 
         if not self.plan_expires_at:
-            raise forms.ValidationError(settings.lang,
-                                        en='Plan expires at is required',
-                                        es='Plan expires at es requerido')
+            raise forms.ValidationError(
+                translation(settings.lang,
+                            en='Plan expires at is required',
+                            es='Plan expires at es requerido'))
 
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
+        self.full_clean()
         return super().save(*args, **kwargs)
 
 
@@ -817,10 +826,6 @@ class PlanServiceItemHandler(models.Model):
         return str(self.subscription or self.plan_financing or 'Unset')
 
 
-#TODO during the renovation, if the ServiceStockScheduler valid_until is greather than subscription valid_until,
-# take it instead
-
-
 class ServiceStockScheduler(models.Model):
     """
     This model is used to represent the units of a service that can be consumed.
@@ -845,7 +850,8 @@ class ServiceStockScheduler(models.Model):
     # last_renew = models.DateTimeField(null=True, blank=True, default=None)
 
     valid_until = models.DateTimeField(null=True, blank=True, default=None)
-    plan_expiration = models.DateTimeField(null=True, blank=True, default=None)
+
+    # plan_expiration = models.DateTimeField(null=True, blank=True, default=None)
 
     def clean(self) -> None:
         resources = [self.subscription_handler, self.plan_handler]

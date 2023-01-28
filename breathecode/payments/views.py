@@ -359,11 +359,10 @@ class MeConsumableView(APIView):
                                           user=request.user)
 
         mentorship_services = MentorshipService.objects.none()
-        mentorship_services = filter_consumables(request, items, mentorship_services,
-                                                 'mentorship_service_set__mentorship_services')
+        mentorship_services = filter_consumables(request, items, mentorship_services, 'mentorship_service')
 
         cohorts = Cohort.objects.none()
-        cohorts = filter_consumables(request, items, cohorts, 'cohorts')
+        cohorts = filter_consumables(request, items, cohorts, 'cohort')
 
         event_types = EventType.objects.none()
         event_types = filter_consumables(request, items, event_types, 'event_type')
@@ -908,6 +907,7 @@ class PayView(APIView):
                         option = plan.financing_options.filter(
                             how_many_months=bag.how_many_installments).first()
                         amount = option.monthly_price
+                        bag.monthly_price = amount
                     except:
                         raise ValidationException(translation(
                             lang,
@@ -948,7 +948,7 @@ class PayView(APIView):
                                                           slug='amount-is-too-low'),
                                               code=500)
 
-                bag.chosen_period = chosen_period or 'MONTH'
+                bag.chosen_period = chosen_period or 'NO_SET'
                 bag.status = 'PAID'
                 bag.is_recurrent = recurrent
                 bag.token = None

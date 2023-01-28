@@ -188,8 +188,8 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
     slug = serpy.Field()
     # description = serpy.Field()
     status = serpy.Field()
-    duration = serpy.Field()
-    duration_unit = serpy.Field()
+    time_of_life = serpy.Field()
+    time_of_life_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
     service_items = serpy.MethodField()
@@ -309,7 +309,7 @@ class ServiceItemSerializer(serializers.Serializer):
 
 
 class PlanSerializer(serializers.Serializer):
-    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit']
+    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
 
     class Meta:
         model = Plan

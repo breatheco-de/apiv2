@@ -282,10 +282,10 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['user'] = just_one(models['user'])
 
             if 'cohort' in models:
-                kargs['cohorts'] = get_list(models['cohort'])
+                kargs['cohort'] = just_one(models['cohort'])
 
-            if 'mentorship_service_set' in models:
-                kargs['mentorship_service_set'] = just_one(models['mentorship_service_set'])
+            if 'mentorship_service' in models:
+                kargs['mentorship_service'] = just_one(models['mentorship_service'])
 
             models['consumable'] = create_models(consumable, 'payments.Consumable', **kargs)
 

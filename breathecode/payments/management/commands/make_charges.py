@@ -13,14 +13,18 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         utc_now = timezone.now()
-        subscriptions = Subscription.objects.filter(valid_until__lte=utc_now + timedelta(
-            days=1)).exclude(Q(status='CANCELLED') | Q(status='DEPRECATED')
-                             | Q(status='FREE_TRIAL'))
+        statuses = ['CANCELLED', 'DEPRECATED', 'FREE_TRIAL']
 
-        plan_financings = PlanFinancing.objects.filter(plan_expires_at__lte=utc_now +
-                                                       timedelta(days=1)).exclude(
-                                                           Q(status='CANCELLED') | Q(status='DEPRECATED')
-                                                           | Q(status='FREE_TRIAL') | Q(status='FULLY_PAID'))
+        subscriptions = Subscription.objects.filter(valid_until__lte=utc_now + timedelta(days=1))
+        plan_financings = PlanFinancing.objects.filter(valid_until__lte=utc_now + timedelta(days=1))
+
+        for status in statuses:
+            subscriptions = subscriptions.exclude(status=status)
+
+        statuses.append('FULLY_PAID')
+
+        for status in statuses:
+            plan_financings = plan_financings.exclude(status=status)
 
         for subscription in subscriptions:
             tasks.charge_subscription.delay(subscription.id)
