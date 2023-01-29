@@ -8,35 +8,33 @@ from .utils import create_models, get_list, is_valid, just_one
 
 class PaymentsModelsMixin(ModelsMixin):
 
-    def generate_payments_models(
-            self,
-            currency=False,
-            #  price=False,
-            service=False,
-            service_translation=False,
-            service_item=False,
-            plan=False,
-            plan_translation=False,
-            consumable=False,
-            invoice=False,
-            subscription=False,
-            service_stock_scheduler=False,
-            payment_contact=False,
-            financial_reputation=False,
-            academy=False,
-            bag=False,
-            plan_service_item_handler=False,
-            mentorship_service_set=False,
-            subscription_service_item=False,
-            plan_service_item=False,
-            plan_financing=False,
-            service_item_feature=False,
-            financing_option=False,
-            consumption_session=False,
-            plan_offer=False,
-            plan_offer_translation=False,
-            models={},
-            **kwargs):
+    def generate_payments_models(self,
+                                 currency=False,
+                                 service=False,
+                                 service_translation=False,
+                                 service_item=False,
+                                 plan=False,
+                                 plan_translation=False,
+                                 consumable=False,
+                                 invoice=False,
+                                 subscription=False,
+                                 service_stock_scheduler=False,
+                                 payment_contact=False,
+                                 financial_reputation=False,
+                                 academy=False,
+                                 bag=False,
+                                 plan_service_item_handler=False,
+                                 mentorship_service_set=False,
+                                 subscription_service_item=False,
+                                 plan_service_item=False,
+                                 plan_financing=False,
+                                 service_item_feature=False,
+                                 financing_option=False,
+                                 consumption_session=False,
+                                 plan_offer=False,
+                                 plan_offer_translation=False,
+                                 models={},
+                                 **kwargs):
         """Generate models"""
         models = models.copy()
 
@@ -342,7 +340,7 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['subscription_handler'] = just_one(models['subscription_service_item'])
 
             if 'plan_service_item' in models:
-                kargs['plan_handler'] = just_one(models['plan_service_item'])
+                kargs['plan_handler'] = just_one(models['plan_service_item_handler'])
 
             if 'consumable' in models:
                 kargs['consumables'] = get_list(models['consumable'])

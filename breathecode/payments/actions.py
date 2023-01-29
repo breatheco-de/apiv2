@@ -391,32 +391,6 @@ def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> floa
     return amount
 
 
-def get_chosen_period_from_subscription(subscription: Subscription, settings: Optional[UserSetting] = None):
-    how_many = subscription.pay_every
-    unit = subscription.pay_every_unit
-
-    if not settings:
-        settings = get_user_settings(subscription.user.id)
-
-    if unit == 'MONTH' and how_many == 1:
-        return 'MONTH'
-
-    if unit == 'MONTH' and how_many == 3:
-        return 'QUARTER'
-
-    if unit == 'MONTH' and how_many == 6:
-        return 'HALF'
-
-    if (unit == 'MONTH' and how_many == 12) or (unit == 'YEAR' and how_many == 1):
-        return 'YEAR'
-
-    raise Exception(
-        translation(settings.lang,
-                    en=f'Period not found for pay_every_unit={unit} and pay_every={how_many}',
-                    es=f'Periodo no encontrado para pay_every_unit={unit} and pay_every={how_many}',
-                    slug='cannot-determine-period'))
-
-
 def get_bag_from_subscription(subscription: Subscription, settings: Optional[UserSetting] = None) -> Bag:
     bag = Bag()
 
@@ -430,8 +404,6 @@ def get_bag_from_subscription(subscription: Subscription, settings: Optional[Use
                         en='Invalid subscription, this has no invoices',
                         es='Suscripción invalida, esta no tiene facturas',
                         slug='subscription-has-no-invoices'))
-
-    # chosen_period = get_chosen_period_from_subscription(subscription, settings)
 
     bag.status = 'RENEWAL'
     bag.type = 'CHARGE'

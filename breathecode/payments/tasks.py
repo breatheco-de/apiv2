@@ -539,10 +539,27 @@ def build_service_stock_scheduler_from_plan_financing(self,
 
     for plan in plan_financing.plans.all():
         for handler in PlanServiceItem.objects.filter(plan=plan):
+            unit = handler.service_item.renew_at
+            unit_type = handler.service_item.renew_at_unit
+            delta = actions.calculate_relative_delta(unit, unit_type)
+            valid_until = plan_financing.created_at + delta
+
+            if valid_until > plan_financing.next_payment_at:
+                valid_until = plan_financing.next_payment_at
+
+            if plan_financing.plan_expires_at and valid_until > plan_financing.plan_expires_at:
+                valid_until = plan_financing.plan_expires_at
+
+            if plan_financing.valid_until and valid_until > plan_financing.valid_until:
+                valid_until = plan_financing.valid_until
+
             handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing,
                                                                       handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler,
+                                                        defaults={
+                                                            'valid_until': valid_until,
+                                                        })
 
     renew_plan_financing_consumables.delay(plan_financing.id)
 
@@ -666,14 +683,12 @@ def build_free_trial(self, bag_id: int, invoice_id: int):
         logger.error(f'Not have plans to associated to this free trial in the bag {bag_id}')
         return
 
-    utc_now = timezone.now()
-
     for plan in plans:
         unit = plan.trial_duration
         unit_type = plan.trial_duration_unit
         delta = actions.calculate_relative_delta(unit, unit_type)
 
-        until = utc_now + delta
+        until = invoice.paid_at + delta
 
         subscription = Subscription.objects.create(user=bag.user,
                                                    paid_at=invoice.paid_at,
@@ -689,12 +704,10 @@ def build_free_trial(self, bag_id: int, invoice_id: int):
 
         build_service_stock_scheduler_from_subscription.delay(subscription.id)
 
-        logger.info(f'Subscription was created with id {subscription.id} for plan {plan.id}')
+        logger.info(f'Free trial subscription was created with id {subscription.id} for plan {plan.id}')
 
     bag.was_delivered = True
     bag.save()
-
-    logger.info(f'The bag {bag_id} was delivered')
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
