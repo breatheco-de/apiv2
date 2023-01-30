@@ -67,6 +67,23 @@ class EventTypeVisibilitySettingSerializer(serpy.Serializer):
     academy = AcademySmallSerializer(required=False)
 
 
+class EventTypeBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    description = serpy.Field()
+    lang = serpy.Field()
+    allow_shared_creation = serpy.Field()
+    academy = AcademySerializer(required=False)
+    # visibility_settings = serpy.MethodField()
+
+    # def get_visibility_settings(self, obj):
+    #     print('obj')
+    #     print(obj)
+    #     # return EventTypeVisibilitySettingSerializer()
+    #     return True
+
+
 class VenueSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
