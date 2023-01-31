@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import (AcademyActivateView, AcademyView, CohortClassRoomView, CohortMeView, CohortUserView,
-                    AcademyCohortView, SyllabusVersionView, SyllabusView, get_timezones, UserView, UserMeView,
+from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserView, AcademyCohortView,
+                    SyllabusVersionView, SyllabusView, get_timezones, UserView, UserMeView,
                     AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView, SyllabusScheduleView,
                     get_all_academies, get_cohorts, AcademyCohortTimeSlotView, handle_test_syllabus,
                     AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
