@@ -538,9 +538,39 @@ class Subscription(AbstractIOweYou):
         return f'{self.user.email} ({self.valid_until})'
 
 
+class MentorshipServiceSet(models.Model):
+    """
+    M2M between plan and ServiceItem
+    """
+
+    slug = models.SlugField(max_length=100, unique=True)
+    name = models.CharField(max_length=150)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    mentorship_services = models.ManyToManyField(MentorshipService, blank=True)
+
+
 class SubscriptionServiceItem(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
+
+    cohorts = models.ManyToManyField(Cohort, blank=True)
+    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
+                                               on_delete=models.CASCADE,
+                                               blank=True,
+                                               null=True)
+
+    def clean(self):
+        if self.id and self.mentorship_service_set and self.cohorts.count():
+            raise forms.ValidationError(
+                translation(
+                    self._lang,
+                    en='You can not set cohorts and mentorship service set at the same time',
+                    es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return str(self.service_item)
@@ -584,17 +614,6 @@ class PlanFinancing(AbstractIOweYou):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
-
-
-class MentorshipServiceSet(models.Model):
-    """
-    M2M between plan and ServiceItem
-    """
-
-    slug = models.SlugField(max_length=100, unique=True)
-    name = models.CharField(max_length=150)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    mentorship_services = models.ManyToManyField(MentorshipService, blank=True)
 
 
 class Consumable(AbstractServiceItem):

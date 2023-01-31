@@ -229,6 +229,18 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['subscription'] = create_models(subscription, 'payments.Subscription', **kargs)
 
+        if not 'mentorship_service_set' in models and is_valid(mentorship_service_set):
+            kargs = {}
+
+            if 'mentorship_service' in models:
+                kargs['mentorship_services'] = get_list(models['mentorship_service'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['mentorship_service_set'] = create_models(mentorship_service_set,
+                                                             'payments.MentorshipServiceSet', **kargs)
+
         if not 'subscription_service_item' in models and is_valid(subscription_service_item):
             kargs = {}
 
@@ -237,6 +249,12 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'service_item' in models:
                 kargs['service_item'] = just_one(models['service_item'])
+
+            if 'mentorship_service_set' in models:
+                kargs['mentorship_service_set'] = just_one(models['mentorship_service_set'])
+
+            if 'cohort' in models:
+                kargs['cohorts'] = get_list(models['cohort'])
 
             models['subscription_service_item'] = create_models(subscription_service_item,
                                                                 'payments.SubscriptionServiceItem', **kargs)
@@ -257,18 +275,6 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['plans'] = get_list(models['plan'])
 
             models['plan_financing'] = create_models(plan_financing, 'payments.PlanFinancing', **kargs)
-
-        if not 'mentorship_service_set' in models and is_valid(mentorship_service_set):
-            kargs = {}
-
-            if 'mentorship_service' in models:
-                kargs['mentorship_services'] = get_list(models['mentorship_service'])
-
-            if 'academy' in models:
-                kargs['academy'] = just_one(models['academy'])
-
-            models['mentorship_service_set'] = create_models(mentorship_service_set,
-                                                             'payments.MentorshipServiceSet', **kargs)
 
         if not 'consumable' in models and (is_valid(consumable) or is_valid(consumption_session)):
             kargs = {}

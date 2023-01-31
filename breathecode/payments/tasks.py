@@ -38,7 +38,7 @@ def renew_consumables(self, scheduler_id: int):
     The purpose of this function is renew every service items belongs to a subscription.
     """
 
-    logger.info(f'Starting renew_consumables for subscription {scheduler_id}')
+    logger.info(f'Starting renew_consumables for service stock scheduler {scheduler_id}')
 
     if not (scheduler := ServiceStockScheduler.objects.filter(id=scheduler_id).first()):
         logger.error(f'ServiceStockScheduler with id {scheduler_id} not found')
@@ -75,12 +75,6 @@ def renew_consumables(self, scheduler_id: int):
             'the consumables')
         return
 
-    # if (scheduler.plan_handler.plan_financing.plan_expires_at
-    #         and scheduler.plan_handler.plan_financing.plan_expires_at < utc_now):
-    #     logger.info(
-    #         f'The services related to PlanFinancing {scheduler.plan_handler.plan_financing.id} is over')
-    #     return
-
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
             and scheduler.plan_handler.handler.plan.time_of_life
             and scheduler.plan_handler.handler.plan.time_of_life_unit
@@ -112,31 +106,21 @@ def renew_consumables(self, scheduler_id: int):
     plan_service_item = None
     service_item = None
     resource_valid_until = None
-    plan_delta = None
 
     if scheduler.plan_handler and scheduler.plan_handler.subscription:
         user = scheduler.plan_handler.subscription.user
         plan_service_item = scheduler.plan_handler.handler
         resource_valid_until = scheduler.plan_handler.subscription.valid_until
 
-        unit = scheduler.plan_handler.handler.plan.time_of_life
-        unit_type = scheduler.plan_handler.handler.plan.time_of_life_unit
-        if unit and unit_type:
-            plan_delta = actions.calculate_relative_delta(unit, unit_type)
-
-    if scheduler.plan_handler and scheduler.plan_handler.plan_financing:
+    elif scheduler.plan_handler and scheduler.plan_handler.plan_financing:
         user = scheduler.plan_handler.plan_financing.user
         plan_service_item = scheduler.plan_handler.handler
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.plan_financing.valid_until
 
-        unit = scheduler.plan_handler.handler.plan.time_of_life
-        unit_type = scheduler.plan_handler.handler.plan.time_of_life_unit
-        if unit and unit_type:
-            plan_delta = actions.calculate_relative_delta(unit, unit_type)
-
-    if scheduler.subscription_handler and scheduler.subscription_handler.subscription:
+    elif scheduler.subscription_handler and scheduler.subscription_handler.subscription:
         user = scheduler.subscription_handler.subscription.user
+        plan_service_item = scheduler.subscription_handler
         service_item = scheduler.subscription_handler.service_item
         resource_valid_until = scheduler.subscription_handler.subscription.valid_until
 
@@ -145,41 +129,45 @@ def renew_consumables(self, scheduler_id: int):
                  if plan_service_item else service_item.renew_at_unit)
 
     delta = actions.calculate_relative_delta(unit, unit_type)
+    scheduler.valid_until = scheduler.valid_until or utc_now
     scheduler.valid_until = scheduler.valid_until + delta
 
     if resource_valid_until and scheduler.valid_until and scheduler.valid_until > resource_valid_until:
         scheduler.valid_until = resource_valid_until
 
-    if scheduler.plan_expiration and scheduler.plan_expiration < scheduler.valid_until:
-        scheduler.valid_until = scheduler.plan_expiration
-
     scheduler.save()
-    consumable_kwargs = {}
-
-    if scheduler.plan_expiration and scheduler.plan_expiration < utc_now:
-        scheduler.plan_expiration = scheduler.plan_expiration + plan_delta
-        return
-
-    elif not scheduler.plan_expiration and plan_delta:
-        scheduler.plan_expiration = utc_now + plan_delta
-
-    elif scheduler.plan_expiration > resource_valid_until:
-        scheduler.plan_expiration = resource_valid_until
 
     if plan_service_item and plan_service_item.mentorship_service_set:
-        consumable_kwargs['mentorship_service_set'] = plan_service_item.mentorship_service_set
+        for mentorship_service in plan_service_item.mentorship_service_set.mentorship_services.all():
+            consumable = Consumable(service_item=service_item,
+                                    user=user,
+                                    valid_until=scheduler.valid_until,
+                                    mentorship_service=mentorship_service)
 
-    elif plan_service_item and plan_service_item.mentorship_service_set:
-        consumable_kwargs['cohorts'] = plan_service_item.cohorts.filter()
+            consumable.save()
 
-    consumable = Consumable(service_item=service_item,
-                            user=user,
-                            valid_until=scheduler.valid_until,
-                            **consumable_kwargs)
+            scheduler.consumables.add(consumable)
 
-    consumable.save()
+            logger.info(
+                f'The consumable {consumable.id} for mentorship service {mentorship_service.id} was built')
 
-    scheduler.consumables.add(consumable)
+    elif plan_service_item and (cohorts := plan_service_item.cohorts.all()):
+        for cohort in cohorts:
+            consumable = Consumable(service_item=service_item,
+                                    user=user,
+                                    valid_until=scheduler.valid_until,
+                                    cohort=cohort)
+
+            consumable.save()
+
+            scheduler.consumables.add(consumable)
+
+            logger.info(f'The consumable {consumable.id} for cohort {cohort.id} was built')
+
+    else:
+        logger.error('The PlanServiceItem or the ServiceItem not have a resource linked to it '
+                     f'for the ServiceStockScheduler {scheduler.id}')
+        return
 
     logger.info(f'The scheduler {scheduler.id} was renewed')
 
