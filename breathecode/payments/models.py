@@ -865,12 +865,7 @@ class ServiceStockScheduler(models.Model):
 
     # this reminds which scheduler generated the consumable
     consumables = models.ManyToManyField(Consumable, blank=True)
-
-    # last_renew = models.DateTimeField(null=True, blank=True, default=None)
-
     valid_until = models.DateTimeField(null=True, blank=True, default=None)
-
-    # plan_expiration = models.DateTimeField(null=True, blank=True, default=None)
 
     def clean(self) -> None:
         resources = [self.subscription_handler, self.plan_handler]

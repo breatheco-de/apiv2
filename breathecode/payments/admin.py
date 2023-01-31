@@ -125,7 +125,7 @@ class PlanServiceItemHandlerAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceStockScheduler)
 class ServiceStockSchedulerAdmin(admin.ModelAdmin):
-    list_display = ('id', 'subscription', 'service_item', 'plan_financing', 'last_renew')
+    list_display = ('id', 'subscription', 'service_item', 'plan_financing', 'valid_until')
 
     def subscription(self, obj):
         if obj.subscription_handler:
