@@ -42,7 +42,7 @@ class AcademyEventTestSuite(EventTestCase):
 
     def test_academy_event_type_slug_no_auth(self):
 
-        url = reverse_lazy('events:academy_eventype_slug', kwargs={'even_type_slug': 'funny_event'})
+        url = reverse_lazy('events:academy_eventype_slug', kwargs={'event_type_slug': 'funny_event'})
 
         response = self.client.get(url)
         json = response.json()
@@ -54,7 +54,7 @@ class AcademyEventTestSuite(EventTestCase):
     def test_academy_event_type_with_bad_slug(self):
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('events:academy_eventype_slug', kwargs={'even_type_slug': 'funny_event'})
+        url = reverse_lazy('events:academy_eventype_slug', kwargs={'event_type_slug': 'funny_event'})
         self.generate_models(
             authenticate=True,
             profile_academy=1,
@@ -80,7 +80,7 @@ class AcademyEventTestSuite(EventTestCase):
             'updated_at': timezone.now()
         }
 
-        url = reverse_lazy('events:academy_eventype_slug', kwargs={'even_type_slug': event_type_slug})
+        url = reverse_lazy('events:academy_eventype_slug', kwargs={'event_type_slug': event_type_slug})
         model = self.generate_models(authenticate=True,
                                      event=True,
                                      event_type=True,

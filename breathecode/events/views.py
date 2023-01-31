@@ -636,10 +636,10 @@ class AcademyEventTypeView(APIView):
     """
 
     @capable_of('read_event_type')
-    def get(self, request, academy_id=None, even_type_slug=None):
+    def get(self, request, academy_id=None, event_type_slug=None):
 
-        if even_type_slug is not None:
-            event_type = EventType.objects.filter(academy__id=academy_id, slug=even_type_slug).first()
+        if event_type_slug is not None:
+            event_type = EventType.objects.filter(academy__id=academy_id, slug=event_type_slug).first()
             if not event_type:
                 raise ValidationException('Event Type not found for this academy',
                                           slug='event-type-not-found')
