@@ -34,6 +34,7 @@ class Currency(models.Model):
 
     code = models.CharField(max_length=3, unique=True)
     name = models.CharField(max_length=20, unique=True)
+    decimals = models.IntegerField(default=0)
 
     countries = models.ManyToManyField(Country,
                                        blank=True,
@@ -467,7 +468,6 @@ class ConsumptionSession(models.Model):
         self.how_many = how_many
         self.save()
 
-        # consume_service.send(instance=self, sender=self.__class__, how_many=how_many)
         end_the_consumption_session.apply_async(args=(self.id, how_many), eta=self.eta)
 
 
@@ -627,7 +627,10 @@ class Subscription(AbstractIOweYou):
     is_refundable = models.BooleanField(default=True)
 
     # in this day the subscription needs being paid again
-    valid_until = models.DateTimeField()
+    next_payment_at = models.DateTimeField()
+
+    # in this moment the subscription will be expired
+    valid_until = models.DateTimeField(default=None, null=True, blank=True)
 
     # this reminds the service items to change the stock scheduler on change
     service_items = models.ManyToManyField(ServiceItem,

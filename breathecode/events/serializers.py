@@ -1,11 +1,13 @@
+from datetime import timedelta
 from typing import Any
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-from .models import Event, EventType, Organization, EventbriteWebhook
+from .models import Event, EventType, LiveClass, Organization, EventbriteWebhook
 from slugify import slugify
 from rest_framework import serializers
 import serpy, logging
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +135,7 @@ class EventSmallSerializer(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
+    live_stream_url = serpy.Field()
     tags = serpy.Field()
 
 
@@ -154,7 +157,24 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
+    live_stream_url = serpy.Field()
     tags = serpy.Field()
+
+
+class GetLiveClassSerializer(serpy.Serializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+
+
+class GetLiveClassJoinSerializer(GetLiveClassSerializer):
+    url = serpy.MethodField()
+
+    def get_url(self, obj):
+        return obj.cohort_time_slot.cohort.online_meeting_url
 
 
 class EventCheckinSerializer(serpy.Serializer):
@@ -212,6 +232,15 @@ class EventSerializer(serializers.ModelSerializer):
         elif slug:
             slug = f'{data["slug"].lower()}'
 
+        online_event = data.get('online_event')
+        live_stream_url = data.get('live_stream_url')
+        if online_event == True and (live_stream_url is None or live_stream_url == ''):
+            raise ValidationException(
+                translation(lang,
+                            en=f'live_stream_url cannot be empty if the event is online.',
+                            es=f'Si el evento es online, entonces live_stream_url no puede estar vacío.',
+                            slug='live-stream-url-empty'))
+
         existing_events = Event.objects.filter(slug=slug)
         if slug and not self.instance and existing_events.exists():
             raise ValidationException(
@@ -220,7 +249,7 @@ class EventSerializer(serializers.ModelSerializer):
                             es=f'El slug {slug} ya está en uso, prueba con otro slug',
                             slug='slug-taken'))
 
-        if 'event_type' in data and 'lang' in data and data['event_type'].academy.lang != data['lang']:
+        if 'event_type' in data and 'lang' in data and data['event_type'].lang != data['lang']:
             raise ValidationException(
                 translation(lang,
                             en='Event type and event language must match',
@@ -273,3 +302,103 @@ class PostEventTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventType
         exclude = ()
+
+
+class LiveClassSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = LiveClass
+        exclude = ()
+
+    def _validate_started_at(self, data: dict[str, Any]):
+        utc_now = timezone.now()
+
+        if not self.instance and 'started_at' in data:
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='You cannot start a live class before it has been created.',
+                            es='No puedes iniciar una clase en vivo antes de que se haya creado.',
+                            slug='started-at-on-creation'))
+
+        if self.instance and 'started_at' in data and len(data) > 1:
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='Start the class before you can update any other of its attributes.',
+                            es='Inicia la clase antes de poder actualizar cualquiera de sus atributos.',
+                            slug='only-started-at'))
+
+        if self.instance and 'started_at' in data and self.instance.started_at:
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='This class has already been started.',
+                            es='Esta clase ya ha sido iniciada.',
+                            slug='started-at-already-set'))
+
+        if self.instance and 'started_at' in data and (data['started_at'] < utc_now - timedelta(minutes=2) or
+                                                       data['started_at'] > utc_now + timedelta(minutes=2)):
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='Started at cannot be so different from the current time.',
+                            es='La fecha de inicio no puede ser tan diferente de la hora actual.',
+                            slug='started-at-too-different'))
+
+    def _validate_ended_at(self, data: dict[str, Any]):
+        utc_now = timezone.now()
+
+        if not self.instance and 'ended_at' in data:
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='Ended at cannot be set on creation',
+                            es='La fecha de finalización no se puede establecer en la creación',
+                            slug='ended-at-on-creation'))
+
+        if self.instance and 'ended_at' in data and len(data) > 1:
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='Only ended at can be updated',
+                            es='Solo se puede actualizar la fecha de finalización',
+                            slug='only-ended-at'))
+
+        if self.instance and 'ended_at' in data and self.instance.ended_at:
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='Ended at already set',
+                            es='La fecha de finalización ya está establecida',
+                            slug='ended-at-already-set'))
+
+        if self.instance and 'ended_at' in data and not self.instance.started_at:
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='You cannot end a live class if it has not yet been started.',
+                            es='No puede finalizar una clase en vivo si aún no se ha iniciado.',
+                            slug='schedule-must-have-started-at-before-ended-at'))
+
+        if self.instance and 'ended_at' in data and self.instance.started_at >= data['ended_at']:
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='The live class cannot have ended before starting.',
+                            es='La clase en vivo no puede haber finalizado antes de comenzar.',
+                            slug='ended-at-cannot-be-less-than-started-at'))
+
+        if self.instance and 'ended_at' in data and (data['ended_at'] < utc_now - timedelta(minutes=2)
+                                                     or data['ended_at'] > utc_now + timedelta(minutes=2)):
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='Ended at at cannot be so different from the current time.',
+                            es='La fecha de finalización no puede ser tan diferente de la hora actual.',
+                            slug='ended-at-too-different'))
+
+    def _validate_cohort(self, data: dict[str, Any]):
+        if 'cohort' in data and data['cohort'].academy.id != int(self.context['academy_id']):
+            raise ValidationException(
+                translation(self.context['lang'],
+                            en='This cohort does not belong to any of your academies.',
+                            es='Este cohort no pertenece a ninguna de tus academias.',
+                            slug='cohort-not-belong-to-academy'))
+
+    def validate(self, data: dict[str, Any]):
+        self._validate_started_at(data)
+        self._validate_ended_at(data)
+        self._validate_cohort(data)
+
+        return data

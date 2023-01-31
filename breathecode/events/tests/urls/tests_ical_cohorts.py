@@ -96,7 +96,10 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_one(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
-        cohort = {'ending_date': timezone.now() + timedelta(weeks=10 * 52)}
+        cohort = {
+            'ending_date': timezone.now() + timedelta(weeks=10 * 52),
+            'kickoff_date': datetime.today().isoformat()
+        }
         model = self.generate_models(academy=True,
                                      cohort=cohort,
                                      device_id=True,
@@ -272,7 +275,7 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort_kwargs = {'ending_date': timezone.now()}
         device_id_kwargs = {'name': 'server'}
         model = self.generate_models(academy=True,
-                                     cohort=True,
+                                     cohort={'kickoff_date': datetime.today().isoformat()},
                                      cohort_user=True,
                                      device_id=True,
                                      cohort_kwargs=cohort_kwargs,
@@ -324,7 +327,10 @@ class AcademyCohortTestSuite(EventTestCase):
                                     skip_cohort=True,
                                     device_id_kwargs=device_id_kwargs)
 
-        cohort = {'ending_date': timezone.now() + timedelta(weeks=10 * 52)}
+        cohort = {
+            'kickoff_date': datetime.today().isoformat(),
+            'ending_date': timezone.now() + timedelta(weeks=10 * 52)
+        }
         models = [
             self.generate_models(user=True, cohort=cohort, models=base),
             self.generate_models(user=True, cohort=cohort, models=base),
@@ -389,13 +395,13 @@ class AcademyCohortTestSuite(EventTestCase):
 
         models = [
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base,
                                  cohort_kwargs=cohort_kwargs,
                                  cohort_user_kwargs=cohort_user_kwargs),
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base,
                                  cohort_kwargs=cohort_kwargs,
@@ -466,13 +472,13 @@ class AcademyCohortTestSuite(EventTestCase):
 
         models = [
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base1,
                                  cohort_kwargs=cohort_kwargs,
                                  cohort_user_kwargs=cohort_user_kwargs),
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base1,
                                  cohort_kwargs=cohort_kwargs,
@@ -483,13 +489,13 @@ class AcademyCohortTestSuite(EventTestCase):
 
         models = models + [
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base2,
                                  cohort_kwargs=cohort_kwargs,
                                  cohort_user_kwargs=cohort_user_kwargs),
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base2,
                                  cohort_kwargs=cohort_kwargs,
@@ -595,13 +601,13 @@ class AcademyCohortTestSuite(EventTestCase):
 
         models = [
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base1,
                                  cohort_kwargs=cohort_kwargs,
                                  cohort_user_kwargs=cohort_user_kwargs),
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base1,
                                  cohort_kwargs=cohort_kwargs,
@@ -612,13 +618,13 @@ class AcademyCohortTestSuite(EventTestCase):
 
         models = models + [
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base2,
                                  cohort_kwargs=cohort_kwargs,
                                  cohort_user_kwargs=cohort_user_kwargs),
             self.generate_models(user=True,
-                                 cohort=True,
+                                 cohort={'kickoff_date': datetime.today().isoformat()},
                                  cohort_user=True,
                                  models=base2,
                                  cohort_kwargs=cohort_kwargs,

@@ -841,7 +841,7 @@ class PayView(APIView):
                             slug='invalid-bag-configured-by-installments'),
                                                   code=500)
                 else:
-                    amount = get_amount_by_chosen_period(bag, chosen_period)
+                    amount = get_amount_by_chosen_period(bag, chosen_period, lang)
 
                 if amount == 0 and PlanFinancing.objects.filter(plans__in=bag.plans.all()).count():
                     raise ValidationException(translation(lang,
@@ -850,12 +850,12 @@ class PayView(APIView):
                                                           slug='your-free-trial-was-already-took'),
                                               code=500)
 
-                if amount > 0:
+                if amount >= 0.50:
                     s = Stripe()
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
 
-                else:
+                elif amount == 0:
                     invoice = Invoice(amount=0,
                                       paid_at=utc_now,
                                       user=request.user,
@@ -865,6 +865,13 @@ class PayView(APIView):
                                       currency=bag.academy.main_currency)
 
                     invoice.save()
+
+                else:
+                    raise ValidationException(translation(lang,
+                                                          en='Amount is too low',
+                                                          es='El monto es muy bajo',
+                                                          slug='amount-is-too-low'),
+                                              code=500)
 
                 bag.chosen_period = chosen_period or 'MONTH'
                 bag.status = 'PAID'
@@ -879,8 +886,8 @@ class PayView(APIView):
                     tasks.build_free_trial.delay(bag.id, invoice.id)
 
                 elif bag.how_many_installments > 0:
-
                     tasks.build_plan_financing.delay(bag.id, invoice.id)
+
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id)
 

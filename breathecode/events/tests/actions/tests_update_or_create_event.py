@@ -171,6 +171,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'sync_with_eventbrite': True,
             'eventbrite_sync_status': 'PERSISTED',
             'eventbrite_organizer_id': None,
+            'live_stream_url': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
         }
 
@@ -246,6 +247,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'sync_with_eventbrite': False,
             'eventbrite_sync_status': 'PERSISTED',
             'eventbrite_organizer_id': None,
+            'live_stream_url': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
         }
 
