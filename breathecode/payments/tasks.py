@@ -110,6 +110,7 @@ def renew_consumables(self, scheduler_id: int):
     if scheduler.plan_handler and scheduler.plan_handler.subscription:
         user = scheduler.plan_handler.subscription.user
         plan_service_item = scheduler.plan_handler.handler
+        service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.subscription.valid_until
 
     elif scheduler.plan_handler and scheduler.plan_handler.plan_financing:

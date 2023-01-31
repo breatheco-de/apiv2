@@ -290,13 +290,290 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
     """
+    🔽🔽🔽 ServiceStockScheduler with PlanFinancing, do not needs renew
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_plan_financing_with_plan_service_item__do_not_needs_renew(self):
+        plan_financing = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+        }
+
+        service_stock_scheduler = {
+            'valid_until': UTC_NOW - relativedelta(seconds=1),
+        }
+
+        model = self.bc.database.create(service_stock_scheduler=service_stock_scheduler,
+                                        plan_financing=plan_financing,
+                                        plan_service_item_handler=1,
+                                        mentorship_service=2,
+                                        mentorship_service_set=1)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+            call("The scheduler 1 don't needs to be renewed"),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    ##########################################################3
+    """
+    🔽🔽🔽 ServiceStockScheduler with Subscription that is over
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription__plan__is_over(self):
+        subscription = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
+            'valid_until': UTC_NOW - relativedelta(seconds=1),
+        }
+
+        model = self.bc.database.create(service_stock_scheduler=1,
+                                        subscription=subscription,
+                                        plan_service_item_handler=1)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('The subscription 1 is over'),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    """
+    🔽🔽🔽 ServiceStockScheduler with Subscription without be paid
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription__plan__without_be_paid(self):
+        subscription = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=1),
+        }
+
+        model = self.bc.database.create(service_stock_scheduler=1,
+                                        subscription=subscription,
+                                        plan_service_item_handler=1)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('The subscription 1 needs to be paid to renew the consumables'),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    """
+    🔽🔽🔽 ServiceStockScheduler with Subscription without a PlanServiceItem linked to a resource
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription__plan__with_plan_service_item_without_a_resource_linked(self):
+        subscription = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+        }
+
+        model = self.bc.database.create(service_stock_scheduler=1,
+                                        subscription=subscription,
+                                        plan_service_item_handler=1)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('The PlanServiceItem or the ServiceItem not have a resource linked to it '
+                 'for the ServiceStockScheduler 1'),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    """
+    🔽🔽🔽 ServiceStockScheduler with Subscription with a PlanServiceItem linked to a resource
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription__plan__with_plan_service_item_with_two_cohorts_linked(self):
+        subscription = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+        }
+
+        model = self.bc.database.create(service_stock_scheduler=1,
+                                        subscription=subscription,
+                                        plan_service_item_handler=1,
+                                        cohort=2)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+            call('The consumable 1 for cohort 1 was built'),
+            call('The consumable 2 for cohort 2 was built'),
+            call('The scheduler 1 was renewed'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
+            consumable_item({
+                'cohort_id': 1,
+                'id': 1,
+                'service_item_id': 1,
+                'user_id': 1,
+                'valid_until': UTC_NOW + relativedelta(minutes=3),
+            }),
+            consumable_item({
+                'cohort_id': 2,
+                'id': 2,
+                'service_item_id': 1,
+                'user_id': 1,
+                'valid_until': UTC_NOW + relativedelta(minutes=3),
+            }),
+        ])
+
+    """
+    🔽🔽🔽 ServiceStockScheduler with Subscription with a PlanServiceItem linked to a resource
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription__plan__with_plan_service_item_with_two_mentorship_services_linked(self):
+        subscription = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+        }
+
+        model = self.bc.database.create(service_stock_scheduler=1,
+                                        subscription=subscription,
+                                        plan_service_item_handler=1,
+                                        mentorship_service=2,
+                                        mentorship_service_set=1)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+            call('The consumable 1 for mentorship service 1 was built'),
+            call('The consumable 2 for mentorship service 2 was built'),
+            call('The scheduler 1 was renewed'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
+            consumable_item({
+                'mentorship_service_id': 1,
+                'id': 1,
+                'service_item_id': 1,
+                'user_id': 1,
+                'valid_until': UTC_NOW + relativedelta(minutes=3),
+            }),
+            consumable_item({
+                'mentorship_service_id': 2,
+                'id': 2,
+                'service_item_id': 1,
+                'user_id': 1,
+                'valid_until': UTC_NOW + relativedelta(minutes=3),
+            }),
+        ])
+
+    """
+    🔽🔽🔽 ServiceStockScheduler with Subscription, do not needs renew
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription__plan__with_plan_service_item__do_not_needs_renew(self):
+        subscription = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+        }
+
+        service_stock_scheduler = {
+            'valid_until': UTC_NOW - relativedelta(seconds=1),
+        }
+
+        model = self.bc.database.create(service_stock_scheduler=service_stock_scheduler,
+                                        subscription=subscription,
+                                        plan_service_item_handler=1,
+                                        mentorship_service=2,
+                                        mentorship_service_set=1)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+            call("The scheduler 1 don't needs to be renewed"),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    ##########################################################3
+    """
     🔽🔽🔽 ServiceStockScheduler with PlanFinancing that is over
     """
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_subscription_is_over(self):
+    def test_subscription__service_item__is_over(self):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
@@ -328,7 +605,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_subscription_without_be_paid(self):
+    def test_subscription__service_item__without_be_paid(self):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
@@ -360,7 +637,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_subscription_with_plan_service_item_without_a_resource_linked(self):
+    def test_subscription__service_item__with_plan_service_item_without_a_resource_linked(self):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
@@ -394,7 +671,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_subscription_with_plan_service_item_with_two_cohorts_linked(self):
+    def test_subscription__service_item__with_plan_service_item_with_two_cohorts_linked(self):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
@@ -444,7 +721,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_subscription_with_plan_service_item_with_two_mentorship_services_linked(self):
+    def test_subscription__service_item__with_plan_service_item_with_two_mentorship_services_linked(self):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
@@ -487,3 +764,41 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'valid_until': UTC_NOW + relativedelta(minutes=3),
             }),
         ])
+
+    """
+    🔽🔽🔽 ServiceStockScheduler with PlanFinancing, do not needs renew
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription__service_item__with_plan_service_item__do_not_needs_renew(self):
+        subscription = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+        }
+
+        service_stock_scheduler = {
+            'valid_until': UTC_NOW - relativedelta(seconds=1),
+        }
+
+        model = self.bc.database.create(service_stock_scheduler=service_stock_scheduler,
+                                        subscription=subscription,
+                                        subscription_service_item=1,
+                                        mentorship_service=2,
+                                        mentorship_service_set=1)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+            call("The scheduler 1 don't needs to be renewed"),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
