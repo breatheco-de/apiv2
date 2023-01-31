@@ -106,7 +106,4 @@ urlpatterns = [
 
     # Public Endpoints anyone can call
     path('public/cohort/user', PublicCohortUserView.as_view(), name='public_cohort_user'),
-    path('public/cohort/<str:cohort_slug>/classroom',
-         CohortClassRoomView.as_view(),
-         name='public_cohort_slug_classroom'),
 ]

@@ -213,7 +213,9 @@ class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
         items = PlanServiceItem.objects.filter(plan=plan)
 
         for item in items:
-            item.cohorts.add(cohorts)
+            for cohort in cohorts:
+                if cohort not in item.cohorts.all():
+                    item.cohorts.add(cohorts)
 
         return Response({'status': 'ok'}, status=status.HTTP_200_OK)
 
