@@ -96,7 +96,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -128,8 +128,8 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -161,9 +161,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_with_plan_service_item_with_two_cohorts_linked(self):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
-            'valid_until': UTC_NOW + relativedelta(minutes=3),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
+            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -190,14 +190,14 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
             consumable_item({
                 'cohort_id': 2,
                 'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
         ])
 
@@ -227,7 +227,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         logging.Logger.error.call_args_list = []
 
         with patch('django.utils.timezone.now',
-                   MagicMock(return_value=UTC_NOW + relativedelta(days=1, minutes=1))):
+                   MagicMock(return_value=UTC_NOW + relativedelta(days=1, minutes=3))):
             renew_consumables.delay(1)
 
         self.assertEqual(logging.Logger.info.call_args_list, [
@@ -248,9 +248,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_with_plan_service_item_with_two_mentorship_services_linked(self):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
-            'valid_until': UTC_NOW + relativedelta(minutes=3),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
+            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -278,14 +278,14 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
             consumable_item({
                 'mentorship_service_id': 2,
                 'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
         ])
 
@@ -299,9 +299,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_with_plan_service_item__do_not_needs_renew(self):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
-            'valid_until': UTC_NOW + relativedelta(minutes=3),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
+            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         service_stock_scheduler = {
@@ -371,7 +371,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -403,8 +403,8 @@ class PaymentsTestSuite(PaymentsTestCase):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -436,9 +436,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_subscription__plan__with_plan_service_item_with_two_cohorts_linked(self):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
-            'valid_until': UTC_NOW + relativedelta(minutes=3),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
+            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -465,14 +465,14 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
             consumable_item({
                 'cohort_id': 2,
                 'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
         ])
 
@@ -486,9 +486,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_subscription__plan__with_plan_service_item_with_two_mentorship_services_linked(self):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
-            'valid_until': UTC_NOW + relativedelta(minutes=3),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
+            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -516,14 +516,14 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
             consumable_item({
                 'mentorship_service_id': 2,
                 'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
         ])
 
@@ -537,9 +537,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_subscription__plan__with_plan_service_item__do_not_needs_renew(self):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
-            'valid_until': UTC_NOW + relativedelta(minutes=3),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
+            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         service_stock_scheduler = {
@@ -609,7 +609,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -641,8 +641,8 @@ class PaymentsTestSuite(PaymentsTestCase):
         subscription = {
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -676,7 +676,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
             'valid_until': UTC_NOW + relativedelta(minutes=3),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -726,7 +726,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
             'valid_until': UTC_NOW + relativedelta(minutes=3),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
@@ -777,7 +777,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             'monthly_price': random.random() * 99.99 + 0.01,
             'plan_expires_at': UTC_NOW - relativedelta(seconds=2),
             'valid_until': UTC_NOW + relativedelta(minutes=3),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
         service_stock_scheduler = {

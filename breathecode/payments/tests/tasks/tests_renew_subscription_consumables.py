@@ -86,7 +86,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
     def test_subscription_was_paid__without_stock_scheduler(self):
-        subscription = {'next_payment_at': UTC_NOW + relativedelta(minutes=1)}
+        subscription = {'next_payment_at': UTC_NOW + relativedelta(minutes=3)}
         model = self.bc.database.create(subscription=subscription)
 
         logging.Logger.info.call_args_list = []
@@ -161,8 +161,8 @@ class PaymentsTestSuite(PaymentsTestCase):
         } for n in range(5, 7)]
         plan_service_item_handlers = [{'handler_id': n} for n in range(1, 5)]
         subscription = {
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
         }
 
         service_stock_schedulers = [{

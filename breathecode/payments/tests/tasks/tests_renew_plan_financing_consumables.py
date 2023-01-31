@@ -57,8 +57,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_subscription_was_not_paid(self):
         subscription = {
             'next_payment_at': UTC_NOW - relativedelta(seconds=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
-            'plan_expires_at': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
             'monthly_price': random.random() * 99.99 + 0.01,
         }
         model = self.bc.database.create(plan_financing=subscription, )
@@ -93,9 +93,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
     def test_subscription_was_paid__without_stock_scheduler(self):
         subscription = {
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
-            'plan_expires_at': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
+            'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
             'monthly_price': random.random() * 99.99 + 0.01,
         }
         model = self.bc.database.create(plan_financing=subscription)
@@ -128,9 +128,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
     def test_subscription_is_over(self):
         subscription = {
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
             'valid_until': UTC_NOW - relativedelta(seconds=1),
-            'plan_expires_at': UTC_NOW + relativedelta(minutes=1),
+            'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
             'monthly_price': random.random() * 99.99 + 0.01,
         }
         model = self.bc.database.create(plan_financing=subscription)
@@ -173,9 +173,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         } for n in range(3, 5)]
         plan_service_item_handlers = [{'handler_id': n} for n in range(1, 5)]
         subscription = {
-            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
-            'plan_expires_at': UTC_NOW + relativedelta(minutes=1),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
             'monthly_price': random.random() * 99.99 + 0.01,
         }
 

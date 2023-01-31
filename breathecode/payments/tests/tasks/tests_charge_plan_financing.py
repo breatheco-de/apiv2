@@ -124,7 +124,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_plan_financing_without_invoices(self):
         plan_financing = {
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(minutes=3),
             'monthly_price': (random.random() * 99) + 1,
             'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
