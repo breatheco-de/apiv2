@@ -12,8 +12,19 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         utc_now = timezone.now()
 
-        cohorts = Cohort.objects.filter(ending_date__gte=utc_now, never_ends=False).exclude(stage='DELETED')
-
+        cohorts = Cohort.objects.filter(ending_date__gte=utc_now,
+                                        never_ends=False).exclude(stage__in=['DELETED', 'PREWORK'])
+        self.stdout.write(self.style.SUCCESS("Successfully deleted EventbriteWebhook's"))
         for cohort in cohorts:
-            for timeslot in CohortTimeSlot.objects.filter(cohort=cohort):
-                tasks.build_live_classes_from_timeslot.delay(timeslot.id)
+            timeslots = CohortTimeSlot.objects.filter(cohort=cohort)
+            total_cohort_timeslots = timeslots.count()
+            if total_cohort_timeslots == 0:
+                self.stdout.write(
+                    self.style.ERROR(
+                        f'Cohort {cohort.slug} live classes will not be generated because it does not have timeslots'
+                    ))
+            else:
+                self.stdout.write(
+                    self.style.SUCCESS(f'Adding cohort {cohort.slug} live classes to the generation queue'))
+                for timeslot in timeslots:
+                    tasks.build_live_classes_from_timeslot.delay(timeslot.id)
