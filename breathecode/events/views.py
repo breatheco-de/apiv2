@@ -252,7 +252,8 @@ class MeLiveClassView(APIView):
             lookup.update(self._get_lookup(academy, 'cohort_time_slot__cohort__academy__'))
 
         if syllabus := self.request.GET.get('syllabus', ''):
-            lookup.update(self._get_lookup(syllabus, 'cohort_time_slot__cohort__syllabus_version__syllabus__'))
+            lookup.update(self._get_lookup(syllabus,
+                                           'cohort_time_slot__cohort__syllabus_version__syllabus__'))
 
         upcoming = self.request.GET.get('upcoming', '')
         if upcoming == 'true':
@@ -318,13 +319,14 @@ class AcademyLiveClassView(APIView):
         lookup = {}
 
         if user := self.request.GET.get('user', ''):
-            lookup.update(self._get_lookup(user, 'cohort__cohortuser__user__'))
+            lookup.update(self._get_lookup(user, 'cohort_time_slot__cohort__cohortuser__user__'))
 
         if cohort := self.request.GET.get('cohort', ''):
-            lookup.update(self._get_lookup(cohort, 'cohort__'))
+            lookup.update(self._get_lookup(cohort, 'cohort_time_slot__cohort__'))
 
         if syllabus := self.request.GET.get('syllabus', ''):
-            lookup.update(self._get_lookup(syllabus, 'cohort__syllabus_version__syllabus__'))
+            lookup.update(self._get_lookup(syllabus,
+                                           'cohort_time_slot__cohort__syllabus_version__syllabus__'))
 
         upcoming = self.request.GET.get('upcoming', '')
         if upcoming == 'true':
