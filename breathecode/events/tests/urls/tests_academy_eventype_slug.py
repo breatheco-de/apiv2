@@ -33,6 +33,7 @@ def get_serializer(event_type, academy=None, city=None, data={}):
         'lang': event_type.lang,
         'allow_shared_creation': event_type.allow_shared_creation,
         'description': event_type.description,
+        'visibility_settings': event_type.visibility_settings,
         **data,
     }
 
@@ -91,7 +92,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         response = self.client.get(url)
         json = response.json()
-        expected = get_serializer(model.event_type, model.academy, model.city)
+        expected = get_serializer(model.event_type, model.academy, model.city, {'visibility_settings': []})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
