@@ -50,7 +50,7 @@ def internal_linking(client, report):
         # clusters must be linked
         path = url.path
         if path == '': path = href
-        missing_cluster_paths = [i for i in missing_cluster_paths if i != path]
+        missing_cluster_paths = [i for i in missing_cluster_paths if i.lower() != path.lower()]
 
     for path in missing_cluster_paths:
         report.fatal(f'Missing link to cluster: {path}')
@@ -60,10 +60,16 @@ def internal_linking(client, report):
         missing = 4 - total_internal
         report.bad(-(missing * 5), f'Please add at least {missing} more internal links')
 
+    text = BeautifulSoup(readme['html'], features='html.parser').get_text()
+    words_count = len(text.split())
+    if int(words_count / 400) > len(links):
+        report.bad(-15, f'Please add at least a link every 400 words')
+
     #report.good('No errors found on keyword density')
 
 
 internal_linking.description = """
 Include a link to all the keyword clusters associated with the asset.
 Include at least 3 links to other internal pages.
+Include at least one link every 400 words.
 """
