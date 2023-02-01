@@ -16,6 +16,7 @@ class CSVDownloadSmallSerializer(serpy.Serializer):
     created_at = serpy.Field()
     finished_at = serpy.Field()
 
+
 class CSVUploadSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
