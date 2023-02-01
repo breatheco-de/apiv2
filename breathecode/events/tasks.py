@@ -118,7 +118,7 @@ def build_live_classes_from_timeslot(self, timeslot_id, utc_now=None):
         schedule, created = LiveClass.objects.get_or_create(
             starting_at=starting_at,
             ending_at=ending_at,
-            cohort=cohort,
+            cohort_time_slot=timeslot,
             defaults={'remote_meeting_url': cohort.online_meeting_url})
 
         if not created:
