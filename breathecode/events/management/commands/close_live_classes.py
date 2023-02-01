@@ -13,7 +13,7 @@ class Command(BaseCommand):
     help = 'Close live classes'
 
     def handle(self, *args: Any, **options: Any):
-        live_classes = LiveClass.objects.filter(started_at__isnull=False, ended_at=None)
+        live_classes = LiveClass.objects.filter(started_at__isnull=False, ended_at__isnull=True)
         utc_now = timezone.now()
 
         for live_class in live_classes:
