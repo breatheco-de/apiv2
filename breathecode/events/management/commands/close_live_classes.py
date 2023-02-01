@@ -17,10 +17,12 @@ class Command(BaseCommand):
         utc_now = timezone.now()
         
         old_classes_that_never_started = LiveClass.objects.filter(started_at__isnull=True, ended_at__isnull=True, ending_at__lte=utc_now)
-        self.style.SUCCESS(f'There are {str(old_classes_that_never_started.count())} old classes that never started and should be closed')
+        self.stdout.write(
+            self.style.SUCCESS(f'There are {str(old_classes_that_never_started.count())} old classes that never started and should be closed'))
         
         live_classes_that_nerver_closed = LiveClass.objects.filter(started_at__isnull=False, ended_at__isnull=True)
-        self.style.SUCCESS(f'There are {str(live_classes_that_nerver_closed.count())} live classes that did start, but still need to be closed')
+        self.stdout.write(
+            self.style.SUCCESS(f'There are {str(live_classes_that_nerver_closed.count())} live classes that did start, but still need to be closed'))
 
         classes_to_close = list(old_classes_that_never_started) +list(live_classes_that_nerver_closed)
         for _class in classes_to_close:
