@@ -569,7 +569,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                                           status.HTTP_400_BAD_REQUEST)
 
         if 'status' in data and data['status'] == 'PUBLISHED':
-            if self.instance.test_status not in ['OK','WARNING']:
+            if self.instance.test_status not in ['OK', 'WARNING']:
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
 
