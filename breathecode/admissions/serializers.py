@@ -568,9 +568,9 @@ class CohortSerializerMixin(serializers.ModelSerializer):
         ending_date = (data['ending_date'] if 'ending_date' in data else None) or (self.instance.ending_date
                                                                                    if self.instance else None)
 
-        if 'never_ends' in data and data['never_ends'] and kickoff_date:
-            raise ValidationException('A cohort cannot have a kickoff_date if it never ends',
-                                      slug='kickoff-date-with-never-ends-true')
+        if 'never_ends' in data and data['ending_date'] and ending_date:
+            raise ValidationException('A cohort cannot have a ending date if it never ends',
+                                      slug='ending-date-with-never-ends-true')
 
         if kickoff_date and ending_date and kickoff_date > ending_date:
             raise ValidationException('kickoff_date cannot be greather than ending_date',
