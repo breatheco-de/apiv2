@@ -293,6 +293,11 @@ def pull_github_lesson(github, asset, override_meta=False):
 
     base64_readme = get_blob_content(repo, file_path, branch=branch_name).content
     asset.readme_raw = base64_readme
+    
+    # this avoids to keep using the old readme file, we do have a new version
+    # the asset.get_readme function will not update the asset if we keep the old version
+    if asset.readme_raw is not None:
+        asset.readme = asset.readme_raw
 
     # only the first time a lesson is synched it will override some of the properties
     readme = asset.get_readme(parse=True)
