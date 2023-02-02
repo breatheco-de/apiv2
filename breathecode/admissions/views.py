@@ -1748,19 +1748,3 @@ class AcademyCohortHistoryView(APIView):
             raise ValidationException(str(e))
 
         return Response(cohort_log.serialize())
-
-
-class CohortClassRoomView(APIView, HeaderLimitOffsetPagination):
-
-    @has_permission('cohort_classroom', consumer=cohort_by_url_param)
-    def get(self, request, cohort_slug=None):
-        cohort = Cohort.objects.filter(slug=cohort_slug).first()
-        if not cohort:
-            raise ValidationException('Cohort not found', code=404, slug='not-found')
-
-        if not cohort.online_meeting_url:
-            raise ValidationException('Cohort does not have a meeting url',
-                                      code=400,
-                                      slug='meeting-url-not-found')
-
-        return HttpResponseRedirect(redirect_to=cohort.online_meeting_url, status=status.HTTP_302_FOUND)
