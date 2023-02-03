@@ -7,6 +7,7 @@ from breathecode.events.models import Event
 from .tasks import async_export_event_to_eventbrite
 from django.db.models.signals import post_save
 from breathecode.events import tasks
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -21,4 +22,7 @@ def post_save_event(sender: Type[Event], instance: Event, **kwargs: Any):
 @receiver(post_save, sender=CohortTimeSlot)
 def post_save_cohort_time_slot(sender: Type[CohortTimeSlot], instance: CohortTimeSlot, **kwargs: Any):
     logger.info('Procesing CohortTimeSlot save')
-    tasks.build_live_classes_from_timeslot.delay(instance.id)
+
+    if instance.cohort.ending_date and instance.cohort.ending_date > timezone.now(
+    ) and instance.cohort.never_ends == False:
+        tasks.build_live_classes_from_timeslot.delay(instance.id)
