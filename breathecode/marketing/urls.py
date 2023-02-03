@@ -25,7 +25,7 @@ urlpatterns = [
          sync_automations_with_active_campaign,
          name='academy_id_automation_sync'),
     path('academy/tag', AcademyTagView.as_view(), name='academy_tag'),
-    path('academy/tag/<slug:tag_slug>', AcademyTagView.as_view(), name='academy_tag_slug'),
+    path('academy/tag/<str:tag_slug>', AcademyTagView.as_view(), name='academy_tag_slug'),
     path('academy/automation', AcademyAutomationView.as_view(), name='academy_automation'),
     path('academy/short', ShortLinkView.as_view(), name='short'),
     path('academy/short/<slug:short_slug>', ShortLinkView.as_view(), name='short-slug'),
