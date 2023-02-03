@@ -80,7 +80,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'name': model.syllabus.academy_owner.name,
                 'slug': model.syllabus.academy_owner.slug,
                 'white_labeled': model.syllabus.academy_owner.white_labeled,
-                'icon_url': model.syllabus.academy_owner.icon_url,
+                'icon_url': model.syllabus.academy_owner.icon_url
             },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,

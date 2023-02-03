@@ -22,6 +22,7 @@ def put_serializer(academy, country, city, data={}):
         'name': academy.name,
         'slug': academy.slug,
         'street_address': academy.street_address,
+        'is_hidden_on_prework': academy.is_hidden_on_prework,
         **data,
     }
 

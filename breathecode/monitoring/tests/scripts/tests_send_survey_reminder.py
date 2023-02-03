@@ -240,15 +240,16 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         ending_date = timezone.now() + timedelta(days=2)
         kickoff_date = timezone.now() - timedelta(days=2)
 
-        base = self.generate_models(academy=True,
-                                    cohort=True,
-                                    monitor_script=True,
-                                    monitor_script_kwargs=monitor_script_kwargs,
-                                    cohort_kwargs={
-                                        'ending_date': ending_date,
-                                        'kickoff_date': kickoff_date,
-                                        'never_ends': True
-                                    })
+        base = self.generate_models(
+            academy=True,
+            cohort=True,
+            monitor_script=True,
+            monitor_script_kwargs=monitor_script_kwargs,
+            cohort_kwargs={
+                # 'ending_date': ending_date,
+                'kickoff_date': kickoff_date,
+                'never_ends': True
+            })
 
         sent_at = timezone.now() - timedelta(weeks=6)
 

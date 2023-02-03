@@ -512,9 +512,10 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
         academy_id = self.context.get('academy_id')
         session_user = self.context.get('request').user
 
-        if self.instance.author is not None and self.instance.author.id != session_user.id:
+        if self.instance.owner is not None and self.instance.owner.id == session_user.id:
             if 'resolved' in data and data['resolved'] != self.instance.resolved:
-                raise ValidationException('Only the comment/issue author can update the resolved property')
+                raise ValidationException(
+                    'You cannot update the resolved property if you are the Asset Comment owner')
 
         return validated_data
 
@@ -568,7 +569,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                                           status.HTTP_400_BAD_REQUEST)
 
         if 'status' in data and data['status'] == 'PUBLISHED':
-            if self.instance.test_status != 'OK':
+            if self.instance.test_status not in ['OK', 'WARNING']:
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
 

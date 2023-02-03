@@ -90,7 +90,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         if author_id is None:
             raise Exception(
-                f'System does not know what github credentials to use to retrive asset info for: {asset_slug}'
+                f'System does not know what github credentials to use to retrieve asset info for: {asset_slug}'
             )
 
         if asset.readme_url is None or 'github.com' not in asset.readme_url:
@@ -302,6 +302,11 @@ def pull_github_lesson(github, asset, override_meta=False):
             logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
             asset.slug = fm['slug']
 
+        if 'excerpt' in fm:
+            asset.description = fm['excerpt']
+        elif 'subtitle' in fm:
+            asset.description = fm['subtitle']
+
         if 'title' in fm and fm['title'] != '':
             asset.title = fm['title']
 
@@ -433,18 +438,13 @@ class AssetThumbnailGenerator:
         Get thumbnail url for asset, the first element of tuple is the url, the second if is permanent
         redirect.
         """
-        print('1')
         if not self.asset:
             return (self._get_default_url(), False)
-        print('2')
         media = self._get_media()
-        print('3')
         if not media:
-            print('4')
             tasks.async_create_asset_thumbnail.delay(self.asset.slug)
             return (self._get_asset_url(), False)
 
-        print('5')
         if not self._the_client_want_resize():
             # register click
             media.hits += 1

@@ -89,7 +89,7 @@ def renew_subscription(self, subscription_id: int, from_datetime: Optional[datet
         subscription.save()
         return
 
-    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period)
+    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
     try:
         s = Stripe()
@@ -254,7 +254,8 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     subscription = Subscription.objects.create(user=bag.user,
                                                paid_at=invoice.paid_at,
                                                academy=bag.academy,
-                                               valid_until=invoice.paid_at + relativedelta(months=months),
+                                               valid_until=None,
+                                               next_payment_at=invoice.paid_at + relativedelta(months=months),
                                                status='ACTIVE')
 
     subscription.plans.set(bag.plans.all())

@@ -1,4 +1,5 @@
 import os, logging
+from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
@@ -98,6 +99,12 @@ class Academy(models.Model):
 
     available_as_saas = models.BooleanField(
         default=False, help_text='Academies available as SAAS will be sold thru 4Geeks.com')
+
+    is_hidden_on_prework = models.BooleanField(
+        default=True,
+        null=False,
+        blank=False,
+        help_text='Determines if the cohorts will be shown in the dashboard if it\'s status is \'PREWORK\'')
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
     main_currency = models.ForeignKey('payments.Currency',
@@ -314,6 +321,12 @@ class Cohort(models.Model):
                                  null=True,
                                  blank=True)
 
+    is_hidden_on_prework = models.BooleanField(
+        default=True,
+        null=True,
+        blank=True,
+        help_text='Determines if the cohort will be shown in the dashboard if it\'s status is \'PREWORK\'')
+
     language = models.CharField(max_length=2, default='en')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -325,6 +338,8 @@ class Cohort(models.Model):
     def clean(self):
         if self.stage:
             self.stage = self.stage.upper()
+        if self.never_ends and self.ending_date:
+            raise forms.ValidationError('If the cohort never ends, it cannot have ending date')
 
     def save(self, *args, **kwargs):
         from .signals import cohort_saved
@@ -458,6 +473,10 @@ class TimeSlot(models.Model):
     recurrent = models.BooleanField(default=True)
     recurrency_type = models.CharField(max_length=10, choices=RECURRENCY_TYPE, default=WEEKLY)
 
+    removed_at = models.DateTimeField(null=True,
+                                      default=None,
+                                      blank=True,
+                                      help_text='This will be available until this date')
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

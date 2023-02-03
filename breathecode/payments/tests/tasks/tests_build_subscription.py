@@ -131,7 +131,8 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             subscription_item({
                 'paid_at': model.invoice.paid_at,
-                'valid_until': model.invoice.paid_at + relativedelta(months=months),
+                'valid_until': None,
+                'next_payment_at': model.invoice.paid_at + relativedelta(months=months),
             }),
         ])
 

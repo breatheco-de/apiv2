@@ -384,6 +384,80 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.database.delete('mentorship.MentorProfile')
 
     """
+    🔽🔽🔽 GET passing like
+    """
+
+    def test__get__mentor__passing_like_wrong(self):
+        model = self.bc.database.create(user=[{
+            'id': 1,
+            'first_name': 'John',
+            'email': 'john@example.com',
+        }, {
+            'id': 2,
+            'first_name': 'Carl',
+            'email': 'carl@example.com',
+        }],
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        mentor_profile=[{
+                                            'user_id': 1,
+                                        }, {
+                                            'user_id': 2,
+                                        }],
+                                        mentorship_service=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=model.academy.id)
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy('mentorship:academy_mentor') + f'?like=luke'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.bc.database.delete('mentorship.MentorProfile')
+
+    def test__get__mentor__passing_like(self):
+        model = self.bc.database.create(user=[{
+            'id': 1,
+            'first_name': 'John',
+            'email': 'john@example.com',
+        }, {
+            'id': 2,
+            'first_name': 'Carl',
+            'email': 'carl@example.com',
+        }],
+                                        role=1,
+                                        capability='read_mentorship_mentor',
+                                        mentor_profile=[{
+                                            'user_id': 1,
+                                        }, {
+                                            'user_id': 2,
+                                        }],
+                                        mentorship_service=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=model.academy.id)
+        self.bc.request.authenticate(model.user[0])
+
+        url = reverse_lazy('mentorship:academy_mentor') + f'?like=john'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [
+            get_serializer(self, model.mentor_profile[0], model.mentorship_service, model.user[0]),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.bc.database.delete('mentorship.MentorProfile')
+
+    """
     🔽🔽🔽 GET with two MentorProfile passing status in querystring
     """
 

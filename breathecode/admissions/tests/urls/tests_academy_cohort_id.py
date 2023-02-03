@@ -202,6 +202,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'academy': {
                 'id': model.academy.id,
                 'slug': model.academy.slug,
@@ -214,6 +215,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -586,7 +588,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'language':
             data['language'],
             'kickoff_date':
-            self.datetime_to_iso(model['cohort'].kickoff_date),
+            self.datetime_to_iso(model['cohort'].kickoff_date)
+            if model['cohort'].kickoff_date else model['cohort'].kickoff_date,
             'ending_date':
             self.datetime_to_iso(model['cohort'].ending_date),
             'current_day':
@@ -599,6 +602,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             model['cohort'].online_meeting_url,
             'timezone':
             model['cohort'].timezone,
+            'is_hidden_on_prework':
+            model['cohort'].is_hidden_on_prework,
             'timeslots': [{
                 'ending_at':
                 DatetimeInteger.to_iso_string(model.academy.timezone, syllabus_schedule_time_slot.ending_at),
@@ -642,6 +647,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -667,11 +673,13 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
+                             'is_hidden_on_prework': True
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
                          [{
                              'cohort_id': 1,
+                             'removed_at': syllabus_schedule_time_slot.removed_at,
                              'ending_at': syllabus_schedule_time_slot.ending_at,
                              'id': syllabus_schedule_time_slot.id,
                              'timezone': model.academy.timezone,
@@ -743,7 +751,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'language':
             data['language'],
             'kickoff_date':
-            self.datetime_to_iso(model['cohort'].kickoff_date),
+            self.datetime_to_iso(model['cohort'].kickoff_date)
+            if model['cohort'].kickoff_date else model['cohort'].kickoff_date,
             'ending_date':
             self.datetime_to_iso(model['cohort'].ending_date),
             'current_day':
@@ -756,6 +765,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             model['cohort'].online_meeting_url,
             'timezone':
             model['cohort'].timezone,
+            'is_hidden_on_prework':
+            model['cohort'].is_hidden_on_prework,
             'timeslots': [{
                 'ending_at':
                 DatetimeInteger.to_iso_string(model.cohort.timezone, syllabus_schedule_time_slot.ending_at),
@@ -798,6 +809,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -823,11 +835,13 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': 'Europe/Monaco',
+                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
                          [{
                              'cohort_id': 1,
+                             'removed_at': syllabus_schedule_time_slot.removed_at,
                              'ending_at': syllabus_schedule_time_slot.ending_at,
                              'id': syllabus_schedule_time_slot.id,
                              'timezone': model.cohort.timezone,
@@ -905,7 +919,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'language':
             data['language'],
             'kickoff_date':
-            self.datetime_to_iso(model['cohort'].kickoff_date),
+            self.datetime_to_iso(model['cohort'].kickoff_date)
+            if model['cohort'].kickoff_date else model['cohort'].kickoff_date,
             'ending_date':
             self.datetime_to_iso(model['cohort'].ending_date),
             'current_day':
@@ -918,6 +933,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             model['cohort'].online_meeting_url,
             'timezone':
             model['cohort'].timezone,
+            'is_hidden_on_prework':
+            model['cohort'].is_hidden_on_prework,
             'timeslots': [{
                 'ending_at':
                 DatetimeInteger.to_iso_string(model.academy.timezone, syllabus_schedule_time_slot.ending_at),
@@ -961,6 +978,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -986,11 +1004,13 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
+                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
                          [{
                              'cohort_id': 1,
+                             'removed_at': syllabus_schedule_time_slot.removed_at,
                              'ending_at': syllabus_schedule_time_slot.ending_at,
                              'id': syllabus_schedule_time_slot.id,
                              'timezone': model.academy.timezone,
@@ -1053,21 +1073,38 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         json = response.json()
 
         expected = {
-            'id': model['cohort'].id,
-            'slug': data['slug'],
-            'name': data['name'],
-            'never_ends': False,
-            'remote_available': True,
-            'private': False,
-            'language': data['language'],
-            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
-            'current_day': data['current_day'],
-            'current_module': None,
-            'stage': model['cohort'].stage,
-            'online_meeting_url': model['cohort'].online_meeting_url,
-            'timezone': model['cohort'].timezone,
+            'id':
+            model['cohort'].id,
+            'slug':
+            data['slug'],
+            'name':
+            data['name'],
+            'never_ends':
+            False,
+            'remote_available':
+            True,
+            'private':
+            False,
+            'language':
+            data['language'],
+            'kickoff_date':
+            self.datetime_to_iso(model['cohort'].kickoff_date)
+            if model['cohort'].kickoff_date else model['cohort'].kickoff_date,
+            'ending_date':
+            self.datetime_to_iso(model['cohort'].ending_date),
+            'current_day':
+            data['current_day'],
+            'current_module':
+            None,
+            'stage':
+            model['cohort'].stage,
+            'online_meeting_url':
+            model['cohort'].online_meeting_url,
+            'timezone':
+            model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework':
+            model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model2.syllabus_schedule.id,
                 'name': model2.syllabus_schedule.name,
@@ -1098,6 +1135,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model.academy.city.name,
                 },
                 'logo_url': model.academy.logo_url,
+                'is_hidden_on_prework': model.academy.is_hidden_on_prework
             }
         }
 
@@ -1123,6 +1161,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
+                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
@@ -1171,6 +1210,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1201,6 +1241,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     'name': model['cohort'].academy.city.name,
                 },
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework
             },
         }
 
@@ -1279,6 +1320,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
+            'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1304,6 +1346,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'country': model['cohort'].academy.country,
                 'city': model['cohort'].academy.city,
                 'logo_url': model['cohort'].academy.logo_url,
+                'is_hidden_on_prework': model['cohort'].academy.is_hidden_on_prework,
                 'country': {
                     'code': model['cohort'].academy.country.code,
                     'name': model['cohort'].academy.country.name,

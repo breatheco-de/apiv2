@@ -2,9 +2,9 @@ import os, requests
 from io import BytesIO, StringIO
 from django.shortcuts import render
 from django.utils import timezone
-from .models import Application, Endpoint, CSVDownload
+from .models import Application, Endpoint, CSVDownload, CSVUpload
 from rest_framework.permissions import AllowAny
-from .serializers import CSVDownloadSmallSerializer
+from .serializers import CSVDownloadSmallSerializer, CSVUploadSmallSerializer
 from django.http import HttpResponseRedirect, HttpResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -56,5 +56,27 @@ def get_download(request, download_id=None):
 
     csv = CSVDownload.objects.all()
     serializer = CSVDownloadSmallSerializer(csv, many=True)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_upload(request, upload_id=None):
+
+    # if request.user.is_staff == False:
+    #     raise ValidationException("You are not authorized to review this download",
+    #                               code=status.HTTP_401_UNAUTHORIZED)
+
+    if upload_id is not None:
+        upload = CSVUpload.objects.filter(id=upload_id).first()
+        if upload is None:
+            raise ValidationException(f'CSV Upload {upload_id} not found', code=status.HTTP_404_NOT_FOUND)
+
+        serializer = CSVUploadSmallSerializer(upload, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    csv = CSVUpload.objects.all()
+    serializer = CSVUploadSmallSerializer(csv, many=True)
 
     return Response(serializer.data, status=status.HTTP_200_OK)

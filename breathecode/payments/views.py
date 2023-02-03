@@ -17,7 +17,7 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
 from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, PlanFinancing,
-                                         Service, ServiceItem, Subscription)
+                                         PlanServiceItem, Service, ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetCreditSerializer, GetInvoiceSerializer,
                                               GetInvoiceSmallSerializer, GetPlanSerializer,
                                               GetServiceItemSerializer, GetServiceItemWithFeaturesSerializer,
@@ -26,6 +26,7 @@ from breathecode.payments.serializers import (GetBagSerializer, GetCreditSeriali
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators.capable_of import capable_of
+from breathecode.utils.generate_lookups_mixin import GenerateLookupsMixin
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
@@ -86,12 +87,13 @@ class AcademyPlanView(APIView):
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_plan')
-    def get(self, request, plan_slug=None, service_slug=None, academy_id=None):
+    def get(self, request, plan_id=None, plan_slug=None, service_slug=None, academy_id=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
-        if plan_slug:
-            item = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None),
+        if plan_slug or plan_slug:
+            item = Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
+                                       Q(owner__id=academy_id) | Q(owner=None),
                                        slug=plan_slug).exclude(status='DELETED').first()
             if not item:
                 raise ValidationException(translation(lang,
@@ -142,10 +144,11 @@ class AcademyPlanView(APIView):
         return Response(serializer.data, status=201)
 
     @capable_of('crud_plan')
-    def put(self, request, plan_id=None, academy_id=None):
+    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
         lang = get_user_language(request)
 
-        plan = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None),
+        plan = Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
+                                   Q(owner__id=academy_id) | Q(owner=None),
                                    id=plan_id).exclude(status='DELETED').first()
         if not plan:
             raise ValidationException(translation(lang,
@@ -165,10 +168,11 @@ class AcademyPlanView(APIView):
         return Response(serializer.data)
 
     @capable_of('crud_plan')
-    def delete(self, request, plan_id=None, academy_id=None):
+    def delete(self, request, plan_id=None, plan_slug=None, academy_id=None):
         lang = get_user_language(request)
 
-        plan = Plan.objects.filter(Q(owner__id=academy_id) | Q(owner=None),
+        plan = Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
+                                   Q(owner__id=academy_id) | Q(owner=None),
                                    id=plan_id).exclude(status='DELETED').first()
         if not plan:
             raise ValidationException(translation(lang,
@@ -181,6 +185,39 @@ class AcademyPlanView(APIView):
         plan.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('crud_plan')
+    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id', 'slug'])
+        lang = get_user_language(request)
+
+        if not (plan := Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
+                                            owner__id=academy_id).exclude(status='DELETED').first()):
+            raise ValidationException(translation(lang,
+                                                  en='Plan not found',
+                                                  es='Plan no encontrado',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if not (cohorts := Cohort.objects.filter(**lookups)):
+            raise ValidationException(translation(lang,
+                                                  en='Cohort not found',
+                                                  es='Cohort no encontrada',
+                                                  slug='cohort-not-found'),
+                                      code=404)
+
+        items = PlanServiceItem.objects.filter(plan=plan)
+
+        for item in items:
+            for cohort in cohorts:
+                if cohort not in item.cohorts.all():
+                    item.cohorts.add(cohorts)
+
+        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
 
 
 class ServiceView(APIView):
@@ -806,7 +843,7 @@ class PayView(APIView):
                             slug='invalid-bag-configured-by-installments'),
                                                   code=500)
                 else:
-                    amount = get_amount_by_chosen_period(bag, chosen_period)
+                    amount = get_amount_by_chosen_period(bag, chosen_period, lang)
 
                 if amount == 0 and PlanFinancing.objects.filter(plans__in=bag.plans.all()).count():
                     raise ValidationException(translation(lang,
@@ -815,12 +852,12 @@ class PayView(APIView):
                                                           slug='your-free-trial-was-already-took'),
                                               code=500)
 
-                if amount > 0:
+                if amount >= 0.50:
                     s = Stripe()
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
 
-                else:
+                elif amount == 0:
                     invoice = Invoice(amount=0,
                                       paid_at=utc_now,
                                       user=request.user,
@@ -830,6 +867,13 @@ class PayView(APIView):
                                       currency=bag.academy.main_currency)
 
                     invoice.save()
+
+                else:
+                    raise ValidationException(translation(lang,
+                                                          en='Amount is too low',
+                                                          es='El monto es muy bajo',
+                                                          slug='amount-is-too-low'),
+                                              code=500)
 
                 bag.chosen_period = chosen_period or 'MONTH'
                 bag.status = 'PAID'
@@ -844,8 +888,8 @@ class PayView(APIView):
                     tasks.build_free_trial.delay(bag.id, invoice.id)
 
                 elif bag.how_many_installments > 0:
-
                     tasks.build_plan_financing.delay(bag.id, invoice.id)
+
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id)
 

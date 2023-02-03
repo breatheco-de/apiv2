@@ -84,6 +84,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'live_stream_url': model['event'].live_stream_url,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -148,6 +149,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'live_stream_url': model['event'].live_stream_url,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -212,6 +214,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'live_stream_url': model['event'].live_stream_url,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -259,6 +262,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'live_stream_url': None,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -584,6 +588,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
@@ -619,6 +624,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
@@ -720,6 +726,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
@@ -759,6 +766,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
         }])
@@ -821,6 +829,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
@@ -857,6 +866,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
         }])
@@ -949,6 +959,7 @@ class AcademyEventTestSuite(EventTestCase):
             'venue': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
+            'live_stream_url': None,
             **data,
         }
 
@@ -982,6 +993,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
         }])
@@ -1055,6 +1067,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
@@ -1090,6 +1103,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
         }])
@@ -1162,6 +1176,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
@@ -1197,6 +1212,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'live_stream_url': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),

@@ -34,6 +34,7 @@ class Currency(models.Model):
 
     code = models.CharField(max_length=3, unique=True)
     name = models.CharField(max_length=20, unique=True)
+    decimals = models.IntegerField(default=0)
 
     countries = models.ManyToManyField(Country,
                                        blank=True,
@@ -384,27 +385,17 @@ class ConsumptionSession(models.Model):
     consumable = models.ForeignKey(Consumable, on_delete=models.CASCADE)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     eta = models.DateTimeField()
-    duration = models.DurationField()
+    duration = models.DurationField(blank=False, default=timedelta)
     how_many = models.FloatField(default=0)
     status = models.CharField(max_length=12, choices=CONSUMPTION_SESSION_STATUS, default=PENDING)
     was_discounted = models.BooleanField(default=False)
 
-    request = models.JSONField()
+    request = models.JSONField(default=dict, blank=True)
 
     # this should be used to get
     path = models.CharField(max_length=200, blank=True)
-    # related_info = models.CharField(max_length=255, default=None, blank=True, null=True)
     related_id = models.IntegerField(max_length=200, default=None, blank=True, null=True)
     related_slug = models.CharField(max_length=200, default=None, blank=True, null=True)
-
-    # created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    # def clean(self) -> None:
-    #     if not self.related_id and not self.related_slug:
-    #         raise forms.ValidationError('You must provide a related_id or a related_slug')
-
-    #     if self.related_id and self.related_slug:
-    #         raise forms.ValidationError('You must provide a related_id or a related_slug, not both')
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -477,7 +468,6 @@ class ConsumptionSession(models.Model):
         self.how_many = how_many
         self.save()
 
-        # consume_service.send(instance=self, sender=self.__class__, how_many=how_many)
         end_the_consumption_session.apply_async(args=(self.id, how_many), eta=self.eta)
 
 
@@ -637,7 +627,10 @@ class Subscription(AbstractIOweYou):
     is_refundable = models.BooleanField(default=True)
 
     # in this day the subscription needs being paid again
-    valid_until = models.DateTimeField()
+    next_payment_at = models.DateTimeField()
+
+    # in this moment the subscription will be expired
+    valid_until = models.DateTimeField(default=None, null=True, blank=True)
 
     # this reminds the service items to change the stock scheduler on change
     service_items = models.ManyToManyField(ServiceItem,

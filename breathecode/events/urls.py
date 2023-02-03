@@ -1,15 +1,24 @@
 from django.urls import path
-from .views import (AcademyEventTypeView, EventMeView, EventTypeVisibilitySettingView, EventView,
-                    EventTypeView, EventCheckinView, get_events, eventbrite_webhook, AcademyEventView,
-                    AcademyVenueView, ICalCohortsView, ICalEventView, ICalStudentView,
-                    AcademyOrganizationView, OrganizationWebhookView, AcademyOrganizerView,
-                    AcademyOrganizationOrganizerView)
+from .views import (AcademyEventTypeView, AcademyLiveClassView, EventMeView, EventTypeVisibilitySettingView,
+                    EventView, EventTypeView, EventCheckinView, MeLiveClassJoinView, MeLiveClassView,
+                    get_events, eventbrite_webhook, AcademyEventView, AcademyVenueView, ICalCohortsView,
+                    ICalEventView, ICalStudentView, AcademyOrganizationView, OrganizationWebhookView,
+                    AcademyOrganizerView, AcademyOrganizationOrganizerView, AcademyLiveClassJoinView)
 
 app_name = 'events'
 urlpatterns = [
     path('', EventView.as_view(), name='root'),
     path('me', EventMeView.as_view(), name='me'),
-    path('me/event/<int:event_id>', EventMeView.as_view(), name='me'),
+    path('me/event/<int:event_id>', EventMeView.as_view(), name='me_event_id'),
+    # move this
+    path('me/event/liveclass', MeLiveClassView.as_view(), name='me_event_liveclass'),
+    path('me/event/liveclass/join/<str:hash>',
+         MeLiveClassJoinView.as_view(),
+         name='me_event_liveclass_join_hash'),
+    path('academy/event/liveclass', AcademyLiveClassView.as_view(), name='academy_event_liveclass'),
+    path('academy/event/liveclass/join/<str:hash>',
+         AcademyLiveClassJoinView.as_view(),
+         name='academy_event_liveclass_join_hash'),
     path('all', get_events, name='all'),
     path('eventype', EventTypeView.as_view(), name='eventype'),
     path('academy/event', AcademyEventView.as_view(), name='academy_event'),
@@ -30,8 +39,10 @@ urlpatterns = [
     path('academy/venues', AcademyVenueView.as_view(), name='academy_venues'),
     path('academy/event/<int:event_id>', AcademyEventView.as_view(), name='academy_event_id'),
     path('academy/eventype', AcademyEventTypeView.as_view(), name='academy_eventype'),
-    path('academy/eventype/<slug:even_type_slug>', AcademyEventTypeView.as_view(), name='academy_eventype'),
-    path('academy/eventype/<slug:even_type_slug>/visibilitysetting',
+    path('academy/eventype/<slug:event_type_slug>',
+         AcademyEventTypeView.as_view(),
+         name='academy_eventype_slug'),
+    path('academy/eventype/<slug:event_type_slug>/visibilitysetting',
          EventTypeVisibilitySettingView.as_view(),
          name='academy_eventype_slug_visibilitysetting'),
     path('academy/checkin', EventCheckinView.as_view(), name='academy_checkin'),
