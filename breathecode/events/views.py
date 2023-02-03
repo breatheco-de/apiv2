@@ -223,7 +223,7 @@ class EventMeView(APIView):
         else:
             items = EventType.objects.none()
 
-        items = Event.objects.filter(event_type__in=items).order_by('-created_at')
+        items = Event.objects.filter(event_type__in=items, status='Active').order_by('-created_at')
 
         serializer = EventSerializer(items, many=True)
         return Response(serializer.data)

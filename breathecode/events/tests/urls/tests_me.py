@@ -159,6 +159,7 @@ class AcademyEventTestSuite(EventTestCase):
         for event_type_visibility_setting, event_type, cohort in cases:
             model = self.bc.database.create(user=1,
                                             event=2,
+                                            event_kwargs={'status': 'Active'},
                                             event_type=event_type,
                                             academy=2,
                                             cohort=cohort,
@@ -247,6 +248,7 @@ class AcademyEventTestSuite(EventTestCase):
         for event_type_visibility_setting, event_type, cohort in cases:
             model = self.bc.database.create(user=1,
                                             event=2,
+                                            event_kwargs={'status': 'Active'},
                                             event_type=event_type,
                                             academy=2,
                                             cohort=cohort,
@@ -337,6 +339,7 @@ class AcademyEventTestSuite(EventTestCase):
         for event_type_visibility_setting, event_type, cohort in cases:
             model = self.bc.database.create(user=1,
                                             event=2,
+                                            event_kwargs={'status': 'Active'},
                                             event_type=event_type,
                                             academy=2,
                                             cohort=cohort,
@@ -353,6 +356,59 @@ class AcademyEventTestSuite(EventTestCase):
                 get_serializer(self, event, model.event_type, model.academy[0], model.user)
                 for event in reversed(model.event)
             ]
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, 200)
+
+    def test_one_item__status_not_active(self):
+        cases = [
+            (
+                {
+                    'academy_id': 1,
+                    'cohort_id': None,
+                    'syllabus_id': 1,
+                },
+                {
+                    'academy_id': 1,
+                    'allow_shared_creation': False,
+                },
+                {
+                    'academy_id': 1,
+                },
+            ),
+            (
+                {
+                    'academy_id': 4,
+                    'cohort_id': None,
+                    'syllabus_id': 2,
+                },
+                {
+                    'academy_id': 3,
+                    'allow_shared_creation': True,
+                },
+                {
+                    'academy_id': 4,
+                },
+            ),
+        ]
+        self.headers(academy=1)
+        url = reverse_lazy('events:me')
+        for event_type_visibility_setting, event_type, cohort in cases:
+            model = self.bc.database.create(user=1,
+                                            event=2,
+                                            event_type=event_type,
+                                            academy=2,
+                                            cohort=cohort,
+                                            cohort_user=1,
+                                            syllabus=1,
+                                            syllabus_version=1,
+                                            event_type_visibility_setting=event_type_visibility_setting)
+
+            self.bc.request.authenticate(model.user)
+
+            response = self.client.get(url)
+            json = response.json()
+            expected = []
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, 200)
