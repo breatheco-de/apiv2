@@ -174,7 +174,6 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'ac_deal_id': None,
             'ac_expected_cohort': None,
             'academy': 1,
-            'automation_objects': [],
             'automations': '',
             'browser_lang': None,
             'city': None,
@@ -206,7 +205,6 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'state': None,
             'storage_status': 'PENDING',
             'street_address': None,
-            'tag_objects': [],
             'tags': '',
             'user': None,
             'utm_campaign': None,
@@ -296,14 +294,12 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'last_request_data': '{"language": "eo"}',
         }])
 
-        form_entry['automation_objects'] = []
         form_entry['academy'] = 1
         form_entry['contact'] = None
         form_entry['created_at'] = created_at_iso_string
         form_entry['updated_at'] = updated_at_iso_string
         form_entry['contact'] = None
         form_entry['lead_generation_app'] = 1
-        form_entry['tag_objects'] = []
         form_entry['user'] = None
 
         del form_entry['academy_id']
@@ -357,7 +353,6 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'ac_deal_id': None,
             'ac_expected_cohort': None,
             'academy': 1,
-            'automation_objects': [],
             'automations': '',
             'browser_lang': None,
             'city': None,
@@ -389,7 +384,6 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'storage_status': 'PENDING',
             'storage_status_text': '',
             'street_address': None,
-            'tag_objects': [],
             'tags': '',
             'user': None,
             'utm_campaign': None,
@@ -478,14 +472,12 @@ class AppSlugLeadTestSuite(MarketingTestCase):
                 'last_request_data': '{"language": "eo", "utm_url": "https:/bad_url/google.co.ve/"}',
             }])
 
-        form_entry['automation_objects'] = []
         form_entry['academy'] = 1
         form_entry['contact'] = None
         form_entry['created_at'] = created_at_iso_string
         form_entry['updated_at'] = updated_at_iso_string
         form_entry['contact'] = None
         form_entry['lead_generation_app'] = 1
-        form_entry['tag_objects'] = []
         form_entry['user'] = None
 
         del form_entry['academy_id']
@@ -539,7 +531,6 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'ac_deal_id': None,
             'ac_expected_cohort': None,
             'academy': 1,
-            'automation_objects': [],
             'automations': '',
             'browser_lang': None,
             'city': None,
@@ -571,7 +562,6 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'storage_status': 'PENDING',
             'storage_status_text': '',
             'street_address': None,
-            'tag_objects': [],
             'tags': '',
             'user': None,
             'utm_campaign': None,
@@ -664,14 +654,12 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             '{"language": "eo", "automations": "they-killed-kenny1,they-killed-kenny2"}',
         }])
 
-        form_entry['automation_objects'] = []
         form_entry['academy'] = 1
         form_entry['contact'] = None
         form_entry['created_at'] = created_at_iso_string
         form_entry['updated_at'] = updated_at_iso_string
         form_entry['contact'] = None
         form_entry['lead_generation_app'] = 1
-        form_entry['tag_objects'] = []
         form_entry['user'] = None
 
         del form_entry['academy_id']
@@ -725,7 +713,6 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'ac_deal_id': None,
             'ac_expected_cohort': None,
             'academy': 1,
-            'automation_objects': [],
             'automations': '',
             'browser_lang': None,
             'city': None,
@@ -757,7 +744,6 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'storage_status': 'PENDING',
             'storage_status_text': '',
             'street_address': None,
-            'tag_objects': [],
             'tags': '',
             'user': None,
             'utm_campaign': None,
@@ -848,14 +834,12 @@ class AppSlugLeadTestSuite(MarketingTestCase):
                 'last_request_data': '{"language": "eo", "tags": "they-killed-kenny1,they-killed-kenny2"}',
             }])
 
-        form_entry['automation_objects'] = []
         form_entry['academy'] = 1
         form_entry['contact'] = None
         form_entry['created_at'] = created_at_iso_string
         form_entry['updated_at'] = updated_at_iso_string
         form_entry['contact'] = None
         form_entry['lead_generation_app'] = 1
-        form_entry['tag_objects'] = []
         form_entry['user'] = None
 
         del form_entry['academy_id']

@@ -1,7 +1,7 @@
 import serpy, logging, hashlib, re
 from django.utils import timezone
 from datetime import timedelta
-from .models import FormEntry, AcademyAlias, ShortLink, Tag, ActiveCampaignAcademy
+from .models import FormEntry, AcademyAlias, ShortLink, Tag, ActiveCampaignAcademy, Automation
 from breathecode.monitoring.actions import test_link
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -159,14 +159,25 @@ class FormEntryBigSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    ac_expected_cohort = serpy.Field()
+    ac_contact_id = serpy.Field()
+    ac_deal_id = serpy.Field()
     sex = serpy.Field()
     email = serpy.Field()
     course = serpy.Field()
     phone = serpy.Field()
+    deal_status = serpy.Field()
+    current_download = serpy.Field()
+    contact = serpy.Field()
     client_comments = serpy.Field()
     location = serpy.Field()
     language = serpy.Field()
     gclid = serpy.Field()
+    fb_ad_id = serpy.Field()
+    fb_adgroup_id = serpy.Field()
+    fb_form_id = serpy.Field()
+    fb_leadgen_id = serpy.Field()
+    fb_page_id = serpy.Field()
     utm_url = serpy.Field()
     utm_medium = serpy.Field()
     utm_campaign = serpy.Field()
@@ -194,13 +205,29 @@ class FormEntryBigSerializer(serpy.Serializer):
     browser_lang = serpy.Field()
     lead_type = serpy.Field()
     created_at = serpy.Field()
+    updated_at = serpy.Field()
+    won_at = serpy.Field()
+    sentiment = serpy.Field()
+    academy = AcademySmallSerializer(required=False)
+    lead_generation_app = LeadgenAppSmallSerializer(required=False)
     user = UserSmallSerializer(required=False)
 
     def get_tag_objects(self, obj):
-        return TagSmallSerializer(obj.tag_objects.all(), many=True).data
+        tag_ids = []
+        if obj.tags is not None:
+            tag_ids = obj.tags.split(',')
+
+        tags = Tag.objects.filter(slug__in=tag_ids, ac_academy__academy=obj.calculate_academy())
+        return TagSmallSerializer(tags, many=True).data
 
     def get_automation_objects(self, obj):
-        return AutomationSmallSerializer(obj.automation_objects.all(), many=True).data
+        automation_ids = []
+        if obj.automations is not None:
+            automation_ids = obj.automations.split(',')
+
+        automations = Automation.objects.filter(slug__in=automation_ids,
+                                                ac_academy__academy=obj.calculate_academy())
+        return AutomationSmallSerializer(automations, many=True).data
 
 
 class PostFormEntrySerializer(serializers.ModelSerializer):
@@ -226,21 +253,11 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
         if 'language' in data and data['language'] == 'us':
             data['language'] = 'en'
 
+        if 'tag_objects' in data and data['tag_objects'] != '':
+            tag_ids = data['tag_objects'].split(',')
+            data['tags'] = Tag.objects.filter(id__in=tag_ids)
+
         result = super().create({**data, 'academy': academy})
-        return result
-
-
-class PutFormEntrySerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = FormEntry
-        exclude = ()
-
-    def validate(self, data):
-
-        if 'location' in data and 'academy' in data:
-            result = FormEntry.objects.filter(id=data['id'])
-
         return result
 
 

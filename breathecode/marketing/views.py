@@ -692,7 +692,8 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
         serializer = PostFormEntrySerializer(data=data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            big_serializer = FormEntryBigSerializer(serializer.instance)
+            return Response(big_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_lead')
@@ -715,7 +716,8 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
                                              })
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            big_serializer = FormEntryBigSerializer(serializer.instance)
+            return Response(big_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_lead')

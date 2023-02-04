@@ -306,9 +306,6 @@ def register_new_lead(form_entry=None):
         for t in tags:
             data = {'contactTag': {'contact': contact_id, 'tag': t.acp_id}}
             response = client.contacts.add_a_tag_to_contact(data)
-            if 'contacts' in response:
-                entry.tag_objects.add(t.id)
-
         logger.info('contact was tagged successfully')
 
     entry.storage_status = 'PERSISTED'
