@@ -159,7 +159,7 @@ class AcademyEventTestSuite(EventTestCase):
         for event_type_visibility_setting, event_type, cohort in cases:
             model = self.bc.database.create(user=1,
                                             event=2,
-                                            event_kwargs={'status': 'Active'},
+                                            event_kwargs={'status': 'ACTIVE'},
                                             event_type=event_type,
                                             academy=2,
                                             cohort=cohort,
@@ -248,7 +248,7 @@ class AcademyEventTestSuite(EventTestCase):
         for event_type_visibility_setting, event_type, cohort in cases:
             model = self.bc.database.create(user=1,
                                             event=2,
-                                            event_kwargs={'status': 'Active'},
+                                            event_kwargs={'status': 'ACTIVE'},
                                             event_type=event_type,
                                             academy=2,
                                             cohort=cohort,
@@ -339,7 +339,7 @@ class AcademyEventTestSuite(EventTestCase):
         for event_type_visibility_setting, event_type, cohort in cases:
             model = self.bc.database.create(user=1,
                                             event=2,
-                                            event_kwargs={'status': 'Active'},
+                                            event_kwargs={'status': 'ACTIVE'},
                                             event_type=event_type,
                                             academy=2,
                                             cohort=cohort,
