@@ -9,6 +9,11 @@ logger = logging.getLogger(__name__)
 # You must always return a score number between 1 and 100
 def keyword_density(client, report):
 
+    def remove_three_characters_words(str):
+        words = str.split(' ')
+        words = list(filter(lambda word: len(word) > 3, words))
+        return ' '.join(words)
+
     asset = client.asset
 
     readme = asset.get_readme(parse=True)
@@ -23,8 +28,9 @@ def keyword_density(client, report):
 
     for keyword in asset.seo_keywords.all():
         h2s_with_keywords = []
+        cleaned_title = remove_three_characters_words(keyword.title)
         for h2 in all_h2s:
-            if keyword.title in h2:
+            if cleaned_title in remove_three_characters_words(h2):
                 h2s_with_keywords.append(h2)
 
         if len(h2s_with_keywords) > 2:

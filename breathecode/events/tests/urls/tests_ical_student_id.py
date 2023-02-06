@@ -72,8 +72,8 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_one__cohort_never_ends(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0,
-                                    tzinfo=pytz.UTC),
+            # 'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0,
+            #                         tzinfo=pytz.UTC),
             'never_ends': True,
         }
 

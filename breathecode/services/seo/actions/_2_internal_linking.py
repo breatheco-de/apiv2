@@ -1,4 +1,4 @@
-import logging
+import logging, re
 from urllib.parse import urlparse
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -9,6 +9,10 @@ logger = logging.getLogger(__name__)
 
 # You must always return a score number between 1 and 100
 def internal_linking(client, report):
+
+    def count_words(text):
+        words = text.split()
+        return len(words)
 
     asset = client.asset
 
@@ -50,7 +54,7 @@ def internal_linking(client, report):
         # clusters must be linked
         path = url.path
         if path == '': path = href
-        missing_cluster_paths = [i for i in missing_cluster_paths if i != path]
+        missing_cluster_paths = [i for i in missing_cluster_paths if i.lower() != path.lower()]
 
     for path in missing_cluster_paths:
         report.fatal(f'Missing link to cluster: {path}')
@@ -60,10 +64,27 @@ def internal_linking(client, report):
         missing = 4 - total_internal
         report.bad(-(missing * 5), f'Please add at least {missing} more internal links')
 
+    missing_links = False
+    text = readme['decoded']
+    url_regex = re.compile(r'[^!]\[.*\]\(.*\)')
+
+    words = text.split()
+    words = [' '.join(words[i:i + 500]) for i in range(0, len(words), 500)]
+
+    for word in words:
+        urls = re.findall(url_regex, word)
+        if len(urls) == 0:
+            missing_links = True
+            break
+
+    if missing_links:
+        report.bad(-15, f'Please add at least a link every 500 words')
+
     #report.good('No errors found on keyword density')
 
 
 internal_linking.description = """
 Include a link to all the keyword clusters associated with the asset.
 Include at least 3 links to other internal pages.
+Include at least one link every 500 words.
 """

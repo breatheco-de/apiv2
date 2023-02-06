@@ -50,7 +50,7 @@ class AssetException(Exception):
 
 class AssetValidator():
     base_warns = ['translations', 'technologies']
-    base_errors = ['lang', 'urls', 'category']
+    base_errors = ['lang', 'urls', 'category', 'preview']
     warns = []
     errors = []
 
