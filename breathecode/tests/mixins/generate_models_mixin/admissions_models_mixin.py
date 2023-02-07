@@ -55,6 +55,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    subscription=False,
                                    event_type_visibility_setting=False,
                                    mentorship_service_set=False,
+                                   live_class=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -192,7 +193,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                     **syllabus_schedule_time_slot_kwargs
                 })
 
-        if not 'cohort_time_slot' in models and is_valid(cohort_time_slot):
+        if not 'cohort_time_slot' in models and (is_valid(cohort_time_slot) or is_valid(live_class)):
             kargs = {
                 'starting_at': random_datetime_interger(),
                 'ending_at': random_datetime_interger(),
