@@ -568,10 +568,6 @@ class CohortSerializerMixin(serializers.ModelSerializer):
         ending_date = (data['ending_date'] if 'ending_date' in data else None) or (self.instance.ending_date
                                                                                    if self.instance else None)
 
-        if 'never_ends' in data and ending_date:
-            raise ValidationException('A cohort cannot have a ending date if it never ends',
-                                      slug='ending-date-with-never-ends-true')
-
         if kickoff_date and ending_date and kickoff_date > ending_date:
             raise ValidationException('kickoff_date cannot be greather than ending_date',
                                       slug='kickoff-date-greather-than-ending-date')
@@ -680,7 +676,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     slug = serializers.SlugField(required=False)
     name = serializers.CharField(required=False)
     private = serializers.BooleanField(required=False)
-    kickoff_date = serializers.DateTimeField(required=False, allow_null=True)
+    kickoff_date = serializers.DateTimeField(required=False)
     ending_date = serializers.DateTimeField(required=False, allow_null=True)
     remote_available = serpy.Field(required=False)
     current_day = serializers.IntegerField(required=False)

@@ -14,12 +14,14 @@ class Command(BaseCommand):
 
         cohorts = Cohort.objects.filter(ending_date__gte=utc_now,
                                         never_ends=False).exclude(stage__in=['DELETED', 'PREWORK'])
+
         self.stdout.write(self.style.SUCCESS(f"Found {str(cohorts.count())} cohorts that have not finished and should have live classes"))
+
         for cohort in cohorts:
             timeslots = CohortTimeSlot.objects.filter(cohort=cohort)
             total_cohort_timeslots = timeslots.count()
             if total_cohort_timeslots == 0:
-                self.stdout.write(
+                self.stderr.write(
                     self.style.ERROR(
                         f'Cohort {cohort.slug} live classes will not be generated because it does not have timeslots'
                     ))
