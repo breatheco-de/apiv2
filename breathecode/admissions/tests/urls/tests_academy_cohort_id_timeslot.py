@@ -2,6 +2,7 @@
 Test /cohort/user
 """
 import random
+from unittest.mock import MagicMock, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.utils import DatetimeInteger
@@ -27,6 +28,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Auth
     """
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__without_auth(self):
         url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         response = self.client.get(url)
@@ -39,6 +41,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__without_academy_header(self):
         model = self.generate_models(authenticate=True)
         url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
@@ -53,6 +56,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__without_capabilities(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True)
@@ -72,6 +76,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Without data
     """
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__without_data(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -90,6 +95,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With data
     """
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__with_data(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -112,6 +118,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 recurrency_type in querystring
     """
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__recurrency_type_in_querystring__not_found(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -132,6 +139,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'cohort_time_slot'),
         }])
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__recurrency_type_in_querystring__found(self):
         statuses = ['DAILY', 'WEEKLY', 'MONTHLY']
         cases = [(x, x, random.choice([y for y in statuses if x != y]))
@@ -186,6 +194,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Without timezone
     """
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__post__without_timezone(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -206,6 +215,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Post
     """
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__post__without_ending_at_and_starting_at(self):
         self.headers(academy=1)
         academy_kwargs = {'timezone': 'America/Caracas'}
@@ -227,6 +237,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__post__passing_all_status__in_lowercase(self):
         self.headers(academy=1)
         academy_kwargs = {'timezone': 'America/Caracas'}
@@ -271,6 +282,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'recurrency_type': recurrency_type,
             }])
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__post__passing_all_status__in_uppercase(self):
         self.headers(academy=1)
         academy_kwargs = {'timezone': 'America/Caracas'}

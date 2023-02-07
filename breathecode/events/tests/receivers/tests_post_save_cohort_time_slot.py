@@ -28,7 +28,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     def test_with_invalid_cohort(self):
         cases = [
             (UTC_NOW - timedelta(seconds=random.randint(1, 1000)), False),
-            (UTC_NOW + timedelta(seconds=random.randint(1, 1000)), True),
+            (None, True),
         ]
         index = 0
         for ending_date, never_ends in cases:
