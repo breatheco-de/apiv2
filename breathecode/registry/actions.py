@@ -13,9 +13,10 @@ from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage, OriginalityScan
 from .serializers import AssetBigSerializer
-from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator, ArticleValidator
+from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
+                    ArticleValidator, OriginalityWrapper)
 from github import Github, GithubException
 from breathecode.registry import tasks
 
@@ -293,7 +294,7 @@ def pull_github_lesson(github, asset, override_meta=False):
 
     base64_readme = get_blob_content(repo, file_path, branch=branch_name).content
     asset.readme_raw = base64_readme
-    
+
     # this avoids to keep using the old readme file, we do have a new version
     # the asset.get_readme function will not update the asset if we keep the old version
     if asset.readme_raw is not None:
@@ -660,6 +661,48 @@ def test_asset(asset):
         asset.save()
         # raise e
         return False
+
+
+def scan_asset_originality(asset):
+
+    scan = OriginalityScan(asset=asset)
+    try:
+        credentials = asset.academy.credentialsoriginality
+    except Exception as e:
+        scan.status_text = f'Error retriving originality credentials for academy: ' + str(e)
+        scan.status = 'ERROR'
+        scan.save()
+        raise Exception(scan.status_text)
+
+    try:
+
+        readme = asset.get_readme()
+        if 'decoded' in readme:
+            readme = readme['decoded']
+
+        position_found = readme.rfind('---')
+        if position_found > -1:
+            readme = readme[position_found + 3:]
+
+        scanner = OriginalityWrapper(credentials.token)
+        result = scanner.detect(readme)
+        if isinstance(result, dict):
+            scan.success = result['success']
+            scan.score_original = result['score']['original']
+            scan.score_ai = result['score']['ai']
+            scan.credits_used = result['credits_used']
+            scan.content = result['content']
+        else:
+            raise Exception('Error receiving originality API response payload')
+
+    except Exception as e:
+        scan.status_text = f'Error scanning originality for asset: ' + str(e)
+        scan.status = 'ERROR'
+        scan.save()
+        raise Exception(scan.status_text)
+
+    scan.status = 'COMPLETED'
+    scan.save()
 
 
 def upload_image_to_bucket(img, asset):
