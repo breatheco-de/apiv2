@@ -23,6 +23,7 @@ class EventsModelsMixin(ModelsMixin):
                                event_checkin=False,
                                eventbrite_webhook=False,
                                event_type_visibility_setting=False,
+                               live_class=False,
                                organization_kwargs={},
                                organizer_kwargs={},
                                venue_kwargs={},
@@ -147,5 +148,13 @@ class EventsModelsMixin(ModelsMixin):
                 **kargs,
                 **eventbrite_webhook_kwargs
             })
+
+        if not 'live_class' in models and is_valid(live_class):
+            kargs = {}
+
+            if 'cohort_time_slot' in models:
+                kargs['cohort_time_slot'] = just_one(models['cohort_time_slot'])
+
+            models['live_class'] = create_models(live_class, 'events.LiveClass', **kargs)
 
         return models
