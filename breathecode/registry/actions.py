@@ -25,6 +25,31 @@ logger = logging.getLogger(__name__)
 ASSET_STATUS_DICT = [x for x, y in ASSET_STATUS]
 
 
+# remove markdown elemnts from text and return the clean text output only
+def unmark(text):
+
+    from markdown import Markdown
+    from io import StringIO
+
+    def unmark_element(element, stream=None):
+        if stream is None:
+            stream = StringIO()
+        if element.text:
+            stream.write(element.text)
+        for sub in element:
+            unmark_element(sub, stream)
+        if element.tail:
+            stream.write(element.tail)
+        return stream.getvalue()
+
+    # patching Markdown
+    Markdown.output_formats['plain'] = unmark_element
+    __md = Markdown(output_format='plain')
+    __md.stripTopLevelTags = False
+
+    return __md.convert(text)
+
+
 def allowed_mimes():
     return ['image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'image/jpg']
 
@@ -676,16 +701,15 @@ def scan_asset_originality(asset):
 
     try:
 
-        readme = asset.get_readme()
-        if 'decoded' in readme:
-            readme = readme['decoded']
+        readme = asset.get_readme(parse=True, remove_frontmatter=True)
 
-        position_found = readme.rfind('---')
-        if position_found > -1:
-            readme = readme[position_found + 3:]
+        from bs4 import BeautifulSoup
+        from markdown import markdown
+        html = markdown(readme['html'])
+        text = ''.join(BeautifulSoup(html).findAll(text=True))
 
         scanner = OriginalityWrapper(credentials.token)
-        result = scanner.detect(readme)
+        result = scanner.detect(text)
         if isinstance(result, dict):
             scan.success = result['success']
             scan.score_original = result['score']['original']
