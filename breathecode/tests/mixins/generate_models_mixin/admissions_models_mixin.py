@@ -180,6 +180,9 @@ class AdmissionsModelsMixin(ModelsMixin):
                 'timezone': choice(TIMEZONES),
             }
 
+            if kargs['starting_at'] > kargs['ending_at']:
+                kargs['starting_at'], kargs['ending_at'] = kargs['ending_at'], kargs['starting_at']
+
             if 'syllabus_schedule' in models:
                 kargs['schedule'] = just_one(models['syllabus_schedule'])
 
@@ -195,6 +198,9 @@ class AdmissionsModelsMixin(ModelsMixin):
                 'ending_at': random_datetime_interger(),
                 'timezone': choice(TIMEZONES),
             }
+
+            if kargs['starting_at'] > kargs['ending_at']:
+                kargs['starting_at'], kargs['ending_at'] = kargs['ending_at'], kargs['starting_at']
 
             if 'cohort' in models:
                 kargs['cohort'] = just_one(models['cohort'])

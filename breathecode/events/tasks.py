@@ -1,5 +1,6 @@
 import logging
 from breathecode.admissions.models import CohortTimeSlot
+from breathecode.events.actions import fix_datetime_weekday
 from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
 
@@ -81,7 +82,7 @@ def async_export_event_to_eventbrite(self, event_id: int):
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def build_live_classes_from_timeslot(self, timeslot_id, utc_now=None):
+def build_live_classes_from_timeslot(self, timeslot_id: int):
     logger.info(f'Starting build_live_classes_from_timeslot with id {timeslot_id}')
 
     timeslot = CohortTimeSlot.objects.filter(id=timeslot_id).first()
@@ -89,8 +90,7 @@ def build_live_classes_from_timeslot(self, timeslot_id, utc_now=None):
         logger.error(f'Timeslot {timeslot_id} not fount')
         return
 
-    if not utc_now:
-        utc_now = timezone.now()
+    utc_now = timezone.now()
 
     cohort = timeslot.cohort
     live_classes = LiveClass.objects.filter(cohort_time_slot=timeslot, starting_at__gte=utc_now)
@@ -98,6 +98,19 @@ def build_live_classes_from_timeslot(self, timeslot_id, utc_now=None):
     starting_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at)
     ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
     until_date = timeslot.removed_at or cohort.ending_date
+    start_date = cohort.kickoff_date
+
+    # this event end in the new day
+    if starting_at > ending_at:
+        ending_at.year = starting_at.year
+        ending_at.month = starting_at.month
+        ending_at.day = starting_at.day + 1
+
+    if not until_date:
+        logger.error(f'Timeslot {timeslot_id} not have a ending date')
+        live_classes.delete()
+
+        return
 
     delta = relativedelta(0)
 
@@ -105,7 +118,7 @@ def build_live_classes_from_timeslot(self, timeslot_id, utc_now=None):
         delta += relativedelta(days=1)
 
     if timeslot.recurrency_type == 'WEEKLY':
-        delta += relativedelta(weeks=7)
+        delta += relativedelta(weeks=1)
 
     if timeslot.recurrency_type == 'MONTHLY':
         delta += relativedelta(months=1)
@@ -115,19 +128,23 @@ def build_live_classes_from_timeslot(self, timeslot_id, utc_now=None):
         return
 
     while True:
-        schedule, created = LiveClass.objects.get_or_create(
-            starting_at=starting_at,
-            ending_at=ending_at,
-            cohort_time_slot=timeslot,
-            defaults={'remote_meeting_url': cohort.online_meeting_url or ''})
-
-        if not created:
-            live_classes = live_classes.exclude(id=schedule.id)
-
-        starting_at += delta
-        ending_at += delta
 
         if ending_at > until_date:
             break
+
+        if starting_at > start_date:
+            schedule, _ = LiveClass.objects.get_or_create(
+                starting_at=starting_at,
+                ending_at=ending_at,
+                cohort_time_slot=timeslot,
+                defaults={'remote_meeting_url': cohort.online_meeting_url or ''})
+
+            live_classes = live_classes.exclude(id=schedule.id)
+
+            if not timeslot.recurrent:
+                break
+
+        starting_at += delta
+        ending_at += delta
 
     live_classes.delete()
