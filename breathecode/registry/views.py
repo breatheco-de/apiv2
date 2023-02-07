@@ -422,7 +422,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         if 'technologies' in self.request.GET:
             param = self.request.GET.get('technologies')
-            lookup['technologies__in'] = [p.lower() for p in param.split(',')]
+            lookup['technologies__slug__in'] = [p.lower() for p in param.split(',')]
 
         if 'keywords' in self.request.GET:
             param = self.request.GET.get('keywords')
