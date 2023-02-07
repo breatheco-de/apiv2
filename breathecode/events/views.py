@@ -672,6 +672,19 @@ class AcademyEventTypeView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of('crud_event_type')
+    def put(self, request, academy_id, event_type_slug=None):
+        event_type = EventType.objects.filter(academy__id=academy_id, slug=event_type_slug).first()
+        if not event_type:
+            raise ValidationException('Event Type not found for this academy', slug='event-type-not-found')
+        serializer = PostEventTypeSerializer(event_type,
+                                             data=request.data,
+                                             context={'academy_id': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class EventTypeVisibilitySettingView(APIView):
     """
