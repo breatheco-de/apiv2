@@ -605,7 +605,7 @@ class KeywordClusterAdmin(admin.ModelAdmin):
 class AssetCommentAdmin(admin.ModelAdmin):
     list_display = ['asset', 'text', 'author']
     search_fields = ('asset__slug', 'author__first_name', 'author__last_name', 'author__email')
-    raw_id_fields = ['asset', 'author']
+    raw_id_fields = ['asset', 'author', 'owner']
     list_filter = ['asset__academy']
 
 
