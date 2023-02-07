@@ -295,10 +295,7 @@ def register_new_lead(form_entry=None):
             if 'contacts' not in response:
                 logger.error(f'error triggering automation with id {str(automation_id)}', response)
                 raise APIException('Could not add contact to Automation')
-
             logger.info(f'Triggered automation with id {str(automation_id)} ' + str(response))
-            auto = Automation.objects.filter(acp_id=automation_id, ac_academy=ac_academy).first()
-            entry.automation_objects.add(auto)
 
         logger.info('automations was executed successfully')
 
