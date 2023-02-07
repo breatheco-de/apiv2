@@ -20,6 +20,7 @@ from ..mixins.new_events_tests_case import EventTestCase
 class AcademyCohortTestSuite(EventTestCase):
     """Test /academy/cohort"""
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__without_academy(self):
         """Test /academy/cohort without auth"""
         url = reverse_lazy('events:ical_cohorts')
@@ -32,6 +33,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__without_events(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -61,6 +63,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__dont_get_status_deleted(self):
         """Test /academy/cohort without auth"""
         cohort_kwargs = {'stage': 'DELETED'}
@@ -93,6 +96,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_one(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -138,6 +142,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_one__ending_date_is_none(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -164,6 +169,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_one__never_ends_true(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -191,6 +197,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_one__with_incoming_true__return_zero_cohorts(self):
         """Test /academy/cohort without auth"""
         cohort_kwargs = {'kickoff_date': timezone.now() - timedelta(days=1)}
@@ -222,6 +229,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_one__with_incoming_true(self):
         """Test /academy/cohort without auth"""
         cohort_kwargs = {
@@ -269,6 +277,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_one__with_teacher__with_ending_date(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
@@ -319,6 +328,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_two(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -383,6 +393,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_two__with_teacher__with_ending_date(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
@@ -462,6 +473,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_id(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
@@ -590,6 +602,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_slug(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
@@ -725,6 +738,7 @@ class AcademyCohortTestSuite(EventTestCase):
     🔽🔽🔽 With first cohort day and last cohort day
     """
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_one__first_day__last_day(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -833,6 +847,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_one__first_day__last_day__timeslot_not_recurrent(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -924,6 +939,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_two__first_day__last_day__two_timeslots(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -977,6 +993,8 @@ class AcademyCohortTestSuite(EventTestCase):
         academy = model.academy
         timeslot1 = model.cohort_time_slot[0]
         timeslot2 = model.cohort_time_slot[1]
+        timeslot3 = model.cohort_time_slot[2]
+        # timeslot4 = model.cohort_time_slot[3]
         key = model.device_id.key
 
         starting_at1 = self.datetime_to_ical(model.cohort[0].kickoff_date)
@@ -994,7 +1012,8 @@ class AcademyCohortTestSuite(EventTestCase):
             next=True),
                                                            utc=False)
 
-        first_timeslot_starting_at_utc = self.datetime_to_ical(timeslot1.created_at, utc=True)
+        first_timeslot_starting_at_utc1 = self.datetime_to_ical(timeslot1.created_at, utc=True)
+        first_timeslot_starting_at_utc2 = self.datetime_to_ical(timeslot3.created_at, utc=True)
 
         first_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
             model.cohort[0].kickoff_date,
@@ -1008,7 +1027,7 @@ class AcademyCohortTestSuite(EventTestCase):
             prev=True),
                                                           utc=False)
 
-        last_timeslot_starting_at_utc = self.datetime_to_ical(timeslot2.created_at, utc=True)
+        last_timeslot_starting_at_utc = self.datetime_to_ical(timeslot2.cohort.created_at, utc=True)
 
         last_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
             model.cohort[1].ending_date,
@@ -1032,7 +1051,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'SUMMARY:{cohort1.name} - First day',
             f'DTSTART;TZID=Europe/Madrid:{first_timeslot_starting_at}',
             f'DTEND;TZID=Europe/Madrid:{first_timeslot_ending_at}',
-            f'DTSTAMP:{first_timeslot_starting_at_utc}',
+            f'DTSTAMP:{first_timeslot_starting_at_utc1}',
             f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -1063,7 +1082,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'SUMMARY:{cohort2.name} - First day',
             f'DTSTART;TZID=Europe/Madrid:{first_timeslot_starting_at}',
             f'DTEND;TZID=Europe/Madrid:{first_timeslot_ending_at}',
-            f'DTSTAMP:{first_timeslot_starting_at_utc}',
+            f'DTSTAMP:{first_timeslot_starting_at_utc2}',
             f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
@@ -1094,6 +1113,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test_ical_cohorts__with_two__first_day__last_day__two_timeslots__cohort_with_meeting_url(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
@@ -1147,6 +1167,8 @@ class AcademyCohortTestSuite(EventTestCase):
 
         timeslot1 = model.cohort_time_slot[0]
         timeslot2 = model.cohort_time_slot[1]
+        timeslot3 = model.cohort_time_slot[2]
+        # timeslot4 = model.cohort_time_slot[3]
         key = model.device_id.key
 
         starting_at1 = self.datetime_to_ical(model.cohort[0].kickoff_date)
@@ -1164,7 +1186,8 @@ class AcademyCohortTestSuite(EventTestCase):
             next=True),
                                                            utc=False)
 
-        first_timeslot_starting_at_utc = self.datetime_to_ical(timeslot1.created_at, utc=True)
+        first_timeslot_starting_at_utc1 = self.datetime_to_ical(timeslot1.created_at, utc=True)
+        first_timeslot_starting_at_utc2 = self.datetime_to_ical(timeslot3.created_at, utc=True)
 
         first_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
             model.cohort[0].kickoff_date,
@@ -1178,7 +1201,7 @@ class AcademyCohortTestSuite(EventTestCase):
             prev=True),
                                                           utc=False)
 
-        last_timeslot_starting_at_utc = self.datetime_to_ical(timeslot2.created_at, utc=True)
+        last_timeslot_starting_at_utc = self.datetime_to_ical(timeslot2.cohort.created_at, utc=True)
 
         last_timeslot_ending_at = self.datetime_to_ical(fix_datetime_weekday(
             model.cohort[1].ending_date,
@@ -1202,7 +1225,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'SUMMARY:{cohort1.name} - First day',
             f'DTSTART;TZID=Europe/Madrid:{first_timeslot_starting_at}',
             f'DTEND;TZID=Europe/Madrid:{first_timeslot_ending_at}',
-            f'DTSTAMP:{first_timeslot_starting_at_utc}',
+            f'DTSTAMP:{first_timeslot_starting_at_utc1}',
             f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
             f'LOCATION:{cohort_kwargs[0]["online_meeting_url"]}',
             'END:VEVENT',
@@ -1233,7 +1256,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'SUMMARY:{cohort2.name} - First day',
             f'DTSTART;TZID=Europe/Madrid:{first_timeslot_starting_at}',
             f'DTEND;TZID=Europe/Madrid:{first_timeslot_ending_at}',
-            f'DTSTAMP:{first_timeslot_starting_at_utc}',
+            f'DTSTAMP:{first_timeslot_starting_at_utc2}',
             f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
             f'LOCATION:{cohort_kwargs[1]["online_meeting_url"]}',
             'END:VEVENT',

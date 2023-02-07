@@ -3,7 +3,7 @@ Headers mixin
 """
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils import timezone
 from breathecode.utils.datetime_interger import DatetimeInteger
 
@@ -73,8 +73,11 @@ class DatetimeMixin():
         return timezone.make_aware(date)
 
     def datetime_to_ical(self, date=datetime.utcnow(), utc=True) -> str:
-        return '{:4d}{:02d}{:02d}T{:02d}{:02d}{:02d}'.format(date.year, date.month, date.day, date.hour,
-                                                             date.minute, date.second) + ('Z' if utc else '')
+        s = f'{date.year:04}{date.month:02}{date.day:02}T{date.hour:02}{date.minute:02}{date.second:02}'
+        if utc:
+            s += 'Z'
+
+        return s
 
     def assertDatetime(self, date: datetime) -> bool:
         if not isinstance(date, str):
