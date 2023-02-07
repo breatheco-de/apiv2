@@ -1,8 +1,10 @@
 import os, logging
+from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from .signals import student_edu_status_updated, academy_saved
+from . import signals
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
 logger = logging.getLogger(__name__)
@@ -279,7 +281,7 @@ class Cohort(models.Model):
     slug = models.CharField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
 
-    kickoff_date = models.DateTimeField(blank=True, null=True)
+    kickoff_date = models.DateTimeField()
     ending_date = models.DateTimeField(blank=True, null=True)
     current_day = models.IntegerField(
         help_text='Each day the teacher takes attendancy and increases the day in one', default=1)
@@ -337,6 +339,12 @@ class Cohort(models.Model):
     def clean(self):
         if self.stage:
             self.stage = self.stage.upper()
+
+        if self.never_ends and self.ending_date:
+            raise forms.ValidationError('If the cohort never ends, it cannot have ending date')
+
+        if not self.kickoff_date:
+            raise forms.ValidationError('Kickoff date is required')
 
     def save(self, *args, **kwargs):
         from .signals import cohort_saved
@@ -488,9 +496,16 @@ class SyllabusScheduleTimeSlot(TimeSlot):
         if self.recurrency_type:
             self.recurrency_type = self.recurrency_type.upper()
 
+        if self.starting_at > self.ending_at:
+            raise forms.ValidationError('The starting date must be before the ending date')
+
     def save(self, *args, **kwargs):
+        # created = not self.id
+
         self.full_clean()
         super().save(*args, **kwargs)
+
+        # signals.timeslot_saved.send(instance=self, sender=self.__class__, created=created)
 
 
 class CohortTimeSlot(TimeSlot):
@@ -500,6 +515,13 @@ class CohortTimeSlot(TimeSlot):
         if self.recurrency_type:
             self.recurrency_type = self.recurrency_type.upper()
 
+        if self.starting_at > self.ending_at:
+            raise forms.ValidationError('The starting date must be before the ending date')
+
     def save(self, *args, **kwargs):
+        created = not self.id
+
         self.full_clean()
         super().save(*args, **kwargs)
+
+        signals.timeslot_saved.send(instance=self, sender=self.__class__, created=created)

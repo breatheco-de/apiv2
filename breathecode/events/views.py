@@ -30,10 +30,11 @@ from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibil
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (GetLiveClassJoinSerializer, GetLiveClassSerializer, LiveClassSerializer,
-                          EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
-                          EventSmallSerializerNoAcademy, EventTypeVisibilitySettingSerializer,
-                          PostEventTypeSerializer, VenueSerializer, OrganizationBigSerializer,
-                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
+                          EventSerializer, EventSmallSerializer, EventTypeSerializer, EventTypeBigSerializer,
+                          EventCheckinSerializer, EventSmallSerializerNoAcademy,
+                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer, VenueSerializer,
+                          OrganizationBigSerializer, OrganizationSerializer, EventbriteWebhookSerializer,
+                          OrganizerSmallSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -252,7 +253,8 @@ class MeLiveClassView(APIView):
             lookup.update(self._get_lookup(academy, 'cohort_time_slot__cohort__academy__'))
 
         if syllabus := self.request.GET.get('syllabus', ''):
-            lookup.update(self._get_lookup(syllabus, 'cohort_time_slot__cohort__syllabus_version__syllabus__'))
+            lookup.update(self._get_lookup(syllabus,
+                                           'cohort_time_slot__cohort__syllabus_version__syllabus__'))
 
         upcoming = self.request.GET.get('upcoming', '')
         if upcoming == 'true':
@@ -318,13 +320,14 @@ class AcademyLiveClassView(APIView):
         lookup = {}
 
         if user := self.request.GET.get('user', ''):
-            lookup.update(self._get_lookup(user, 'cohort__cohortuser__user__'))
+            lookup.update(self._get_lookup(user, 'cohort_time_slot__cohort__cohortuser__user__'))
 
         if cohort := self.request.GET.get('cohort', ''):
-            lookup.update(self._get_lookup(cohort, 'cohort__'))
+            lookup.update(self._get_lookup(cohort, 'cohort_time_slot__cohort__'))
 
         if syllabus := self.request.GET.get('syllabus', ''):
-            lookup.update(self._get_lookup(syllabus, 'cohort__syllabus_version__syllabus__'))
+            lookup.update(self._get_lookup(syllabus,
+                                           'cohort_time_slot__cohort__syllabus_version__syllabus__'))
 
         upcoming = self.request.GET.get('upcoming', '')
         if upcoming == 'true':
@@ -634,7 +637,16 @@ class AcademyEventTypeView(APIView):
     """
 
     @capable_of('read_event_type')
-    def get(self, request, academy_id=None):
+    def get(self, request, academy_id=None, event_type_slug=None):
+
+        if event_type_slug is not None:
+            event_type = EventType.objects.filter(academy__id=academy_id, slug=event_type_slug).first()
+            if not event_type:
+                raise ValidationException('Event Type not found for this academy',
+                                          slug='event-type-not-found')
+
+            serializer = EventTypeBigSerializer(event_type, many=False)
+            return Response(serializer.data)
 
         items = EventType.objects.filter(Q(academy__id=academy_id) | Q(allow_shared_creation=True))
         lookup = {}
