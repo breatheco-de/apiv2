@@ -241,6 +241,10 @@ def get_url_info(url: str):
 
 
 def get_blob_content(repo, path_name, branch='main'):
+  
+    if "?" in path_name:
+      path_name = path_name.split("?")[0]
+      
     # first get the branch reference
     ref = repo.get_git_ref(f'heads/{branch}')
     # then get the tree
