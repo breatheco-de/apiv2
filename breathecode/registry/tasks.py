@@ -14,7 +14,7 @@ from breathecode.media.views import media_gallery_bucket
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
-from breathecode.monitoring.decorators import github_webhook_task
+from breathecode.monitoring.decorators import WebhookTask
 from .models import Asset, AssetImage
 from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
                       upload_image_to_bucket, asset_images_bucket)
@@ -415,11 +415,10 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
     resolution.save()
 
 
-@shared_task
-@github_webhook_task()
-def async_synchonize_repository_content(webhook):
+@shared_task(bind=True, base=WebhookTask)
+def async_synchonize_repository_content(self, webhook):
 
-    logger.debug('Starting to sync github repo content')
+    logger.debug('async_synchonize_repository_content')
     payload = webhook.get_payload()
     if 'commits' not in payload:
         logger.debug('No commits found on the push object')

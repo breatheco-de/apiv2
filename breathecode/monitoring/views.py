@@ -108,7 +108,7 @@ def process_github_webhook(request, subscription_token):
     for academy_slug in academy_slugs:
         webhook = add_github_webhook(payload, academy_slug)
         if webhook:
-            logger.debug('triggering signal github_webhook')
+            logger.debug('triggering signal github_webhook: ' + payload['scope'])
             github_webhook.send(instance=webhook, sender=RepositoryWebhook)
             return Response(payload, status=status.HTTP_200_OK)
         else:

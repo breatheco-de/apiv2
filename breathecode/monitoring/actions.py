@@ -370,11 +370,13 @@ def add_github_webhook(context: dict, academy_slug: str):
         logger.error('Missing webhook payload')
         return None
 
-    if 'action' not in context and context['scope'] == 'push':
-        context['action'] = 'push'
-    else:
-        logger.error('Missing action param on the webhook payload')
-        return None
+    if 'action' not in context:
+        if context['scope'] == 'push':
+            context['action'] = 'push'
+        else:
+            logger.error('Missing action param on the webhook payload')
+            logger.error(context)
+            return None
 
     webhook = RepositoryWebhook(webhook_action=context['action'],
                                 scope=context['scope'],
