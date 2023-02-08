@@ -32,9 +32,9 @@ from rest_framework.decorators import api_view, permission_classes
 from .serializers import (GetLiveClassJoinSerializer, GetLiveClassSerializer, LiveClassSerializer,
                           EventSerializer, EventSmallSerializer, EventTypeSerializer, EventTypeBigSerializer,
                           EventCheckinSerializer, EventSmallSerializerNoAcademy,
-                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer, VenueSerializer,
-                          OrganizationBigSerializer, OrganizationSerializer, EventbriteWebhookSerializer,
-                          OrganizerSmallSerializer)
+                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
+                          EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
+                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -677,9 +677,7 @@ class AcademyEventTypeView(APIView):
         event_type = EventType.objects.filter(academy__id=academy_id, slug=event_type_slug).first()
         if not event_type:
             raise ValidationException('Event Type not found for this academy', slug='event-type-not-found')
-        serializer = PostEventTypeSerializer(event_type,
-                                             data=request.data,
-                                             context={'academy_id': academy_id})
+        serializer = EventTypePutSerializer(event_type, data=request.data, context={'academy_id': academy_id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

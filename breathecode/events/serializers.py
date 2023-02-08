@@ -313,11 +313,51 @@ class EventbriteWebhookSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
-class PostEventTypeSerializer(serializers.ModelSerializer):
+class EventTypeSerializerMixin(serializers.ModelSerializer):
+
+    def validate(self, data: dict[str, Any]):
+        lang = data.get('lang', 'en')
+
+        visibility_settings = data.get('visibility_settings')
+
+        if 'visibility_settings' in data:
+            raise ValidationException(
+                translation(lang,
+                            en='You are not allowed to set visibility settings here',
+                            es='No se permite establecer ajustes de visibilidad por este medio',
+                            slug='try-set-visibility-settings'))
+
+        return data
+
+
+class PostEventTypeSerializer(EventTypeSerializerMixin):
 
     class Meta:
         model = EventType
         exclude = ()
+
+    def create(self, validated_data):
+        event_type = EventType.objects.create(**validated_data, **self.context)
+
+        return event_type
+
+
+class EventTypePutSerializer(EventTypeSerializerMixin):
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField(required=False)
+    description = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
+    allow_shared_creation = serializers.BooleanField(required=False)
+
+    class Meta:
+        model = EventType
+        exclude = ()
+
+    def update(self, instance, validated_data):
+
+        event_type = super().update(instance, validated_data)
+
+        return event_type
 
 
 class LiveClassSerializer(serializers.ModelSerializer):

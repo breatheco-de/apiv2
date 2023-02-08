@@ -38,7 +38,7 @@ def get_serializer(event_type, academy=None, city=None, data={}):
     }
 
 
-def get_put_serializer(event_type, data={}):
+def put_serializer(event_type, data={}):
 
     return {
         'academy': event_type.academy,
@@ -154,10 +154,12 @@ class AcademyEventTestSuite(EventTestCase):
         del json['created_at']
         del json['updated_at']
 
-        expected = get_put_serializer(model.event_type, {**data, 'visibility_settings': [], 'academy': 1})
+        expected = put_serializer(model.event_type, {**data, 'visibility_settings': [], 'academy': 1})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.bc.database.list_of('events.EventType'),
+                         self.bc.format.to_dict(model.event_type))
 
     def test_academy_event_type_slug__put_with_bad_slug(self):
         """Test /cohort without auth"""
@@ -234,7 +236,11 @@ class AcademyEventTestSuite(EventTestCase):
         del json['created_at']
         del json['updated_at']
 
-        expected = get_put_serializer(model.event_type, {**data, 'visibility_settings': [], 'academy': 1})
+        expected = put_serializer(model.event_type, {**data, 'visibility_settings': [], 'academy': 1})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.bc.database.list_of('events.EventType'), [{
+            **self.bc.format.to_dict(model.event_type),
+            **data
+        }])
