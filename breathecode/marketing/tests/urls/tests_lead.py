@@ -69,8 +69,6 @@ def post_serializer(data={}):
         'academy': None,
         'user': None,
         'lead_generation_app': None,
-        'tag_objects': [],
-        'automation_objects': [],
         **data,
     }
 

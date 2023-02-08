@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import get_apps, get_endpoints, get_download, get_upload
+from .views import get_apps, get_endpoints, get_download, get_upload, process_github_webhook
 
 app_name = 'monitoring'
 urlpatterns = [
@@ -10,4 +10,5 @@ urlpatterns = [
     path('download/<int:download_id>', get_download),
     path('upload', get_upload),
     path('upload/<int:upload_id>', get_upload),
+    path('github/webhook/<str:subscription_token>', process_github_webhook),
 ]

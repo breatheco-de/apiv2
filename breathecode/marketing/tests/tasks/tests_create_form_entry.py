@@ -192,8 +192,8 @@ def form_entry_serializer(self, data={}):
         'academy': None,
         'lead_generation_app': None,
         'user': None,
-        'tag_objects': [],
-        'automation_objects': [],
+        # 'tag_objects': [],
+        # 'automation_objects': [],
         **data
     }
 
@@ -341,6 +341,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                          [call('Create form entry started'),
                           call('create_form_entry successfully created')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
+
         self.assertEqual(tasks.persist_single_lead.delay.call_args_list,
                          [call(form_entry_serializer(self, {
                              **data, 'academy': 1

@@ -11,22 +11,13 @@ from breathecode.assessment.models import Assessment
 from breathecode.utils.admin import change_field
 from breathecode.services.seo import SEOAnalyzer
 
-from .models import (
-    Asset,
-    AssetTechnology,
-    AssetAlias,
-    AssetErrorLog,
-    KeywordCluster,
-    AssetCategory,
-    AssetKeyword,
-    AssetComment,
-    SEOReport,
-    AssetImage,
-)
+from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory,
+                     AssetKeyword, AssetComment, SEOReport, AssetImage, OriginalityScan,
+                     CredentialsOriginality)
 from .tasks import (async_pull_from_github, async_test_asset, async_execute_seo_report,
                     async_regenerate_asset_readme, async_download_readme_images, async_remove_img_from_cloud,
                     async_upload_image_to_bucket)
-from .actions import pull_from_github, get_user_from_github_username, test_asset, AssetThumbnailGenerator
+from .actions import pull_from_github, get_user_from_github_username, test_asset, AssetThumbnailGenerator, scan_asset_originality
 
 logger = logging.getLogger(__name__)
 lang_flags = {
@@ -179,6 +170,18 @@ def seo_report(modeladmin, request, queryset):
             messages.error(request, a.slug + ': ' + str(e))
 
 
+def originality_report(modeladmin, request, queryset):
+    assets = queryset.all()
+
+    for a in assets:
+        try:
+            # async_scan_asset_originality.delay(a.slug)
+            scan_asset_originality(a)
+        except Exception as e:
+            raise e
+            messages.error(request, a.slug + ': ' + str(e))
+
+
 def seo_optimization_off(modeladmin, request, queryset):
     queryset.update(is_seo_tracked=False)
 
@@ -309,6 +312,7 @@ class AssetAdmin(admin.ModelAdmin):
         seo_optimization_off,
         seo_optimization_on,
         seo_report,
+        originality_report,
         make_me_author,
         make_me_owner,
         get_author_grom_github_usernames,
@@ -601,7 +605,7 @@ class KeywordClusterAdmin(admin.ModelAdmin):
 class AssetCommentAdmin(admin.ModelAdmin):
     list_display = ['asset', 'text', 'author']
     search_fields = ('asset__slug', 'author__first_name', 'author__last_name', 'author__email')
-    raw_id_fields = ['asset', 'author']
+    raw_id_fields = ['asset', 'author', 'owner']
     list_filter = ['asset__academy']
 
 
@@ -611,6 +615,22 @@ class SEOReportAdmin(admin.ModelAdmin):
     search_fields = ('asset__slug', 'asset__title', 'report_type')
     raw_id_fields = ['asset']
     list_filter = ['asset__academy']
+
+
+@admin.register(OriginalityScan)
+class OriginalityScanAdmin(admin.ModelAdmin):
+    list_display = ['id', 'created_at', 'status', 'asset', 'success', 'score_original', 'score_ai']
+    search_fields = ('asset__slug', 'asset__title', 'report_type')
+    raw_id_fields = ['asset']
+    list_filter = ['asset__academy']
+
+
+@admin.register(CredentialsOriginality)
+class CredentialsOriginalityAdmin(admin.ModelAdmin):
+    list_display = ['id', 'academy', 'created_at', 'balance', 'last_call_at']
+    search_fields = ('academy__slug', 'academy__title')
+    raw_id_fields = ['academy']
+    list_filter = ['academy']
 
 
 def remove_image_from_bucket(modeladmin, request, queryset):
