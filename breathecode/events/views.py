@@ -30,8 +30,8 @@ from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibil
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (GetLiveClassJoinSerializer, GetLiveClassSerializer, LiveClassSerializer,
-                          EventSerializer, EventSmallSerializer, EventTypeSerializer, EventTypeBigSerializer,
-                          EventCheckinSerializer, EventSmallSerializerNoAcademy,
+                          EventSerializer, EventBigSerializer, EventSmallSerializer, EventTypeSerializer,
+                          EventTypeBigSerializer, EventCheckinSerializer, EventSmallSerializerNoAcademy,
                           EventTypeVisibilitySettingSerializer, PostEventTypeSerializer, VenueSerializer,
                           OrganizationBigSerializer, OrganizationSerializer, EventbriteWebhookSerializer,
                           OrganizerSmallSerializer)
@@ -226,7 +226,7 @@ class EventMeView(APIView):
 
         items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('-created_at')
 
-        serializer = EventSerializer(items, many=True)
+        serializer = EventBigSerializer(items, many=True)
         return Response(serializer.data)
 
 
