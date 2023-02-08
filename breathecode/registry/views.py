@@ -8,9 +8,10 @@ from django.core.validators import URLValidator
 from .tasks import async_pull_from_github
 from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
-                     AssetKeyword, AssetComment, SEOReport)
+                     AssetKeyword, AssetComment, SEOReport, OriginalityScan)
 
-from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github, clean_asset_readme
+from .actions import (AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github,
+                      clean_asset_readme, scan_asset_originality)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
@@ -24,7 +25,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
                           PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
-                          KeywordClusterMidSerializer, SEOReportSerializer)
+                          KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -486,7 +487,7 @@ class AcademyAssetActionView(APIView):
             raise ValidationException(f'This asset {asset_slug} does not exist for this academy {academy_id}',
                                       404)
 
-        possible_actions = ['test', 'pull', 'push', 'analyze_seo', 'clean']
+        possible_actions = ['test', 'pull', 'push', 'analyze_seo', 'clean', 'originality']
         if action_slug not in possible_actions:
             raise ValidationException(f'Invalid action {action_slug}')
         try:
@@ -509,6 +510,11 @@ class AcademyAssetActionView(APIView):
             elif action_slug == 'analyze_seo':
                 report = SEOAnalyzer(asset)
                 report.start()
+            elif action_slug == 'originality':
+
+                if asset.asset_type not in ['ARTICLE', 'LESSON']:
+                    raise ValidationException(f'Only lessons and articles can be scanned for originality')
+                scan_asset_originality(asset)
 
         except Exception as e:
             logger.exception(e)
@@ -593,6 +599,30 @@ class AcademyAssetSEOReportView(APIView, GenerateLookupsMixin):
 
         reports = handler.queryset(reports)
         serializer = SEOReportSerializer(reports, many=True)
+        return handler.response(serializer.data)
+
+
+# Create your views here.
+class AcademyAssetOriginalityView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_asset')
+    def get(self, request, asset_slug, academy_id):
+
+        handler = self.extensions(request)
+
+        scans = OriginalityScan.objects.filter(asset__slug=asset_slug)
+        if scans.count() == 0:
+            raise ValidationException(f'No originality scans found for asset {asset_slug}',
+                                      status.HTTP_404_NOT_FOUND)
+
+        scans = scans.order_by('-created_at')
+
+        reports = handler.queryset(scans)
+        serializer = OriginalityScanSerializer(scans, many=True)
         return handler.response(serializer.data)
 
 

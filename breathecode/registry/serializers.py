@@ -29,6 +29,20 @@ class SEOReportSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
+class OriginalityScanSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    success = serpy.Field()
+    score_original = serpy.Field()
+    score_ai = serpy.Field()
+    credits_used = serpy.Field()
+    content = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
 class KeywordSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.

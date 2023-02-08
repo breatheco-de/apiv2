@@ -187,6 +187,25 @@ class CohortLeadIdSuite(MarketingTestCase):
             'state': model.form_entry[0].state,
             'storage_status_text': model.form_entry[0].storage_status_text,
             'street_address': model.form_entry[0].street_address,
+            'won_at': model.form_entry[0].won_at,
+            'updated_at': self.bc.datetime.to_iso_string(model.form_entry[0].updated_at),
+            'lead_generation_app': model.form_entry[0].lead_generation_app,
+            'fb_page_id': model.form_entry[0].fb_page_id,
+            'fb_leadgen_id': model.form_entry[0].fb_leadgen_id,
+            'fb_form_id': model.form_entry[0].fb_form_id,
+            'fb_adgroup_id': model.form_entry[0].fb_adgroup_id,
+            'fb_ad_id': model.form_entry[0].fb_ad_id,
+            'deal_status': model.form_entry[0].deal_status,
+            'current_download': model.form_entry[0].current_download,
+            'contact': model.form_entry[0].contact,
+            'ac_deal_id': model.form_entry[0].ac_deal_id,
+            'ac_contact_id': model.form_entry[0].ac_contact_id,
+            'sentiment': model.form_entry[0].sentiment,
+            'academy': {
+                'id': model.form_entry[0].academy.id,
+                'name': model.form_entry[0].academy.name,
+                'slug': model.form_entry[0].academy.slug,
+            },
             'zip_code': model.form_entry[0].zip_code
         }
 
@@ -263,7 +282,11 @@ class CohortLeadIdSuite(MarketingTestCase):
             'ac_contact_id': model.form_entry.ac_contact_id,
             'ac_deal_id': model.form_entry.ac_deal_id,
             'ac_expected_cohort': model.form_entry.ac_expected_cohort,
-            'academy': model.form_entry.academy.id,
+            'academy': {
+                'id': model.form_entry.academy.id,
+                'name': model.form_entry.academy.name,
+                'slug': model.form_entry.academy.slug
+            },
             'automation_objects': [],
             'tag_objects': [],
             'automations': model.form_entry.automations,

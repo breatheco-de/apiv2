@@ -132,12 +132,6 @@ class MarketingModelsMixin(ModelsMixin):
             if 'contact' in models:
                 kargs['contact'] = just_one(models['contact'])
 
-            if 'tag' in models:
-                kargs['tag_objects'] = get_list(models['tag'])
-
-            if 'automation' in models:
-                kargs['automation_objects'] = get_list(models['automation'])
-
             if 'academy' in models or academy:
                 kargs['academy'] = just_one(models['academy'])
 
