@@ -518,6 +518,9 @@ class AcademyAssetActionView(APIView):
 
         except Exception as e:
             logger.exception(e)
+            if isinstance(e,Exception):
+                raise ValidationException(str(e))
+              
             raise ValidationException('; '.join(
                 [k.capitalize() + ': ' + ''.join(v) for k, v in e.message_dict.items()]))
 
