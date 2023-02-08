@@ -13,20 +13,11 @@ class Command(BaseCommand):
     help = 'Close live classes'
 
     def handle(self, *args: Any, **options: Any):
-        
+        live_classes = LiveClass.objects.filter(started_at__isnull=False, ended_at=None)
         utc_now = timezone.now()
-        
-        old_classes_that_never_started = LiveClass.objects.filter(started_at__isnull=True, ended_at__isnull=True, ending_at__lte=utc_now)
-        self.stdout.write(
-            self.style.SUCCESS(f'There are {str(old_classes_that_never_started.count())} old classes that never started and should be closed'))
-        
-        live_classes_that_nerver_closed = LiveClass.objects.filter(started_at__isnull=False, ended_at__isnull=True)
-        self.stdout.write(
-            self.style.SUCCESS(f'There are {str(live_classes_that_nerver_closed.count())} live classes that did start, but still need to be closed'))
 
-        classes_to_close = list(old_classes_that_never_started) +list(live_classes_that_nerver_closed)
-        for _class in classes_to_close:
-            ended_at = _class.ending_at + timedelta(minutes=30)
+        for live_class in live_classes:
+            ended_at = live_class.ending_at + timedelta(minutes=30)
             if ended_at < utc_now:
-                _class.ended_at = ended_at
-                _class.save()
+                live_class.ended_at = ended_at
+                live_class.save()
