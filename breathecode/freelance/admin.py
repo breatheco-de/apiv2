@@ -1,7 +1,6 @@
 import json
 from django.contrib import admin, messages
-from .models import (Freelancer, Issue, Bill, RepositoryIssueWebhook, AcademyFreelanceProject,
-                     FreelanceProjectMember, ProjectInvoice)
+from .models import (Freelancer, Issue, Bill, AcademyFreelanceProject, FreelanceProjectMember, ProjectInvoice)
 from django.utils.html import format_html
 from . import actions
 from breathecode.utils.admin import change_field
@@ -111,39 +110,6 @@ class BillAdmin(admin.ModelAdmin):
         return format_html(
             "<a rel='noopener noreferrer' target='_blank' href='/v1/freelance/bills/{id}/html'>open invoice</a>",
             id=obj.id)
-
-
-def run_hook(modeladmin, request, queryset):
-    # stay this here for use the poor mocking system
-    for hook in queryset.all():
-        actions.sync_single_issue(json.loads(hook.payload), academy_slug=hook.academy_slug)
-
-
-run_hook.short_description = 'Process IssueHook'
-
-
-def run_hook_delayed(modeladmin, request, queryset):
-    # stay this here for use the poor mocking system
-    for hook in queryset.all():
-        async_repository_issue_github.delay(hook.id)
-
-
-run_hook_delayed.short_description = 'Process IssueHook (delayed)'
-
-
-@admin.register(RepositoryIssueWebhook)
-class RepositoryIssueWebhookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'webhook_action', 'current_status', 'run_at', 'academy_slug', 'created_at')
-    list_filter = ['status', 'webhook_action', 'academy_slug']
-    actions = [run_hook, run_hook_delayed]
-
-    def current_status(self, obj):
-        colors = {
-            'DONE': 'bg-success',
-            'ERROR': 'bg-error',
-            'PENDING': 'bg-warning',
-        }
-        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 
 def generate_project_invoice(modeladmin, request, queryset):

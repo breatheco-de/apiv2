@@ -14,6 +14,7 @@ from breathecode.media.views import media_gallery_bucket
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
+from breathecode.monitoring.decorators import github_webhook_task
 from .models import Asset, AssetImage
 from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
                       upload_image_to_bucket, asset_images_bucket)
@@ -73,6 +74,7 @@ def async_regenerate_asset_readme(asset_slug):
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
         logger.debug(f'Error: Error running SEO report for asset with slug {asset_slug}, does not exist.')
+        return False
 
     a.readme = a.readme_raw
     a.save()
@@ -411,3 +413,38 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
 
     resolution = MediaResolution(width=res['width'], height=res['height'], hash=media.hash)
     resolution.save()
+
+
+@shared_task
+@github_webhook_task()
+def async_synchonize_repository_content(webhook):
+
+    logger.debug('Starting to sync github repo content')
+    payload = webhook.get_payload()
+    if 'commits' not in payload:
+        logger.debug('No commits found on the push object')
+        return False
+
+    if 'repository' not in payload:
+        logger.debug('Missing repository information')
+        return False
+
+    base_repo_url = payload['repository']['url']
+    default_branch = payload['repository']['default_branch']
+
+    files = []
+    for commit in payload['commits']:
+        for file_path in commit['modified']:
+            # one file can be modified in multiple commits, but we don't have to synch many times
+            if file_path not in files:
+                files.append(file_path)
+                logger.debug(
+                    f'The file {file_path} was modified, searching for matches in our registry with {base_repo_url}/blob/{default_branch}/{file_path}'
+                )
+                assets = Asset.objects.filter(
+                    readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/{file_path}')
+                for a in assets:
+                    logger.debug(f'Pulling asset readme from github for asset: {a.slug}')
+                    async_pull_from_github.delay(a.slug)
+
+    return webhook

@@ -1,7 +1,7 @@
 import os, re, json, logging
 from itertools import chain
 from django.db.models import Q
-from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook, ProjectInvoice, ISSUE_STATUS
+from .models import Freelancer, Issue, Bill, ProjectInvoice, ISSUE_STATUS
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
 from schema import Schema, And, Use, Optional, SchemaError
@@ -306,21 +306,3 @@ def run_hook(modeladmin, request, queryset):
 
 
 run_hook.short_description = 'Process Hook'
-
-
-def add_webhook(context: dict, academy_slug: str):
-    """Add one incoming webhook request to log"""
-
-    if not context or not len(context) or 'action' not in context:
-        return None
-
-    webhook = RepositoryIssueWebhook(webhook_action=context['action'], academy_slug=academy_slug)
-
-    if 'repository' in context:
-        webhook.repository = context['repository']['html_url']
-
-    webhook.payload = json.dumps(context)
-    webhook.status = 'PENDING'
-    webhook.save()
-
-    return webhook
