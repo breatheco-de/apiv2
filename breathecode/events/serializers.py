@@ -39,6 +39,8 @@ class EventTypeSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    description = serpy.Field()
+    lang = serpy.Field()
     academy = AcademySerializer(required=False)
 
 

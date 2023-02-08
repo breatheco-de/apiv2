@@ -30,6 +30,8 @@ def get_serializer(event_type, academy=None, city=None, data={}):
         'id': event_type.id,
         'name': event_type.name,
         'slug': event_type.slug,
+        'lang': event_type.lang,
+        'description': event_type.description,
         **data,
     }
 
