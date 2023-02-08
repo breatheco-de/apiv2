@@ -780,7 +780,7 @@ class CredentialsOriginality(models.Model):
 
     token = models.CharField(max_length=255)
     balance = models.FloatField(default=0)  # balance
-    usage = models.JSONField(default=[])
+    usage = models.JSONField(default=dict)
     last_call_at = models.DateTimeField(default=None, null=True, blank=True)
 
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
