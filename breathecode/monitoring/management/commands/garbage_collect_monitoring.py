@@ -1,5 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
-from ...models import Issue, RepositoryWebhook
+from ...models import RepositoryWebhook
+from django.utils import timezone
+from datetime import datetime
+from datetime import timedelta
 
 
 class Command(BaseCommand):
@@ -9,7 +12,9 @@ class Command(BaseCommand):
 
         date_limit = timezone.make_aware(datetime.now() - timedelta(days=10))
 
-        webhooks = RepositoryWebhook.objects.filter(started_at__lt=date_limit)
+        RepositoryWebhook.objects.filter(run_at__isnull=True).delete()
+
+        webhooks = RepositoryWebhook.objects.filter(run_at__lt=date_limit)
         count = webhooks.count()
         webhooks.delete()
 
