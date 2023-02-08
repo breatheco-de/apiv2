@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class WebhookTask(Task):
+    pending_status = 'pending...'
 
     def initialize(self, webhook_id):
 
@@ -16,7 +17,7 @@ class WebhookTask(Task):
         if webhook is None:
             raise Exception(f'Github Webhook with id {webhook_id} not found')
         webhook.status = 'PENDING'
-        webhook.status_text = 'pending...'
+        webhook.status_text = self.pending_status
         webhook.save()
         return webhook
 
@@ -42,6 +43,9 @@ class WebhookTask(Task):
             status = 'error'
 
         webhook.run_at = datetime.now()
+        if webhook.status_text == self.pending_status:
+            webhook.status_text = 'finished'
+
         webhook.save()
 
         logger.debug(f'Github Webook processing status: {webhook.status}')
