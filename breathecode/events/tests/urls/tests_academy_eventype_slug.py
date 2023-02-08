@@ -48,7 +48,6 @@ def put_serializer(event_type, data={}):
         'lang': event_type.lang,
         'allow_shared_creation': event_type.allow_shared_creation,
         'description': event_type.description,
-        'visibility_settings': event_type.visibility_settings,
         **data,
     }
 
@@ -236,7 +235,7 @@ class AcademyEventTestSuite(EventTestCase):
         del json['created_at']
         del json['updated_at']
 
-        expected = put_serializer(model.event_type, {**data, 'visibility_settings': [], 'academy': 1})
+        expected = put_serializer(model.event_type, {**data, 'academy': 1})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)

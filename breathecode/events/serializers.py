@@ -351,7 +351,7 @@ class EventTypePutSerializer(EventTypeSerializerMixin):
 
     class Meta:
         model = EventType
-        exclude = ()
+        exclude = ('visibility_settings', )
 
     def update(self, instance, validated_data):
 
