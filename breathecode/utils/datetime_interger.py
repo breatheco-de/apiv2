@@ -120,14 +120,15 @@ class DatetimeInteger:
                         int(elements[2]),
                         int(elements[3]),
                         int(elements[4]),
+                        0,
                         tzinfo=tz)
 
         return date
 
     @staticmethod
-    def to_utc_datetime(timezone: str, interger: int) -> datetime:
+    def to_utc_datetime(timezone: str, integer: int) -> datetime:
         tz = pytz.timezone(timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(interger))
+        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
         if not matches:
             return None
 

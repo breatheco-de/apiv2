@@ -4,9 +4,9 @@ from ...models import Cohort
 
 
 class Command(BaseCommand):
-    help = 'Remove the kickoff_date from the never ending cohorts'
+    help = 'Remove the ending_date from the never ending cohorts'
 
     def handle(self, *args, **options):
-        for element in Cohort.objects.filter(~Q(kickoff_date=None), never_ends=True):
-            element.kickoff_date = None
+        for element in Cohort.objects.filter(~Q(ending_date=None), never_ends=True):
+            element.ending_date = None
             element.save()

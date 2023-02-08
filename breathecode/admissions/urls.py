@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import (AcademyActivateView, AcademyView, CohortClassRoomView, CohortMeView, CohortUserView,
-                    AcademyCohortView, SyllabusVersionView, SyllabusView, get_timezones, UserView, UserMeView,
+from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserView, AcademyCohortView,
+                    SyllabusVersionView, SyllabusView, get_timezones, UserView, UserMeView,
                     AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView, SyllabusScheduleView,
                     get_all_academies, get_cohorts, AcademyCohortTimeSlotView, handle_test_syllabus,
                     AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
@@ -106,7 +106,4 @@ urlpatterns = [
 
     # Public Endpoints anyone can call
     path('public/cohort/user', PublicCohortUserView.as_view(), name='public_cohort_user'),
-    path('public/cohort/<str:cohort_slug>/classroom',
-         CohortClassRoomView.as_view(),
-         name='public_cohort_slug_classroom'),
 ]

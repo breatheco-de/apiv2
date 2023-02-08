@@ -1,8 +1,8 @@
 from django.urls import path
 
-from .views import (AcademyPlanView, AcademyServiceView, AcademySubscriptionView, BagView, CardView,
-                    CheckingView, MeConsumableView, MeInvoiceView, AcademyInvoiceView, PayView, PlanView,
-                    ServiceItemView, ServiceView, MeSubscriptionView)
+from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyServiceView, AcademySubscriptionView,
+                    BagView, CardView, CheckingView, MeConsumableView, MeInvoiceView, AcademyInvoiceView,
+                    PayView, PlanView, ServiceItemView, ServiceView, MeSubscriptionView)
 
 # /v1/payment/offer
 # /v1/payment/planoffer?original_plan=<>&from_syllabus=<>
@@ -14,7 +14,10 @@ urlpatterns = [
     path('plan', PlanView.as_view(), name='plan'),
     path('plan/<slug:plan_slug>', PlanView.as_view()),
     path('academy/plan', AcademyPlanView.as_view()),
+    path('academy/plan/<int:plan_id>', AcademyPlanView.as_view()),
     path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view()),
+    path('academy/plan/<int:plan_id>/cohort', AcademyPlanCohortView.as_view()),
+    path('academy/plan/<slug:plan_slug>/cohort', AcademyPlanCohortView.as_view()),
     #FIXME
     # path('academy/plan/<slug:plan_slug>/financingoption', AcademyPlanView.as_view()),
     path('service', ServiceView.as_view()),
