@@ -445,12 +445,16 @@ class Invoice(models.Model):
         help_text='If amount is 0, transaction will not be sent to stripe or any other payment processor.')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
     paid_at = models.DateTimeField()
+    refunded_at = models.DateTimeField(null=True, blank=True, default=None)
     status = models.CharField(max_length=17, choices=INVOICE_STATUS, default=PENDING)
 
     bag = models.ForeignKey('Bag', on_delete=models.CASCADE)
 
     # actually return 27 characters
     stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True)
+
+    # actually return 27 characters
+    refund_stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True)
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)

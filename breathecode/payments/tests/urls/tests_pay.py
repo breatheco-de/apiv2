@@ -36,6 +36,8 @@ def format_invoice_item(data={}):
         'status': 'FULFILLED',
         'stripe_id': None,
         'user_id': 1,
+        'refund_stripe_id': None,
+        'refunded_at': None,
         **data,
     }
 

@@ -185,3 +185,21 @@ class Stripe:
         invoice.save()
 
         return invoice
+
+    def refund_payment(self, invoice: Invoice) -> Invoice:
+
+        stripe.api_key = self.api_key
+
+        self.add_contact(invoice.user)
+
+        def callback():
+            return stripe.Refund.create(charge=invoice.stripe_id)
+
+        refund = self._i18n_validations(callback)
+
+        invoice.refund_stripe_id = refund['id']
+        invoice.refunded_at = timezone.now()
+        invoice.status = 'REFUNDED'
+        invoice.save()
+
+        return invoice

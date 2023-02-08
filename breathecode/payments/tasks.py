@@ -14,6 +14,7 @@ from breathecode.payments.services.stripe import Stripe
 from dateutil.relativedelta import relativedelta
 from django.db.models import Q
 from breathecode.payments.signals import consume_service
+from breathecode.utils.decorators import task
 from breathecode.utils.i18n import translation
 
 from .models import Bag, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, ServiceStockScheduler, Subscription, SubscriptionServiceItem
@@ -227,7 +228,26 @@ def renew_plan_financing_consumables(self, plan_financing_id: int):
         renew_consumables.delay(scheduler.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+def fallback_charge_subscription(self, subscription_id: int, exception: Exception):
+    if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+        return
+
+    settings = get_user_settings(subscription.user.id)
+    utc_now = timezone.now()
+
+    subscription.status = 'ERROR'
+    subscription.status_message = (
+        f'charge_subscription is failing for the subscription {subscription.user.id}: ' + str(exception))
+
+    invoice = subscription.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by('-id').first()
+
+    if invoice:
+        s = Stripe()
+        s.set_language_from_settings(settings)
+        s.refund_payment(invoice)
+
+
+@task(bind=True, base=BaseTaskWithRetry, translation=True, fallback=fallback_charge_subscription)
 def charge_subscription(self, subscription_id: int):
     """
     The purpose of this function is just to renew a subscription, not more than this.
@@ -318,7 +338,27 @@ def charge_subscription(self, subscription_id: int):
     renew_subscription_consumables.delay(subscription.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exception):
+    if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
+        return
+
+    settings = get_user_settings(plan_financing.user.id)
+    utc_now = timezone.now()
+
+    plan_financing.status = 'ERROR'
+    plan_financing.status_message = (
+        f'charge_plan_financing is failing for the plan finanfing {plan_financing.user.id}: ' +
+        str(exception))
+
+    invoice = plan_financing.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by('-id').first()
+
+    if invoice:
+        s = Stripe()
+        s.set_language_from_settings(settings)
+        s.refund_payment(invoice)
+
+
+@task(bind=True, base=BaseTaskWithRetry, translation=True, fallback=fallback_charge_plan_financing)
 def charge_plan_financing(self, plan_financing_id: int):
     """
     The purpose of this function is just to renew a subscription, not more than this.
