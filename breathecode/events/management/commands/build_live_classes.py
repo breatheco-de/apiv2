@@ -15,7 +15,9 @@ class Command(BaseCommand):
         cohorts = Cohort.objects.filter(ending_date__gte=utc_now,
                                         never_ends=False).exclude(stage__in=['DELETED', 'PREWORK'])
 
-        self.stdout.write(self.style.SUCCESS(f"Found {str(cohorts.count())} cohorts that have not finished and should have live classes"))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Found {str(cohorts.count())} cohorts that have not finished and should have live classes'))
 
         for cohort in cohorts:
             timeslots = CohortTimeSlot.objects.filter(cohort=cohort)
@@ -27,6 +29,8 @@ class Command(BaseCommand):
                     ))
             else:
                 self.stdout.write(
-                    self.style.SUCCESS(f'Adding cohort {cohort.slug} to the generation queue, it ends on {str(cohort.ending_date)}'))
+                    self.style.SUCCESS(
+                        f'Adding cohort {cohort.slug} to the generation queue, it ends on {str(cohort.ending_date)}'
+                    ))
                 for timeslot in timeslots:
                     tasks.build_live_classes_from_timeslot.delay(timeslot.id)
