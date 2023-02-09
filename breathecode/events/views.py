@@ -188,7 +188,7 @@ class EventMeView(APIView):
 
         return academies, cohorts, syllabus
 
-    def get(self, request):
+    def get(self, request, event_id=None):
         query = None
 
         academies, cohorts, syllabus = self.get_related_resources()
@@ -223,6 +223,14 @@ class EventMeView(APIView):
 
         else:
             items = EventType.objects.none()
+
+        if event_id is not None:
+            single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
+            if single_event is None:
+                raise ValidationException('Event not found', 404)
+
+            serializer = EventBigSerializer(single_event, many=False)
+            return Response(serializer.data)
 
         items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('-created_at')
 
