@@ -589,6 +589,17 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
         if 'slug' in data:
             data['slug'] = slugify(data['slug']).lower()
+            
+        category = self.instance.category
+        if "category" in data:
+            category = data["category"]
+            
+        if category is None:
+            raise ValidationException(f'Asset category cannot be null', status.HTTP_400_BAD_REQUEST)
+            
+        if self.instance.lang != category.lang:
+            raise ValidationException(f'Asset category is in a different language than the asset itself',
+                                      status.HTTP_400_BAD_REQUEST)
 
         validated_data = super().validate(data)
         return validated_data
