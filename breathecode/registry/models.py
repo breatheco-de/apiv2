@@ -86,6 +86,8 @@ class AssetCategory(models.Model):
     description = models.TextField(null=True, blank=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
+    all_translations = models.ManyToManyField('self', blank=True)
+
     # Ideal for generating blog post thumbnails
     auto_generate_previews = models.BooleanField(default=False)
     preview_generation_url = models.URLField(null=True,

@@ -518,9 +518,9 @@ class AcademyAssetActionView(APIView):
 
         except Exception as e:
             logger.exception(e)
-            if isinstance(e,Exception):
+            if isinstance(e, Exception):
                 raise ValidationException(str(e))
-              
+
             raise ValidationException('; '.join(
                 [k.capitalize() + ': ' + ''.join(v) for k, v in e.message_dict.items()]))
 
@@ -772,8 +772,12 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
     @capable_of('crud_asset')
     def put(self, request, asset_slug=None, academy_id=None):
 
-        many = isinstance(request.data, list)
-        if not many:
+        data_list = request.data
+        if not isinstance(request.data, list):
+
+            # make it a list
+            data_list = [request.data]
+
             if asset_slug is None:
                 raise ValidationException('Missing asset_slug')
 
@@ -782,9 +786,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 raise ValidationException(
                     f'This asset {asset_slug} does not exist for this academy {academy_id}', 404)
 
-            data = {
-                **request.data,
-            }
+            data_list[0]['id'] = asset.id
+
+        all_assets = []
+        for data in data_list:
 
             if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
                     data['technologies'][0], str):
@@ -807,38 +812,40 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 data['all_translations'] = Asset.objects.filter(
                     slug__in=data['all_translations']).values_list('pk', flat=True)
 
+            if 'id' not in data:
+                raise ValidationException(f'Cannot determine asset in index {index}', slug='without-id')
+
+            instance = Asset.objects.filter(id=data['id'], academy__id=academy_id).first()
+            if not instance:
+                raise ValidationException(f'Asset({data["id"]}) does not exist on this academy',
+                                          code=404,
+                                          slug='not-found')
+            all_assets.append(instance)
+
+        all_serializers = []
+        index = -1
+        for data in data_list:
+            index += 1
+            serializer = AssetPUTSerializer(all_assets[index],
+                                            data=data,
+                                            context={
+                                                'request': request,
+                                                'academy_id': academy_id
+                                            })
+            all_serializers.append(serializer)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        all_assets = []
+        for serializer in all_serializers:
+            all_assets.append(serializer.save())
+
+        if len(all_assets) > 1:
+            serializer = AcademyAssetSerializer(all_assets, many=True)
         else:
-            data = request.data
-            asset = []
-            index = -1
-            for x in request.data:
-                index = index + 1
+            serializer = AcademyAssetSerializer(all_assets.pop(), many=False)
 
-                if 'id' not in x:
-                    raise ValidationException('Cannot determine asset in '
-                                              f'index {index}',
-                                              slug='without-id')
-
-                instance = Asset.objects.filter(id=x['id'], academy__id=academy_id).first()
-
-                if not instance:
-                    raise ValidationException(f'Asset({x["id"]}) does not exist on this academy',
-                                              code=404,
-                                              slug='not-found')
-                asset.append(instance)
-
-        serializer = AssetPUTSerializer(asset,
-                                        data=data,
-                                        context={
-                                            'request': request,
-                                            'academy_id': academy_id
-                                        },
-                                        many=many)
-        if serializer.is_valid():
-            serializer.save()
-            serializer = AcademyAssetSerializer(asset, many=many)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_asset')
     def post(self, request, academy_id=None):
