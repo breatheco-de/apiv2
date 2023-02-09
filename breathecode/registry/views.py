@@ -813,7 +813,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                     slug__in=data['all_translations']).values_list('pk', flat=True)
 
             if 'id' not in data:
-                raise ValidationException(f'Cannot determine asset in index {index}', slug='without-id')
+                raise ValidationException(f'Cannot determine asset id', slug='without-id')
 
             instance = Asset.objects.filter(id=data['id'], academy__id=academy_id).first()
             if not instance:
@@ -840,7 +840,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         for serializer in all_serializers:
             all_assets.append(serializer.save())
 
-        if len(all_assets) > 1:
+        if isinstance(request.data, list):
             serializer = AcademyAssetSerializer(all_assets, many=True)
         else:
             serializer = AcademyAssetSerializer(all_assets.pop(), many=False)

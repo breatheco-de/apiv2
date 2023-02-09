@@ -443,6 +443,10 @@ def async_synchonize_repository_content(self, webhook):
                 assets = Asset.objects.filter(
                     readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/{file_path}')
                 for a in assets:
+                    if commit['id'] == assets.github_commit_hash:
+                        # ignore asset because the commit content is already on the asset
+                        # probably the asset was updated in github using the breathecode api
+                        continue
                     logger.debug(f'Pulling asset readme from github for asset: {a.slug}')
                     async_pull_from_github.delay(a.slug)
 

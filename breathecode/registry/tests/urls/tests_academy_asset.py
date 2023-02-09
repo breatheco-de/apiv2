@@ -45,6 +45,7 @@ def database_item(academy, category, data={}):
         'last_test_at': None,
         'optimization_rating': None,
         'owner_id': None,
+        'github_commit_hash': None,
         'preview': None,
         'published_at': None,
         'readme': None,
@@ -144,7 +145,7 @@ def put_serializer(academy, category, asset, data={}):
         'id': asset.id,
         'intro_video_url': None,
         'is_seo_tracked': True,
-        'lang': None,
+        'lang': asset.lang,
         'last_synch_at': None,
         'last_test_at': None,
         'last_cleaning_at': None,
@@ -166,7 +167,7 @@ def put_serializer(academy, category, asset, data={}):
         'test_status': None,
         'title': asset.title,
         'translations': {
-            'null': asset.slug,
+            'es': asset.slug,
         },
         'url': None,
         'visibility': 'PUBLIC',
@@ -319,13 +320,15 @@ class RegistryTestAsset(RegistryTestCase):
             profile_academy=True,
             capability='crud_asset',
             role='potato',
-            asset_category=True,
+            asset_category={'lang': 'es'},
             asset=[{
                 'category_id': 1,
+                'lang': 'es',
                 'academy_id': 1,
                 'slug': 'asset-1'
             }, {
                 'category_id': 1,
+                'lang': 'es',
                 'academy_id': 1,
                 'slug': 'asset-2'
             }],
@@ -342,6 +345,7 @@ class RegistryTestAsset(RegistryTestCase):
 
         response = self.client.put(url, data, format='json')
         json = response.json()
+
         for item in json:
             del item['created_at']
             del item['updated_at']

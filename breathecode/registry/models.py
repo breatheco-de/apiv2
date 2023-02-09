@@ -338,7 +338,7 @@ class Asset(models.Model):
                                    blank=True,
                                    help_text='Internal state automatically set by the system based on sync')
     last_synch_at = models.DateTimeField(null=True, blank=True, default=None)
-    # is_synched = models.BooleanField(default=True)
+    github_commit_hash = models.CharField(max_length=100, null=True, blank=True, default=None)
 
     test_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,

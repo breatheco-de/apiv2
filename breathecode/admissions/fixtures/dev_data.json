@@ -67,7 +67,7 @@
             "country": "us",
             "latitude": null,
             "longitude": null,
-            "zip_code": 33129,
+            "zip_code": "33129",
             "white_labeled": false,
             "active_campaign_slug": "downtown-miami",
             "available_as_saas": false,
