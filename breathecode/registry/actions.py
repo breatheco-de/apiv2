@@ -300,7 +300,7 @@ def push_github_asset(github, asset):
     result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
 
     if 'commit' in result:
-        asset.github_commit_hash = result['commit']['sha']
+        asset.github_commit_hash = result['commit'].sha
 
     return asset
 
