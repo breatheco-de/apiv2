@@ -1,9 +1,10 @@
-import hashlib, urlencode
+import hashlib
 import logging
 import os
 import time
 import re
 import pathlib
+from urllib.parse import urlencode
 from typing import Optional
 from celery import shared_task, Task
 from breathecode.services.seo import SEOAnalyzer
