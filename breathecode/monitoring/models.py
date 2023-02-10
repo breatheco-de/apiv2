@@ -1,3 +1,6 @@
+import binascii
+import os
+import json
 from django.db import models
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackChannel
@@ -168,3 +171,70 @@ class CSVUpload(models.Model):
     hash = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     finished_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class RepositorySubscription(models.Model):
+    repository = models.URLField(max_length=255, help_text='Github repo where the event occured')
+    token = models.CharField(max_length=255, unique=True)
+
+    owner = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    shared_with = models.ManyToManyField(Academy, blank=True, related_name='repo_subscription')
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.token = binascii.hexlify(os.urandom(20)).decode()
+
+        return super().save(*args, **kwargs)
+
+
+PENDING = 'PENDING'
+DONE = 'DONE'
+ERROR = 'ERROR'
+WEBHOOK_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (ERROR, 'Error'),
+)
+
+
+class RepositoryWebhook(models.Model):
+
+    webhook_action = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='The specific action that was triggered on github for this webhook')
+    scope = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='The specific entity that triggered this webhook, for example: issues, issues_comment, etc.'
+    )
+    run_at = models.DateTimeField(help_text='Date/time that the webhook ran',
+                                  blank=True,
+                                  null=True,
+                                  default=None)
+    repository = models.URLField(max_length=255, help_text='Github repo where the event occured')
+
+    payload = models.JSONField(
+        help_text='Info that came on the request, it varies depending on the webhook type')
+
+    academy_slug = models.SlugField()
+
+    status = models.CharField(max_length=9, choices=WEBHOOK_STATUS, default=PENDING)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'Webhook {self.webhook_action} {self.status} => {self.status_text}'
+
+    def get_payload(self):
+        return json.loads(self.payload)

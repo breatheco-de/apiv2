@@ -4,7 +4,7 @@ import json, re, os, subprocess, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Academy
-from .models import CSVUpload, Endpoint, CSVDownload
+from .models import CSVUpload, Endpoint, CSVDownload, RepositoryWebhook
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
 logger = logging.getLogger(__name__)
@@ -361,3 +361,30 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
         download.status_message = str(e)
         download.save()
         return False
+
+
+def add_github_webhook(context: dict, academy_slug: str):
+    """Add one incoming webhook request to log"""
+
+    if not context or not len(context):
+        logger.error('Missing webhook payload')
+        return None
+
+    if 'action' not in context and context['scope'] == 'push':
+        context['action'] = 'push'
+    else:
+        logger.error('Missing action param on the webhook payload')
+        return None
+
+    webhook = RepositoryWebhook(webhook_action=context['action'],
+                                scope=context['scope'],
+                                academy_slug=academy_slug)
+
+    if 'repository' in context:
+        webhook.repository = context['repository']['html_url']
+
+    webhook.payload = json.dumps(context)
+    webhook.status = 'PENDING'
+    webhook.save()
+
+    return webhook
