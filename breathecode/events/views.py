@@ -222,7 +222,7 @@ class EventMeView(APIView):
             items = EventType.objects.filter(query)
         else:
             items = EventType.objects.none()
-        items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('-created_at')
+        items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('starting_at')
         lookup = {}
 
         online_event = self.request.GET.get('online_event', '')
