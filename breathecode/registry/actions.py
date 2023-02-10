@@ -480,7 +480,10 @@ class AssetThumbnailGenerator:
             return (self._get_default_url(), False)
         media = self._get_media()
         if not media:
-            tasks.async_create_asset_thumbnail.delay(self.asset.slug)
+            tasks.async_create_asset_thumbnail_legacy.delay(self.asset.slug)
+            # the new way of creating screenshots cannot be released yet until
+            # we fix the cloud function
+            # tasks.async_create_asset_thumbnail.delay(self.asset.slug)
             return (self._get_asset_url(), False)
 
         if not self._the_client_want_resize():
