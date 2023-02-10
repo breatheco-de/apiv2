@@ -1,4 +1,4 @@
-import hashlib
+import hashlib, urlencode
 import logging
 import os
 import time
