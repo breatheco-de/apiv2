@@ -2,7 +2,7 @@ import logging
 from celery import shared_task, Task
 from django.db.models import F
 from datetime import datetime
-from breathecode.monitoring.decorators import github_webhook_task
+from breathecode.monitoring.decorators import WebhookTask
 from .actions import (sync_single_issue, update_status_based_on_github_action, generate_freelancer_bill)
 
 logger = logging.getLogger(__name__)
@@ -15,10 +15,10 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-@github_webhook_task()
+@shared_task(bind=True, base=WebhookTask)
 def async_repository_issue_github(self, webhook):
 
+    logger.debug('async_repository_issue_github')
     payload = webhook.get_payload()
 
     comment = None
