@@ -31,6 +31,7 @@ def get_serializer(event_type, academy=None, city=None, data={}):
         'name': event_type.name,
         'slug': event_type.slug,
         'lang': event_type.lang,
+        'icon_url': event_type.icon_url,
         'allow_shared_creation': event_type.allow_shared_creation,
         'description': event_type.description,
         'visibility_settings': event_type.visibility_settings,
@@ -46,6 +47,7 @@ def put_serializer(event_type, data={}):
         'name': event_type.name,
         'slug': event_type.slug,
         'lang': event_type.lang,
+        'icon_url': event_type.icon_url,
         'allow_shared_creation': event_type.allow_shared_creation,
         'description': event_type.description,
         **data,
@@ -197,6 +199,46 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
 
+    def test_academy_event_type_slug_put_without_icon_url(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        event_type_slug = 'potato'
+        event_type_kwargs = {
+            'slug': event_type_slug,
+            'name': 'Potato',
+            'created_at': timezone.now(),
+            'updated_at': timezone.now()
+        }
+
+        model = self.generate_models(authenticate=True,
+                                     event=True,
+                                     event_type=True,
+                                     event_type_kwargs=event_type_kwargs,
+                                     profile_academy=1,
+                                     role=1,
+                                     capability='crud_event_type')
+
+        url = reverse_lazy('events:academy_eventype_slug', kwargs={'event_type_slug': 'potato'})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'slug': 'potato',
+            'name': 'SUPER NEW event type changed',
+            'description': 'funtastic event type'
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'icon_url': ['This field is required.']}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.bc.database.list_of('events.EventType'), [{
+            **self.bc.format.to_dict(model.event_type)
+        }])
+
     def test_academy_event_type_slug__put(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -223,6 +265,7 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 1,
             'slug': 'potato',
             'name': 'SUPER NEW event type changed',
+            'icon_url': 'https://www.google.com',
             'description': 'funtastic event type'
         }
 

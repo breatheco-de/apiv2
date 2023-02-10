@@ -68,6 +68,7 @@ def get_serializer(self, event, event_type, user, academy=None, city=None, data=
             'name': event_type.name,
             'slug': event_type.slug,
             'lang': event_type.lang,
+            'icon_url': event_type.icon_url,
             'allow_shared_creation': event_type.allow_shared_creation,
             'description': event_type.description,
             'visibility_settings': visibility_settings_serializer(event_type.visibility_settings),

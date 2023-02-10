@@ -75,6 +75,7 @@ class EventTypeBigSerializer(serpy.Serializer):
     name = serpy.Field()
     description = serpy.Field()
     lang = serpy.Field()
+    icon_url = serpy.Field()
     allow_shared_creation = serpy.Field()
     academy = AcademySerializer(required=False)
     visibility_settings = serpy.MethodField()
@@ -357,6 +358,8 @@ class EventTypeSerializerMixin(serializers.ModelSerializer):
         exclude = ('visibility_settings', )
 
     def validate(self, data: dict[str, Any]):
+        if 'icon_url' not in data:
+            raise ValidationException('Icon Url is required', slug='icon_url_required')
 
         return data
 
@@ -378,6 +381,7 @@ class EventTypePutSerializer(EventTypeSerializerMixin):
     name = serializers.CharField(required=False)
     description = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
+    icon_url = serializers.URLField(required=True)
     allow_shared_creation = serializers.BooleanField(required=False)
 
     def update(self, instance, validated_data):
