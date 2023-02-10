@@ -29,12 +29,12 @@ from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibil
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (GetLiveClassJoinSerializer, GetLiveClassSerializer, LiveClassSerializer,
-                          EventSerializer, EventBigSerializer, EventSmallSerializer, EventTypeSerializer,
+from .serializers import (GetLiveClassJoinSerializer, EventBigSerializer, GetLiveClassSerializer,
+                          LiveClassSerializer, EventSerializer, EventSmallSerializer, EventTypeSerializer,
                           EventTypeBigSerializer, EventCheckinSerializer, EventSmallSerializerNoAcademy,
-                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer, VenueSerializer,
-                          OrganizationBigSerializer, OrganizationSerializer, EventbriteWebhookSerializer,
-                          OrganizerSmallSerializer)
+                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
+                          EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
+                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -678,6 +678,17 @@ class AcademyEventTypeView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_event_type')
+    def put(self, request, academy_id, event_type_slug=None):
+        event_type = EventType.objects.filter(academy__id=academy_id, slug=event_type_slug).first()
+        if not event_type:
+            raise ValidationException('Event Type not found for this academy', slug='event-type-not-found')
+        serializer = EventTypePutSerializer(event_type, data=request.data, context={'academy_id': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
