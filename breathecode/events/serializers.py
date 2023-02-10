@@ -315,11 +315,41 @@ class EventbriteWebhookSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
-class PostEventTypeSerializer(serializers.ModelSerializer):
+class EventTypeSerializerMixin(serializers.ModelSerializer):
+
+    class Meta:
+        model = EventType
+        exclude = ('visibility_settings', )
+
+    def validate(self, data: dict[str, Any]):
+
+        return data
+
+
+class PostEventTypeSerializer(EventTypeSerializerMixin):
 
     class Meta:
         model = EventType
         exclude = ()
+
+    def create(self, validated_data):
+        event_type = EventType.objects.create(**validated_data, **self.context)
+
+        return event_type
+
+
+class EventTypePutSerializer(EventTypeSerializerMixin):
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField(required=False)
+    description = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
+    allow_shared_creation = serializers.BooleanField(required=False)
+
+    def update(self, instance, validated_data):
+
+        event_type = super().update(instance, validated_data)
+
+        return event_type
 
 
 class LiveClassSerializer(serializers.ModelSerializer):
