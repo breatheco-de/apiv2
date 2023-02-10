@@ -4,10 +4,10 @@ from breathecode.utils import ScriptNotification
 from django.utils import timezone
 from breathecode.utils.datetime_interger import duration_to_str, from_now
 
-published_without_live_stream_url = Event.objects.filter(status='ACTIVE',
-                                                         online_event=True,
-                                                         live_stream_url='',
-                                                         ending_at__gt=timezone.now())
+published_without_live_stream_url = Event.objects.filter(
+    status='ACTIVE', online_event=True, live_stream_url='',
+    ending_at__gt=timezone.now()) | Event.objects.filter(
+        status='ACTIVE', online_event=True, live_stream_url=None, ending_at__gt=timezone.now())
 total = published_without_live_stream_url.count()
 
 if total > 0:
@@ -15,12 +15,11 @@ if total > 0:
     for event in published_without_live_stream_url:
         msg += f'- <a href="{ADMIN_URL}/events/event/{event.id}">{event.title}</a> added {from_now(event.created_at)} ago. \n'
 
-        event.status = 'draft'
-        serializer = EventSerializer(data=event, context={'academy_id': None})
-        if serializer.is_valid():
-            serializer.save()
+        event.status = 'DRAFT'
+        if event.is_valid():
+            event.save()
         else:
-            print(f'The event {event.title} status was not able to be changed.', serializer.errors)
+            print(f'The event {event.title} status was not able to be changed.')
 
     raise ScriptNotification(f'There are {total} published online events without live stream URL \n\n' + msg,
                              status='CRITICAL',
