@@ -394,7 +394,7 @@ class ConsumptionSession(models.Model):
 
     # this should be used to get
     path = models.CharField(max_length=200, blank=True)
-    related_id = models.IntegerField(max_length=200, default=None, blank=True, null=True)
+    related_id = models.IntegerField(default=None, blank=True, null=True)
     related_slug = models.CharField(max_length=200, default=None, blank=True, null=True)
 
     def save(self, *args, **kwargs):

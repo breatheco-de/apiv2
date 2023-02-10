@@ -63,6 +63,6 @@ def post_assignment_created(sender, instance: Task, **kwargs):
 
 @receiver(github_webhook, sender=RepositoryWebhook)
 def post_webhook_received(sender, instance, **kwargs):
-    logger.debug('Received github webhook signal, processing if its related to pushes to the repo')
     if instance.scope in ['push']:
+        logger.debug('Received github webhook signal for push')
         async_synchonize_repository_content.delay(instance.id)

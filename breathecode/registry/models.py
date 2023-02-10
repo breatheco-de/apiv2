@@ -86,6 +86,8 @@ class AssetCategory(models.Model):
     description = models.TextField(null=True, blank=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
+    all_translations = models.ManyToManyField('self', blank=True)
+
     # Ideal for generating blog post thumbnails
     auto_generate_previews = models.BooleanField(default=False)
     preview_generation_url = models.URLField(null=True,
@@ -336,7 +338,7 @@ class Asset(models.Model):
                                    blank=True,
                                    help_text='Internal state automatically set by the system based on sync')
     last_synch_at = models.DateTimeField(null=True, blank=True, default=None)
-    # is_synched = models.BooleanField(default=True)
+    github_commit_hash = models.CharField(max_length=100, null=True, blank=True, default=None)
 
     test_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
@@ -780,7 +782,7 @@ class CredentialsOriginality(models.Model):
 
     token = models.CharField(max_length=255)
     balance = models.FloatField(default=0)  # balance
-    usage = models.JSONField(default=[])
+    usage = models.JSONField(default=dict)
     last_call_at = models.DateTimeField(default=None, null=True, blank=True)
 
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)

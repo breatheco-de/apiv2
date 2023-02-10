@@ -385,7 +385,7 @@ class FormEntry(models.Model):
     latitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
     longitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
     state = models.CharField(max_length=30, null=True, default=None, blank=True)
-    zip_code = models.IntegerField(null=True, default=None, blank=True)
+    zip_code = models.CharField(max_length=15, null=True, default=None, blank=True)
     browser_lang = models.CharField(max_length=10, null=True, default=None, blank=True)
 
     sex = models.CharField(max_length=15,

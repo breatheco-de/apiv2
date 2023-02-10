@@ -78,7 +78,7 @@ class Venue(models.Model):
     latitude = models.DecimalField(max_digits=20, decimal_places=15, default=0)
     longitude = models.DecimalField(max_digits=20, decimal_places=15, default=0)
     state = models.CharField(max_length=30, blank=True, default=None, null=True)
-    zip_code = models.IntegerField(blank=True, default=None, null=True)
+    zip_code = models.CharField(max_length=15, blank=True, default=None, null=True)
     status = models.CharField(max_length=9, choices=VENUE_STATUS, default=DRAFT)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, blank=True, null=True)

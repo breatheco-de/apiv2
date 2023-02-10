@@ -236,7 +236,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'youtube_url': self.bc.fake.url(),
             'latitude': random.random() * 90 * random.choice([1, -1]),  #
             'longitude': random.random() * 90 * random.choice([1, -1]),
-            'zip_code': random.randint(1, 1000),
+            'zip_code': str(random.randint(1, 1000)),
             'white_labeled': bool(random.randint(0, 1)),
             'active_campaign_slug': self.bc.fake.slug(),
             'available_as_saas': bool(random.randint(0, 1)),
