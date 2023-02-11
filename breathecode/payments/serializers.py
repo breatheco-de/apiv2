@@ -32,7 +32,7 @@ class GetPriceSerializer(serpy.Serializer):
     currency = GetCurrencySmallSerializer()
 
 
-class GetAcademySerializer(serpy.Serializer):
+class GetAcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
@@ -70,7 +70,7 @@ class GetServiceSmallSerializer(serpy.Serializer):
 
     price_per_unit = serpy.Field()
 
-    # owner = GetAcademySerializer(many=False)
+    # owner = GetAcademySmallSerializer(many=False)
     private = serpy.Field()
     groups = serpy.MethodField()
 
@@ -86,7 +86,7 @@ class GetServiceSerializer(custom_serpy.Serializer):
     price_per_unit = serpy.Field()
     currency = GetCurrencySmallSerializer(many=False)
 
-    owner = GetAcademySerializer(many=False)
+    owner = GetAcademySmallSerializer(many=False)
     private = serpy.Field()
     groups = serpy.MethodField()
     cohorts = serpy.MethodField()
@@ -115,6 +115,7 @@ class GetServiceSerializer(custom_serpy.Serializer):
         cohorts = Cohort.objects.none()
 
         service = obj
+        #FIXME: this is not defined
         payment_service_schedulers = PaymentServiceScheduler.objects.filter(service=service)
 
         for schedule in payment_service_schedulers:
@@ -206,7 +207,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     price_per_half = serpy.Field()
     price_per_year = serpy.Field()
     currency = GetCurrencySmallSerializer()
-    owner = GetAcademySerializer()
+    owner = GetAcademySmallSerializer()
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
@@ -224,32 +225,44 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     currency = GetCurrencySmallSerializer()
 
 
-class GetSubscriptionSerializer(serpy.Serializer):
-    paid_at = serpy.Field()
-    status = serpy.Field()
-    is_cancellable = serpy.Field()
-    is_refundable = serpy.Field()
-    is_recurrent = serpy.Field()
+class GetAbstractIOweYouSerializer(serpy.Serializer):
 
-    invoices = GetInvoiceSerializer(many=True)
+    id = serpy.Field()
+    status = serpy.Field()
+    status_message = serpy.Field()
+
+    user = GetUserSmallSerializer(many=False)
+    academy = GetAcademySmallSerializer(many=False)
+
+    plans = serpy.MethodField()
+    invoices = serpy.MethodField()
+
+    def get_plans(self, obj):
+        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
+
+    def get_invoices(self, obj):
+        return GetInvoiceSerializer(obj.invoices.filter(), many=True).data
+
+
+class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
+    paid_at = serpy.Field()
+    is_refundable = serpy.Field()
+    next_payment_at = serpy.Field()
     valid_until = serpy.Field()
-    last_renew = serpy.Field()
 
     pay_every = serpy.Field()
     pay_every_unit = serpy.Field()
-    renew_every = serpy.Field()
-    renew_every_unit = serpy.Field()
 
-    user = GetUserSmallSerializer(many=False)
-    services = GetServiceItemSerializer(many=True)
-    plans = GetPlanSerializer(many=True)
+    service_items = serpy.MethodField()
+
+    def get_service_items(self, obj):
+        return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
 
 
-class GetCreditSerializer(serpy.Serializer):
-    valid_until = serpy.Field()
-    is_free_trial = serpy.Field()
-    services = GetConsumableSerializer(many=True)
-    invoice = GetInvoiceSerializer(many=False)
+#NOTE: this is before feature/add-plan-duration branch, this will be outdated
+class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
+    paid_at = serpy.Field()
+    pay_until = serpy.Field()
 
 
 class GetBagSerializer(serpy.Serializer):
@@ -271,15 +284,6 @@ class GetBagSerializer(serpy.Serializer):
 
     def get_plans(self, obj):
         return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
-
-
-class GetCheckingSerializer(GetInvoiceSmallSerializer):
-    amount = GetServiceItemSerializer(many=True)
-    token = GetPlanSerializer(many=True)
-    expires_at = GetPlanSerializer(many=True)
-
-    services = GetServiceItemSerializer(many=True)
-    plans = GetPlanSerializer(many=True)
 
 
 class ServiceSerializer(serializers.Serializer):
