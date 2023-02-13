@@ -446,7 +446,7 @@ class MeSubscriptionView(APIView):
                                                     user=request.user)
 
         #NOTE: this is before feature/add-plan-duration branch, this will be outdated
-        plan_financings = PlanFinancing.objects.filter(pay_until__gte=now, user=request.user)
+        plan_financings = PlanFinancing.objects.filter(valid_until__gte=now, user=request.user)
 
         if subscription := request.GET.get('subscription'):
             subscriptions = subscriptions.filter(id=int(subscription))
