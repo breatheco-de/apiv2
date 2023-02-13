@@ -1,52 +1,53 @@
 from breathecode.utils.exceptions import ProgramingError
 from celery import shared_task
 from django.db import transaction
+import copy
 
 __all__ = ['task']
 
 
-def task(*dargs, **dkwargs):
+class Task(object):
 
-    is_transaction = dkwargs.pop('transaction', False)
-    fallback = dkwargs.pop('fallback')
+    def __init__(self, *args, **kwargs):
 
-    if not callable(fallback):
-        raise ProgramingError('Fallback must be a callable')
+        self.is_transaction = kwargs.pop('transaction', False)
+        self.fallback = kwargs.pop('fallback')
 
-    @shared_task(*dargs, **dkwargs)
-    def decorator(self, function):
+        if self.fallback and not callable(self.fallback):
+            raise ProgramingError('Fallback must be a callable')
 
-        def wrapper(*fargs, **fkwargs):
-            # This must be a boolean
+        self.parent_decorator = shared_task(*args, **kwargs)
 
-            # @shared_task(*dargs, **dkwargs)
-            def inner_wrapper(*fargs, **fkwargs):
-                return function(*fargs, **fkwargs)
+    def __call__(self, function):
+        self.function = function
 
-            inner_wrapper.__name__ = function.__name__
-
-            if is_transaction == True:
+        def wrapper(*args, **kwargs):
+            if self.is_transaction == True:
                 with transaction.atomic():
                     sid = transaction.savepoint()
                     try:
-                        self.__call__ = inner_wrapper
-                        return self
-                        return inner_wrapper()
-                        return shared_task(inner_wrapper)(*dargs, **dkwargs)
+                        return function(*args, **kwargs)
 
                     except Exception as e:
                         transaction.savepoint_rollback(sid)
-                        if fallback:
-                            return fallback(*fargs, **fkwargs, exception=e)
 
-                        return
+                        # fallback
+                        if self.fallback:
+                            return self.fallback(*args, **kwargs, exception=e)
 
-            self.__call__ = inner_wrapper
-            return self
+                        # behavior by default
+                        raise e
 
-            return inner_wrapper()
-            return shared_task(inner_wrapper)(*dargs, **dkwargs)
+            return function(*args, **kwargs)
 
-        return wrapper
+        w = copy.deepcopy(wrapper)
 
-    return decorator
+        w.__name__ = function.__name__
+        w.__module__ = function.__module__
+
+        self.instance = self.parent_decorator(w)
+        return self.instance
+
+
+def task(*dargs, **dkwargs):
+    return Task(*dargs, **dkwargs)

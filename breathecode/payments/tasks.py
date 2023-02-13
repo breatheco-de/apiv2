@@ -247,7 +247,7 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
         s.refund_payment(invoice)
 
 
-@task(bind=True, base=BaseTaskWithRetry, translation=True, fallback=fallback_charge_subscription)
+@task(bind=True, base=BaseTaskWithRetry, transaction=True, fallback=fallback_charge_subscription)
 def charge_subscription(self, subscription_id: int):
     """
     The purpose of this function is just to renew a subscription, not more than this.
@@ -358,7 +358,7 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
         s.refund_payment(invoice)
 
 
-@task(bind=True, base=BaseTaskWithRetry, translation=True, fallback=fallback_charge_plan_financing)
+@task(bind=True, base=BaseTaskWithRetry, transaction=True, fallback=fallback_charge_plan_financing)
 def charge_plan_financing(self, plan_financing_id: int):
     """
     The purpose of this function is just to renew a subscription, not more than this.
