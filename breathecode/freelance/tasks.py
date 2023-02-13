@@ -1,8 +1,8 @@
-import logging, json
+import logging
 from celery import shared_task, Task
 from django.db.models import F
 from datetime import datetime
-from .models import RepositoryIssueWebhook
+from breathecode.monitoring.decorators import WebhookTask
 from .actions import (sync_single_issue, update_status_based_on_github_action, generate_freelancer_bill)
 
 logger = logging.getLogger(__name__)
@@ -15,39 +15,21 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def async_repository_issue_github(self, webhook_id):
-    logger.debug('Starting async_repository_issue_github')
-    status = 'ok'
+@shared_task(bind=True, base=WebhookTask)
+def async_repository_issue_github(self, webhook):
 
-    webhook = RepositoryIssueWebhook.objects.filter(id=webhook_id).first()
-    if webhook is None:
-        raise Exception(f'Github IssueWebhook with id {webhook_id} not found')
-    webhook.status = 'PENDING'
-    webhook.save()
+    logger.debug('async_repository_issue_github')
+    payload = webhook.get_payload()
 
-    try:
-        payload = json.loads(webhook.payload)
+    comment = None
+    if 'comment' in payload:
+        comment = payload['comment']
 
-        comment = None
-        if 'comment' in payload:
-            comment = payload['comment']
+    issue = sync_single_issue(issue=payload['issue'], comment=comment, academy_slug=webhook.academy_slug)
+    issue.status = update_status_based_on_github_action(webhook.webhook_action, issue=issue)
+    issue.save()
 
-        issue = sync_single_issue(issue=payload['issue'], comment=comment, academy_slug=webhook.academy_slug)
-        issue.status = update_status_based_on_github_action(webhook.webhook_action, issue=issue)
-        issue.save()
+    if webhook.webhook_action in ['closed', 'reopened']:
+        generate_freelancer_bill(issue.freelancer)
 
-        if webhook.webhook_action in ['closed', 'reopened']:
-            generate_freelancer_bill(issue.freelancer)
-
-        webhook.status = 'DONE'
-    except Exception as ex:
-        webhook.status = 'ERROR'
-        webhook.status_text = str(ex)[:255]
-        logger.debug(ex)
-        status = 'error'
-
-    webhook.run_at = datetime.now()
-    webhook.save()
-
-    logger.debug(f'Github IssueWebook processing status: {status}')
+    return webhook

@@ -10,8 +10,6 @@ from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, Aca
 
 app_name = 'payments'
 urlpatterns = [
-    #TODO generate plans and services from yml
-    # create and renew, never delete
     path('plan', PlanView.as_view(), name='plan'),
     path('plan/<slug:plan_slug>', PlanView.as_view()),
     path('academy/plan', AcademyPlanView.as_view()),
@@ -28,12 +26,8 @@ urlpatterns = [
     path('academy/service/<slug:service_slug>', AcademyServiceView.as_view()),
     path('serviceitem', ServiceItemView.as_view(), name='serviceitem'),
     path('me/service/consumable', MeConsumableView.as_view(), name='me_service_consumable'),
-    path('me/subscription', MeSubscriptionView.as_view()),
-    path('me/subscription/<int:subscription_id>', MeSubscriptionView.as_view()),
-    path('me/subscription/<int:subscription_id>', MeSubscriptionChargeView.as_view()),
-    path('me/planfinancing', MeSubscriptionView.as_view()),
-    path('me/planfinancing/<int:plan_financing_id>', MeSubscriptionView.as_view()),
-    path('me/planfinancing/<int:plan_financing_id>', MeSubscriptionChargeView.as_view()),
+    path('me/subscription', MeSubscriptionView.as_view(), name='me_subscription'),
+    path('me/subscription/charge', MeSubscriptionChargeView.as_view(), name='me_subscription_charge'),
     path('academy/subscription', AcademySubscriptionView.as_view()),
     path('academy/subscription/<int:subscription_id>', AcademySubscriptionView.as_view()),
     path('me/invoice', MeInvoiceView.as_view()),

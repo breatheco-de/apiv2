@@ -13,15 +13,41 @@ from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage, OriginalityScan
 from .serializers import AssetBigSerializer
-from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator, ArticleValidator
+from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
+                    ArticleValidator, OriginalityWrapper)
 from github import Github, GithubException
 from breathecode.registry import tasks
 
 logger = logging.getLogger(__name__)
 
 ASSET_STATUS_DICT = [x for x, y in ASSET_STATUS]
+
+
+# remove markdown elemnts from text and return the clean text output only
+def unmark(text):
+
+    from markdown import Markdown
+    from io import StringIO
+
+    def unmark_element(element, stream=None):
+        if stream is None:
+            stream = StringIO()
+        if element.text:
+            stream.write(element.text)
+        for sub in element:
+            unmark_element(sub, stream)
+        if element.tail:
+            stream.write(element.tail)
+        return stream.getvalue()
+
+    # patching Markdown
+    Markdown.output_formats['plain'] = unmark_element
+    __md = Markdown(output_format='plain')
+    __md.stripTopLevelTags = False
+
+    return __md.convert(text)
 
 
 def allowed_mimes():
@@ -215,6 +241,10 @@ def get_url_info(url: str):
 
 
 def get_blob_content(repo, path_name, branch='main'):
+
+    if '?' in path_name:
+        path_name = path_name.split('?')[0]
+
     # first get the branch reference
     ref = repo.get_git_ref(f'heads/{branch}')
     # then get the tree
@@ -267,7 +297,10 @@ def push_github_asset(github, asset):
     logger.debug(f'Fetching readme: {file_path}')
 
     decoded_readme = base64.b64decode(asset.readme.encode('utf-8')).decode('utf-8')
-    set_blob_content(repo, file_path, decoded_readme, branch=branch)
+    result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
+
+    if 'commit' in result:
+        asset.github_commit_hash = result['commit'].sha
 
     return asset
 
@@ -293,6 +326,11 @@ def pull_github_lesson(github, asset, override_meta=False):
 
     base64_readme = get_blob_content(repo, file_path, branch=branch_name).content
     asset.readme_raw = base64_readme
+
+    # this avoids to keep using the old readme file, we do have a new version
+    # the asset.get_readme function will not update the asset if we keep the old version
+    if asset.readme_raw is not None:
+        asset.readme = asset.readme_raw
 
     # only the first time a lesson is synched it will override some of the properties
     readme = asset.get_readme(parse=True)
@@ -442,7 +480,10 @@ class AssetThumbnailGenerator:
             return (self._get_default_url(), False)
         media = self._get_media()
         if not media:
-            tasks.async_create_asset_thumbnail.delay(self.asset.slug)
+            tasks.async_create_asset_thumbnail_legacy.delay(self.asset.slug)
+            # the new way of creating screenshots cannot be released yet until
+            # we fix the cloud function
+            # tasks.async_create_asset_thumbnail.delay(self.asset.slug)
             return (self._get_asset_url(), False)
 
         if not self._the_client_want_resize():
@@ -655,6 +696,47 @@ def test_asset(asset):
         asset.save()
         # raise e
         return False
+
+
+def scan_asset_originality(asset):
+
+    scan = OriginalityScan(asset=asset)
+    try:
+        credentials = asset.academy.credentialsoriginality
+    except Exception as e:
+        scan.status_text = f'Error retriving originality credentials for academy: ' + str(e)
+        scan.status = 'ERROR'
+        scan.save()
+        raise Exception(scan.status_text)
+
+    try:
+
+        readme = asset.get_readme(parse=True, remove_frontmatter=True)
+
+        from bs4 import BeautifulSoup
+        from markdown import markdown
+        html = markdown(readme['html'])
+        text = ''.join(BeautifulSoup(html).findAll(text=True))
+
+        scanner = OriginalityWrapper(credentials.token)
+        result = scanner.detect(text)
+        if isinstance(result, dict):
+            scan.success = result['success']
+            scan.score_original = result['score']['original']
+            scan.score_ai = result['score']['ai']
+            scan.credits_used = result['credits_used']
+            scan.content = result['content']
+        else:
+            raise Exception('Error receiving originality API response payload')
+
+    except Exception as e:
+        scan.status_text = f'Error scanning originality for asset: ' + str(e)
+        scan.status = 'ERROR'
+        scan.save()
+        raise Exception(scan.status_text)
+
+    scan.status = 'COMPLETED'
+    scan.save()
 
 
 def upload_image_to_bucket(img, asset):

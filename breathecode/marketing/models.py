@@ -379,16 +379,13 @@ class FormEntry(models.Model):
                                    default='',
                                    help_text='Comma separated list of automations')
 
-    tag_objects = models.ManyToManyField(Tag, blank=True)
-    automation_objects = models.ManyToManyField(Automation, blank=True)
-
     street_address = models.CharField(max_length=250, null=True, default=None, blank=True)
     country = models.CharField(max_length=30, null=True, default=None, blank=True)
     city = models.CharField(max_length=30, null=True, default=None, blank=True)
     latitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
     longitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
     state = models.CharField(max_length=30, null=True, default=None, blank=True)
-    zip_code = models.IntegerField(null=True, default=None, blank=True)
+    zip_code = models.CharField(max_length=15, null=True, default=None, blank=True)
     browser_lang = models.CharField(max_length=10, null=True, default=None, blank=True)
 
     sex = models.CharField(max_length=15,
@@ -464,6 +461,17 @@ class FormEntry(models.Model):
             return True
 
         return False
+
+    def calculate_academy(self):
+
+        if self.academy is not None:
+            return self.academy
+        elif self.location is not None and self.location != '':
+            _alias = AcademyAlias.objects.filter(slug=self.location).first()
+            if _alias is not None:
+                return _alias.academy
+
+        return None
 
     def toFormData(self):
         _entry = {

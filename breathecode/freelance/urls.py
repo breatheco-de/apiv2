@@ -4,8 +4,7 @@ from rest_framework.authtoken import views
 
 from .views import (AcademyBillView, AcademyInvoiceMemberView, AcademyProjectInvoiceView,
                     AcademyProjectMemberView, AcademyProjectView, BillView, SingleBillView, SingleInvoiceView,
-                    get_issues, get_latest_bill, issue_webhook, render_html_all_bills, render_html_bill,
-                    sync_user_issues)
+                    get_issues, get_latest_bill, render_html_all_bills, render_html_bill, sync_user_issues)
 
 app_name = 'freelance'
 urlpatterns = [
@@ -26,5 +25,4 @@ urlpatterns = [
     path('academy/project/<int:project_id>/invoice', AcademyProjectInvoiceView.as_view()),
     path('academy/project/invoice/<int:invoice_id>', AcademyProjectInvoiceView.as_view()),
     path('academy/project/invoice/<int:invoice_id>/member', AcademyInvoiceMemberView.as_view()),
-    path('github/issue_webhook/academy/<slug:academy_slug>', issue_webhook),
 ]

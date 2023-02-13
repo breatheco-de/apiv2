@@ -1,5 +1,7 @@
 from bs4 import BeautifulSoup
-import requests
+import requests, logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_urls_from_html(html_content):
@@ -144,3 +146,39 @@ class ProjectValidator(ExerciseValidator):
 class QuizValidator(AssetValidator):
     warns = ['difficulty']
     errors = ['preview']
+
+
+class OriginalityWrapper():
+
+    def __init__(self, token):
+        self.token = token
+
+    def detect(self, text):
+
+        return self._request('scan/ai', method='POST', body={'content': text})
+
+    def _request(self, url, method='GET', body=None):
+
+        headers = {'X-OAI-API-KEY': self.token}
+        response = requests.request(method=method,
+                                    url=f'https://api.originality.ai/api/v1/' + url,
+                                    data=body,
+                                    headers=headers,
+                                    timeout=2)
+
+        if response.status_code == 200:
+            result = response.json()
+            # {
+            #     "success": true,
+            #     "score": {
+            #         "original": 0.8502796292304993,
+            #         "ai": 0.14972037076950073
+            #     },
+            #     "credits_used": 1,
+            #     "content": "A delicious cup of tea is a simple and timeless pleasure, and for many people it's even more than that..."
+            # }
+            return result
+        else:
+            msg = f'Error {response.status_code} while request originality API'
+            logger.error(msg)
+            raise Exception(msg)

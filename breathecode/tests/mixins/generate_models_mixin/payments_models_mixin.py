@@ -121,14 +121,8 @@ class PaymentsModelsMixin(ModelsMixin):
                                      or is_valid(plan_service_item) or is_valid(plan_offer)):
             kargs = {}
 
-            # if 'price' in models:
-            #     kargs['price'] = just_one(models['price'])
-
             if 'currency' in models:
                 kargs['currency'] = just_one(models['currency'])
-
-            # if 'service_item' in models:
-            #     kargs['service_items'] = get_list(models['service_item'])
 
             if 'payment_service_scheduler' in models:
                 kargs['schedulers'] = get_list(models['payment_service_scheduler'])
@@ -220,9 +214,6 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
-
-            # if 'service_item' in models:
-            #     kargs['service_items'] = get_list(models['service_item'])
 
             if 'plan' in models:
                 kargs['plans'] = get_list(models['plan'])

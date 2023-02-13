@@ -29,6 +29,20 @@ class SEOReportSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
+class OriginalityScanSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    success = serpy.Field()
+    score_original = serpy.Field()
+    score_ai = serpy.Field()
+    credits_used = serpy.Field()
+    content = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
 class KeywordSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -575,6 +589,25 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
         if 'slug' in data:
             data['slug'] = slugify(data['slug']).lower()
+
+        lang = self.instance.lang
+        if 'lang' in data:
+            lang = data['lang']
+
+        category = self.instance.category
+        if 'category' in data:
+            category = data['category']
+
+        if category is None:
+            raise ValidationException(f'Asset category cannot be null', status.HTTP_400_BAD_REQUEST)
+
+        if lang != category.lang:
+            translated_category = category.all_translations.filter(lang=lang).first()
+            if translated_category is None:
+                raise ValidationException(
+                    f'Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language',
+                    status.HTTP_400_BAD_REQUEST)
+            data['category'] = translated_category
 
         validated_data = super().validate(data)
         return validated_data

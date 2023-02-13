@@ -86,6 +86,8 @@ class AssetCategory(models.Model):
     description = models.TextField(null=True, blank=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
+    all_translations = models.ManyToManyField('self', blank=True)
+
     # Ideal for generating blog post thumbnails
     auto_generate_previews = models.BooleanField(default=False)
     preview_generation_url = models.URLField(null=True,
@@ -336,7 +338,7 @@ class Asset(models.Model):
                                    blank=True,
                                    help_text='Internal state automatically set by the system based on sync')
     last_synch_at = models.DateTimeField(null=True, blank=True, default=None)
-    # is_synched = models.BooleanField(default=True)
+    github_commit_hash = models.CharField(max_length=100, null=True, blank=True, default=None)
 
     test_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
@@ -774,3 +776,43 @@ class AssetImage(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.id})'
+
+
+class CredentialsOriginality(models.Model):
+
+    token = models.CharField(max_length=255)
+    balance = models.FloatField(default=0)  # balance
+    usage = models.JSONField(default=dict)
+    last_call_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+ASSET_ORIGINALITY_STATUS = (
+    ('PENDING', 'Pending'),
+    ('ERROR', 'Error'),
+    ('COMPLETED', 'Completed'),
+    ('WARNING', 'Warning'),
+)
+
+
+class OriginalityScan(models.Model):
+
+    success = models.BooleanField(null=True, default=None, blank=True)
+    score_original = models.FloatField(null=True, default=None, blank=True)
+    score_ai = models.FloatField(null=True, default=None, blank=True)
+    credits_used = models.IntegerField(default=0)
+    content = models.TextField()
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+
+    status = models.CharField(max_length=20,
+                              choices=ASSET_ORIGINALITY_STATUS,
+                              default='PENDING',
+                              help_text='Scan for originality')
+    status_text = models.TextField(default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)

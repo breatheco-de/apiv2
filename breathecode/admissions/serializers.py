@@ -499,7 +499,9 @@ class UserMeSerializer(serpy.Serializer):
         return ProfileAcademySmallSerializer(roles, many=True).data
 
     def get_cohorts(self, obj):
-        cohorts = CohortUser.objects.filter(user__id=obj.id)
+        cohorts = CohortUser.objects.filter(
+            user__id=obj.id).exclude(Q(educational_status='DROPPED')
+                                     | Q(educational_status='SUSPENDED'))
         return GETCohortUserSmallSerializer(cohorts, many=True).data
 
 

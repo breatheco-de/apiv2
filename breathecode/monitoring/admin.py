@@ -2,7 +2,8 @@ import os, ast
 from django.contrib import admin
 from django import forms
 from django.utils import timezone
-from .models import Endpoint, Application, MonitorScript, CSVDownload, CSVUpload
+from .signals import github_webhook
+from .models import Endpoint, Application, MonitorScript, CSVDownload, CSVUpload, RepositoryWebhook, RepositorySubscription
 from breathecode.notify.models import SlackChannel
 from django.utils.html import format_html
 
@@ -176,3 +177,35 @@ class CSVUploadAdmin(admin.ModelAdmin):
     list_display = ('name', 'url', 'status', 'academy', 'hash')
     list_filter = ['academy', 'status']
     search_fields = ['name', 'url', 'hash']
+
+
+@admin.register(RepositorySubscription)
+class RepositorySubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'repository', 'owner', 'shared')
+    list_filter = ['owner']
+    search_fields = ['repository', 'token']
+    readonly_fields = ['token']
+
+    def shared(self, obj):
+        return format_html(''.join([o.name for o in obj.shared_with.all()]))
+
+
+def process_webhook(modeladmin, request, queryset):
+    # stay this here for use the poor mocking system
+    for hook in queryset.all():
+        github_webhook.send(instance=hook, sender=RepositoryWebhook)
+
+
+@admin.register(RepositoryWebhook)
+class RepositoryWebhookAdmin(admin.ModelAdmin):
+    list_display = ('id', 'webhook_action', 'scope', 'current_status', 'run_at', 'academy_slug', 'created_at')
+    list_filter = ['status', 'webhook_action', 'scope', 'academy_slug']
+    actions = [process_webhook]
+
+    def current_status(self, obj):
+        colors = {
+            'DONE': 'bg-success',
+            'ERROR': 'bg-error',
+            'PENDING': 'bg-warning',
+        }
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")

@@ -18,9 +18,9 @@ from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_c
                                           get_amount_by_chosen_period, get_balance_by_resource)
 from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, PlanFinancing,
                                          PlanServiceItem, Service, ServiceItem, Subscription)
-from breathecode.payments.serializers import (GetBagSerializer, GetCreditSerializer, GetInvoiceSerializer,
-                                              GetInvoiceSmallSerializer, GetPlanSerializer,
-                                              GetServiceItemSerializer, GetServiceItemWithFeaturesSerializer,
+from breathecode.payments.serializers import (GetBagSerializer, GetInvoiceSerializer,
+                                              GetInvoiceSmallSerializer, GetPlanFinancingSerializer,
+                                              GetPlanSerializer, GetServiceItemWithFeaturesSerializer,
                                               GetServiceSerializer, GetSubscriptionSerializer,
                                               ServiceSerializer)
 from breathecode.payments.services.stripe import Stripe
@@ -414,50 +414,89 @@ class MeConsumableView(APIView):
 
 
 class MeSubscriptionView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    # this cannot support cache because the cache does not support associated two models to a response yet
+    extensions = APIViewExtensions(sort='-created_at')
 
-    def get(self, request, subscription_id=None):
+    def get_lookup(self, key, value):
+        kwargs = {}
+        slug_key = f'{key}__slug__in'
+        pk_key = f'{key}__id__in'
+
+        for v in value.split(','):
+            if slug_key not in kwargs and not v.isnumeric():
+                kwargs[slug_key] = []
+
+            if pk_key not in kwargs and v.isnumeric():
+                kwargs[pk_key] = []
+
+            if v.isnumeric():
+                kwargs[pk_key].append(int(v))
+
+            else:
+                kwargs[slug_key].append(v)
+
+        return kwargs
+
+    def get(self, request):
         handler = self.extensions(request)
-        lang = get_user_language(request)
 
         now = timezone.now()
 
-        if subscription_id:
-            item = Subscription.objects.filter(
-                Q(valid_until__gte=now) | Q(valid_until=None), id=subscription_id, user=request.user).exclude(
-                    status='CANCELLED').exclude(status='DEPRECATED').exclude(status='PAYMENT_ISSUE').first()
+        subscriptions = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
+                                                    user=request.user)
 
-            if not item:
-                raise ValidationException(translation(lang,
-                                                      en='Subscription not found',
-                                                      es='No existe el suscripción',
-                                                      slug='not-found'),
-                                          code=404)
+        #NOTE: this is before feature/add-plan-duration branch, this will be outdated
+        plan_financings = PlanFinancing.objects.filter(pay_until__gte=now, user=request.user)
 
-            serializer = GetCreditSerializer(items, many=True)
-            return handler.response(serializer.data)
+        if subscription := request.GET.get('subscription'):
+            subscriptions = subscriptions.filter(id=int(subscription))
 
-        items = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None), user=request.user)
+        if plan_financing := request.GET.get('plan-financing'):
+            plan_financings = plan_financings.filter(id=int(plan_financing))
+
+        if subscription and not plan_financing:
+            plan_financings = PlanFinancing.objects.none()
+
+        if not subscription and plan_financing:
+            subscriptions = Subscription.objects.none()
 
         if status := request.GET.get('status'):
-            items = items.filter(status__in=status.split(','))
+            subscriptions = subscriptions.filter(status__in=status.split(','))
+            plan_financings = plan_financings.filter(status__in=status.split(','))
         else:
-            items = items.exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(
+            subscriptions = subscriptions.exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(
                 status='PAYMENT_ISSUE')
+            plan_financings = plan_financings.exclude(status='CANCELLED').exclude(
+                status='DEPRECATED').exclude(status='PAYMENT_ISSUE')
 
-        if invoice_ids := request.GET.get('invoice_ids'):
-            items = items.filter(invoices__id__in=invoice_ids.split(','))
+        if invoice := request.GET.get('invoice'):
+            ids = [int(x) for x in invoice if x.isnumeric()]
+            subscriptions = subscriptions.filter(invoices__id__in=ids).distinct()
+            plan_financings = plan_financings.filter(invoices__id__in=ids).distinct()
 
-        if service_slugs := request.GET.get('service_slugs'):
-            items = items.filter(services__slug__in=service_slugs.split(','))
+        if service := request.GET.get('service'):
+            service_items_kwargs = self.get_lookup('service_items__service', service)
+            plans_kwargs = self.get_lookup('plans__service_items__service', service)
+            subscriptions = subscriptions.filter(Q(**plans_kwargs) | Q(**service_items_kwargs)).distinct()
+            plan_financings = plan_financings.filter(**plans_kwargs).distinct()
 
-        if plan_slugs := request.GET.get('plan_slugs'):
-            items = items.filter(plans__slug__in=plan_slugs.split(','))
+        if plan := request.GET.get('plan'):
+            kwargs = self.get_lookup('plans', plan)
+            subscriptions = subscriptions.filter(**kwargs).distinct()
+            plan_financings = plan_financings.filter(**kwargs).distinct()
 
-        items = handler.queryset(items)
-        serializer = GetSubscriptionSerializer(items, many=True)
+        # this can't support pagination
+        subscriptions = handler.queryset(subscriptions)
+        subscription_serializer = GetSubscriptionSerializer(subscriptions, many=True)
 
-        return handler.response(serializer.data)
+        # this can't support pagination
+        plan_financings = handler.queryset(plan_financings)
+        plan_financing_serializer = GetPlanFinancingSerializer(plan_financings, many=True)
+
+        return handler.response({
+            'subscriptions': subscription_serializer.data,
+            'plan_financings': plan_financing_serializer.data,
+        })
 
 
 class MeSubscriptionChargeView(APIView):
@@ -490,54 +529,6 @@ class MeSubscriptionChargeView(APIView):
         tasks.charge_subscription.delay(subscription_id)
 
         return Response({'status': 'loading'}, status=status.HTTP_202_ACCEPTED)
-
-
-class MePlanFinancingView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
-
-    def get(self, request, plan_financing_id=None):
-        handler = self.extensions(request)
-        lang = get_user_language(request)
-
-        now = timezone.now()
-
-        if plan_financing_id:
-            item = PlanFinancing.objects.filter(
-                Q(valid_until__gte=now) | Q(valid_until=None), id=plan_financing_id,
-                user=request.user).exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(
-                    status='PAYMENT_ISSUE').first()
-
-            if not item:
-                raise ValidationException(translation(lang,
-                                                      en='Subscription not found',
-                                                      es='No existe el suscripción',
-                                                      slug='not-found'),
-                                          code=404)
-
-            serializer = GetCreditSerializer(items, many=True)
-            return handler.response(serializer.data)
-
-        items = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None), user=request.user)
-
-        if status := request.GET.get('status'):
-            items = items.filter(status__in=status.split(','))
-        else:
-            items = items.exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(
-                status='PAYMENT_ISSUE')
-
-        if invoice_ids := request.GET.get('invoice_ids'):
-            items = items.filter(invoices__id__in=invoice_ids.split(','))
-
-        if service_slugs := request.GET.get('service_slugs'):
-            items = items.filter(services__slug__in=service_slugs.split(','))
-
-        if plan_slugs := request.GET.get('plan_slugs'):
-            items = items.filter(plans__slug__in=plan_slugs.split(','))
-
-        items = handler.queryset(items)
-        serializer = GetPlanFinancingSerializer(items, many=True)
-
-        return handler.response(serializer.data)
 
 
 class MePlanFinancingChargeView(APIView):
