@@ -494,6 +494,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
 
     @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
+    @patch('breathecode.registry.tasks.async_create_asset_thumbnail_legacy.delay', MagicMock())
     @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
     def test__get_thumbnail_url__without_asset(self):
         generator = AssetThumbnailGenerator(None)
@@ -512,6 +513,7 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(self.bc.database.list_of('media.MediaResolution'), [])
 
         self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
+        self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [])
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
 
     """
@@ -519,6 +521,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
 
     @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
+    @patch('breathecode.registry.tasks.async_create_asset_thumbnail_legacy.delay', MagicMock())
     @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
     def test__get_thumbnail_url__with_asset(self):
         model = self.bc.database.create(asset=1, academy=1, asset_category=1)
@@ -540,7 +543,10 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(self.bc.database.list_of('media.Media'), [])
         self.assertEqual(self.bc.database.list_of('media.MediaResolution'), [])
 
-        self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [call(model.asset.slug)])
+        self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
+        self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [
+            call(model.asset.slug),
+        ])
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
 
     """
@@ -548,6 +554,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
 
     @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
+    @patch('breathecode.registry.tasks.async_create_asset_thumbnail_legacy.delay', MagicMock())
     @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
     def test__get_thumbnail_url__with_asset__with_media__slug_does_not_match(self):
         model = self.bc.database.create(asset=1, media=1, academy=1)
@@ -572,7 +579,9 @@ class RegistryTestSuite(RegistryTestCase):
 
         self.assertEqual(self.bc.database.list_of('media.MediaResolution'), [])
 
-        self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [call(model.asset.slug)])
+        self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
+        self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list,
+                         [call(model.asset.slug)])
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
 
     """
@@ -580,6 +589,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
 
     @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
+    @patch('breathecode.registry.tasks.async_create_asset_thumbnail_legacy.delay', MagicMock())
     @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
     def test__get_thumbnail_url__with_asset__with_media__slug_match(self):
         academy_slug = self.bc.fake.slug()
@@ -617,6 +627,7 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(self.bc.database.list_of('media.MediaResolution'), [])
 
         self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
+        self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [])
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
 
     """
@@ -625,6 +636,7 @@ class RegistryTestSuite(RegistryTestCase):
     """
 
     @patch('breathecode.registry.tasks.async_create_asset_thumbnail.delay', MagicMock())
+    @patch('breathecode.registry.tasks.async_create_asset_thumbnail_legacy.delay', MagicMock())
     @patch('breathecode.registry.tasks.async_resize_asset_thumbnail.delay', MagicMock())
     def test__get_thumbnail_url__with_asset__with_media__with_media_resolution__passing_width_or_height(self):
         width = randint(1, 2000)
@@ -668,4 +680,5 @@ class RegistryTestSuite(RegistryTestCase):
             ])
 
             self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
+            self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [])
             self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])

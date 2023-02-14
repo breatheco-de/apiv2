@@ -418,6 +418,7 @@ class MeSubscriptionView(APIView):
     extensions = APIViewExtensions(sort='-created_at')
 
     def get_lookup(self, key, value):
+        args = ()
         kwargs = {}
         slug_key = f'{key}__slug__in'
         pk_key = f'{key}__id__in'
@@ -435,7 +436,11 @@ class MeSubscriptionView(APIView):
             else:
                 kwargs[slug_key].append(v)
 
-        return kwargs
+        if len(kwargs) > 1:
+            args = (Q(**{slug_key: kwargs[slug_key]}) | Q(**{pk_key: kwargs[pk_key]}), )
+            kwargs = {}
+
+        return args, kwargs
 
     def get(self, request):
         handler = self.extensions(request)
@@ -475,14 +480,20 @@ class MeSubscriptionView(APIView):
             plan_financings = plan_financings.filter(invoices__id__in=ids).distinct()
 
         if service := request.GET.get('service'):
-            service_items_kwargs = self.get_lookup('service_items__service', service)
-            plans_kwargs = self.get_lookup('plans__service_items__service', service)
-            subscriptions = subscriptions.filter(Q(**plans_kwargs) | Q(**service_items_kwargs)).distinct()
-            plan_financings = plan_financings.filter(**plans_kwargs).distinct()
+            service_items_args, service_items_kwargs = self.get_lookup('service_items__service', service)
+            plans_args, plans_kwargs = self.get_lookup('plans__service_items__service', service)
+
+            if service_items_args:
+                subscriptions = subscriptions.filter(Q(*service_items_args) | Q(*plans_args)).distinct()
+                plan_financings = plan_financings.filter(*plans_args).distinct()
+
+            else:
+                subscriptions = subscriptions.filter(Q(**plans_kwargs) | Q(**service_items_kwargs)).distinct()
+                plan_financings = plan_financings.filter(**plans_kwargs).distinct()
 
         if plan := request.GET.get('plan'):
-            kwargs = self.get_lookup('plans', plan)
-            subscriptions = subscriptions.filter(**kwargs).distinct()
+            args, kwargs = self.get_lookup('plans', plan)
+            subscriptions = subscriptions.filter(*args, **kwargs).distinct()
             plan_financings = plan_financings.filter(**kwargs).distinct()
 
         # this can't support pagination
