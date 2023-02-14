@@ -370,7 +370,7 @@ class AssetView(APIView, GenerateLookupsMixin):
     List all snippets, or create a new snippet.
     """
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(cache=AssetCache, sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(cache=AssetCache, sort='-published_at', paginate=True)
 
     def get(self, request, asset_slug=None):
         handler = self.extensions(request)
@@ -477,7 +477,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         need_translation = self.request.GET.get('need_translation', False)
         if need_translation == 'true':
-            items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
+            items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1)
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -653,7 +653,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    extensions = APIViewExtensions(cache=AssetCache, sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(cache=AssetCache, sort='-published_at', paginate=True)
 
     @capable_of('read_asset')
     def get(self, request, asset_slug=None, academy_id=None):
