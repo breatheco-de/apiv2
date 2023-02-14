@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
@@ -98,6 +99,10 @@ def get_serializer(self, event, event_type, user, academy=None, city=None, data=
         'venue': event.venue,
         **data,
     }
+
+
+def extract_starting_at(d):
+    return datetime.strptime(str(d.starting_at), '%Y-%m-%d %H:%M:%S%z')
 
 
 class AcademyEventTestSuite(EventTestCase):
@@ -223,6 +228,7 @@ class AcademyEventTestSuite(EventTestCase):
 
             response = self.client.get(url)
             json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
             expected = [
                 get_serializer(self, event, model.event_type, model.user, model.academy[0], model.city)
                 for event in reversed(model.event)
@@ -312,6 +318,7 @@ class AcademyEventTestSuite(EventTestCase):
 
             response = self.client.get(url)
             json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
             expected = [
                 get_serializer(self, event, model.event_type, model.user, model.academy[0], model.city)
                 for event in reversed(model.event)
@@ -406,6 +413,7 @@ class AcademyEventTestSuite(EventTestCase):
 
             response = self.client.get(url)
             json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
             expected = [
                 get_serializer(self, event, model.event_type, model.user, model.academy[0], model.city)
                 for event in reversed(model.event)

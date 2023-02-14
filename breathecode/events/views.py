@@ -220,9 +220,10 @@ class EventMeView(APIView):
 
         if query:
             items = EventType.objects.filter(query)
-
         else:
             items = EventType.objects.none()
+        items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('starting_at')
+        lookup = {}
 
         if event_id is not None:
             single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
@@ -233,6 +234,13 @@ class EventMeView(APIView):
             return Response(serializer.data)
 
         items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('-created_at')
+        online_event = self.request.GET.get('online_event', '')
+        if online_event == 'true':
+            lookup['online_event'] = True
+        elif online_event == 'false':
+            lookup['online_event'] = False
+
+        items = items.filter(**lookup)
 
         serializer = EventBigSerializer(items, many=True)
         return Response(serializer.data)

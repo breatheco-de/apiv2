@@ -100,7 +100,7 @@ def generate_form_entry_kwargs(kwargs={}):
         'latitude': 15,
         'longitude': 15,
         'state': random_string(),
-        'zip_code': randint(0, 9999),
+        'zip_code': str(randint(0, 9999)),
         'browser_lang': random_string(),
         'storage_status': choice(['PENDING', 'PERSISTED']),
         'lead_type': choice(['STRONG', 'SOFT', 'DISCOVERY']),

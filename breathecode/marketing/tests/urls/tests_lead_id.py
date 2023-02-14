@@ -53,7 +53,7 @@ def generate_form_entry_kwargs():
         'latitude': randint(0, 9999),
         'longitude': randint(0, 9999),
         'state': random_string(),
-        'zip_code': randint(0, 9999),
+        'zip_code': str(randint(0, 9999)),
         'browser_lang': random_string(),
         'storage_status': choice(['PENDING', 'PERSISTED']),
         'lead_type': choice(['STRONG', 'SOFT', 'DISCOVERY']),

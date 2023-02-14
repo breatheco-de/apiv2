@@ -95,7 +95,8 @@ def process_github_webhook(request, subscription_token):
     if subscription is None:
         raise ValidationException(f'Subscription not found with token {subscription_token}')
 
-    academies = [subscription.owner] + list(subscription.shared_with.all())
+    academy_slugs = set([subscription.owner.slug] +
+                        [academy.slug for academy in subscription.shared_with.all()])
     payload = request.data
     payload['scope'] = request.headers['X-GitHub-Event']
 
@@ -104,12 +105,12 @@ def process_github_webhook(request, subscription_token):
             'Webhook was called from a different repository than its original subscription: ' +
             payload['repository']['html_url'])
 
-    for academy in academies:
-        webhook = add_github_webhook(payload, academy.slug)
+    for academy_slug in academy_slugs:
+        webhook = add_github_webhook(payload, academy_slug)
         if webhook:
-            logger.debug('triggering signal github_webhook')
+            logger.debug('triggering signal github_webhook: ' + payload['scope'])
             github_webhook.send(instance=webhook, sender=RepositoryWebhook)
             return Response(payload, status=status.HTTP_200_OK)
         else:
-            logger.debug(f'Error at processing github webhook from academy {academy.slug}')
-            raise ValidationException(f'Error at processing github webhook from academy {academy.slug}')
+            logger.debug(f'Error at processing github webhook from academy {academy_slug}')
+            raise ValidationException(f'Error at processing github webhook from academy {academy_slug}')

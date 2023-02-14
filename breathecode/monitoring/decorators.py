@@ -6,47 +6,47 @@ from .models import RepositoryWebhook
 logger = logging.getLogger(__name__)
 
 
-def github_webhook_task():
+class WebhookTask(Task):
+    pending_status = 'pending...'
 
-    def decorator(func):
+    def initialize(self, webhook_id):
 
-        def inner(*args, **kwargs):
-            _self = args[0]
-            webhook_id = None
-            if isinstance(_self, Task):
-                webhook_id = args[1]
-            else:
-                _self = None
-                webhook_id = args[0]
+        status = 'ok'
 
-            logger.debug('Starting webhook task')
-            status = 'ok'
+        webhook = RepositoryWebhook.objects.filter(id=webhook_id).first()
+        if webhook is None:
+            raise Exception(f'Github Webhook with id {webhook_id} not found')
+        webhook.status = 'PENDING'
+        webhook.status_text = self.pending_status
+        webhook.save()
+        return webhook
 
-            webhook = RepositoryWebhook.objects.filter(id=webhook_id).first()
-            if webhook is None:
-                raise Exception(f'Github Webhook with id {webhook_id} not found')
-            webhook.status = 'PENDING'
-            webhook.save()
+    def __call__(self, *args, **kwargs):
+        """In celery task this function call the run method, here you can
+        set some environment variable before the run of the task"""
 
-            try:
+        webhook_id = args[0]
+        webhook = self.initialize(webhook_id)
 
-                if _self is not None:
-                    webhook = func(_self, webhook)
-                else:
-                    webhook = func(webhook)
+        try:
+            _webhook = self.run(webhook)
 
+            if isinstance(_webhook, RepositoryWebhook):
+                webhook = _webhook
                 webhook.status = 'DONE'
-            except Exception as ex:
-                webhook.status = 'ERROR'
-                webhook.status_text = str(ex)[:255]
-                logger.debug(ex)
-                status = 'error'
+            else:
+                raise Exception('Error while running async webhook task')
+        except Exception as ex:
+            webhook.status = 'ERROR'
+            webhook.status_text = str(ex)[:255]
+            logger.debug(ex)
+            status = 'error'
 
-            webhook.run_at = datetime.now()
-            webhook.save()
+        webhook.run_at = datetime.now()
+        if webhook.status_text == self.pending_status:
+            webhook.status_text = 'finished'
 
-            logger.debug(f'Github Webook processing status: {status}')
+        webhook.save()
 
-        return inner
-
-    return decorator
+        logger.debug(f'Github Webook processing status: {webhook.status}')
+        return webhook.status

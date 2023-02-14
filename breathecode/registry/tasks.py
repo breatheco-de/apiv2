@@ -1,9 +1,10 @@
-import hashlib
+import hashlib, requests
 import logging
 import os
 import time
 import re
 import pathlib
+from urllib.parse import urlencode
 from typing import Optional
 from celery import shared_task, Task
 from breathecode.services.seo import SEOAnalyzer
@@ -14,7 +15,7 @@ from breathecode.media.views import media_gallery_bucket
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
-from breathecode.monitoring.decorators import github_webhook_task
+from breathecode.monitoring.decorators import WebhookTask
 from .models import Asset, AssetImage
 from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
                       upload_image_to_bucket, asset_images_bucket)
@@ -98,6 +99,53 @@ def async_execute_seo_report(asset_slug):
         logger.exception(f'Error running SEO report asset {a.slug}')
 
     return False
+
+
+@shared_task
+def async_create_asset_thumbnail_legacy(asset_slug: str):
+
+    asset = Asset.objects.filter(slug=asset_slug).first()
+    if asset is None:
+        logger.error(f'Asset with slug {asset_slug} not found')
+        return
+
+    preview_url = asset.get_preview_generation_url()
+    if preview_url is None:
+        logger.warn(f'Not able to retrieve a preview generation')
+        return False
+
+    filename = asset.get_thumbnail_name()
+    url = set_query_parameter(preview_url, 'slug', asset_slug)
+
+    response = None
+    try:
+        query_string = urlencode({
+            'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
+            'url': url,
+            'device': 'desktop',
+            'cacheLimit': '0',
+            'dimension': '1024x707',
+        })
+        response = requests.get(f'https://api.screenshotmachine.com?{query_string}', stream=True)
+
+    except Exception as e:
+        logger.error('Error calling service to generate thumbnail screenshot: ' + str(e))
+        return False
+
+    if response.status_code >= 400:
+        logger.error('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
+                     f'returns status code {response.status_code}')
+        return False
+
+    storage = Storage()
+    cloud_file = storage.file(screenshots_bucket(), filename)
+    cloud_file.upload(response.content)
+
+    if asset.preview is None or asset.preview == '':
+        asset.preview = cloud_file.url()
+        asset.save()
+
+    return True
 
 
 @shared_task
@@ -415,11 +463,10 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
     resolution.save()
 
 
-@shared_task
-@github_webhook_task()
-def async_synchonize_repository_content(webhook):
+@shared_task(bind=True, base=WebhookTask)
+def async_synchonize_repository_content(self, webhook):
 
-    logger.debug('Starting to sync github repo content')
+    logger.debug('async_synchonize_repository_content')
     payload = webhook.get_payload()
     if 'commits' not in payload:
         logger.debug('No commits found on the push object')
@@ -444,6 +491,10 @@ def async_synchonize_repository_content(webhook):
                 assets = Asset.objects.filter(
                     readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/{file_path}')
                 for a in assets:
+                    if commit['id'] == a.github_commit_hash:
+                        # ignore asset because the commit content is already on the asset
+                        # probably the asset was updated in github using the breathecode api
+                        continue
                     logger.debug(f'Pulling asset readme from github for asset: {a.slug}')
                     async_pull_from_github.delay(a.slug)
 
