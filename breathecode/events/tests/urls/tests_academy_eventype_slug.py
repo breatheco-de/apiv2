@@ -94,7 +94,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': event_type_slug,
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
 
         url = reverse_lazy('events:academy_eventype_slug', kwargs={'event_type_slug': event_type_slug})
@@ -126,7 +127,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': event_type_slug,
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
 
         model = self.generate_models(authenticate=True,
@@ -171,7 +173,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': event_type_slug,
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
 
         model = self.generate_models(authenticate=True,
@@ -208,7 +211,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': event_type_slug,
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
 
         model = self.generate_models(authenticate=True,
@@ -248,7 +252,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': event_type_slug,
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
 
         model = self.generate_models(authenticate=True,

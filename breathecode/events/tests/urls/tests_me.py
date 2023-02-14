@@ -137,7 +137,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.headers(academy=1)
         url = reverse_lazy('events:me')
 
-        model = self.bc.database.create(user=1, event=1, event_type=1)
+        model = self.bc.database.create(user=1, event=1, event_type={'icon_url': 'https://www.google.com'})
         self.bc.request.authenticate(model.user)
 
         response = self.client.get(url)
@@ -160,6 +160,7 @@ class AcademyEventTestSuite(EventTestCase):
         event_type = {
             'academy_id': 1,
             'allow_shared_creation': False,
+            'icon_url': 'https://www.google.com',
         }
         cohort = {
             'academy_id': 2,
@@ -193,6 +194,7 @@ class AcademyEventTestSuite(EventTestCase):
                 {
                     'academy_id': 1,
                     'allow_shared_creation': False,
+                    'icon_url': 'https://www.google.com',
                 },
                 {
                     'academy_id': 1,
@@ -207,6 +209,7 @@ class AcademyEventTestSuite(EventTestCase):
                 {
                     'academy_id': 3,
                     'allow_shared_creation': True,
+                    'icon_url': 'https://www.google.com',
                 },
                 {
                     'academy_id': 4,
@@ -233,6 +236,7 @@ class AcademyEventTestSuite(EventTestCase):
                 get_serializer(self, event, model.event_type, model.user, model.academy[0], model.city)
                 for event in reversed(model.event)
             ]
+            expected = sorted(expected, key=lambda d: d['starting_at'])
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, 200)
@@ -250,6 +254,7 @@ class AcademyEventTestSuite(EventTestCase):
         event_type = {
             'academy_id': 1,
             'allow_shared_creation': False,
+            'icon_url': 'https://www.google.com',
         }
         cohort = {
             'academy_id': 2,
@@ -283,6 +288,7 @@ class AcademyEventTestSuite(EventTestCase):
                 {
                     'academy_id': 1,
                     'allow_shared_creation': False,
+                    'icon_url': 'https://www.google.com'
                 },
                 {
                     'academy_id': 1,
@@ -297,6 +303,7 @@ class AcademyEventTestSuite(EventTestCase):
                 {
                     'academy_id': 3,
                     'allow_shared_creation': True,
+                    'icon_url': 'https://www.google.com'
                 },
                 {
                     'academy_id': 4,
@@ -324,6 +331,8 @@ class AcademyEventTestSuite(EventTestCase):
                 for event in reversed(model.event)
             ]
 
+            expected = sorted(expected, key=lambda d: d['starting_at'])
+
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, 200)
 
@@ -337,10 +346,7 @@ class AcademyEventTestSuite(EventTestCase):
             'cohort_id': None,
             'syllabus_id': 2,
         }
-        event_type = {
-            'academy_id': 1,
-            'allow_shared_creation': False,
-        }
+        event_type = {'academy_id': 1, 'allow_shared_creation': False, 'icon_url': 'https://www.google.com'}
         cohort = {
             'academy_id': 2,
         }
@@ -375,6 +381,7 @@ class AcademyEventTestSuite(EventTestCase):
                 {
                     'academy_id': 1,
                     'allow_shared_creation': False,
+                    'icon_url': 'https://www.google.com'
                 },
                 {
                     'academy_id': 1,
@@ -389,6 +396,7 @@ class AcademyEventTestSuite(EventTestCase):
                 {
                     'academy_id': 3,
                     'allow_shared_creation': True,
+                    'icon_url': 'https://www.google.com'
                 },
                 {
                     'academy_id': 4,
@@ -418,6 +426,7 @@ class AcademyEventTestSuite(EventTestCase):
                 get_serializer(self, event, model.event_type, model.user, model.academy[0], model.city)
                 for event in reversed(model.event)
             ]
+            expected = sorted(expected, key=lambda d: d['starting_at'])
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, 200)
@@ -433,6 +442,7 @@ class AcademyEventTestSuite(EventTestCase):
                 {
                     'academy_id': 1,
                     'allow_shared_creation': False,
+                    'icon_url': 'https://www.google.com'
                 },
                 {
                     'academy_id': 1,
@@ -447,6 +457,7 @@ class AcademyEventTestSuite(EventTestCase):
                 {
                     'academy_id': 3,
                     'allow_shared_creation': True,
+                    'icon_url': 'https://www.google.com'
                 },
                 {
                     'academy_id': 4,

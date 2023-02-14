@@ -73,7 +73,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': 'potato',
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
         model = self.generate_models(authenticate=True,
                                      event=True,
@@ -102,7 +103,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': 'potato',
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
         model = self.generate_models(authenticate=True,
                                      event=True,
@@ -130,7 +132,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': 'potato',
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
         model = self.generate_models(authenticate=True,
                                      academy=1,
@@ -161,7 +164,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': 'potato',
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
         model = self.generate_models(authenticate=True,
                                      event=True,
@@ -189,7 +193,8 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': 'potato',
             'name': 'Potato',
             'created_at': timezone.now(),
-            'updated_at': timezone.now()
+            'updated_at': timezone.now(),
+            'icon_url': 'https://www.google.com',
         }
         model = self.generate_models(authenticate=True,
                                      academy=1,

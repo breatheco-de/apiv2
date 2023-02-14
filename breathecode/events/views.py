@@ -233,7 +233,6 @@ class EventMeView(APIView):
             serializer = EventBigSerializer(single_event, many=False)
             return Response(serializer.data)
 
-        items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('-created_at')
         online_event = self.request.GET.get('online_event', '')
         if online_event == 'true':
             lookup['online_event'] = True
