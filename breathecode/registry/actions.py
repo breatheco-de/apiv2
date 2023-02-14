@@ -2,12 +2,14 @@ import logging, json, os, re, pathlib, base64, hashlib, requests
 from typing import Optional
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
+from breathecode.utils.views import set_query_parameter
 from breathecode.utils.validation_exception import ValidationException
+from breathecode.services.google_cloud.storage import Storage
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.template.loader import get_template
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 from slugify import slugify
 from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
@@ -480,10 +482,7 @@ class AssetThumbnailGenerator:
             return (self._get_default_url(), False)
         media = self._get_media()
         if not media:
-            tasks.async_create_asset_thumbnail_legacy.delay(self.asset.slug)
-            # the new way of creating screenshots cannot be released yet until
-            # we fix the cloud function
-            # tasks.async_create_asset_thumbnail.delay(self.asset.slug)
+            tasks.async_create_asset_thumbnail.delay(self.asset.slug)
             return (self._get_asset_url(), False)
 
         if not self._the_client_want_resize():
@@ -538,6 +537,43 @@ class AssetThumbnailGenerator:
         """
 
         return bool((self.width and not self.height) or (not self.width and self.height))
+
+    def create(self):
+
+        preview_url = self.asset.get_preview_generation_url()
+        if preview_url is None:
+            raise Exception(f'Not able to retrieve a preview generation url')
+
+        filename = self.asset.get_thumbnail_name()
+        url = set_query_parameter(preview_url, 'slug', self.asset.slug)
+
+        response = None
+        try:
+            query_string = urlencode({
+                'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
+                'url': url,
+                'device': 'desktop',
+                'cacheLimit': '0',
+                'dimension': '1024x707',
+            })
+            response = requests.get(f'https://api.screenshotmachine.com?{query_string}', stream=True)
+
+        except Exception as e:
+            raise Exception('Error calling service to generate thumbnail screenshot: ' + str(e))
+
+        if response.status_code >= 400:
+            raise Exception(
+                'Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
+                f'returns status code {response.status_code}')
+
+        storage = Storage()
+        cloud_file = storage.file(screenshots_bucket(), filename)
+        cloud_file.upload(response.content)
+
+        self.asset.preview = cloud_file.url()
+        self.asset.save()
+
+        return self.asset
 
 
 def pull_learnpack_asset(github, asset, override_meta):

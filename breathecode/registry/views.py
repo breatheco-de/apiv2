@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
-from .tasks import async_pull_from_github
+from .tasks import async_pull_from_github, async_create_asset_thumbnail_legacy
 from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment, SEOReport, OriginalityScan)
@@ -342,6 +342,26 @@ class AssetThumbnailView(APIView):
 
         url, permanent = generator.get_thumbnail_url()
         return redirect(url, permanent=permanent)
+
+    # this method will force to reset the thumbnail
+    @capable_of('crud_asset')
+    def post(self, request, asset_slug, academy_id):
+
+        width = int(request.GET.get('width', '0'))
+        height = int(request.GET.get('height', '0'))
+
+        asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
+        if asset is None:
+            raise ValidationException(f'Asset with slug {asset_slug} not found for this academy',
+                                      slug='asset-slug-not-found',
+                                      code=400)
+
+        generator = AssetThumbnailGenerator(asset, width, height)
+
+        asset = generator.create()
+
+        serializer = AcademyAssetSerializer(asset)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # Create your views here.
