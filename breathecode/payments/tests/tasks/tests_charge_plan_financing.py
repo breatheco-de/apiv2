@@ -13,6 +13,7 @@ from breathecode.notify import actions as notify_actions
 from ..mixins import PaymentsTestCase
 from dateutil.relativedelta import relativedelta
 from mixer.backend.django import mixer
+from breathecode.payments.services import Stripe
 
 UTC_NOW = timezone.now()
 
@@ -98,7 +99,7 @@ def calculate_relative_delta(unit: float, unit_type: str):
 #FIXME: create_v2 fail in this test file
 class PaymentsTestSuite(PaymentsTestCase):
     """
-    🔽🔽🔽 plan_financing not found
+    🔽🔽🔽 PlanFinancing not found
     """
 
     @patch('logging.Logger.info', MagicMock())
@@ -118,7 +119,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [])
 
     """
-    🔽🔽🔽 plan_financing with zero Invoice
+    🔽🔽🔽 PlanFinancing with zero Invoice
     """
 
     @patch('logging.Logger.info', MagicMock())
@@ -163,7 +164,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
 
     """
-    🔽🔽🔽 plan_financing process to charge
+    🔽🔽🔽 PlanFinancing process to charge
     """
 
     @patch('logging.Logger.info', MagicMock())
@@ -234,7 +235,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
     """
-    🔽🔽🔽 plan_financing error when try to charge
+    🔽🔽🔽 PlanFinancing error when try to charge
     """
 
     @patch('logging.Logger.info', MagicMock())
@@ -290,7 +291,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
     """
-    🔽🔽🔽 plan_financing is over
+    🔽🔽🔽 PlanFinancing is over
     """
 
     @patch('logging.Logger.info', MagicMock())
@@ -335,3 +336,118 @@ class PaymentsTestSuite(PaymentsTestCase):
             },
         ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+
+    """
+    🔽🔽🔽 PlanFinancing try to charge, but a undexpected exception is raised, the database is rollbacked
+    and the error is register in PlanFinancing
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.payments.tasks.renew_plan_financing_consumables.delay', MagicMock())
+    @patch('mixer.main.LOGGER.info', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.services.stripe.Stripe.refund_payment', MagicMock())
+    def test_plan_financing_process_to_charge__but_a_undexpected_exception_is_raised__not_found_invoice_to_refund(
+            self):
+        plan_financing = {
+            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'monthly_price': (random.random() * 99) + 1,
+            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        }
+        invoice = {'paid_at': UTC_NOW - relativedelta(hours=24, seconds=1)}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=1)
+
+        error = self.bc.fake.text()
+
+        with patch('breathecode.payments.services.stripe.Stripe.pay',
+                   MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            with patch('breathecode.notify.actions.send_email_message',
+                       MagicMock(side_effect=Exception(error))):
+                charge_plan_financing.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting charge_plan_financing for id 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        message = f'charge_plan_financing is failing for the plan financing {model.plan_financing.id}: '
+        message += str(error)[:250 - len(message)]
+
+        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
+            {
+                **self.bc.format.to_dict(model.plan_financing),
+                'status': 'ERROR',
+                'status_message': message,
+            },
+        ])
+
+        self.assertEqual(Stripe.refund_payment.call_args_list, [])
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.payments.tasks.renew_plan_financing_consumables.delay', MagicMock())
+    @patch('mixer.main.LOGGER.info', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.services.stripe.Stripe.refund_payment', MagicMock())
+    def test_plan_financing_process_to_charge__but_a_undexpected_exception_is_raised__found_invoice_to_refund(
+            self):
+        plan_financing = {
+            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'monthly_price': (random.random() * 99) + 1,
+            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        }
+        invoice = {'paid_at': UTC_NOW - relativedelta(hours=random.randint(1, 23))}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=1)
+
+        error = self.bc.fake.text()
+
+        with patch('breathecode.payments.services.stripe.Stripe.pay',
+                   MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            with patch('breathecode.notify.actions.send_email_message',
+                       MagicMock(side_effect=Exception(error))):
+                charge_plan_financing.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting charge_plan_financing for id 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        message = f'charge_plan_financing is failing for the plan financing {model.plan_financing.id}: '
+        message += str(error)[:250 - len(message)]
+
+        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
+            {
+                **self.bc.format.to_dict(model.plan_financing),
+                'status': 'ERROR',
+                'status_message': message,
+            },
+        ])
+
+        self.assertEqual(Stripe.refund_payment.call_args_list, [call(model.invoice)])

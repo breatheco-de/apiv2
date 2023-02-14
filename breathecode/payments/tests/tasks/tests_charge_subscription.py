@@ -13,6 +13,7 @@ from breathecode.notify import actions as notify_actions
 from ..mixins import PaymentsTestCase
 from dateutil.relativedelta import relativedelta
 from mixer.backend.django import mixer
+from breathecode.payments.services import Stripe
 
 UTC_NOW = timezone.now()
 
@@ -335,3 +336,120 @@ class PaymentsTestSuite(PaymentsTestCase):
             },
         ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+
+    """
+    🔽🔽🔽 Subscription try to charge, but a undexpected exception is raised, the database is rollbacked
+    and the error is register in Subscription
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
+    @patch('mixer.main.LOGGER.info', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.services.stripe.Stripe.refund_payment', MagicMock())
+    def test_plan_financing_process_to_charge__but_a_undexpected_exception_is_raised__not_found_invoice_to_refund(
+            self):
+        unit = random.choice([1, 3, 6, 12])
+        unit_type = 'MONTH'
+        subscription = {
+            'pay_every': unit,
+            'pay_every_unit': unit_type,
+        }
+        invoice = {'paid_at': UTC_NOW - relativedelta(hours=24, seconds=1)}
+        model = self.bc.database.create(subscription=subscription, invoice=invoice)
+
+        error = self.bc.fake.text()
+
+        with patch('breathecode.payments.services.stripe.Stripe.pay',
+                   MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            with patch('breathecode.notify.actions.send_email_message',
+                       MagicMock(side_effect=Exception(error))):
+                charge_subscription.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting charge_subscription for subscription 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        message = f'charge_subscription is failing for the subscription {model.subscription.id}: '
+        message += str(error)[:250 - len(message)]
+
+        self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
+            {
+                **self.bc.format.to_dict(model.subscription),
+                'status': 'ERROR',
+                'status_message': message,
+            },
+        ])
+
+        self.assertEqual(Stripe.refund_payment.call_args_list, [])
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
+    @patch('mixer.main.LOGGER.info', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.services.stripe.Stripe.refund_payment', MagicMock())
+    def test_plan_financing_process_to_charge__but_a_undexpected_exception_is_raised__found_invoice_to_refund(
+            self):
+        unit = random.choice([1, 3, 6, 12])
+        unit_type = 'MONTH'
+        subscription = {
+            'pay_every': unit,
+            'pay_every_unit': unit_type,
+        }
+        invoice = {'paid_at': UTC_NOW - relativedelta(hours=random.randint(1, 23))}
+        model = self.bc.database.create(subscription=subscription, invoice=invoice)
+
+        error = self.bc.fake.text()
+
+        with patch('breathecode.payments.services.stripe.Stripe.pay',
+                   MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            with patch('breathecode.notify.actions.send_email_message',
+                       MagicMock(side_effect=Exception(error))):
+                charge_subscription.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting charge_subscription for subscription 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        message = f'charge_subscription is failing for the subscription {model.subscription.id}: '
+        message += str(error)[:250 - len(message)]
+
+        self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
+            {
+                **self.bc.format.to_dict(model.subscription),
+                'status': 'ERROR',
+                'status_message': message,
+            },
+        ])
+
+        self.assertEqual(Stripe.refund_payment.call_args_list, [call(model.invoice)])

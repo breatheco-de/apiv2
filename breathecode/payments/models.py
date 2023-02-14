@@ -281,13 +281,6 @@ class Plan(AbstractPriceByTime):
                                          null=True,
                                          default=MONTH)
 
-    # expires_after = models.IntegerField(default=1, blank=True, null=True)
-    # expires_after_unit = models.CharField(max_length=10,
-    #                                       choices=PAY_EVERY_UNIT,
-    #                                       blank=True,
-    #                                       null=True,
-    #                                       default=MONTH)
-
     trial_duration = models.IntegerField(default=1)
     trial_duration_unit = models.CharField(max_length=10, choices=PAY_EVERY_UNIT, default=MONTH)
 
@@ -495,7 +488,7 @@ class AbstractIOweYou(models.Model):
     """
 
     status = models.CharField(max_length=13, choices=SUBSCRIPTION_STATUS, default=ACTIVE)
-    status_message = models.CharField(max_length=150, null=True, blank=True, default=None)
+    status_message = models.CharField(max_length=250, null=True, blank=True, default=None)
 
     invoices = models.ManyToManyField(Invoice, blank=True)
 

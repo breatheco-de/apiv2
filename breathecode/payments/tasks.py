@@ -235,9 +235,12 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
     settings = get_user_settings(subscription.user.id)
     utc_now = timezone.now()
 
+    message = f'charge_subscription is failing for the subscription {subscription.id}: '
+    message += str(exception)[:250 - len(message)]
+
     subscription.status = 'ERROR'
-    subscription.status_message = (
-        f'charge_subscription is failing for the subscription {subscription.user.id}: ' + str(exception))
+    subscription.status_message = message
+    subscription.save()
 
     invoice = subscription.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by('-id').first()
 
@@ -345,10 +348,12 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
     settings = get_user_settings(plan_financing.user.id)
     utc_now = timezone.now()
 
+    message = f'charge_plan_financing is failing for the plan financing {plan_financing.id}: '
+    message += str(exception)[:250 - len(message)]
+
     plan_financing.status = 'ERROR'
-    plan_financing.status_message = (
-        f'charge_plan_financing is failing for the plan finanfing {plan_financing.user.id}: ' +
-        str(exception))
+    plan_financing.status_message = message
+    plan_financing.save()
 
     invoice = plan_financing.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by('-id').first()
 
