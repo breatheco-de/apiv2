@@ -148,12 +148,17 @@ class MemberPutDuckTestSuite(AuthTestCase):
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     def test_academy_id_member_id__with_auth(self):
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email(),
+        }
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)
             model = self.bc.database.create(authenticate=True,
                                             capability='crud_member',
                                             role='role',
-                                            profile_academy=1)
+                                            profile_academy=profile_academy)
 
             url = reverse_lazy('authenticate:academy_id_member_id',
                                kwargs={

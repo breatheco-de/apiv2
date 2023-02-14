@@ -519,12 +519,20 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id__put__passing_email(self):
         """Test /academy/:id/member/:id"""
+
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
         role = 'konan'
         self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_member',
-                                     profile_academy=True)
+        model = self.generate_models(
+            authenticate=True,
+            role=role,
+            capability='crud_member',
+            profile_academy=profile_academy,
+        )
         url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': 'dude@dude.dude'})
 
         response = self.client.put(url)
@@ -544,12 +552,17 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id__put__without_required_fields(self):
         """Test /academy/:id/member/:id"""
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
         role = 'konan'
         self.bc.request.set_headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      role=role,
                                      capability='crud_member',
-                                     profile_academy=True)
+                                     profile_academy=profile_academy)
         url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
 
         response = self.client.put(url)
@@ -569,12 +582,18 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id__put__role_does_not_exists(self):
         """Test /academy/:id/member/:id"""
+
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
         role = 'konan'
         self.bc.request.set_headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      role=role,
                                      capability='crud_member',
-                                     profile_academy=True)
+                                     profile_academy=profile_academy)
         url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '2'})
 
         data = {'role': 'mirai-nikki'}
@@ -596,19 +615,24 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id__put__user_does_not_exists(self):
         """Test /academy/:id/member/:id"""
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
         role = 'konan'
         self.bc.request.set_headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      role=role,
                                      capability='crud_member',
-                                     profile_academy=True)
+                                     profile_academy=profile_academy)
         url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '2'})
 
         data = {'role': role}
         response = self.client.put(url, data, format='json')
 
         json = response.json()
-        expected = {'detail': 'user-not-found', 'status_code': 400}
+        expected = {'detail': 'Unable to find first name on this user', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -623,9 +647,17 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id__put__user_exists_but_without_profile_academy(self):
         """Test /academy/:id/member/:id"""
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
         role = 'konan'
         self.bc.request.set_headers(academy=1)
-        model = self.generate_models(role=role, user=2, capability='crud_member', profile_academy=True)
+        model = self.generate_models(role=role,
+                                     user=2,
+                                     capability='crud_member',
+                                     profile_academy=profile_academy)
 
         self.bc.request.authenticate(model.user[0])
         url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '2'})
@@ -637,8 +669,8 @@ class AuthenticateTestSuite(AuthTestCase):
         expected = {
             'address': None,
             'email': model.user[1].email,
-            'first_name': None,
-            'last_name': None,
+            'first_name': model.user[1].first_name,
+            'last_name': model.user[1].last_name,
             'phone': '',
             'role': role,
             'status': 'ACTIVE',
@@ -652,8 +684,8 @@ class AuthenticateTestSuite(AuthTestCase):
                 **self.bc.format.to_dict(model.profile_academy),
                 'id': 2,
                 'email': model.user[1].email,
-                'first_name': None,
-                'last_name': None,
+                'first_name': model.user[1].first_name,
+                'last_name': model.user[1].last_name,
                 'role_id': role,
                 'status': 'ACTIVE',
                 'user_id': 2,
@@ -667,12 +699,17 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id__put__with_data(self):
         """Test /academy/:id/member/:id"""
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
         role = 'konan'
         self.bc.request.set_headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      role=role,
                                      capability='crud_member',
-                                     profile_academy=True)
+                                     profile_academy=profile_academy)
         url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
 
         data = {'role': role}
@@ -698,6 +735,11 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id__put__with_null_names(self):
         """Test /academy/:id/member/:id"""
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
         role = 'konan'
         self.bc.request.set_headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -707,7 +749,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      },
                                      role=role,
                                      capability='crud_member',
-                                     profile_academy=True)
+                                     profile_academy=profile_academy)
         url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
 
         data = {'role': role, 'first_name': None, 'last_name': None}
@@ -737,12 +779,17 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id__put__with_data__changing_values(self):
         """Test /academy/:id/member/:id"""
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
         role = 'konan'
         self.bc.request.set_headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      role=role,
                                      capability='crud_member',
-                                     profile_academy=True)
+                                     profile_academy=profile_academy)
         url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
 
         data = {'role': role, 'first_name': 'Lord', 'last_name': 'Valdomero'}

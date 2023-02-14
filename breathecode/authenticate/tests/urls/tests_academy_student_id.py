@@ -482,12 +482,17 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_student_id__put__with_data(self):
         """Test /academy/:id/member/:id"""
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email(),
+        }
         role = 'student'
         self.bc.request.set_headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      role=role,
                                      capability='crud_student',
-                                     profile_academy=True)
+                                     profile_academy=profile_academy)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'})
 
         response = self.client.put(url)
