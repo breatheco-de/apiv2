@@ -451,7 +451,7 @@ class MeSubscriptionView(APIView):
                                                     user=request.user)
 
         #NOTE: this is before feature/add-plan-duration branch, this will be outdated
-        plan_financings = PlanFinancing.objects.filter(pay_until__gte=now, user=request.user)
+        plan_financings = PlanFinancing.objects.filter(valid_until__gte=now, user=request.user)
 
         if subscription := request.GET.get('subscription'):
             subscriptions = subscriptions.filter(id=int(subscription))
@@ -508,6 +508,71 @@ class MeSubscriptionView(APIView):
             'subscriptions': subscription_serializer.data,
             'plan_financings': plan_financing_serializer.data,
         })
+
+
+class MeSubscriptionChargeView(APIView):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    def put(self, request, subscription_id):
+        utc_now = timezone.now()
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id, user=request.user).first()):
+            raise ValidationException(translation(request.user.language,
+                                                  en='Subscription not found',
+                                                  es='No existe la suscripción',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if subscription.status != 'PAYMENT_ISSUE' and subscription.status == 'ERROR':
+            raise ValidationException(translation(request.user.language,
+                                                  en='Nothing to charge too',
+                                                  es='No hay nada que cobrar',
+                                                  slug='nothing-to-charge'),
+                                      code=400)
+
+        if subscription.next_payment_at - timedelta(days=1) > utc_now:
+            raise ValidationException(translation(request.user.language,
+                                                  en='The subscription time is not over',
+                                                  es='El tiempo de la suscripción no ha terminado',
+                                                  slug='time-not-over'),
+                                      code=400)
+
+        tasks.charge_subscription.delay(subscription_id)
+
+        return Response({'status': 'loading'}, status=status.HTTP_202_ACCEPTED)
+
+
+class MePlanFinancingChargeView(APIView):
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    def put(self, request, plan_financing_id):
+        utc_now = timezone.now()
+
+        if not (subscription := PlanFinancing.objects.filter(id=plan_financing_id,
+                                                             user=request.user).first()):
+            raise ValidationException(translation(request.user.language,
+                                                  en='Subscription not found',
+                                                  es='No existe la suscripción',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if subscription.status != 'PAYMENT_ISSUE' and subscription.status == 'ERROR':
+            raise ValidationException(translation(request.user.language,
+                                                  en='Nothing to charge too',
+                                                  es='No hay nada que cobrar',
+                                                  slug='nothing-to-charge'),
+                                      code=400)
+
+        if subscription.next_payment_at - timedelta(days=1) > utc_now:
+            raise ValidationException(translation(request.user.language,
+                                                  en='Your current installment is not due yet',
+                                                  es='Tu cuota actual no está vencida',
+                                                  slug='installment-is-not-due'),
+                                      code=400)
+
+        tasks.charge_plan_financing.delay(plan_financing_id)
+
+        return Response({'status': 'loading'}, status=status.HTTP_202_ACCEPTED)
 
 
 class AcademySubscriptionView(APIView):
@@ -765,8 +830,8 @@ class CheckingView(APIView):
 
                 #FIXME: the service items should be bought without renewals
                 if not plan or plan.is_renewable:
-                    bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-                        bag, bag.academy.main_currency)
+                    bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = \
+                        get_amount(bag, bag.academy.main_currency)
 
                 amount = bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
                 plans = bag.plans.all()
@@ -881,6 +946,7 @@ class PayView(APIView):
                         option = plan.financing_options.filter(
                             how_many_months=bag.how_many_installments).first()
                         amount = option.monthly_price
+                        bag.monthly_price = amount
                     except:
                         raise ValidationException(translation(
                             lang,
@@ -921,7 +987,7 @@ class PayView(APIView):
                                                           slug='amount-is-too-low'),
                                               code=500)
 
-                bag.chosen_period = chosen_period or 'MONTH'
+                bag.chosen_period = chosen_period or 'NO_SET'
                 bag.status = 'PAID'
                 bag.is_recurrent = recurrent
                 bag.token = None

@@ -189,6 +189,8 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
     slug = serpy.Field()
     # description = serpy.Field()
     status = serpy.Field()
+    time_of_life = serpy.Field()
+    time_of_life_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
     service_items = serpy.MethodField()
@@ -198,6 +200,9 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
 
     def get_financing_options(self, obj):
+        if not obj.is_renewable:
+            return []
+
         return GetFinancingOptionSerializer(obj.financing_options.all(), many=True).data
 
 
@@ -237,6 +242,9 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     plans = serpy.MethodField()
     invoices = serpy.MethodField()
 
+    next_payment_at = serpy.Field()
+    valid_until = serpy.Field()
+
     def get_plans(self, obj):
         return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
 
@@ -247,8 +255,6 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
     is_refundable = serpy.Field()
-    next_payment_at = serpy.Field()
-    valid_until = serpy.Field()
 
     pay_every = serpy.Field()
     pay_every_unit = serpy.Field()
@@ -261,8 +267,8 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
 
 #NOTE: this is before feature/add-plan-duration branch, this will be outdated
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
-    paid_at = serpy.Field()
-    pay_until = serpy.Field()
+    plan_expires_at = serpy.Field()
+    monthly_price = serpy.Field()
 
 
 class GetBagSerializer(serpy.Serializer):
@@ -308,7 +314,7 @@ class ServiceItemSerializer(serializers.Serializer):
 
 
 class PlanSerializer(serializers.Serializer):
-    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit']
+    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
 
     class Meta:
         model = Plan

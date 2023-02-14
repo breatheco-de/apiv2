@@ -36,6 +36,8 @@ def format_invoice_item(data={}):
         'status': 'FULFILLED',
         'stripe_id': None,
         'user_id': 1,
+        'refund_stripe_id': None,
+        'refunded_at': None,
         **data,
     }
 
@@ -475,14 +477,16 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'),
-                         [{
-                             **self.bc.format.to_dict(model.bag),
-                             'token': None,
-                             'status': 'PAID',
-                             'expires_at': None,
-                             'how_many_installments': how_many_installments,
-                         }])
+        self.assertEqual(
+            self.bc.database.list_of('payments.Bag'),
+            [{
+                **self.bc.format.to_dict(model.bag),
+                'token': None,
+                'status': 'PAID',
+                #  'chosen_period': 'NO_SET',
+                'expires_at': None,
+                'how_many_installments': how_many_installments,
+            }])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
             format_invoice_item({
                 'amount': math.ceil(charge),

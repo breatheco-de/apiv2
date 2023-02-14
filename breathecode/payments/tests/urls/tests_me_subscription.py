@@ -90,6 +90,10 @@ def plan_serializer(self, plan, service, groups=[], permissions=[], service_item
         plan.slug,
         'status':
         plan.status,
+        'time_of_life':
+        plan.time_of_life,
+        'time_of_life_unit':
+        plan.time_of_life_unit,
         'trial_duration':
         plan.trial_duration,
         'trial_duration_unit':
@@ -113,10 +117,12 @@ def get_plan_financing_serializer(self,
         'id': plan_financing.id,
         'academy': academy_serializer(academy),
         'invoices': [invoice_serializer(self, invoice, currency, user) for invoice in invoices],
-        'paid_at': self.bc.datetime.to_iso_string(plan_financing.paid_at),
-        'pay_until': self.bc.datetime.to_iso_string(plan_financing.pay_until),
+        'valid_until': self.bc.datetime.to_iso_string(plan_financing.valid_until),
+        'next_payment_at': self.bc.datetime.to_iso_string(plan_financing.next_payment_at),
+        'plan_expires_at': self.bc.datetime.to_iso_string(plan_financing.plan_expires_at),
         'plans': [plan_serializer(self, plan, service, groups, permissions, service_items) for plan in plans],
         'status': plan_financing.status,
+        'monthly_price': plan_financing.monthly_price,
         'status_message': plan_financing.status_message,
         'user': user_serializer(user),
     }
@@ -211,7 +217,12 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items(self):
         subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
-        plan_financing = {'pay_until': UTC_NOW + timedelta(days=1)}
+        plan_financing = {
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+        }
+
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
@@ -290,7 +301,11 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_subscription(self):
         subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
-        plan_financing = {'pay_until': UTC_NOW + timedelta(days=1)}
+        plan_financing = {
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+        }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
@@ -338,7 +353,11 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_plan_financing(self):
         subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
-        plan_financing = {'pay_until': UTC_NOW + timedelta(days=1)}
+        plan_financing = {
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+        }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
@@ -386,7 +405,11 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_subscription_and_plan_financing(self):
         subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
-        plan_financing = {'pay_until': UTC_NOW + timedelta(days=1)}
+        plan_financing = {
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+        }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
@@ -451,8 +474,10 @@ class SignalTestSuite(PaymentsTestCase):
             'status': random.choice(wrong_statuses),
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
-            'pay_until': UTC_NOW + timedelta(days=1),
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
             'status': random.choice(wrong_statuses),
+            'monthly_price': random.random() * 99.99 + 0.01,
         }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -496,8 +521,10 @@ class SignalTestSuite(PaymentsTestCase):
             'status': random.choice(chosen_statuses),
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
-            'pay_until': UTC_NOW + timedelta(days=1),
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
             'status': random.choice(chosen_statuses),
+            'monthly_price': random.random() * 99.99 + 0.01,
         }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -584,8 +611,10 @@ class SignalTestSuite(PaymentsTestCase):
             'status': random.choice(chosen_statuses),
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
-            'pay_until': UTC_NOW + timedelta(days=1),
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
             'status': random.choice(chosen_statuses),
+            'monthly_price': random.random() * 99.99 + 0.01,
         }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -626,7 +655,9 @@ class SignalTestSuite(PaymentsTestCase):
             'valid_until': x,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
-            'pay_until': UTC_NOW + timedelta(days=1),
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
         }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -712,8 +743,10 @@ class SignalTestSuite(PaymentsTestCase):
             'status': random.choice(chosen_statuses),
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
-            'pay_until': UTC_NOW + timedelta(days=1),
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
             'status': random.choice(chosen_statuses),
+            'monthly_price': random.random() * 99.99 + 0.01,
         }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -755,7 +788,9 @@ class SignalTestSuite(PaymentsTestCase):
             'valid_until': x,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
-            'pay_until': UTC_NOW + timedelta(days=1),
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
         }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -843,8 +878,10 @@ class SignalTestSuite(PaymentsTestCase):
             'status': random.choice(chosen_statuses),
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
-            'pay_until': UTC_NOW + timedelta(days=1),
+            'valid_until': UTC_NOW + timedelta(days=1),
             'status': random.choice(chosen_statuses),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
         }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -886,7 +923,9 @@ class SignalTestSuite(PaymentsTestCase):
             'valid_until': x,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
-            'pay_until': UTC_NOW + timedelta(days=1),
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
         }
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
