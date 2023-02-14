@@ -8,7 +8,7 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from django.utils import timezone
 from django.db.models import Q
-from .signals import asset_slug_modified, asset_readme_modified
+from .signals import asset_slug_modified, asset_readme_modified, asset_title_modified
 from slugify import slugify
 from breathecode.assessment.models import Assessment
 
@@ -260,6 +260,7 @@ class Asset(models.Model):
     def __init__(self, *args, **kwargs):
         super(Asset, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
+        self.__old_title = self.title
         self.__old_readme_raw = self.readme_raw
 
     slug = models.SlugField(
@@ -425,12 +426,16 @@ class Asset(models.Model):
     def save(self, *args, **kwargs):
 
         slug_modified = False
+        title_modified = False
         readme_modified = False
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
             self.readme_updated_at = timezone.now()
             self.cleaning_status = 'PENDING'
+
+        if self.__old_title != self.title:
+            title_modified = True
 
         # only validate this on creation
         if self.pk is None or self.__old_slug != self.slug:
@@ -448,6 +453,7 @@ class Asset(models.Model):
 
         if slug_modified: asset_slug_modified.send(instance=self, sender=Asset)
         if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
+        if title_modified: asset_title_modified.send(instance=self, sender=Asset)
 
     def get_preview_generation_url(self):
 
