@@ -465,17 +465,21 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     f'This user is already a member of this academy as {str(already.role)}',
                     slug='already-exists')
 
-        print(data)
-        #user = User.objects.filter(id=data['user']).first()
         academy_id = data['academy'] if 'academy' in data else self.context['academy_id']
-        user = User.objects.filter(id=data['user']).first()
+        if 'user' in data:
+            user = User.objects.filter(id=data['user']).first()
+        else:
+            user = User.objects.filter(email=data['email']).first()
         #mentor = MentorProfile.objects.filter(user__id=data['user'], academy__id=academy_id).first()
         #user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id)
-        print(user)
-        profile_academy = ProfileAcademy.objects.filter(user__id=data['user'],
-                                                            academy__id=academy_id, first_name__isnull=False, \
+        if 'user' in data:
+            profile_academy = ProfileAcademy.objects.filter(user__id=data['user'],
+                                            academy__id=academy_id, first_name__isnull=False, \
                                                             last_name__isnull=False).exclude(first_name='', last_name='').first()
-
+        else:
+            profile_academy = ProfileAcademy.objects.filter(email=data['email'],
+                                            academy__id=academy_id, first_name__isnull=False, \
+                                                            last_name__isnull=False).exclude(first_name='', last_name='').first()
         if 'first_name' not in data:
             data['first_name'] = ''
         print(data['first_name'])
