@@ -32,7 +32,7 @@ class GetPriceSerializer(serpy.Serializer):
     currency = GetCurrencySmallSerializer()
 
 
-class GetAcademySerializer(serpy.Serializer):
+class GetAcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
@@ -70,7 +70,7 @@ class GetServiceSmallSerializer(serpy.Serializer):
 
     price_per_unit = serpy.Field()
 
-    # owner = GetAcademySerializer(many=False)
+    # owner = GetAcademySmallSerializer(many=False)
     private = serpy.Field()
     groups = serpy.MethodField()
 
@@ -86,7 +86,7 @@ class GetServiceSerializer(custom_serpy.Serializer):
     price_per_unit = serpy.Field()
     currency = GetCurrencySmallSerializer(many=False)
 
-    owner = GetAcademySerializer(many=False)
+    owner = GetAcademySmallSerializer(many=False)
     private = serpy.Field()
     groups = serpy.MethodField()
     cohorts = serpy.MethodField()
@@ -115,6 +115,7 @@ class GetServiceSerializer(custom_serpy.Serializer):
         cohorts = Cohort.objects.none()
 
         service = obj
+        #FIXME: this is not defined
         payment_service_schedulers = PaymentServiceScheduler.objects.filter(service=service)
 
         for schedule in payment_service_schedulers:
@@ -188,6 +189,8 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
     slug = serpy.Field()
     # description = serpy.Field()
     status = serpy.Field()
+    time_of_life = serpy.Field()
+    time_of_life_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
     service_items = serpy.MethodField()
@@ -197,6 +200,9 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
 
     def get_financing_options(self, obj):
+        if not obj.is_renewable:
+            return []
+
         return GetFinancingOptionSerializer(obj.financing_options.all(), many=True).data
 
 
@@ -206,7 +212,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     price_per_half = serpy.Field()
     price_per_year = serpy.Field()
     currency = GetCurrencySmallSerializer()
-    owner = GetAcademySerializer()
+    owner = GetAcademySmallSerializer()
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
@@ -224,32 +230,45 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     currency = GetCurrencySmallSerializer()
 
 
-class GetSubscriptionSerializer(serpy.Serializer):
-    paid_at = serpy.Field()
-    status = serpy.Field()
-    is_cancellable = serpy.Field()
-    is_refundable = serpy.Field()
-    is_recurrent = serpy.Field()
+class GetAbstractIOweYouSerializer(serpy.Serializer):
 
-    invoices = GetInvoiceSerializer(many=True)
+    id = serpy.Field()
+    status = serpy.Field()
+    status_message = serpy.Field()
+
+    user = GetUserSmallSerializer(many=False)
+    academy = GetAcademySmallSerializer(many=False)
+
+    plans = serpy.MethodField()
+    invoices = serpy.MethodField()
+
+    next_payment_at = serpy.Field()
     valid_until = serpy.Field()
-    last_renew = serpy.Field()
+
+    def get_plans(self, obj):
+        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
+
+    def get_invoices(self, obj):
+        return GetInvoiceSerializer(obj.invoices.filter(), many=True).data
+
+
+class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
+    paid_at = serpy.Field()
+    is_refundable = serpy.Field()
 
     pay_every = serpy.Field()
     pay_every_unit = serpy.Field()
-    renew_every = serpy.Field()
-    renew_every_unit = serpy.Field()
 
-    user = GetUserSmallSerializer(many=False)
-    services = GetServiceItemSerializer(many=True)
-    plans = GetPlanSerializer(many=True)
+    service_items = serpy.MethodField()
+
+    def get_service_items(self, obj):
+        return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
 
 
-class GetCreditSerializer(serpy.Serializer):
-    valid_until = serpy.Field()
-    is_free_trial = serpy.Field()
-    services = GetConsumableSerializer(many=True)
-    invoice = GetInvoiceSerializer(many=False)
+#NOTE: this is before feature/add-plan-duration branch, this will be outdated
+class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
+    plan_expires_at = serpy.Field()
+    monthly_price = serpy.Field()
 
 
 class GetBagSerializer(serpy.Serializer):
@@ -271,15 +290,6 @@ class GetBagSerializer(serpy.Serializer):
 
     def get_plans(self, obj):
         return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
-
-
-class GetCheckingSerializer(GetInvoiceSmallSerializer):
-    amount = GetServiceItemSerializer(many=True)
-    token = GetPlanSerializer(many=True)
-    expires_at = GetPlanSerializer(many=True)
-
-    services = GetServiceItemSerializer(many=True)
-    plans = GetPlanSerializer(many=True)
 
 
 class ServiceSerializer(serializers.Serializer):
@@ -304,7 +314,7 @@ class ServiceItemSerializer(serializers.Serializer):
 
 
 class PlanSerializer(serializers.Serializer):
-    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit']
+    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
 
     class Meta:
         model = Plan
