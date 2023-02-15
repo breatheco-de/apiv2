@@ -53,10 +53,11 @@ class RetryPendingLeadsTestSuite(MarketingTestCase):
     @patch('breathecode.marketing.tasks.persist_single_lead.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_without_pending_formentries(self):
-        model = self.bc.database.create(
-            form_entry=2,
-            form_entry_kwargs={'storage_status': 'PERSISTED'},
-        )
+        model = self.bc.database.create(form_entry=[{
+            'storage_status': 'PERSISTED'
+        }, {
+            'storage_status': 'PERSISTED'
+        }], )
         command = Command()
         command.handle()
 
@@ -71,10 +72,7 @@ class RetryPendingLeadsTestSuite(MarketingTestCase):
     @patch('breathecode.marketing.tasks.persist_single_lead.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_with_pending_formentries(self):
-        model = self.bc.database.create(
-            form_entry=True,
-            form_entry_kwargs={'storage_status': 'PENDING'},
-        )
+        model = self.bc.database.create(form_entry={'storage_status': 'PENDING'}, )
         command = Command()
         result = command.handle()
 
@@ -84,3 +82,26 @@ class RetryPendingLeadsTestSuite(MarketingTestCase):
                          self.bc.format.to_dict([model.form_entry]))
         self.assertEqual(tasks.persist_single_lead.delay.call_args_list,
                          [call(serialize_form_entry(model_dict))])
+
+    """
+    🔽🔽🔽 With two form entries
+    """
+
+    @patch('breathecode.marketing.tasks.persist_single_lead.delay', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_with_two_formentries(self):
+        model = self.bc.database.create(form_entry=[{
+            'storage_status': 'PENDING'
+        }, {
+            'storage_status': 'PERSISTED'
+        }], )
+        command = Command()
+        result = command.handle()
+
+        model_dict = self.bc.format.to_dict(model.form_entry)
+        serialize_model = [serialize_form_entry(dict) for dict in model_dict]
+
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'),
+                         self.bc.format.to_dict(model.form_entry))
+        self.assertEqual(tasks.persist_single_lead.delay.call_args_list,
+                         [call(serialize_form_entry(model_dict[0]))])
