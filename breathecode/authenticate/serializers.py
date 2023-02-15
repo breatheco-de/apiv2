@@ -470,8 +470,6 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             user = User.objects.filter(id=data['user']).first()
         else:
             user = User.objects.filter(email=data['email']).first()
-        #mentor = MentorProfile.objects.filter(user__id=data['user'], academy__id=academy_id).first()
-        #user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id)
         if 'user' in data:
             profile_academy = ProfileAcademy.objects.filter(user__id=data['user'],
                                             academy__id=academy_id, first_name__isnull=False, \
@@ -482,15 +480,12 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                                             last_name__isnull=False).exclude(first_name='', last_name='').first()
         if 'first_name' not in data:
             data['first_name'] = ''
-        print(data['first_name'])
         if not data['first_name'] and profile_academy:
 
             data['first_name'] = profile_academy.first_name
-        print(data['first_name'])
         if not data['first_name'] and user:
 
             data['first_name'] = user.first_name
-        print(data['first_name'])
         if not data['first_name']:
             raise ValidationException('Unable to find first name on this user', code=400)
 
@@ -507,20 +502,6 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
         if not data['last_name']:
             raise ValidationException('Unable to find last name on this user', code=400)
-
-        # if 'phone' not in data:
-        #     data['phone'] = ''
-
-        # if not data['phone'] and profile_academy:
-
-        #     data['phone'] = profile_academy.phone
-
-        # if not data['phone']:
-
-        #     data['phone'] = user.phone
-
-        # if not data['phone']:
-        #     raise ValidationException('Unable to find first phone on this user', code=400)
 
         return data
 
