@@ -5,6 +5,9 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from django.core.validators import RegexValidator
+from breathecode.admissions.models import Syllabus
+from breathecode.utils.validators.language import validate_language_code
+from django import forms
 
 __all__ = [
     'ActiveCampaignAcademy', 'AcademyAlias', 'Automation', 'Tag', 'Contact', 'FormEntry', 'ShortLink',
@@ -663,3 +666,55 @@ class UTMField(models.Model):
 
     def __str__(self):
         return f'{self.slug}'
+
+
+ACTIVE = 'ACTIVE'
+DELETED = 'DELETED'
+ARCHIVED = 'ARCHIVED'
+COURSE_STATUS = (
+    (ACTIVE, 'Active'),
+    (DELETED, 'Deleted'),
+    (ARCHIVED, 'Archived'),
+)
+
+PRIVATE = 'PRIVATE'
+UNLISTED = 'UNLISTED'
+PUBLIC = 'PUBLIC'
+VISIBILITY_STATUS = (
+    (PRIVATE, 'Private'),
+    (UNLISTED, 'Unlisted'),
+    (PUBLIC, 'Public'),
+)
+
+
+class Course(models.Model):
+    slug = models.SlugField(max_length=150, unique=True)
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+
+    status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
+    visibility = models.CharField(max_length=15, choices=VISIBILITY_STATUS, default=PRIVATE)
+
+    icon_url = models.URLField(help_text='Image icon to show on website')
+    technologies = models.SlugField(max_length=150, blank=False)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.slug}'
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+class CourseTranslation(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    lang = models.CharField(max_length=5, validators=[validate_language_code])
+    title = models.CharField(max_length=60)
+    description = models.CharField(max_length=255)
+
+    def __str__(self) -> str:
+        return f'{self.lang}: {self.title}'
