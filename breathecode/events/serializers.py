@@ -358,8 +358,11 @@ class EventTypeSerializerMixin(serializers.ModelSerializer):
         exclude = ('visibility_settings', )
 
     def validate(self, data: dict[str, Any]):
-        if 'icon_url' not in data:
-            raise ValidationException('Icon Url is required', slug='icon_url_required')
+        if ('visibility_settings' in data):
+            del data['visibility_settings']
+
+        # if 'icon_url' not in data:
+        #     raise ValidationException('Icon Url is required', slug='icon_url_required')
 
         return data
 

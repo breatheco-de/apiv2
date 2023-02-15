@@ -208,7 +208,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         response = self.client.get(url)
         json = response.json()
-        print(json)
+
         expected = [get_serializer(model.event_type, model.academy, model.city)]
 
         self.assertEqual(json, expected)
@@ -216,4 +216,82 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(self.all_event_type_dict(), [{
             **self.model_to_dict(model, 'event_type'),
+        }])
+
+    # def test_post_event_type_without_icon_url(self):
+    #     self.bc.request.set_headers(academy=1)
+
+    #     model = self.generate_models(authenticate=True,
+    #                                  academy=1,
+    #                                  profile_academy=1,
+    #                                  role='potato',
+    #                                  capability='crud_event_type')
+    #     data = {
+    #         'slug': 'potato',
+    #         'name': 'Potato',
+    #         'description': 'Potato',
+    #         'lang': 'en'
+    #     }
+
+    #     url = reverse_lazy('events:academy_eventype')
+
+    #     response = self.client.post(url, data)
+
+    #     json = response.json()
+
+    #     expected = {
+    #         'id': 1,
+    #         'academy': 1,
+    #         'allow_shared_creation': False,
+    #         'visibility_settings': [],
+    #         **data
+    #     }
+
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, 201)
+
+    #     self.assertEqual(self.all_event_type_dict(), [{
+    #         'id': 1,
+    #         'academy_id': 1,
+    #         'allow_shared_creation': False,
+    #         **data
+    #     }])
+
+    def test_post_event_type(self):
+        self.bc.request.set_headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     academy=1,
+                                     profile_academy=1,
+                                     role='potato',
+                                     capability='crud_event_type')
+        data = {
+            'slug': 'potato',
+            'name': 'Potato',
+            'description': 'Potato',
+            'icon_url': 'https://www.google.com',
+            'lang': 'en'
+        }
+
+        url = reverse_lazy('events:academy_eventype')
+
+        response = self.client.post(url, data)
+
+        json = response.json()
+
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+
+        del json['created_at']
+        del json['updated_at']
+        expected = {'id': 1, 'academy': 1, 'allow_shared_creation': False, 'visibility_settings': [], **data}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 201)
+
+        self.assertEqual(self.all_event_type_dict(), [{
+            'id': 1,
+            'academy_id': 1,
+            'allow_shared_creation': False,
+            **data
         }])
