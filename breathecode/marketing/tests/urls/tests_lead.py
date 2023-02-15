@@ -64,6 +64,9 @@ def post_serializer(data={}):
         'ac_contact_id': None,
         'ac_deal_id': None,
         'ac_expected_cohort': None,
+        'ac_deal_owner_id': None,
+        'ac_deal_owner_full_name': None,
+        'ac_expected_cohort_date': None,
         'won_at': None,
         'contact': None,
         'academy': None,
@@ -125,6 +128,9 @@ def form_entry_field(data={}):
         'academy_id': None,
         'user_id': None,
         'lead_generation_app_id': None,
+        'ac_deal_owner_full_name': None,
+        'ac_deal_owner_id': None,
+        'ac_expected_cohort_date': None,
         **data,
     }
 

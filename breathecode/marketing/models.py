@@ -405,6 +405,7 @@ class FormEntry(models.Model):
     lead_type = models.CharField(max_length=15, choices=LEAD_TYPE, null=True, default=None)
 
     deal_status = models.CharField(max_length=15, choices=DEAL_STATUS, default=None, null=True, blank=True)
+
     sentiment = models.CharField(max_length=15, choices=DEAL_SENTIMENT, default=None, null=True, blank=True)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
@@ -424,6 +425,13 @@ class FormEntry(models.Model):
                                           default=None,
                                           blank=True,
                                           help_text='Which cohort is this student expecting to join')
+
+    ac_expected_cohort_date = models.CharField(max_length=100,
+                                               null=True,
+                                               default=None,
+                                               blank=True,
+                                               help_text='Which date is this student expecting to join')
+
     ac_contact_id = models.CharField(max_length=20,
                                      null=True,
                                      default=None,
@@ -434,6 +442,10 @@ class FormEntry(models.Model):
                                   default=None,
                                   blank=True,
                                   help_text='Active Campaign Deal ID')
+
+    ac_deal_owner_id = models.CharField(max_length=15, default=None, null=True, blank=True)
+    ac_deal_owner_full_name = models.CharField(max_length=150, default=None, null=True, blank=True)
+
     won_at = models.DateTimeField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

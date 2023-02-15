@@ -42,6 +42,9 @@ def deal_update(self, webhook, payload: dict, acp_ids):
             entry.won_at = None
 
         entry.deal_status = status[payload['deal[status]']]
+        entry.ac_deal_owner_id = status[payload['deal[owner]']]
+        entry.ac_deal_owner_full_name = status[payload['deal[owner_firstname]']] + ' ' + status[
+            payload['deal[owner_lastname]']]
 
     if entry.academy is not None:
         logger.debug(f'looking for deal on activecampaign api')
@@ -49,6 +52,8 @@ def deal_update(self, webhook, payload: dict, acp_ids):
         fields = self.get_deal_customfields(entry.ac_deal_id)
         if acp_ids['expected_cohort'] in fields:
             entry.ac_expected_cohort = fields[acp_ids['expected_cohort']]
+        if acp_ids['expected_cohort_date'] in fields:
+            entry.ac_expected_cohort_date = fields[acp_ids['expected_cohort_date']]
     else:
         logger.debug(f'No academy for EntryForm, ignoring deal custom fields')
 
