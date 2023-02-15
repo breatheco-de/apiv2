@@ -129,8 +129,12 @@ class EventType(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
+        try:
+            self.full_clean()
+            super().save(*args, **kwargs)
+        except:
+            if self.icon_url is None:
+                raise ValidationException('Icon url is required', 400)
 
 
 EVENT_STATUS = (

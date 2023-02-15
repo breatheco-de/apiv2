@@ -361,9 +361,6 @@ class EventTypeSerializerMixin(serializers.ModelSerializer):
         if ('visibility_settings' in data):
             del data['visibility_settings']
 
-        # if 'icon_url' not in data:
-        #     raise ValidationException('Icon Url is required', slug='icon_url_required')
-
         return data
 
 
