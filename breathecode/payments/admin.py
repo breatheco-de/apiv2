@@ -100,7 +100,7 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
 
 @admin.register(PlanFinancing)
 class PlanFinancingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'paid_at', 'pay_until', 'status', 'user')
+    list_display = ('id', 'next_payment_at', 'valid_until', 'status', 'user')
     list_filter = ['status']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
 
@@ -125,7 +125,7 @@ class PlanServiceItemHandlerAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceStockScheduler)
 class ServiceStockSchedulerAdmin(admin.ModelAdmin):
-    list_display = ('id', 'subscription', 'service_item', 'plan_financing', 'last_renew')
+    list_display = ('id', 'subscription', 'service_item', 'plan_financing', 'valid_until')
 
     def subscription(self, obj):
         if obj.subscription_handler:

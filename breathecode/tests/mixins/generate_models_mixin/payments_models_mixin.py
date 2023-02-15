@@ -31,6 +31,8 @@ class PaymentsModelsMixin(ModelsMixin):
                                  service_item_feature=False,
                                  financing_option=False,
                                  consumption_session=False,
+                                 plan_offer=False,
+                                 plan_offer_translation=False,
                                  models={},
                                  **kwargs):
         """Generate models"""
@@ -116,7 +118,7 @@ class PaymentsModelsMixin(ModelsMixin):
             models['financing_option'] = create_models(financing_option, 'payments.FinancingOption', **kargs)
 
         if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation)
-                                     or is_valid(plan_service_item)):
+                                     or is_valid(plan_service_item) or is_valid(plan_offer)):
             kargs = {}
 
             if 'currency' in models:
@@ -141,34 +143,28 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['plan_translation'] = create_models(plan_translation, 'payments.PlanTranslation', **kargs)
 
-        if not 'consumable' in models and (is_valid(consumable) or is_valid(consumption_session)):
+        if not 'plan_offer' in models and (is_valid(plan_translation) or is_valid(plan_offer_translation)):
             kargs = {}
 
-            if 'service_item' in models:
-                kargs['service_item'] = just_one(models['service_item'])
+            if 'plan' in models:
+                kargs['original_plan'] = just_one(models['plan'])
 
-            if 'user' in models:
-                kargs['user'] = just_one(models['user'])
+            if 'syllabus' in models:
+                kargs['from_syllabus'] = get_list(models['syllabus'])
 
-            if 'cohort' in models:
-                kargs['cohort'] = just_one(models['cohort'])
+            if 'plan' in models:
+                kargs['suggested_plans'] = get_list(models['plan'])
 
-            if 'mentorship_service' in models:
-                kargs['mentorship_service'] = just_one(models['mentorship_service'])
+            models['plan_offer'] = create_models(plan_offer, 'payments.PlanOffer', **kargs)
 
-            models['consumable'] = create_models(consumable, 'payments.Consumable', **kargs)
-
-        if not 'consumption_session' in models and is_valid(consumption_session):
+        if not 'plan_offer_translation' in models and is_valid(plan_offer_translation):
             kargs = {}
 
-            if 'consumable' in models:
-                kargs['consumable'] = just_one(models['consumable'])
+            if 'offer' in models:
+                kargs['offer'] = just_one(models['plan_offer'])
 
-            if 'user' in models:
-                kargs['user'] = just_one(models['user'])
-
-            models['consumption_session'] = create_models(consumption_session, 'payments.ConsumptionSession',
-                                                          **kargs)
+            models['plan_offer_translation'] = create_models(plan_offer_translation,
+                                                             'payments.PlanOfferTranslation', **kargs)
 
         if not 'bag' in models and (is_valid(bag) or is_valid(invoice)):
             kargs = {}
@@ -224,6 +220,18 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['subscription'] = create_models(subscription, 'payments.Subscription', **kargs)
 
+        if not 'mentorship_service_set' in models and is_valid(mentorship_service_set):
+            kargs = {}
+
+            if 'mentorship_service' in models:
+                kargs['mentorship_services'] = get_list(models['mentorship_service'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['mentorship_service_set'] = create_models(mentorship_service_set,
+                                                             'payments.MentorshipServiceSet', **kargs)
+
         if not 'subscription_service_item' in models and is_valid(subscription_service_item):
             kargs = {}
 
@@ -232,6 +240,12 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'service_item' in models:
                 kargs['service_item'] = just_one(models['service_item'])
+
+            if 'mentorship_service_set' in models:
+                kargs['mentorship_service_set'] = just_one(models['mentorship_service_set'])
+
+            if 'cohort' in models:
+                kargs['cohorts'] = get_list(models['cohort'])
 
             models['subscription_service_item'] = create_models(subscription_service_item,
                                                                 'payments.SubscriptionServiceItem', **kargs)
@@ -253,17 +267,34 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['plan_financing'] = create_models(plan_financing, 'payments.PlanFinancing', **kargs)
 
-        if not 'mentorship_service_set' in models and is_valid(mentorship_service_set):
+        if not 'consumable' in models and (is_valid(consumable) or is_valid(consumption_session)):
             kargs = {}
 
+            if 'service_item' in models:
+                kargs['service_item'] = just_one(models['service_item'])
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            if 'cohort' in models:
+                kargs['cohort'] = just_one(models['cohort'])
+
             if 'mentorship_service' in models:
-                kargs['mentorship_services'] = get_list(models['mentorship_service'])
+                kargs['mentorship_service'] = just_one(models['mentorship_service'])
 
-            if 'academy' in models:
-                kargs['academy'] = just_one(models['academy'])
+            models['consumable'] = create_models(consumable, 'payments.Consumable', **kargs)
 
-            models['mentorship_service_set'] = create_models(mentorship_service_set,
-                                                             'payments.MentorshipServiceSet', **kargs)
+        if not 'consumption_session' in models and is_valid(consumption_session):
+            kargs = {}
+
+            if 'consumable' in models:
+                kargs['consumable'] = just_one(models['consumable'])
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            models['consumption_session'] = create_models(consumption_session, 'payments.ConsumptionSession',
+                                                          **kargs)
 
         if not 'plan_service_item' in models and (is_valid(plan_service_item)
                                                   or is_valid(plan_service_item_handler)):
@@ -306,7 +337,7 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['subscription_handler'] = just_one(models['subscription_service_item'])
 
             if 'plan_service_item' in models:
-                kargs['plan_handler'] = just_one(models['plan_service_item'])
+                kargs['plan_handler'] = just_one(models['plan_service_item_handler'])
 
             if 'consumable' in models:
                 kargs['consumables'] = get_list(models['consumable'])
