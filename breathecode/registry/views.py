@@ -55,7 +55,7 @@ def forward_asset_url(request, asset_slug=None):
 
         if not asset.external and asset.asset_type == 'LESSON':
             slug = Path(asset.readme_url).stem
-            url = 'https://content.breatheco.de/en/lesson/' + slug + '?plain=true'
+            url = 'https://4geeks.com/en/lesson/' + slug + '?plain=true'
             if ENV == 'development':
                 return render_message(request, 'Redirect to: ' + url)
             else:

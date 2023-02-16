@@ -136,7 +136,7 @@ def send_question(user, cohort=None):
         'SUBJECT': question['title'],
         'ANSWER_ID': answer.id,
         'BUTTON': strings[answer.cohort.language.lower()]['button_label'],
-        'LINK': f'https://nps.breatheco.de/{answer.id}?token={token.key}',
+        'LINK': f'https://nps.4geeks.com/{answer.id}?token={token.key}',
     }
 
     if user.email:

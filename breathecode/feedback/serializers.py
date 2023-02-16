@@ -106,7 +106,7 @@ class SurveySmallSerializer(serpy.Serializer):
     public_url = serpy.MethodField()
 
     def get_public_url(self, obj):
-        return 'https://nps.breatheco.de/survey/' + str(obj.id)
+        return 'https://nps.4geeks.com/survey/' + str(obj.id)
 
 
 class BigAnswerSerializer(serpy.Serializer):
@@ -190,7 +190,7 @@ class SurveySerializer(serializers.ModelSerializer):
     public_url = serializers.SerializerMethodField()
 
     def get_public_url(self, obj):
-        return 'https://nps.breatheco.de/survey/' + str(obj.id)
+        return 'https://nps.4geeks.com/survey/' + str(obj.id)
 
     class Meta:
         model = Survey

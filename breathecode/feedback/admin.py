@@ -184,7 +184,7 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     raw_id_fields = ['user', 'cohort', 'mentor']
 
     def answer_url(self, obj):
-        url = 'https://nps.breatheco.de/' + str(obj.id)
+        url = 'https://nps.4geeks.com/' + str(obj.id)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open answer</a>")
 
     # def entity(self, object):
@@ -263,7 +263,7 @@ class SurveyAdmin(admin.ModelAdmin):
                ] + change_field(['PENDING', 'SENT', 'PARTIAL', 'FATAL'], name='status')
 
     def survey_url(self, obj):
-        url = 'https://nps.breatheco.de/survey/' + str(obj.id)
+        url = 'https://nps.4geeks.com/survey/' + str(obj.id)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>")
 
 
