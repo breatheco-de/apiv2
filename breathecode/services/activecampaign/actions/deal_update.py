@@ -42,9 +42,8 @@ def deal_update(self, webhook, payload: dict, acp_ids):
             entry.won_at = None
 
         entry.deal_status = status[payload['deal[status]']]
-        entry.ac_deal_owner_id = status[payload['deal[owner]']]
-        entry.ac_deal_owner_full_name = status[payload['deal[owner_firstname]']] + ' ' + status[
-            payload['deal[owner_lastname]']]
+        entry.ac_deal_owner_id = payload['deal[owner]']
+        entry.ac_deal_owner_full_name = payload['deal[owner_firstname]'] + ' ' + payload['deal[owner_lastname]']
 
     if entry.academy is not None:
         logger.debug(f'looking for deal on activecampaign api')
