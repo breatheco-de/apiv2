@@ -496,12 +496,47 @@ class Asset(models.Model):
         return readme
 
     def parse(self, readme, format='markdown', remove_frontmatter=False):
+
+        readme = {
+            'clean': self.readme,
+            'decoded': Asset.decode(self.readme),
+            'raw': self.readme_raw,
+            'decoded_raw': Asset.decode(self.readme_raw)
+        }
+
+        if not isinstance(readme, dict):
+            readme = {}
+
+        if 'decoded' not in readme:
+            readme['decoded'] = Asset.decode(self.readme)
+
+        if 'clean' not in readme:
+            readme['clean'] = self.readme
+
+        if 'raw' not in readme:
+            readme['raw'] = self.readme_raw
+
+        if 'decoded_raw' not in readme:
+            readme['decoded_raw'] = Asset.decode(self.readme_raw)
+
         if format == 'markdown':
-            _data = frontmatter.loads(readme['decoded'])
-            readme['frontmatter'] = _data.metadata
-            readme['frontmatter']['format'] = format
-            readme['decoded'] = _data.content
-            readme['html'] = markdown.markdown(_data.content, extensions=['markdown.extensions.fenced_code'])
+            try:
+                _data = frontmatter.loads(readme['decoded'])
+                readme['frontmatter'] = _data.metadata
+                readme['frontmatter']['format'] = format
+                readme['decoded'] = _data.content
+                readme['html'] = markdown.markdown(_data.content,
+                                                   extensions=['markdown.extensions.fenced_code'])
+            except Exception:
+                readme['html'] = markdown.markdown(_data.content,
+                                                   extensions=['markdown.extensions.fenced_code'])
+                AssetErrorLog(slug=AssetErrorLog.README_SYNTAX,
+                              path=self.slug,
+                              asset_type=self.asset_type,
+                              asset=self,
+                              status_text='The frontmatter has failed.').save()
+            return readme
+
         if format == 'notebook':
             import nbformat
             from nbconvert import HTMLExporter

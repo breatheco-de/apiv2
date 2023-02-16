@@ -14,7 +14,7 @@ urlpatterns = [
     path('asset/preview/<str:asset_slug>', render_preview_html),
     path('asset/gitpod/<str:asset_slug>', forward_asset_url),
     path('asset/<str:asset_slug>/github/config', get_config),
-    path('asset/<str:asset_slug>.<str:extension>', render_readme),
+    path('asset/<str:asset_slug>.<str:extension>', render_readme, name='asset_slug_extension'),
     path('asset/<str:asset_slug>', AssetView.as_view()),
     path('academy/asset', AcademyAssetView.as_view()),
     path('academy/asset/comment', AcademyAssetCommentView.as_view()),

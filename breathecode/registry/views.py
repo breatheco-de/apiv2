@@ -251,7 +251,7 @@ def render_readme(request, asset_slug, extension='raw'):
 
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
-        raise ValidationException('Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
+        raise ValidationException(f'Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
     is_parse = True
     if asset.asset_type == 'QUIZ':
