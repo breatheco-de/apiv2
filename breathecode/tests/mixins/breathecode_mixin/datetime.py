@@ -1,6 +1,8 @@
 from __future__ import annotations
-from datetime import timedelta
+from datetime import datetime, timedelta
 from rest_framework.test import APITestCase
+
+from breathecode.utils.datetime_interger import DatetimeInteger
 from . import interfaces
 
 from ..datetime_mixin import DatetimeMixin
@@ -33,4 +35,24 @@ class Datetime:
         self.bc.datetime.from_timedelta(delta)  # equals to '777.0'
         ```
         """
+
         return str(delta.total_seconds())
+
+    def to_datetime_integer(self, timezone: str, date: datetime) -> int:
+        """
+        Transform datetime to datetime integer.
+
+        Usage:
+
+        ```py
+        utc_now = timezone.now()
+
+        # date
+        date = datetime.datetime(2022, 3, 21, 2, 51, 55, 068)
+
+        # equals to 202203210751
+        self.bc.datetime.to_datetime_integer('america/new_york', date)
+        ```
+        """
+
+        return DatetimeInteger.from_datetime(timezone, date)

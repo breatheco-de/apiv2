@@ -8,9 +8,10 @@ from django.core.validators import URLValidator
 from .tasks import async_pull_from_github
 from breathecode.services.seo import SEOAnalyzer
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
-                     AssetKeyword, AssetComment, SEOReport)
+                     AssetKeyword, AssetComment, SEOReport, OriginalityScan)
 
-from .actions import AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github, clean_asset_readme
+from .actions import (AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github,
+                      clean_asset_readme, scan_asset_originality)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
@@ -24,7 +25,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
                           PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
-                          KeywordClusterMidSerializer, SEOReportSerializer)
+                          KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -349,7 +350,7 @@ class AssetView(APIView, GenerateLookupsMixin):
     List all snippets, or create a new snippet.
     """
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(cache=AssetCache, sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(cache=AssetCache, sort='-published_at', paginate=True)
 
     def get(self, request, asset_slug=None):
         handler = self.extensions(request)
@@ -421,7 +422,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         if 'technologies' in self.request.GET:
             param = self.request.GET.get('technologies')
-            lookup['technologies__in'] = [p.lower() for p in param.split(',')]
+            lookup['technologies__slug__in'] = [p.lower() for p in param.split(',')]
 
         if 'keywords' in self.request.GET:
             param = self.request.GET.get('keywords')
@@ -456,7 +457,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         need_translation = self.request.GET.get('need_translation', False)
         if need_translation == 'true':
-            items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
+            items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1)
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -486,7 +487,7 @@ class AcademyAssetActionView(APIView):
             raise ValidationException(f'This asset {asset_slug} does not exist for this academy {academy_id}',
                                       404)
 
-        possible_actions = ['test', 'pull', 'push', 'analyze_seo', 'clean']
+        possible_actions = ['test', 'pull', 'push', 'analyze_seo', 'clean', 'originality']
         if action_slug not in possible_actions:
             raise ValidationException(f'Invalid action {action_slug}')
         try:
@@ -509,9 +510,17 @@ class AcademyAssetActionView(APIView):
             elif action_slug == 'analyze_seo':
                 report = SEOAnalyzer(asset)
                 report.start()
+            elif action_slug == 'originality':
+
+                if asset.asset_type not in ['ARTICLE', 'LESSON']:
+                    raise ValidationException(f'Only lessons and articles can be scanned for originality')
+                scan_asset_originality(asset)
 
         except Exception as e:
             logger.exception(e)
+            if isinstance(e, Exception):
+                raise ValidationException(str(e))
+
             raise ValidationException('; '.join(
                 [k.capitalize() + ': ' + ''.join(v) for k, v in e.message_dict.items()]))
 
@@ -596,11 +605,35 @@ class AcademyAssetSEOReportView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
 
+# Create your views here.
+class AcademyAssetOriginalityView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_asset')
+    def get(self, request, asset_slug, academy_id):
+
+        handler = self.extensions(request)
+
+        scans = OriginalityScan.objects.filter(asset__slug=asset_slug)
+        if scans.count() == 0:
+            raise ValidationException(f'No originality scans found for asset {asset_slug}',
+                                      status.HTTP_404_NOT_FOUND)
+
+        scans = scans.order_by('-created_at')
+
+        reports = handler.queryset(scans)
+        serializer = OriginalityScanSerializer(scans, many=True)
+        return handler.response(serializer.data)
+
+
 class AcademyAssetView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    extensions = APIViewExtensions(cache=AssetCache, sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(cache=AssetCache, sort='-published_at', paginate=True)
 
     @capable_of('read_asset')
     def get(self, request, asset_slug=None, academy_id=None):
@@ -739,8 +772,12 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
     @capable_of('crud_asset')
     def put(self, request, asset_slug=None, academy_id=None):
 
-        many = isinstance(request.data, list)
-        if not many:
+        data_list = request.data
+        if not isinstance(request.data, list):
+
+            # make it a list
+            data_list = [request.data]
+
             if asset_slug is None:
                 raise ValidationException('Missing asset_slug')
 
@@ -749,9 +786,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 raise ValidationException(
                     f'This asset {asset_slug} does not exist for this academy {academy_id}', 404)
 
-            data = {
-                **request.data,
-            }
+            data_list[0]['id'] = asset.id
+
+        all_assets = []
+        for data in data_list:
 
             if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
                     data['technologies'][0], str):
@@ -774,38 +812,40 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 data['all_translations'] = Asset.objects.filter(
                     slug__in=data['all_translations']).values_list('pk', flat=True)
 
+            if 'id' not in data:
+                raise ValidationException(f'Cannot determine asset id', slug='without-id')
+
+            instance = Asset.objects.filter(id=data['id'], academy__id=academy_id).first()
+            if not instance:
+                raise ValidationException(f'Asset({data["id"]}) does not exist on this academy',
+                                          code=404,
+                                          slug='not-found')
+            all_assets.append(instance)
+
+        all_serializers = []
+        index = -1
+        for data in data_list:
+            index += 1
+            serializer = AssetPUTSerializer(all_assets[index],
+                                            data=data,
+                                            context={
+                                                'request': request,
+                                                'academy_id': academy_id
+                                            })
+            all_serializers.append(serializer)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        all_assets = []
+        for serializer in all_serializers:
+            all_assets.append(serializer.save())
+
+        if isinstance(request.data, list):
+            serializer = AcademyAssetSerializer(all_assets, many=True)
         else:
-            data = request.data
-            asset = []
-            index = -1
-            for x in request.data:
-                index = index + 1
+            serializer = AcademyAssetSerializer(all_assets.pop(), many=False)
 
-                if 'id' not in x:
-                    raise ValidationException('Cannot determine asset in '
-                                              f'index {index}',
-                                              slug='without-id')
-
-                instance = Asset.objects.filter(id=x['id'], academy__id=academy_id).first()
-
-                if not instance:
-                    raise ValidationException(f'Asset({x["id"]}) does not exist on this academy',
-                                              code=404,
-                                              slug='not-found')
-                asset.append(instance)
-
-        serializer = AssetPUTSerializer(asset,
-                                        data=data,
-                                        context={
-                                            'request': request,
-                                            'academy_id': academy_id
-                                        },
-                                        many=many)
-        if serializer.is_valid():
-            serializer.save()
-            serializer = AcademyAssetSerializer(asset, many=many)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_asset')
     def post(self, request, academy_id=None):

@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
@@ -44,6 +45,10 @@ def get_serializer(self, event, event_type, academy, user, data={}):
         'venue': event.venue,
         **data,
     }
+
+
+def extract_starting_at(d):
+    return datetime.strptime(str(d.starting_at), '%Y-%m-%d %H:%M:%S%z')
 
 
 class AcademyEventTestSuite(EventTestCase):
@@ -159,6 +164,7 @@ class AcademyEventTestSuite(EventTestCase):
         for event_type_visibility_setting, event_type, cohort in cases:
             model = self.bc.database.create(user=1,
                                             event=2,
+                                            event_kwargs={'status': 'ACTIVE'},
                                             event_type=event_type,
                                             academy=2,
                                             cohort=cohort,
@@ -168,9 +174,10 @@ class AcademyEventTestSuite(EventTestCase):
 
             response = self.client.get(url)
             json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
             expected = [
                 get_serializer(self, event, model.event_type, model.academy[0], model.user)
-                for event in reversed(model.event)
+                for event in ordered_events
             ]
 
             self.assertEqual(json, expected)
@@ -247,6 +254,7 @@ class AcademyEventTestSuite(EventTestCase):
         for event_type_visibility_setting, event_type, cohort in cases:
             model = self.bc.database.create(user=1,
                                             event=2,
+                                            event_kwargs={'status': 'ACTIVE'},
                                             event_type=event_type,
                                             academy=2,
                                             cohort=cohort,
@@ -256,9 +264,10 @@ class AcademyEventTestSuite(EventTestCase):
 
             response = self.client.get(url)
             json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
             expected = [
                 get_serializer(self, event, model.event_type, model.academy[0], model.user)
-                for event in reversed(model.event)
+                for event in ordered_events
             ]
 
             self.assertEqual(json, expected)
@@ -337,6 +346,7 @@ class AcademyEventTestSuite(EventTestCase):
         for event_type_visibility_setting, event_type, cohort in cases:
             model = self.bc.database.create(user=1,
                                             event=2,
+                                            event_kwargs={'status': 'ACTIVE'},
                                             event_type=event_type,
                                             academy=2,
                                             cohort=cohort,
@@ -349,10 +359,64 @@ class AcademyEventTestSuite(EventTestCase):
 
             response = self.client.get(url)
             json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
             expected = [
                 get_serializer(self, event, model.event_type, model.academy[0], model.user)
-                for event in reversed(model.event)
+                for event in ordered_events
             ]
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, 200)
+
+    def test_one_item__status_not_active(self):
+        cases = [
+            (
+                {
+                    'academy_id': 1,
+                    'cohort_id': None,
+                    'syllabus_id': 1,
+                },
+                {
+                    'academy_id': 1,
+                    'allow_shared_creation': False,
+                },
+                {
+                    'academy_id': 1,
+                },
+            ),
+            (
+                {
+                    'academy_id': 4,
+                    'cohort_id': None,
+                    'syllabus_id': 2,
+                },
+                {
+                    'academy_id': 3,
+                    'allow_shared_creation': True,
+                },
+                {
+                    'academy_id': 4,
+                },
+            ),
+        ]
+        self.headers(academy=1)
+        url = reverse_lazy('events:me')
+        for event_type_visibility_setting, event_type, cohort in cases:
+            model = self.bc.database.create(user=1,
+                                            event=2,
+                                            event_type=event_type,
+                                            academy=2,
+                                            cohort=cohort,
+                                            cohort_user=1,
+                                            syllabus=1,
+                                            syllabus_version=1,
+                                            event_type_visibility_setting=event_type_visibility_setting)
+
+            self.bc.request.authenticate(model.user)
+
+            response = self.client.get(url)
+            json = response.json()
+            expected = []
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, 200)

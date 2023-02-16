@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
 from breathecode.payments import tasks
+from breathecode.payments.actions import calculate_relative_delta
 
 from ...tasks import build_service_stock_scheduler_from_subscription
 
@@ -19,9 +20,9 @@ UTC_NOW = timezone.now()
 def service_stock_scheduler_item(data={}):
     return {
         'id': 1,
-        'last_renew': None,
         'plan_handler_id': None,
         'subscription_handler_id': None,
+        'valid_until': None,
         **data,
     }
 
@@ -52,7 +53,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     def test_subscription_exists(self):
         model = self.bc.database.create(subscription=1)
 
@@ -72,10 +73,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             self.bc.format.to_dict(model.subscription),
         ])
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1)])
+        self.assertEqual(tasks.renew_subscription_consumables.delay.call_args_list, [call(1)])
         self.bc.check.queryset_with_pks(model.subscription.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.subscription.plans.all(), [])
-        # self.bc.check.queryset_with_pks(model.subscription.service_stock_schedulers.all(), [])
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [])
 
@@ -85,10 +85,16 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_with_service_item(self):
-        model = self.bc.database.create(subscription=1, service_item=1, subscription_service_item=1)
+        subscription = {
+            'next_payment_at': UTC_NOW + relativedelta(months=1),
+            'valid_until': UTC_NOW + relativedelta(months=2),
+        }
+        model = self.bc.database.create(subscription=subscription,
+                                        service_item=1,
+                                        subscription_service_item=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -106,14 +112,17 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             self.bc.format.to_dict(model.subscription),
         ])
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1)])
+        self.assertEqual(tasks.renew_subscription_consumables.delay.call_args_list, [call(1)])
         self.bc.check.queryset_with_pks(model.subscription.service_items.all(), [1])
         self.bc.check.queryset_with_pks(model.subscription.plans.all(), [])
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [
             service_stock_scheduler_item({
-                'last_renew': UTC_NOW,
-                'subscription_handler_id': 1,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item.renew_at, model.service_item.renew_at_unit),
+                'subscription_handler_id':
+                1,
             }),
         ])
 
@@ -123,12 +132,15 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_with_plan(self):
-        subscription = {'service_items': []}
+        subscription = {
+            'next_payment_at': UTC_NOW + relativedelta(months=1),
+            'valid_until': UTC_NOW + relativedelta(months=2),
+        }
 
-        model = self.bc.database.create_v2(subscription=1, plan=1, plan_service_item_handler=1)
+        model = self.bc.database.create(subscription=subscription, plan=1, plan_service_item=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -146,14 +158,17 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             self.bc.format.to_dict(model.subscription),
         ])
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1)])
+        self.assertEqual(tasks.renew_subscription_consumables.delay.call_args_list, [call(1)])
         self.bc.check.queryset_with_pks(model.subscription.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.subscription.plans.all(), [1])
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [
             service_stock_scheduler_item({
-                'plan_handler_id': 1,
-                'last_renew': UTC_NOW,
+                'plan_handler_id':
+                1,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item.renew_at, model.service_item.renew_at_unit),
             }),
         ])
 
@@ -163,13 +178,26 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_with_plan_and_service_item(self):
-        model = self.bc.database.create(subscription=1,
-                                        subscription_service_item=1,
-                                        plan=1,
-                                        plan_service_item_handler=1)
+        subscription = {
+            'next_payment_at': UTC_NOW + relativedelta(months=1),
+            'valid_until': UTC_NOW + relativedelta(months=2),
+        }
+        subscription_service_items = [{'service_item_id': n} for n in range(1, 3)]
+        plan_service_items = [{
+            'plan_id': 1,
+            'service_item_id': n
+        } for n in range(3, 5)] + [{
+            'plan_id': 2,
+            'service_item_id': n
+        } for n in range(5, 7)]
+        model = self.bc.database.create(subscription=subscription,
+                                        subscription_service_item=subscription_service_items,
+                                        plan=2,
+                                        plan_service_item=plan_service_items,
+                                        service_item=6)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -187,19 +215,63 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             self.bc.format.to_dict(model.subscription),
         ])
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1)])
-        self.bc.check.queryset_with_pks(model.subscription.service_items.all(), [1])
-        self.bc.check.queryset_with_pks(model.subscription.plans.all(), [1])
+        self.assertEqual(tasks.renew_subscription_consumables.delay.call_args_list, [call(1)])
+        self.bc.check.queryset_with_pks(model.subscription.service_items.all(), [1, 2])
+        self.bc.check.queryset_with_pks(model.subscription.plans.all(), [1, 2])
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [
             service_stock_scheduler_item({
-                'id': 1,
-                'subscription_handler_id': 1,
-                'last_renew': UTC_NOW,
+                'id':
+                1,
+                'subscription_handler_id':
+                1,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item[0].renew_at, model.service_item[0].renew_at_unit),
             }),
             service_stock_scheduler_item({
-                'id': 2,
-                'plan_handler_id': 1,
-                'last_renew': UTC_NOW,
+                'id':
+                2,
+                'subscription_handler_id':
+                2,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item[1].renew_at, model.service_item[1].renew_at_unit),
+            }),
+            service_stock_scheduler_item({
+                'id':
+                3,
+                'plan_handler_id':
+                1,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item[2].renew_at, model.service_item[2].renew_at_unit),
+            }),
+            service_stock_scheduler_item({
+                'id':
+                4,
+                'plan_handler_id':
+                2,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item[3].renew_at, model.service_item[3].renew_at_unit),
+            }),
+            service_stock_scheduler_item({
+                'id':
+                5,
+                'plan_handler_id':
+                3,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item[4].renew_at, model.service_item[4].renew_at_unit),
+            }),
+            service_stock_scheduler_item({
+                'id':
+                6,
+                'plan_handler_id':
+                4,
+                'valid_until':
+                UTC_NOW +
+                calculate_relative_delta(model.service_item[5].renew_at, model.service_item[5].renew_at_unit),
             }),
         ])

@@ -14,8 +14,9 @@ class SEOAnalyzer:
     shared_state = {}
     influence = {
         'general_structure': 0.2,
-        'keyword_density': 0.4,
-        'internal_linking': 0.4,
+        'keyword_density': 0.375,
+        'internal_linking': 0.375,
+        'images_use': 0.05
     }
 
     def __init__(self, asset, exclude=[]):

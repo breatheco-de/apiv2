@@ -8,7 +8,7 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from django.utils import timezone
 from django.db.models import Q
-from .signals import asset_slug_modified, asset_readme_modified
+from .signals import asset_slug_modified, asset_readme_modified, asset_title_modified
 from slugify import slugify
 from breathecode.assessment.models import Assessment
 
@@ -85,6 +85,8 @@ class AssetCategory(models.Model):
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
     description = models.TextField(null=True, blank=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    all_translations = models.ManyToManyField('self', blank=True)
 
     # Ideal for generating blog post thumbnails
     auto_generate_previews = models.BooleanField(default=False)
@@ -258,6 +260,7 @@ class Asset(models.Model):
     def __init__(self, *args, **kwargs):
         super(Asset, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
+        self.__old_title = self.title
         self.__old_readme_raw = self.readme_raw
 
     slug = models.SlugField(
@@ -336,7 +339,7 @@ class Asset(models.Model):
                                    blank=True,
                                    help_text='Internal state automatically set by the system based on sync')
     last_synch_at = models.DateTimeField(null=True, blank=True, default=None)
-    # is_synched = models.BooleanField(default=True)
+    github_commit_hash = models.CharField(max_length=100, null=True, blank=True, default=None)
 
     test_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
@@ -423,12 +426,16 @@ class Asset(models.Model):
     def save(self, *args, **kwargs):
 
         slug_modified = False
+        title_modified = False
         readme_modified = False
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
             self.readme_updated_at = timezone.now()
             self.cleaning_status = 'PENDING'
+
+        if self.__old_title != self.title:
+            title_modified = True
 
         # only validate this on creation
         if self.pk is None or self.__old_slug != self.slug:
@@ -446,6 +453,7 @@ class Asset(models.Model):
 
         if slug_modified: asset_slug_modified.send(instance=self, sender=Asset)
         if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
+        if title_modified: asset_title_modified.send(instance=self, sender=Asset)
 
     def get_preview_generation_url(self):
 
@@ -774,3 +782,43 @@ class AssetImage(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.id})'
+
+
+class CredentialsOriginality(models.Model):
+
+    token = models.CharField(max_length=255)
+    balance = models.FloatField(default=0)  # balance
+    usage = models.JSONField(default=dict)
+    last_call_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+ASSET_ORIGINALITY_STATUS = (
+    ('PENDING', 'Pending'),
+    ('ERROR', 'Error'),
+    ('COMPLETED', 'Completed'),
+    ('WARNING', 'Warning'),
+)
+
+
+class OriginalityScan(models.Model):
+
+    success = models.BooleanField(null=True, default=None, blank=True)
+    score_original = models.FloatField(null=True, default=None, blank=True)
+    score_ai = models.FloatField(null=True, default=None, blank=True)
+    credits_used = models.IntegerField(default=0)
+    content = models.TextField()
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+
+    status = models.CharField(max_length=20,
+                              choices=ASSET_ORIGINALITY_STATUS,
+                              default='PENDING',
+                              help_text='Scan for originality')
+    status_text = models.TextField(default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)

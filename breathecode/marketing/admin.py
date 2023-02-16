@@ -175,8 +175,8 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('id', '_storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location',
                     'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = [
-        'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app',
-        'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'utm_campaign', 'utm_source'
+        'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app', 'utm_medium',
+        'utm_campaign', 'utm_source'
     ]
     actions = [send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
 

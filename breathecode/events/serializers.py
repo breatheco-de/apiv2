@@ -39,6 +39,8 @@ class EventTypeSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    description = serpy.Field()
+    lang = serpy.Field()
     academy = AcademySerializer(required=False)
 
 
@@ -65,6 +67,22 @@ class EventTypeVisibilitySettingSerializer(serpy.Serializer):
     cohort = CohortSmallSerializer(required=False)
     syllabus = SyllabusSmallSerializer(required=False)
     academy = AcademySmallSerializer(required=False)
+
+
+class EventTypeBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    description = serpy.Field()
+    lang = serpy.Field()
+    allow_shared_creation = serpy.Field()
+    academy = AcademySerializer(required=False)
+    visibility_settings = serpy.MethodField()
+
+    def get_visibility_settings(self, obj):
+        if obj.visibility_settings is not None:
+            return EventTypeVisibilitySettingSerializer(obj.visibility_settings.all(), many=True).data
+        return None
 
 
 class VenueSerializer(serpy.Serializer):
@@ -297,11 +315,41 @@ class EventbriteWebhookSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
-class PostEventTypeSerializer(serializers.ModelSerializer):
+class EventTypeSerializerMixin(serializers.ModelSerializer):
+
+    class Meta:
+        model = EventType
+        exclude = ('visibility_settings', )
+
+    def validate(self, data: dict[str, Any]):
+
+        return data
+
+
+class PostEventTypeSerializer(EventTypeSerializerMixin):
 
     class Meta:
         model = EventType
         exclude = ()
+
+    def create(self, validated_data):
+        event_type = EventType.objects.create(**validated_data, **self.context)
+
+        return event_type
+
+
+class EventTypePutSerializer(EventTypeSerializerMixin):
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField(required=False)
+    description = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
+    allow_shared_creation = serializers.BooleanField(required=False)
+
+    def update(self, instance, validated_data):
+
+        event_type = super().update(instance, validated_data)
+
+        return event_type
 
 
 class LiveClassSerializer(serializers.ModelSerializer):

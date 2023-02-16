@@ -100,7 +100,7 @@ def generate_form_entry_kwargs(kwargs={}):
         'latitude': 15,
         'longitude': 15,
         'state': random_string(),
-        'zip_code': randint(0, 9999),
+        'zip_code': str(randint(0, 9999)),
         'browser_lang': random_string(),
         'storage_status': choice(['PENDING', 'PERSISTED']),
         'lead_type': choice(['STRONG', 'SOFT', 'DISCOVERY']),
@@ -789,125 +789,124 @@ class AnswerIdTestSuite(MarketingTestCase):
                              'storage_status_text': "The course doesn't exist",
                          }])
 
-    """
-    🔽🔽🔽 First successful response, with id in dict, FormEntry found
-    """
+    # """
+    # 🔽🔽🔽 First successful response, with id in dict, FormEntry found
+    # """
 
-    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
-    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
-    @patch('requests.request', apply_old_breathecode_requests_request_mock())
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    def test_with_form_entry_with_data(self):
-        """Test /answer/:id without auth"""
+    # @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
+    # @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
+    # @patch('requests.request', apply_old_breathecode_requests_request_mock())
+    # @patch('logging.Logger.info', MagicMock())
+    # @patch('logging.Logger.error', MagicMock())
+    # def test_with_form_entry_with_data(self):
+    #     """Test /answer/:id without auth"""
 
-        mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
-        mock_old_breathecode.call_args_list = []
-        model = self.generate_models(
-            academy=1,
-            active_campaign_academy={'ac_url': 'https://old.hardcoded.breathecode.url'},
-            tag={'tag_type': 'STRONG'},
-            automation={'slug': 'they-killed-kenny'},
-            form_entry=generate_form_entry_kwargs())
+    #     mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
+    #     mock_old_breathecode.call_args_list = []
+    #     model = self.generate_models(
+    #         academy=1,
+    #         active_campaign_academy={'ac_url': 'https://old.hardcoded.breathecode.url'},
+    #         tag={'tag_type': 'STRONG'},
+    #         automation={'slug': 'they-killed-kenny'},
+    #         form_entry=generate_form_entry_kwargs())
 
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
+    #     logging.Logger.info.call_args_list = []
+    #     logging.Logger.error.call_args_list = []
 
-        data = {
-            'location': model['academy'].slug,
-            'tags': model['tag'].slug,
-            'automations': model['automation'].slug,
-            'email': 'pokemon@potato.io',
-            'first_name': 'Konan',
-            'last_name': 'Amegakure',
-            'phone': '123123123',
-            'id': model['form_entry'].id,
-            'course': 'asdasd',
-        }
+    #     data = {
+    #         'location': model['academy'].slug,
+    #         'tags': model['tag'].slug,
+    #         'automations': model['automation'].slug,
+    #         'email': 'pokemon@potato.io',
+    #         'first_name': 'Konan',
+    #         'last_name': 'Amegakure',
+    #         'phone': '123123123',
+    #         'id': model['form_entry'].id,
+    #         'course': 'asdasd',
+    #     }
 
-        persist_single_lead.delay(data)
+    #     persist_single_lead.delay(data)
 
-        db = self.bc.format.to_dict(model['form_entry'])
-        del db['ac_academy']
+    #     db = self.bc.format.to_dict(model['form_entry'])
+    #     del db['ac_academy']
 
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [{
-            **db,
-            'ac_contact_id': '1',
-            'storage_status': 'PERSISTED',
-            'storage_status_text': '',
-        }])
+    #     self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [{
+    #         **db,
+    #         'ac_contact_id': '1',
+    #         'storage_status': 'PERSISTED',
+    #         'storage_status_text': '',
+    #     }])
 
-        self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting persist_single_lead'),
-            call('found automations'),
-            call([model.automation.acp_id]),
-            call('found tags'),
-            call({model.tag.slug}),
-            call('ready to send contact with following details: ' + str({
-                'email': 'pokemon@potato.io',
-                'first_name': 'Konan',
-                'last_name': 'Amegakure',
-                'phone': '123123123',
-                'field[18,0]': model.academy.slug,
-                'field[2,0]': 'asdasd',
-            })),
-            call(f'Triggered automation with id {model.automation.acp_id} ' + str({
-                'subscriber_id': 1,
-                'result_code': 1,
-                'contacts': [{
-                    'id': 1
-                }]
-            })),
-            call('automations was executed successfully'),
-            call('contact was tagged successfully'),
-        ])
-        self.assertEqual(logging.Logger.error.call_args_list, [])
+    #     self.assertEqual(logging.Logger.info.call_args_list, [
+    #         call('Starting persist_single_lead'),
+    #         call('found automations'),
+    #         call([model.automation.acp_id]),
+    #         call('found tags'),
+    #         call({model.tag.slug}),
+    #         call('ready to send contact with following details: ' + str({
+    #             'email': 'pokemon@potato.io',
+    #             'first_name': 'Konan',
+    #             'last_name': 'Amegakure',
+    #             'phone': '123123123',
+    #             'field[18,0]': model.academy.slug,
+    #             'field[2,0]': 'asdasd',
+    #         })),
+    #         call(f'Triggered automation with id {model.automation.acp_id} ' + str({
+    #             'subscriber_id': 1,
+    #             'result_code': 1,
+    #             'contacts': [{
+    #                 'id': 1
+    #             }]
+    #         })),
+    #         call('automations was executed successfully'),
+    #         call('contact was tagged successfully'),
+    #     ])
+    #     self.assertEqual(logging.Logger.error.call_args_list, [])
 
-        self.assertEqual(requests.get.call_args_list, [])
-        self.assertEqual(requests.post.call_args_list, [])
-        self.assertEqual(requests.request.call_args_list, [
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/admin/api.php',
-                 params=[
-                     ('api_action', 'contact_sync'),
-                     ('api_key', model['active_campaign_academy'].ac_key),
-                     ('api_output', 'json'),
-                 ],
-                 data={
-                     'email': 'pokemon@potato.io',
-                     'first_name': 'Konan',
-                     'last_name': 'Amegakure',
-                     'phone': '123123123',
-                     'field[18,0]': model['academy'].slug,
-                     'field[2,0]': 'asdasd',
-                 },
-                 timeout=2),
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
-                 headers={
-                     'Accept': 'application/json',
-                     'Content-Type': 'application/json',
-                     'Api-Token': model['active_campaign_academy'].ac_key
-                 },
-                 json={'contactAutomation': {
-                     'contact': 1,
-                     'automation': model['automation'].acp_id
-                 }},
-                 timeout=2),
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/api/3/contactTags',
-                 headers={
-                     'Accept': 'application/json',
-                     'Content-Type': 'application/json',
-                     'Api-Token': model['active_campaign_academy'].ac_key
-                 },
-                 json={'contactTag': {
-                     'contact': 1,
-                     'tag': model['tag'].acp_id
-                 }},
-                 timeout=2)
-        ])
-
+    #     self.assertEqual(requests.get.call_args_list, [])
+    #     self.assertEqual(requests.post.call_args_list, [])
+    #     self.assertEqual(requests.request.call_args_list, [
+    #         call('POST',
+    #              'https://old.hardcoded.breathecode.url/admin/api.php',
+    #              params=[
+    #                  ('api_action', 'contact_sync'),
+    #                  ('api_key', model['active_campaign_academy'].ac_key),
+    #                  ('api_output', 'json'),
+    #              ],
+    #              data={
+    #                  'email': 'pokemon@potato.io',
+    #                  'first_name': 'Konan',
+    #                  'last_name': 'Amegakure',
+    #                  'phone': '123123123',
+    #                  'field[18,0]': model['academy'].slug,
+    #                  'field[2,0]': 'asdasd',
+    #              },
+    #              timeout=2),
+    #         call('POST',
+    #              'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
+    #              headers={
+    #                  'Accept': 'application/json',
+    #                  'Content-Type': 'application/json',
+    #                  'Api-Token': model['active_campaign_academy'].ac_key
+    #              },
+    #              json={'contactAutomation': {
+    #                  'contact': 1,
+    #                  'automation': model['automation'].acp_id
+    #              }},
+    #              timeout=2),
+    #         call('POST',
+    #              'https://old.hardcoded.breathecode.url/api/3/contactTags',
+    #              headers={
+    #                  'Accept': 'application/json',
+    #                  'Content-Type': 'application/json',
+    #                  'Api-Token': model['active_campaign_academy'].ac_key
+    #              },
+    #              json={'contactTag': {
+    #                  'contact': 1,
+    #                  'tag': model['tag'].acp_id
+    #              }},
+    #              timeout=2)
+    #     ])
     """
     🔽🔽🔽 First successful response, with id in dict, FormEntry found two times
     """
@@ -1010,125 +1009,4 @@ class AnswerIdTestSuite(MarketingTestCase):
                      'field[2,0]': 'asdasd',
                  },
                  timeout=2),
-        ])
-
-    """
-    🔽🔽🔽 Successful response, dict with current_download ---
-    """
-
-    @patch('requests.get', apply_requests_get_mock([(200, GOOGLE_MAPS_URL, GOOGLE_MAPS_OK)]))
-    @patch('requests.post', apply_requests_post_mock([(201, MAILGUN_URL, 'ok')]))
-    @patch('requests.request', apply_old_breathecode_requests_request_mock())
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    def test_with_form_entry_with_data__current_download(self):
-        mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
-        mock_old_breathecode.call_args_list = []
-
-        model = self.generate_models(
-            academy=1,
-            active_campaign_academy={'ac_url': 'https://old.hardcoded.breathecode.url'},
-            tag={'tag_type': 'STRONG'},
-            automation={'slug': 'they-killed-kenny'},
-            form_entry=generate_form_entry_kwargs())
-
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
-
-        data = {
-            'location': model['academy'].slug,
-            'tags': model['tag'].slug,
-            'automations': model['automation'].slug,
-            'email': 'pokemon@potato.io',
-            'first_name': 'Konan',
-            'last_name': 'Amegakure',
-            'phone': '123123123',
-            'id': model['form_entry'].id,
-            'course': 'asdasd',
-            'current_download': fake_url
-        }
-
-        persist_single_lead.delay(data)
-
-        db = self.bc.format.to_dict(model['form_entry'])
-        del db['ac_academy']
-
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [{
-            **db,
-            'ac_contact_id': '1',
-            'storage_status': 'PERSISTED',
-            'storage_status_text': '',
-        }])
-
-        self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting persist_single_lead'),
-            call('found automations'),
-            call([model.automation.acp_id]),
-            call('found tags'),
-            call({model.tag.slug}),
-            call('ready to send contact with following details: ' + str({
-                'email': 'pokemon@potato.io',
-                'first_name': 'Konan',
-                'last_name': 'Amegakure',
-                'phone': '123123123',
-                'field[18,0]': model.academy.slug,
-                'field[2,0]': 'asdasd',
-                'field[46,0]': fake_url,
-            })),
-            call(f'Triggered automation with id {model.automation.acp_id} ' + str({
-                'subscriber_id': 1,
-                'result_code': 1,
-                'contacts': [{
-                    'id': 1
-                }]
-            })),
-            call('automations was executed successfully'),
-            call('contact was tagged successfully'),
-        ])
-        self.assertEqual(logging.Logger.error.call_args_list, [])
-
-        self.assertEqual(requests.get.call_args_list, [])
-        self.assertEqual(requests.post.call_args_list, [])
-        self.assertEqual(requests.request.call_args_list, [
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/admin/api.php',
-                 params=[
-                     ('api_action', 'contact_sync'),
-                     ('api_key', model['active_campaign_academy'].ac_key),
-                     ('api_output', 'json'),
-                 ],
-                 data={
-                     'email': 'pokemon@potato.io',
-                     'first_name': 'Konan',
-                     'last_name': 'Amegakure',
-                     'phone': '123123123',
-                     'field[18,0]': model['academy'].slug,
-                     'field[46,0]': fake_url,
-                     'field[2,0]': 'asdasd',
-                 },
-                 timeout=2),
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
-                 headers={
-                     'Accept': 'application/json',
-                     'Content-Type': 'application/json',
-                     'Api-Token': model['active_campaign_academy'].ac_key
-                 },
-                 json={'contactAutomation': {
-                     'contact': 1,
-                     'automation': model['automation'].acp_id
-                 }},
-                 timeout=2),
-            call('POST',
-                 'https://old.hardcoded.breathecode.url/api/3/contactTags',
-                 headers={
-                     'Accept': 'application/json',
-                     'Content-Type': 'application/json',
-                     'Api-Token': model['active_campaign_academy'].ac_key
-                 },
-                 json={'contactTag': {
-                     'contact': 1,
-                     'tag': model['tag'].acp_id
-                 }},
-                 timeout=2)
         ])

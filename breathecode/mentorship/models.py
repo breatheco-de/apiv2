@@ -1,4 +1,4 @@
-import re, hashlib, datetime
+import re, hashlib, datetime, binascii, os
 from django.utils import timezone
 from breathecode.admissions.models import Academy, Syllabus
 from django.contrib.auth.models import User
@@ -120,6 +120,12 @@ class SupportAgent(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.token = binascii.hexlify(os.urandom(20)).decode()
+
+        return super().save(*args, **kwargs)
 
 
 class MentorProfile(models.Model):

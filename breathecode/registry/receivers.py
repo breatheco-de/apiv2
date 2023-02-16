@@ -1,11 +1,15 @@
-import logging, json
+import logging, json, os
 from django.dispatch import receiver
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_save
 from .models import Asset, AssetAlias, AssetImage
-from .tasks import (async_regenerate_asset_readme, async_delete_asset_images, async_remove_img_from_cloud)
-from .signals import asset_slug_modified, asset_readme_modified
+from .tasks import (async_regenerate_asset_readme, async_delete_asset_images, async_remove_img_from_cloud,
+                    async_synchonize_repository_content, async_create_asset_thumbnail_legacy)
+from .signals import asset_slug_modified, asset_readme_modified, asset_title_modified
 from breathecode.assignments.signals import assignment_created
 from breathecode.assignments.models import Task
+
+from breathecode.monitoring.signals import github_webhook
+from breathecode.monitoring.models import RepositoryWebhook
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +27,34 @@ def post_asset_slug_modified(sender, instance: Asset, **kwargs):
     a = Asset.objects.get(id=instance.id)
     a.all_translations.add(instance)
     instance.save()
+
+
+@receiver(asset_title_modified, sender=Asset)
+def asset_title_was_updated(sender, instance, **kwargs):
+
+    # ignore unpublished assets
+    if instance.status != 'PUBLISHED':
+        return False
+
+    bucket_name = os.getenv('SCREENSHOTS_BUCKET', None)
+    if bucket_name is None or bucket_name == '':
+        return False
+
+    if instance.title is None or instance.title == '':
+        return False
+
+    # taking thumbnail for the first time
+    if instance.preview is None or instance.preview == '':
+        logger.debug('Creating asset screenshot')
+        async_create_asset_thumbnail_legacy.delay(instance.slug)
+        return True
+
+    # retaking a thumbnail if it was generated automatically
+    # we know this because bucket_name is inside instance.preview
+    if bucket_name in instance.preview:
+        logger.debug('Retaking asset screenshot because title was updated')
+        async_create_asset_thumbnail_legacy.delay(instance.slug)
+        return True
 
 
 @receiver(asset_readme_modified, sender=Asset)
@@ -55,3 +87,10 @@ def post_assignment_created(sender, instance: Task, **kwargs):
     # adding subtasks to assignment based on the readme from the task
     instance.subtasks = asset.get_tasks()
     instance.save()
+
+
+@receiver(github_webhook, sender=RepositoryWebhook)
+def post_webhook_received(sender, instance, **kwargs):
+    if instance.scope in ['push']:
+        logger.debug('Received github webhook signal for push')
+        async_synchonize_repository_content.delay(instance.id)
