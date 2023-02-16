@@ -626,7 +626,7 @@ def pull_learnpack_asset(github, asset, override_meta):
                 if(lang == '' or asset.title == '' or asset.title is None):
                     asset.title = config['title']
             elif isinstance(config['title'],dict) and asset.lang in config['title']:
-                asset.title = config['title']
+                asset.title = config['title'][asset.lang]
                 
         if 'description' in config:
             if isinstance(config['description'], str):
