@@ -621,10 +621,21 @@ def pull_learnpack_asset(github, asset, override_meta):
         asset.config = config
 
         # only replace title and description of English language
-        if 'title' in config and (lang == '' or asset.title == '' or asset.title is None):
-            asset.title = config['title']
-        if 'description' in config and (lang == '' or asset.description == '' or asset.description is None):
-            asset.description = config['description']
+        if 'title' in config:
+            if isinstance(config['title'], str):
+                if(lang == '' or asset.title == '' or asset.title is None):
+                    asset.title = config['title']
+            elif isinstance(config['title'],dict) and asset.lang in config['title']:
+                asset.title = config['title']
+                
+        if 'description' in config:
+            if isinstance(config['description'], str):
+                # avoid replacing descriptions for other languages
+                if(lang == '' or asset.description == '' or asset.description is None):
+                    asset.description = config['description']
+            # there are multiple translations, and the translation exists for this lang
+            elif isinstance(config['description'],dict) and asset.lang in config['description']:
+                asset.description = config['description'][asset.lang]
 
         if 'preview' in config:
             asset.preview = config['preview']
