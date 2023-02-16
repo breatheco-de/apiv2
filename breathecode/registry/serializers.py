@@ -585,6 +585,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
         if 'visibility' in data and data['visibility'] == 'PRIVATE':
             if self.instance.test_visibility != 'OK':
+                print(self.instance.test_visibility, '111111111111111111111111111')
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
 
