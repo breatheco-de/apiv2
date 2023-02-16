@@ -189,6 +189,10 @@ class FinalProjectMeView(APIView):
         if isinstance(request.data, list) == False:
             payload = [request.data]
 
+        members_set = set(payload[0]['members'])
+        members_set.add(user_id)
+        payload[0]['members'] = list(members_set)
+
         serializer = PostFinalProjectSerializer(data=payload,
                                                 context={
                                                     'request': request,
