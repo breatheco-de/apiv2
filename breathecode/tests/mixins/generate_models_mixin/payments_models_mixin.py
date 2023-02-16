@@ -25,6 +25,7 @@ class PaymentsModelsMixin(ModelsMixin):
                                  bag=False,
                                  plan_service_item_handler=False,
                                  mentorship_service_set=False,
+                                 event_type_set=False,
                                  subscription_service_item=False,
                                  plan_service_item=False,
                                  plan_financing=False,
@@ -232,6 +233,17 @@ class PaymentsModelsMixin(ModelsMixin):
             models['mentorship_service_set'] = create_models(mentorship_service_set,
                                                              'payments.MentorshipServiceSet', **kargs)
 
+        if not 'event_type_set' in models and is_valid(event_type_set):
+            kargs = {}
+
+            if 'mentorship_service' in models:
+                kargs['mentorship_services'] = get_list(models['mentorship_service'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['event_type_set'] = create_models(event_type_set, 'payments.EventTypeSet', **kargs)
+
         if not 'subscription_service_item' in models and is_valid(subscription_service_item):
             kargs = {}
 
@@ -307,7 +319,10 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['service_item'] = just_one(models['service_item'])
 
             if 'mentorship_service_set' in models:
-                kargs['mentorship_service_set'] = just_one(models['mentorship_service_set'])
+                kargs['mentorship_service_sets'] = get_list(models['mentorship_service_set'])
+
+            if 'event_type_set' in models:
+                kargs['event_type_sets'] = get_list(models['event_type_set'])
 
             if 'cohort' in models:
                 kargs['cohorts'] = get_list(models['cohort'])

@@ -546,6 +546,17 @@ class MentorshipServiceSet(models.Model):
     mentorship_services = models.ManyToManyField(MentorshipService, blank=True)
 
 
+class EventTypeSet(models.Model):
+    """
+    M2M between plan and ServiceItem
+    """
+
+    slug = models.SlugField(max_length=100, unique=True)
+    name = models.CharField(max_length=150)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    event_types = models.ManyToManyField(EventType, blank=True)
+
+
 class SubscriptionServiceItem(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE)
@@ -772,26 +783,28 @@ class PlanServiceItem(models.Model):
     cohort_pattern = models.CharField(max_length=80, default=None, blank=True, null=True)
 
     cohorts = models.ManyToManyField(Cohort, blank=True)
-    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
-                                               on_delete=models.CASCADE,
-                                               blank=True,
-                                               null=True)
+    mentorship_service_sets = models.ManyToManyField(MentorshipServiceSet, blank=True)
+    event_type_sets = models.ManyToManyField(EventTypeSet, blank=True)
 
     def clean(self):
-        if self.id and self.mentorship_service_set and self.cohorts.count():
+        if self.id and self.mentorship_service_sets.count() and self.event_type_sets.count(
+        ) and self.cohorts.count():
             raise forms.ValidationError(
                 translation(
                     self._lang,
-                    en='You can not set cohorts and mentorship service set at the same time',
-                    es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
+                    en='You can not set cohorts, mentorship service sets and event type sets at the same time',
+                    es='No puedes establecer cohortes, conjuntos de servicios de mentoría y conjuntos de '
+                    'tipos de eventos al mismo tiempo'))
 
-        if self.mentorship_service_set and self.cohort_pattern:
+        if self.id and self.cohort_pattern and self.event_type_sets.count(
+        ) and self.mentorship_service_sets.count():
             raise forms.ValidationError(
                 translation(
                     self._lang,
-                    en='You can not set cohorts pattern and mentorship service set at the same time',
-                    es='No puedes establecer patrón de cohortes y conjunto de servicios de mentoría al '
-                    'mismo tiempo'))
+                    en='You can not set cohorts pattern if you are set mentorship service sets '
+                    'or event type sets',
+                    es='No puedes establecer el patrón de cohortes si estableces conjuntos de servicios '
+                    'de mentoría o conjuntos de tipos de eventos'))
 
     def save(self, *args, **kwargs):
         self.full_clean()

@@ -140,7 +140,7 @@ def renew_consumables(self, scheduler_id: int):
     scheduler.save()
 
     if plan_service_item and plan_service_item.mentorship_service_set:
-        for mentorship_service in plan_service_item.mentorship_service_set.mentorship_services.all():
+        for mentorship_service in plan_service_item.mentorship_service_sets.mentorship_services.all():
             consumable = Consumable(service_item=service_item,
                                     user=user,
                                     valid_until=scheduler.valid_until,
