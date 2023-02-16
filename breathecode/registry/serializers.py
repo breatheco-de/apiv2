@@ -583,6 +583,11 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
 
+        if 'visibility' in data and data['visibility'] == 'PRIVATE':
+            if self.instance.test_visibility != 'OK':
+                raise ValidationException(f'This asset has to pass tests successfully before publishing',
+                                          status.HTTP_400_BAD_REQUEST)
+
         if 'slug' in data:
             data['slug'] = slugify(data['slug']).lower()
 
