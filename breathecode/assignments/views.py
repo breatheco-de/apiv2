@@ -128,6 +128,63 @@ def sync_cohort_tasks_view(request, cohort_id=None):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class FinalProjectScreenshotView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    def upload(self, request, update=False):
+        from ..services.google_cloud import Storage
+
+        files = request.data.getlist('file')
+        names = request.data.getlist('name')
+        result = {
+            'data': [],
+            'instance': [],
+        }
+
+        file = request.data.get('file')
+        slugs = []
+
+        for index in range(0, len(files)):
+            file = files[index]
+            if file.content_type not in MIME_ALLOW:
+                raise ValidationException(
+                    f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}')
+
+        for index in range(0, len(files)):
+            file = files[index]
+            name = names[index] if len(names) else file.name
+            file_bytes = file.read()
+            hash = hashlib.sha256(file_bytes).hexdigest()
+            slug = slugify(name)
+
+            slugs.append(slug)
+            data = {
+                'hash': hash,
+                'slug': slug,
+                'mime': file.content_type,
+                'name': name,
+                'categories': [],
+            }
+
+            # upload file section
+            storage = Storage()
+            cloud_file = storage.file(media_gallery_bucket(), hash)
+            cloud_file.upload(file, content_type=file.content_type)
+            data['url'] = cloud_file.url()
+            data['thumbnail'] = data['url'] + '-thumbnail'
+
+            result['data'].append(data)
+
+        return result
+
+    def post(self, request, user_id=None):
+        files = self.upload(request)
+
+        return Response({'data': files})
+
+
 class FinalProjectMeView(APIView):
     """
     List all snippets, or create a new snippet.
@@ -189,9 +246,15 @@ class FinalProjectMeView(APIView):
         if isinstance(request.data, list) == False:
             payload = [request.data]
 
+        print('request')
+        print(request.data)
         members_set = set(payload[0]['members'])
         members_set.add(user_id)
         payload[0]['members'] = list(members_set)
+
+        # files = self.upload(request)
+        # print('files')
+        # print(files)
 
         serializer = PostFinalProjectSerializer(data=payload,
                                                 context={
