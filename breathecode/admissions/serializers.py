@@ -415,6 +415,17 @@ class GetPublicCohortUserSerializer(serpy.Serializer):
     role = serpy.Field()
 
 
+class CohortUserHookSerializer(serpy.Serializer):
+    id = serpy.Field()
+    user = UserSerializer()
+    cohort = GetSmallCohortSerializer()
+    role = serpy.Field()
+    finantial_status = serpy.Field()
+    educational_status = serpy.Field()
+    watching = serpy.Field()
+    created_at = serpy.Field()
+
+
 class GetCohortUserSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
