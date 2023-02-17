@@ -367,7 +367,7 @@ HOOK_EVENTS = {
     'cohort_user.added': 'admissions.CohortUser.created+',
     'cohort_user.changed': 'admissions.CohortUser.updated+',
     # and custom events, no extra meta data needed
-    # 'book.read':         'bookstore.Book.read',
+    'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
 }
 
 # Websocket

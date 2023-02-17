@@ -46,6 +46,9 @@ def deal_update(self, webhook, payload: dict, acp_ids):
         entry.ac_deal_owner_full_name = status[payload['deal[owner_firstname]']] + ' ' + status[
             payload['deal[owner_lastname]']]
 
+        entry.ac_deal_amount = float(payload['deal[value]'])
+        entry.ac_deal_currency_code = payload['deal[currency_symbol]']
+
     if entry.academy is not None:
         logger.debug(f'looking for deal on activecampaign api')
         ac_academy = entry.academy.activecampaignacademy

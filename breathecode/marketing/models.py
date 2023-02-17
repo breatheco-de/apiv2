@@ -3,6 +3,7 @@ from django.db import models
 from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth.models import User
+from .signals import form_entry_won_or_lost
 from breathecode.admissions.models import Academy, Cohort
 from django.core.validators import RegexValidator
 
@@ -301,6 +302,11 @@ DEAL_SENTIMENT = (
 
 # Create your models here.
 class FormEntry(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(FormEntry, self).__init__(*args, **kwargs)
+        self.__old_deal_status = self.deal_status
+
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     fb_leadgen_id = models.BigIntegerField(null=True, default=None, blank=True)
@@ -446,6 +452,9 @@ class FormEntry(models.Model):
     ac_deal_owner_id = models.CharField(max_length=15, default=None, null=True, blank=True)
     ac_deal_owner_full_name = models.CharField(max_length=150, default=None, null=True, blank=True)
 
+    ac_deal_amount = models.FloatField(default=None, null=True, blank=True)
+    ac_deal_currency_code = models.CharField(max_length=3, default=None, null=True, blank=True)
+
     won_at = models.DateTimeField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -453,6 +462,17 @@ class FormEntry(models.Model):
 
     def __str__(self):
         return self.first_name + ' ' + self.last_name
+
+    def save(self, *args, **kwargs):
+
+        deal_status_modified = False
+
+        if self.__old_deal_status != self.deal_status:
+            deal_status_modified = True
+
+        super().save(*args, **kwargs)
+
+        if deal_status_modified: form_entry_won_or_lost.send(instance=self, sender=FormEntry)
 
     def is_duplicate(self, incoming_lead):
         duplicate_leads_delta_avoidance = timedelta(minutes=30)

@@ -3,6 +3,8 @@ from django.dispatch import receiver
 from django.db.models import Avg
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
+from breathecode.marketing.signals import form_entry_won_or_lost
+from breathecode.marketing.models import FormEntry
 from .tasks import send_mentorship_starting_notification
 from .utils.hook_manager import HookManager
 from django.db.models.signals import post_save, post_delete
@@ -47,3 +49,9 @@ def model_deleted(sender, instance, using, **kwargs):
     """
     model_label = get_model_label(instance)
     HookManager.process_model_event(instance, model_label, 'deleted')
+
+
+@receiver(form_entry_won_or_lost, sender=FormEntry)
+def form_entry_updated(sender, instance, **kwargs):
+    model_label = get_model_label(instance)
+    HookManager.process_model_event(instance, model_label, 'won_or_lost')
