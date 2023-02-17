@@ -372,6 +372,7 @@ class RegistryTestAsset(RegistryTestCase):
 
     #     url = reverse_lazy('registry:academy_asset')
     #     data = [{
+    #         'test_status': 'WARNING',
     #         'id': 1,
     #         'category': 1,
     #         'visibility': 'PRIVATE',
@@ -380,7 +381,7 @@ class RegistryTestAsset(RegistryTestCase):
     #     response = self.client.put(url, data, format='json')
     #     json = response.json()
 
-    #     expected = [{'detail' : 'This asset has to pass tests successfully before publishing'}]
+    #     expected = {'detail' : 'This asset has to pass tests successfully before publishing', 'status_code': 400}
 
     #     self.assertEqual(json, expected)
     #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -389,22 +390,24 @@ class RegistryTestAsset(RegistryTestCase):
 
     #     self.headers(academy=1)
 
-    #     #self.instance.test_visibility != 'OK'
-
     #     model = self.generate_models(
     #         authenticate=True,
     #         profile_academy=True,
     #         capability='crud_asset',
     #         role='potato',
-    #         asset_category=True,
+    #         asset_category=[{'lang': 'es'}],
     #         asset=[{
     #             'category_id': 1,
     #             'academy_id': 1,
-    #             'slug': 'asset-1'
+    #             'slug': 'asset-1',
+    #             'test_status':'OK',
+    #             'lang': 'es',
     #         }, {
     #             'category_id': 1,
     #             'academy_id': 1,
-    #             'slug': 'asset-2'
+    #             'slug': 'asset-2',
+    #             'test_status':'OK',
+    #             'lang': 'es',
     #         }],
     #     )
 
@@ -418,6 +421,6 @@ class RegistryTestAsset(RegistryTestCase):
     #     response = self.client.put(url, data, format='json')
     #     json = response.json()
 
-    #     expected = []
+    #     expected = [put_serializer(model.academy, model.asset_category, model.asset[0])]
     #     self.assertEqual(json, expected)
     #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
