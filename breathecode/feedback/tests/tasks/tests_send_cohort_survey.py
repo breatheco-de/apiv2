@@ -148,7 +148,7 @@ class SendCohortSurvey(FeedbackTestCase):
                         'Please take 5 minutes to give us feedback about your experience at the academy so far.',
                         'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                         'BUTTON': 'Answer the question',
-                        'LINK': f'https://nps.breatheco.de/survey/{model.survey.id}?token={token.key}'
+                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
                     })
             ])
 
@@ -205,7 +205,7 @@ class SendCohortSurvey(FeedbackTestCase):
                             'TRACKER_URL':
                             f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                             'BUTTON': 'Answer the question',
-                            'LINK': f'https://nps.breatheco.de/survey/{model.survey.id}?token={token.key}'
+                            'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
                         })
                 ]))
             self.assertEqual(actions.send_email_message.call_args_list, [
@@ -216,7 +216,7 @@ class SendCohortSurvey(FeedbackTestCase):
                         'Please take 5 minutes to give us feedback about your experience at the academy so far.',
                         'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                         'BUTTON': 'Answer the question',
-                        'LINK': f'https://nps.breatheco.de/survey/{model.survey.id}?token={token.key}'
+                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
                     })
             ])
 

@@ -27,7 +27,7 @@ class AssignmentsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, Generate
     def check_email_contain_a_correct_token(self, lang, dicts, mock, model):
         token = self.get_token_key()
         question = dicts[0]['title']
-        link = f"https://nps.breatheco.de/{dicts[0]['id']}?token={token}"
+        link = f"https://nps.4geeks.com/{dicts[0]['id']}?token={token}"
 
         args_list = mock.call_args_list
 
@@ -118,7 +118,7 @@ class AssignmentsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, Generate
                                  'text': answer,
                                  'emoji': True
                              },
-                             'url': f'https://nps.breatheco.de/1?token={token}'
+                             'url': f'https://nps.4geeks.com/1?token={token}'
                          }]
                      }],
                      'parse':
