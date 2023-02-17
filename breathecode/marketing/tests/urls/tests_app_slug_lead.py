@@ -75,6 +75,8 @@ def post_serializer(data={}):
         'ac_deal_owner_full_name': None,
         'ac_deal_owner_id': None,
         'ac_expected_cohort_date': None,
+        'ac_deal_amount': None,
+        'ac_deal_currency_code': None,
         **data,
     }
 
@@ -134,6 +136,8 @@ def form_entry_field(data={}):
         'ac_deal_owner_full_name': None,
         'ac_deal_owner_id': None,
         'ac_expected_cohort_date': None,
+        'ac_deal_amount': None,
+        'ac_deal_currency_code': None,
         **data,
     }
 
@@ -419,6 +423,8 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'ac_deal_owner_full_name': None,
             'ac_deal_owner_id': None,
             'ac_expected_cohort_date': None,
+            'ac_deal_amount': None,
+            'ac_deal_currency_code': None,
             **data,
         }
 
@@ -637,6 +643,8 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'ac_deal_owner_full_name': None,
             'ac_deal_owner_id': None,
             'ac_expected_cohort_date': None,
+            'ac_deal_amount': None,
+            'ac_deal_currency_code': None,
             **data,
         }
 
