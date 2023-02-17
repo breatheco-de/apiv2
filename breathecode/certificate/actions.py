@@ -175,7 +175,7 @@ def certificate_screenshot(certificate_id: int):
         if file.blob is None:
             query_string = urlencode({
                 'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
-                'url': f'https://certificate.breatheco.de/preview/{certificate.token}',
+                'url': f'https://certificate.4geeks.com/preview/{certificate.token}',
                 'device': 'desktop',
                 'cacheLimit': '0',
                 'dimension': '1024x707',

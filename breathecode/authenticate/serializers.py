@@ -559,7 +559,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug('Sending invite email to ' + email)
 
-                params = {'callback': 'https://admin.breatheco.de'}
+                params = {'callback': 'https://admin.4geeks.com'}
                 querystr = urllib.parse.urlencode(params)
                 url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                     str(invite.token) + '?' + querystr
