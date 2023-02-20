@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Syllabus
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
+from django.core.exceptions import ValidationError
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
@@ -132,7 +133,8 @@ class EventType(models.Model):
         try:
             self.full_clean()
             super().save(*args, **kwargs)
-        except:
+
+        except ValidationError:
             if self.icon_url is None:
                 raise ValidationException('Icon url is required', 400)
 
