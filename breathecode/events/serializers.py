@@ -4,6 +4,7 @@ from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from .models import Event, EventType, LiveClass, Organization, EventbriteWebhook
+from breathecode.admissions.models import Academy
 from slugify import slugify
 from rest_framework import serializers
 import serpy, logging
@@ -358,6 +359,9 @@ class EventTypeSerializerMixin(serializers.ModelSerializer):
         exclude = ('visibility_settings', )
 
     def validate(self, data: dict[str, Any]):
+        academy_id = self.context.get('academy_id')
+        data['academy'] = Academy.objects.filter(id=academy_id).get()
+
         if ('visibility_settings' in data):
             del data['visibility_settings']
 
@@ -371,7 +375,7 @@ class PostEventTypeSerializer(EventTypeSerializerMixin):
         exclude = ()
 
     def create(self, validated_data):
-        event_type = EventType.objects.create(**validated_data, **self.context)
+        event_type = super().create(validated_data)
 
         return event_type
 
