@@ -21,8 +21,6 @@ def breathecode_exception_handler(exc, context):
 
     if response is not None:
         if isinstance(exc, ValidationError):
-            print('validation error')
-            print('validation error')
             response.data['status_code'] = 400
         elif isinstance(response.data, list):
             if response.data[0].code != 'invalid':
