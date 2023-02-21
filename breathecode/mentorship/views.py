@@ -764,7 +764,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
                 translation(lang,
                             en='This mentor does not have a first name',
                             es='Este mentor no tiene nombre',
-                            slug='without first-name'),
+                            slug='without-first-name'),
                 code=400,
             )
 
