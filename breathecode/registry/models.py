@@ -527,8 +527,9 @@ class Asset(models.Model):
                 readme['decoded'] = _data.content
                 readme['html'] = markdown.markdown(_data.content,
                                                    extensions=['markdown.extensions.fenced_code'])
-            except Exception:
-                readme['html'] = markdown.markdown(_data.content,
+            except Exception as exception:
+                print(exception)
+                readme['html'] = markdown.markdown(readme['decoded'],
                                                    extensions=['markdown.extensions.fenced_code'])
                 AssetErrorLog(slug=AssetErrorLog.README_SYNTAX,
                               path=self.slug,
@@ -559,6 +560,7 @@ class Asset(models.Model):
 
     @staticmethod
     def decode(content):
+        print(content)
         if content is not None:
             return base64.b64decode(content.encode('utf-8')).decode('utf-8')
         return None

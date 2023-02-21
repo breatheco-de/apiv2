@@ -4,6 +4,7 @@ Test /answer
 from random import randint
 import random
 import string
+import base64
 from unittest.mock import MagicMock, patch, call
 from django.urls.base import reverse_lazy
 from rest_framework import status
@@ -37,7 +38,7 @@ class RegistryTestSuite(RegistryTestCase):
     🔽🔽🔽 Auth
     """
 
-    def test_without_auth(self):
+    def test_number_one(self):
         url = reverse_lazy('registry:asset_slug_extension',
                            kwargs={
                                'asset_slug': 'this_is_a_slug',
@@ -53,7 +54,11 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
 
     def test_number_two(self):
-        model = self.bc.database.create(asset=1)
+        asset = {
+            'readme_raw': base64.b64encode(self.bc.fake.text().encode('utf-8')).decode('utf-8'),
+            'readme_url': self.bc.fake.url(),
+        }
+        model = self.bc.database.create(asset=asset)
         url = reverse_lazy('registry:asset_slug_extension',
                            kwargs={
                                'asset_slug': model.asset.slug,
@@ -70,10 +75,13 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('registry.Asset'), [self.bc.format.to_dict(model.asset)])
 
-    @patch('breathecode.models.parse.frontmatter.loads',
-           MagicMock(side_effect=Exception('They killed kenny')))
-    def test_number_two(self):
-        model = self.bc.database.create(asset=1)
+    @patch('frontmatter.loads', MagicMock(side_effect=Exception('They killed kenny')))
+    def test_number_three(self):
+        asset = {
+            'readme_raw': base64.b64encode(self.bc.fake.text().encode('utf-8')).decode('utf-8'),
+            'readme_url': self.bc.fake.url(),
+        }
+        model = self.bc.database.create(asset=asset)
         url = reverse_lazy('registry:asset_slug_extension',
                            kwargs={
                                'asset_slug': model.asset.slug,
@@ -84,7 +92,33 @@ class RegistryTestSuite(RegistryTestCase):
         expected = '\n'.join([
             f'# {model.asset.title}', '',
             f'Readme file in language `None` was not found for this {model.asset.asset_type.lower()}.', '',
-            'This error was reported to our team and it will be fixed soon. In the mean time, try looking for the lesson in a different language.'
+            'This error was reported to our team and it will be fixed soon. In the mean time, try looking for the lesson in a different language.',
+            ''
+        ])
+        self.assertEqual(text, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('registry.Asset'), [self.bc.format.to_dict(model.asset)])
+
+    @patch('frontmatter.loads', MagicMock(MagicMock(return_value={'random': 'dictionary'})))
+    def test_number_four(self):
+        decoded = base64.b64encode(self.bc.fake.text().encode('utf-8')).decode('utf-8')
+        asset = {
+            'readme_raw': decoded,
+            'readme_url': self.bc.fake.url(),
+        }
+        model = self.bc.database.create(asset=asset)
+        url = reverse_lazy('registry:asset_slug_extension',
+                           kwargs={
+                               'asset_slug': model.asset.slug,
+                               'extension': 'md'
+                           })
+        response = self.client.get(url)
+        text = response.content.decode('utf-8')
+        expected = '\n'.join([
+            f'# {model.asset.title}', '',
+            f'Readme file in language `None` was not found for this {model.asset.asset_type.lower()}.', '',
+            'This error was reported to our team and it will be fixed soon. In the mean time, try looking for the lesson in a different language.',
+            ''
         ])
         self.assertEqual(text, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
