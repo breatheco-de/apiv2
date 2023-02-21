@@ -179,14 +179,12 @@ class FinalProjectScreenshotView(APIView):
             data['url'] = cloud_file.url()
             data['thumbnail'] = data['url'] + '-thumbnail'
 
-            result['data'].append(data)
-
-        return result
+        return data
 
     def post(self, request, user_id=None):
         files = self.upload(request)
 
-        return Response({'data': files})
+        return Response(files)
 
 
 class FinalProjectMeView(APIView):
