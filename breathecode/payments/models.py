@@ -522,6 +522,7 @@ class Subscription(AbstractIOweYou):
     valid_until = models.DateTimeField(default=None, null=True, blank=True)
 
     # this reminds the service items to change the stock scheduler on change
+    # only for consuming single items without having a plan, when you buy consumable quantities
     service_items = models.ManyToManyField(ServiceItem,
                                            blank=True,
                                            through='SubscriptionServiceItem',
