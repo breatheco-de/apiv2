@@ -760,22 +760,40 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id).first()
 
         if user.first_name is None:
-            raise ValidationException('This mentor does not have a first name',
-                                      code=400,
-                                      slug='without first-name')
+            raise ValidationException(
+                translation(lang,
+                            en='This mentor does not have a first name',
+                            es='Este mentor no tiene nombre',
+                            slug='without first-name'),
+                code=400,
+            )
 
         if user.last_name is None:
-            raise ValidationException('This mentor does not have a last name',
-                                      code=400,
-                                      slug='without last-name')
+            raise ValidationException(
+                translation(lang,
+                            en='This mentor does not have a last name',
+                            es='Este mentor no tiene apellido',
+                            slug='without-last-name'),
+                code=400,
+            )
 
         if user.email is None:
-            raise ValidationException('This mentor does not have an email address',
-                                      code=400,
-                                      slug='without email')
+            raise ValidationException(
+                translation(lang,
+                            en='This mentor does not have an email address',
+                            es='Este mentor no tiene correo electrónico',
+                            slug='without-email'),
+                code=400,
+            )
 
         if user.phone is None:
-            raise ValidationException('This mentor does not have a phone', code=400, slug='without-phone')
+            raise ValidationException(
+                translation(lang,
+                            en='This mentor does not have a phone',
+                            es='Este mentor no tiene numero de telefono',
+                            slug='without-phone'),
+                code=400,
+            )
 
         if 'user' in request.data:
             raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',
