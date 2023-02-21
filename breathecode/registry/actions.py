@@ -461,7 +461,6 @@ class AssetThumbnailGenerator:
             # register click
             media.hits += 1
             media.save()
-            print('11111111111111111')
             tasks.async_resize_asset_thumbnail.delay(media.id, width=self.width, height=self.height)
             return (media.url, False)
 
