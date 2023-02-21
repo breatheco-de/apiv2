@@ -487,7 +487,11 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
             data['first_name'] = user.first_name
         if not data['first_name']:
-            raise ValidationException('Unable to find first name on this user', code=400)
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find first name on this user',
+                                                  es='Imposible encontrar el nombre en este usuario',
+                                                  slug='first-name-not-found'),
+                                      code=400)
 
         if 'last_name' not in data:
             data['last_name'] = ''
@@ -501,7 +505,11 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             data['last_name'] = user.last_name
 
         if not data['last_name']:
-            raise ValidationException('Unable to find last name on this user', code=400)
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find last name on this user',
+                                                  es='Imposible encontrar el apellido en este usuario',
+                                                  slug='last-name-not-found'),
+                                      code=400)
 
         return data
 
@@ -835,7 +843,11 @@ class MemberPUTSerializer(serializers.ModelSerializer):
             data['first_name'] = User.first_name
 
         if not data['first_name']:
-            raise ValidationException('Unable to find first name on this user', code=400)
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find first name on this user',
+                                                  es='Imposible encontrar el nombre en este usuario',
+                                                  slug='first-name-not-found'),
+                                      code=400)
 
         if 'last_name' not in data:
             data['last_name'] = ''
@@ -849,7 +861,11 @@ class MemberPUTSerializer(serializers.ModelSerializer):
             data['last_name'] = User.last_name
 
         if not data['last_name']:
-            raise ValidationException('Unable to find last name on this user', code=400)
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find last name on this user',
+                                                  es='Imposible encontrar el apellido en este usuario',
+                                                  slug='last-name-not-found'),
+                                      code=400)
 
         return data
 
