@@ -494,6 +494,13 @@ class AbstractIOweYou(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    
+    # Add this three foreign keys, but we have to make sure this 3 items match exactly with the possible
+    # cohorts, service sets and eventtype sets that the PlanServiceItem is allowing.
+    #
+    # cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
+    # mentorshipservice_set = models.ForeignKey(MentorshipServiceSet, on_delete=models.CASCADE)
+    # eventtype_set = models.ForeignKey(EventTypeSet, on_delete=models.CASCADE)
 
     # this reminds the plans to change the stock scheduler on change
     plans = models.ManyToManyField(Plan, blank=True)
