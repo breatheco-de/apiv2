@@ -772,7 +772,10 @@ class PlanServiceItem(models.Model):
     # patterns
     cohort_pattern = models.CharField(max_length=80, default=None, blank=True, null=True)
 
+    # available cohorts to be sold in this service and plan
     cohorts = models.ManyToManyField(Cohort, blank=True)
+    
+    # available mentorships service to be sold in this service and plan
     mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
                                                on_delete=models.CASCADE,
                                                blank=True,
