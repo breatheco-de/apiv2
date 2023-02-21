@@ -775,7 +775,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
                                       slug='without email')
 
         if user.phone is None:
-            raise ValidationException('This mentor does not have a phone', code=400, slug='without phone')
+            raise ValidationException('This mentor does not have a phone', code=400, slug='without-phone')
 
         if 'user' in request.data:
             raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',
