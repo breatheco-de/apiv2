@@ -1,7 +1,10 @@
 import logging
+from typing import Any, Type
 from breathecode.admissions.signals import syllabus_asset_slug_updated
+from .signals import assignment_status_updated
 from .models import Task
 from django.dispatch import receiver
+from breathecode.assignments import tasks
 
 logger = logging.getLogger(__name__)
 
@@ -18,3 +21,10 @@ def process_syllabus_asset_slug_updated(sender, **kwargs):
     logger.debug(
         f'{asset_type} slug {from_slug} was replaced with {to_slug} on all the syllabus, as a sideeffect we are replacing the slug also on the student tasks'
     )
+
+
+@receiver(assignment_status_updated, sender=Task)
+def process_cohort_history_log(sender: Type[Task], instance: Task, **kwargs: Any):
+    logger.info('Procesing Cohort history log for cohort: ' + str(instance.id))
+
+    tasks.set_cohort_user_assignments.delay(instance.id)

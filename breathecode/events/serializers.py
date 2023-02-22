@@ -4,6 +4,7 @@ from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from .models import Event, EventType, LiveClass, Organization, EventbriteWebhook
+from breathecode.admissions.models import Academy
 from slugify import slugify
 from rest_framework import serializers
 import serpy, logging
@@ -75,6 +76,7 @@ class EventTypeBigSerializer(serpy.Serializer):
     name = serpy.Field()
     description = serpy.Field()
     lang = serpy.Field()
+    icon_url = serpy.Field()
     allow_shared_creation = serpy.Field()
     academy = AcademySerializer(required=False)
     visibility_settings = serpy.MethodField()
@@ -177,6 +179,41 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     eventbrite_sync_description = serpy.Field()
     live_stream_url = serpy.Field()
     tags = serpy.Field()
+
+
+class EventBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    description = serpy.Field()
+    excerpt = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    currency = serpy.Field()
+    tags = serpy.Field()
+    url = serpy.Field()
+    banner = serpy.Field()
+    capacity = serpy.Field()
+    live_stream_url = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    host = serpy.Field()
+    academy = AcademySerializer(required=False)
+    organization = OrganizationSmallSerializer(required=False)
+    author = UserSerializer(required=False)
+    online_event = serpy.Field()
+    venue = VenueSerializer(required=False)
+    event_type = EventTypeBigSerializer(required=False)
+    eventbrite_id = serpy.Field()
+    eventbrite_url = serpy.Field()
+    eventbrite_organizer_id = serpy.Field()
+    status = serpy.Field()
+    eventbrite_status = serpy.Field()
+    sync_with_eventbrite = serpy.Field()
+    eventbrite_sync_status = serpy.Field()
+    eventbrite_sync_description = serpy.Field()
+    published_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class GetLiveClassSerializer(serpy.Serializer):
@@ -322,6 +359,11 @@ class EventTypeSerializerMixin(serializers.ModelSerializer):
         exclude = ('visibility_settings', )
 
     def validate(self, data: dict[str, Any]):
+        academy_id = self.context.get('academy_id')
+        data['academy'] = Academy.objects.filter(id=academy_id).get()
+
+        if ('visibility_settings' in data):
+            del data['visibility_settings']
 
         return data
 
@@ -333,7 +375,7 @@ class PostEventTypeSerializer(EventTypeSerializerMixin):
         exclude = ()
 
     def create(self, validated_data):
-        event_type = EventType.objects.create(**validated_data, **self.context)
+        event_type = super().create(validated_data)
 
         return event_type
 
@@ -343,6 +385,7 @@ class EventTypePutSerializer(EventTypeSerializerMixin):
     name = serializers.CharField(required=False)
     description = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
+    icon_url = serializers.URLField(required=True)
     allow_shared_creation = serializers.BooleanField(required=False)
 
     def update(self, instance, validated_data):

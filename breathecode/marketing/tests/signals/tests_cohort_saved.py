@@ -15,7 +15,7 @@ class LeadTestSuite(MarketingTestCase):
 
         model = self.generate_models(cohort=True)
 
-        self.assertEqual(self.all_cohort_dict(), [self.model_to_dict(model, 'cohort')])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [self.model_to_dict(model, 'cohort')])
         self.assertEqual(add_cohort_slug_as_acp_tag.delay.call_args_list, [])
 
     """
@@ -30,7 +30,7 @@ class LeadTestSuite(MarketingTestCase):
         base = self.generate_models(academy=True, active_campaign_academy=True, skip_cohort=True)
         model = self.generate_models(cohort=True, models=base)
 
-        self.assertEqual(self.all_cohort_dict(), [self.model_to_dict(model, 'cohort')])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [self.model_to_dict(model, 'cohort')])
         self.assertEqual(add_cohort_slug_as_acp_tag.delay.call_args_list, [call(1, 1)])
 
     """
@@ -48,5 +48,5 @@ class LeadTestSuite(MarketingTestCase):
         model.cohort.slug = 'they-killed-kenny'
         model.cohort.save()
 
-        self.assertEqual(self.all_cohort_dict(), [self.model_to_dict(model, 'cohort')])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [self.model_to_dict(model, 'cohort')])
         self.assertEqual(add_cohort_slug_as_acp_tag.delay.call_args_list, [call(1, 1)])

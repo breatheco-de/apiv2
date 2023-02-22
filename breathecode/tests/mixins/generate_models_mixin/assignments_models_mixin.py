@@ -10,9 +10,7 @@ class AssignmentsModelsMixin(ModelsMixin):
 
     def generate_assignments_models(self,
                                     task=False,
-                                    task_status='',
                                     cohort=False,
-                                    task_type='',
                                     task_revision_status='',
                                     models={},
                                     task_kwargs={},

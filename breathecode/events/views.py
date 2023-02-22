@@ -29,9 +29,9 @@ from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibil
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (GetLiveClassJoinSerializer, GetLiveClassSerializer, LiveClassSerializer,
-                          EventSerializer, EventSmallSerializer, EventTypeSerializer, EventTypeBigSerializer,
-                          EventCheckinSerializer, EventSmallSerializerNoAcademy,
+from .serializers import (GetLiveClassJoinSerializer, EventBigSerializer, GetLiveClassSerializer,
+                          LiveClassSerializer, EventSerializer, EventSmallSerializer, EventTypeSerializer,
+                          EventTypeBigSerializer, EventCheckinSerializer, EventSmallSerializerNoAcademy,
                           EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
                           EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
                           OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
@@ -188,7 +188,7 @@ class EventMeView(APIView):
 
         return academies, cohorts, syllabus
 
-    def get(self, request):
+    def get(self, request, event_id=None):
         query = None
 
         academies, cohorts, syllabus = self.get_related_resources()
@@ -225,6 +225,14 @@ class EventMeView(APIView):
         items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('starting_at')
         lookup = {}
 
+        if event_id is not None:
+            single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
+            if single_event is None:
+                raise ValidationException('Event not found', 404)
+
+            serializer = EventBigSerializer(single_event, many=False)
+            return Response(serializer.data)
+
         online_event = self.request.GET.get('online_event', '')
         if online_event == 'true':
             lookup['online_event'] = True
@@ -233,7 +241,7 @@ class EventMeView(APIView):
 
         items = items.filter(**lookup)
 
-        serializer = EventSerializer(items, many=True)
+        serializer = EventBigSerializer(items, many=True)
         return Response(serializer.data)
 
 
