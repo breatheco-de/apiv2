@@ -81,7 +81,7 @@ def post_assignment_created(sender, instance: Task, **kwargs):
 
     asset = Asset.objects.filter(slug=instance.associated_slug).first()
     if asset is None:
-        logger.debug('Ignoring task {instance.associated_slug} because its not an internal registry asset')
+        logger.debug(f'Ignoring task {instance.associated_slug} because its not an internal registry asset')
         return None
 
     # adding subtasks to assignment based on the readme from the task

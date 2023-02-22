@@ -27,7 +27,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
     def test_with_many_cohorts(self):
         how_many = random.randint(2, 5)
-        self.bc.database.create(cohort=how_many)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            self.bc.database.create(cohort=how_many)
         request = HttpRequest()
         queryset = Cohort.objects.all()
 

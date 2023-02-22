@@ -566,6 +566,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'role': 'REVIEWER',
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }])
 
     """
@@ -618,6 +619,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'role': model.role.slug.upper(),
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }])
 
     """
@@ -674,6 +676,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'role': model.role.slug.upper(),
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }])
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
@@ -725,6 +728,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'role': model.role.slug.upper(),
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }])
 
     """
@@ -778,6 +782,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'role': 'STUDENT',
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }])
 
     """

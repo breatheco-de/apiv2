@@ -30,9 +30,9 @@ from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibil
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (GetLiveClassJoinSerializer, GetLiveClassSerializer, LiveClassSerializer,
-                          EventSerializer, EventSmallSerializer, EventTypeSerializer, EventTypeBigSerializer,
-                          EventCheckinSerializer, EventSmallSerializerNoAcademy,
+from .serializers import (GetLiveClassJoinSerializer, EventBigSerializer, GetLiveClassSerializer,
+                          LiveClassSerializer, EventSerializer, EventSmallSerializer, EventTypeSerializer,
+                          EventTypeBigSerializer, EventCheckinSerializer, EventSmallSerializerNoAcademy,
                           EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
                           EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
                           OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer,
@@ -156,7 +156,7 @@ class EventMeView(APIView):
         items = get_my_events(request.user)
 
         if event_id is not None:
-            single_event = Event.objects.filter(event_type__in=items, id=event_id).first()
+            single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
             _r = self.request.GET.get('redirect', 'false')
             if _r == 'true':
                 if single_event is None:
@@ -164,11 +164,8 @@ class EventMeView(APIView):
                 if single_event.live_stream_url is None or single_event.live_stream_url == '':
                     return render_message(request, 'Event live stream URL is not found')
                 return redirect(single_event.live_stream_url, permanent=True)
-            else:
-                if single_event is None:
-                    raise ValidationException('Event not found or you dont have access', 404)
 
-            serializer = EventSmallSerializer(single_event, many=False)
+            serializer = EventBigSerializer(single_event, many=False)
             return Response(serializer.data)
 
         items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('starting_at')
@@ -182,7 +179,7 @@ class EventMeView(APIView):
 
         items = items.filter(**lookup)
 
-        serializer = EventSerializer(items, many=True)
+        serializer = EventBigSerializer(items, many=True)
         return Response(serializer.data)
 
 

@@ -22,7 +22,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(command.handle(), None)
         self.assertEqual(self.count_cohort_user(), 1)
-        self.assertEqual(self.all_cohort_user_dict(), [model_dict])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [model_dict])
 
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -47,7 +47,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
     #     self.assertEqual(command.cohort_users(), None)
     #     self.assertEqual(self.count_cohort_user(), 1)
-    #     self.assertEqual(self.all_cohort_user_dict(), [model_dict])
+    #     self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [model_dict])
 
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -72,4 +72,4 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
     #     self.assertEqual(command.cohort_users(), None)
     #     self.assertEqual(self.count_cohort_user(), 1)
-    #     self.assertEqual(self.all_cohort_user_dict(), [model_dict])
+    #     self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [model_dict])

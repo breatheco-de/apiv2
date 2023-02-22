@@ -661,7 +661,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, {'status_code': 400, 'detail': 'Missing cohort_id, user_id and id'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -677,7 +677,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -693,7 +693,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -709,7 +709,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -725,7 +725,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'id': 1,
             'user_id': 1,
             'cohort_id': 1,
@@ -733,6 +733,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'finantial_status': None,
             'educational_status': None,
             'watching': False,
+            'history_log': {},
         }])
 
     def test_put_in_bulk_with_stage_delete(self):
@@ -750,7 +751,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'id': 1,
             'user_id': 1,
             'cohort_id': 1,
@@ -758,6 +759,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'finantial_status': None,
             'educational_status': None,
             'watching': False,
+            'history_log': {},
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -791,7 +793,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'id': 1,
             'user_id': 1,
             'cohort_id': 1,
@@ -799,6 +801,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'finantial_status': None,
             'educational_status': None,
             'watching': False,
+            'history_log': {},
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -854,7 +857,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'id': 1,
             'user_id': 1,
             'cohort_id': 1,
@@ -862,6 +865,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'finantial_status': 'LATE',
             'educational_status': None,
             'watching': False,
+            'history_log': {},
         }, {
             'id': 2,
             'user_id': 2,
@@ -870,6 +874,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'finantial_status': None,
             'educational_status': 'GRADUATED',
             'watching': False,
+            'history_log': {},
         }])
 
     # that's methods name is irrelevant because it's deprecated
@@ -886,7 +891,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -905,7 +910,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -935,7 +940,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_cohort_user_dict(), [])
+            self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -977,7 +982,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_cohort_user_dict(), [])
+            self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())

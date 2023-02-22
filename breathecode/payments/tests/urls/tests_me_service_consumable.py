@@ -364,7 +364,15 @@ class SignalTestSuite(PaymentsTestCase):
             'event_type_id': math.floor(n / 3) + 1
         } for n in range(9)]
 
-        model = self.bc.database.create(user=1, consumable=consumables, event_type=3)
+        model = self.bc.database.create(user=1,
+                                        consumable=consumables,
+                                        event_type=[{
+                                            'icon_url': 'https://www.google.com'
+                                        }, {
+                                            'icon_url': 'https://www.google.com'
+                                        }, {
+                                            'icon_url': 'https://www.google.com'
+                                        }])
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -399,7 +407,15 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to_cohort2 = sum([x['how_many'] for x in belong_to_cohort2])
         how_many_belong_to_cohort3 = sum([x['how_many'] for x in belong_to_cohort3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, event_type=3)
+        model = self.bc.database.create(user=1,
+                                        consumable=consumables,
+                                        event_type=[{
+                                            'icon_url': 'https://www.google.com'
+                                        }, {
+                                            'icon_url': 'https://www.google.com'
+                                        }, {
+                                            'icon_url': 'https://www.google.com'
+                                        }])
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?event_type=1,2,3'
@@ -646,7 +662,15 @@ class SignalTestSuite(PaymentsTestCase):
             'event_type_id': math.floor(n / 3) + 1
         } for n in range(9)]
 
-        model = self.bc.database.create(user=1, consumable=consumables, event_type=3)
+        model = self.bc.database.create(user=1,
+                                        consumable=consumables,
+                                        event_type=[{
+                                            'icon_url': 'https://www.google.com'
+                                        }, {
+                                            'icon_url': 'https://www.google.com'
+                                        }, {
+                                            'icon_url': 'https://www.google.com'
+                                        }])
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -681,7 +705,15 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to_cohort2 = sum([x['how_many'] for x in belong_to_cohort2])
         how_many_belong_to_cohort3 = sum([x['how_many'] for x in belong_to_cohort3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, event_type=3)
+        model = self.bc.database.create(user=1,
+                                        consumable=consumables,
+                                        event_type=[{
+                                            'icon_url': 'https://www.google.com'
+                                        }, {
+                                            'icon_url': 'https://www.google.com'
+                                        }, {
+                                            'icon_url': 'https://www.google.com'
+                                        }])
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable'
@@ -769,7 +801,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         model = self.bc.database.create(user=1,
                                         consumable=consumables,
-                                        event_type=1,
+                                        event_type={'icon_url': 'https://www.google.com'},
                                         cohort=1,
                                         mentorship_service=1)
         self.bc.request.authenticate(model.user)

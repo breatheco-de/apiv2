@@ -278,6 +278,8 @@ COHORT_STAGE = (
 
 
 class Cohort(models.Model):
+    _current_history_log = None
+
     slug = models.CharField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
 
@@ -333,8 +335,9 @@ class Cohort(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    def __str__(self):
-        return self.name + '(' + self.slug + ')'
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._current_history_log = self.history_log
 
     def clean(self):
         if self.stage:
@@ -346,15 +349,36 @@ class Cohort(models.Model):
         if not self.kickoff_date:
             raise forms.ValidationError('Kickoff date is required')
 
+    def save_history_log(self, *args, **kwargs):
+        """
+        It prevent to trigger cohort_log_saved signal when the cohort is created, you must avoid to use this
+        method.
+        """
+        assert self.id
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        signals.cohort_saved.send(instance=self, sender=self.__class__, created=False)
+
+        self._current_history_log = self.history_log
+
     def save(self, *args, **kwargs):
-        from .signals import cohort_saved
 
         created = not self.id
 
         self.full_clean()
         super().save(*args, **kwargs)
 
-        cohort_saved.send(instance=self, sender=self.__class__, created=created)
+        signals.cohort_saved.send(instance=self, sender=self.__class__, created=created)
+
+        if self.history_log and self.history_log != self._current_history_log:
+            signals.cohort_log_saved.send(instance=self, sender=self.__class__, created=created)
+
+        self._current_history_log = self.history_log
+
+    def __str__(self):
+        return self.name + '(' + self.slug + ')'
 
 
 TEACHER = 'TEACHER'
@@ -404,6 +428,12 @@ class CohortUser(models.Model):
     watching = models.BooleanField(
         default=False, help_text='You can active students to the watch list and monitor them closely')
 
+    history_log = models.JSONField(
+        default={},
+        blank=True,
+        null=False,
+        help_text='The cohort user log will save attendancy and information about progress on each class')
+
     #FIXME: this have a typo
     finantial_status = models.CharField(max_length=15,
                                         choices=FINANTIAL_STATUS,
@@ -431,14 +461,15 @@ class CohortUser(models.Model):
             self.educational_status = self.educational_status.upper()
 
     def save(self, *args, **kwargs):
-
-        if self.__old_edu_status != self.educational_status:
-            student_edu_status_updated.send(instance=self, sender=CohortUser)
-
         # check the fields before saving
         self.full_clean()
 
+        if self.__old_edu_status != self.educational_status:
+            student_edu_status_updated.send(instance=self, sender=self.__class__)
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
+        signals.cohort_log_saved.send(instance=self, sender=self.__class__)
 
 
 DAILY = 'DAILY'

@@ -69,8 +69,7 @@ def export_user_specialty_csv(self, request, queryset):
     for obj in queryset:
         row = writer.writerow([
             obj.user.first_name, obj.user.last_name, obj.specialty.name, obj.academy.name, obj.cohort.name,
-            f'https://certificate.4geeks.com/{obj.token}',
-            f'https://certificate.4geeks.com/pdf/{obj.token}'
+            f'https://certificate.4geeks.com/{obj.token}', f'https://certificate.4geeks.com/pdf/{obj.token}'
         ])
 
     return response

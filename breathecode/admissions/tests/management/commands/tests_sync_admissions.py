@@ -68,7 +68,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), len(cohorts))
         self.assertEqual(self.count_user(), 10)
         self.assertEqual(self.count_cohort_user(), count_cohorts)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
 
         cohort_user_acc = 0
 
@@ -106,6 +106,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         'finantial_status': financial_status[student['financial_status']],
                         'role': 'STUDENT',
                         'watching': False,
+                        'history_log': {},
                     })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
@@ -132,7 +133,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), len(cohorts))
         self.assertEqual(self.count_user(), 10)
         self.assertEqual(self.count_cohort_user(), count_cohorts)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
 
         cohort_user_acc = 0
 
@@ -170,6 +171,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         'finantial_status': financial_status[student['financial_status']],
                         'role': 'STUDENT',
                         'watching': False,
+                        'history_log': {},
                     })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
@@ -195,7 +197,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), len(cohorts))
         self.assertEqual(self.count_user(), 10)
         self.assertEqual(self.count_cohort_user(), count_cohorts)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
 
         cohort_user_acc = 0
 
@@ -233,6 +235,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         'finantial_status': None,
                         'role': 'TEACHER',
                         'watching': False,
+                        'history_log': {},
                     })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
@@ -259,7 +262,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), len(cohorts))
         self.assertEqual(self.count_user(), 10)
         self.assertEqual(self.count_cohort_user(), count_cohorts)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
 
         cohort_user_acc = 0
 
@@ -297,6 +300,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         'finantial_status': None,
                         'role': 'TEACHER',
                         'watching': False,
+                        'history_log': {},
                     })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
