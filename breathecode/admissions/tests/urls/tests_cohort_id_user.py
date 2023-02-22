@@ -32,6 +32,8 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             cohort.slug,
             'stage':
             cohort.stage,
+            'available_as_saas':
+            cohort.available_as_saas,
         },
         'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
         'educational_status': None,
