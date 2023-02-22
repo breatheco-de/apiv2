@@ -330,6 +330,12 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
         validated_data = super().validate(data)
 
+        if 'category' not in data or data['category'] is None:
+            category = AssetCategory.objects.filter(
+                id=validated_data['all_translations'][0].category.id).first()
+            category_translation = category.all_translations.filter(lang=validated_data['lang']).first()
+            validated_data['category'] = category_translation
+
         academy_id = self.context['academy']
         validated_data['academy'] = Academy.objects.filter(id=academy_id).first()
 
