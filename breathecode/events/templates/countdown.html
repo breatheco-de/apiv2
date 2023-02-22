@@ -59,9 +59,9 @@ header {
     if (difference > 0) {
       timeLeft = {
         days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((difference / 1000 / 60) % 60),
-        seconds: Math.floor((difference / 1000) % 60),
+        hrs: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        min: Math.floor((difference / 1000 / 60) % 60),
+        sec: Math.floor((difference / 1000) % 60),
       };
     }
 
@@ -87,7 +87,7 @@ header {
       timerComponents.push(<div><span>{timeLeft[interval]}</span><span class="interval">{interval}</span></div>);
     });
 
-    const size = { width: (100 * timerComponents.length) + "px"}
+    const size = { width: (120 * timerComponents.length) + "px"}
     return (<div>
         <h3>This event will start in</h3>
         <div className="clock" style={size}>
