@@ -1120,7 +1120,10 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': self.bc.random.string(lower=True, size=10),
             'tag_type': 'DISCOVERY'
         } for _ in range(2)]
-        event_type = {'lang': self.bc.random.string(lower=True, size=2)}
+        event_type = {
+            'lang': self.bc.random.string(lower=True, size=2),
+            'icon_url': 'https://www.google.com',
+        }
         model = self.generate_models(authenticate=True,
                                      organization=True,
                                      profile_academy=True,

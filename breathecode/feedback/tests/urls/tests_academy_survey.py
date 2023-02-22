@@ -102,7 +102,7 @@ class SurveyTestSuite(FeedbackTestCase):
             'duration': '86400.0',
             'created_at': self.bc.datetime.to_iso_string(model['survey'].created_at),
             'sent_at': None,
-            'public_url': 'https://nps.breatheco.de/survey/1'
+            'public_url': 'https://nps.4geeks.com/survey/1'
         }]
 
         self.assertEqual(json, expected)
@@ -140,7 +140,7 @@ class SurveyTestSuite(FeedbackTestCase):
             'duration': '86400.0',
             'created_at': self.bc.datetime.to_iso_string(model['survey'].created_at),
             'sent_at': None,
-            'public_url': 'https://nps.breatheco.de/survey/1'
+            'public_url': 'https://nps.4geeks.com/survey/1'
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -197,7 +197,7 @@ class SurveyTestSuite(FeedbackTestCase):
             'duration': '86400.0',
             'created_at': self.bc.datetime.to_iso_string(model['survey'].created_at),
             'sent_at': None,
-            'public_url': 'https://nps.breatheco.de/survey/1'
+            'public_url': 'https://nps.4geeks.com/survey/1'
         }]
 
         self.assertEqual(json, expected)
@@ -255,7 +255,7 @@ class SurveyTestSuite(FeedbackTestCase):
             'duration': '86400.0',
             'created_at': self.bc.datetime.to_iso_string(model['survey'].created_at),
             'sent_at': None,
-            'public_url': 'https://nps.breatheco.de/survey/1'
+            'public_url': 'https://nps.4geeks.com/survey/1'
         }]
 
         self.assertEqual(json, expected)
@@ -316,7 +316,7 @@ class SurveyTestSuite(FeedbackTestCase):
             'duration': '86400.0',
             'created_at': self.bc.datetime.to_iso_string(model['survey'].created_at),
             'sent_at': None,
-            'public_url': 'https://nps.breatheco.de/survey/1'
+            'public_url': 'https://nps.4geeks.com/survey/1'
         }]
 
         self.assertEqual(json, expected)
@@ -465,7 +465,7 @@ class SurveyTestSuite(FeedbackTestCase):
         expected = {
             'id': model['cohort'].id,
             'status': True,
-            'public_url': 'https://nps.breatheco.de/survey/1',
+            'public_url': 'https://nps.4geeks.com/survey/1',
             'lang': 'en',
             'max_assistants_to_ask': 2,
             'max_teachers_to_ask': 1,
@@ -500,7 +500,7 @@ class SurveyTestSuite(FeedbackTestCase):
         expected = {
             'id': model['cohort'].id,
             'status': True,
-            'public_url': 'https://nps.breatheco.de/survey/1',
+            'public_url': 'https://nps.4geeks.com/survey/1',
             'lang': 'en',
             'max_assistants_to_ask': 2,
             'max_teachers_to_ask': 1,
@@ -540,7 +540,7 @@ class SurveyTestSuite(FeedbackTestCase):
         expected = {
             'id': model['cohort'].id,
             'status': True,
-            'public_url': 'https://nps.breatheco.de/survey/1',
+            'public_url': 'https://nps.4geeks.com/survey/1',
             'lang': 'en',
             'max_assistants_to_ask': 2,
             'max_teachers_to_ask': 1,

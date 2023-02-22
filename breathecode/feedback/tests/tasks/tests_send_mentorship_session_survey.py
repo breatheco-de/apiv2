@@ -263,7 +263,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
                     'MESSAGE': strings['en']['session']['title'].format(fullname_of_mentor),
                     'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
                     'BUTTON': strings['en']['button_label'],
-                    'LINK': f'https://nps.breatheco.de/1?token={token.key}'
+                    'LINK': f'https://nps.4geeks.com/1?token={token.key}'
                 })
         ])
 
@@ -316,7 +316,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
                     'MESSAGE': model.answer.title,
                     'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
                     'BUTTON': strings['en']['button_label'],
-                    'LINK': f'https://nps.breatheco.de/1?token={token.key}'
+                    'LINK': f'https://nps.4geeks.com/1?token={token.key}'
                 })
         ])
 

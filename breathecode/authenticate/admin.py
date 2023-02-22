@@ -102,7 +102,7 @@ class UserInviteAdmin(admin.ModelAdmin):
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list]
 
     def invite_url(self, obj):
-        params = {'callback': 'https://learn.breatheco.de'}
+        params = {'callback': 'https://4geeks.com'}
         querystr = urllib.parse.urlencode(params)
         url = os.getenv('API_URL') + '/v1/auth/member/invite/' + str(obj.token) + '?' + querystr
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
@@ -124,7 +124,7 @@ class UserAdmin(UserAdmin):
 
     def get_queryset(self, request):
 
-        self.github_callback = f'https://app.breatheco.de'
+        self.github_callback = f'https://4geeks.com'
         self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode('utf-8')), 'utf-8')
         return super(UserAdmin, self).get_queryset(request)
 
@@ -155,7 +155,7 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
 
-        self.slack_callback = f'https://app.breatheco.de'
+        self.slack_callback = f'https://4geeks.com'
         self.slack_callback = str(base64.urlsafe_b64encode(self.slack_callback.encode('utf-8')), 'utf-8')
         return super(ProfileAcademyAdmin, self).get_queryset(request)
 

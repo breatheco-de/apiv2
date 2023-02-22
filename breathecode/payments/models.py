@@ -494,6 +494,13 @@ class AbstractIOweYou(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    
+    # Add this three foreign keys, but we have to make sure this 3 items match exactly with the possible
+    # cohorts, service sets and eventtype sets that the PlanServiceItem is allowing.
+    #
+    # cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
+    # mentorshipservice_set = models.ForeignKey(MentorshipServiceSet, on_delete=models.CASCADE)
+    # eventtype_set = models.ForeignKey(EventTypeSet, on_delete=models.CASCADE)
 
     # this reminds the plans to change the stock scheduler on change
     plans = models.ManyToManyField(Plan, blank=True)
@@ -522,6 +529,7 @@ class Subscription(AbstractIOweYou):
     valid_until = models.DateTimeField(default=None, null=True, blank=True)
 
     # this reminds the service items to change the stock scheduler on change
+    # only for consuming single items without having a plan, when you buy consumable quantities
     service_items = models.ManyToManyField(ServiceItem,
                                            blank=True,
                                            through='SubscriptionServiceItem',
@@ -771,7 +779,10 @@ class PlanServiceItem(models.Model):
     # patterns
     cohort_pattern = models.CharField(max_length=80, default=None, blank=True, null=True)
 
+    # available cohorts to be sold in this service and plan
     cohorts = models.ManyToManyField(Cohort, blank=True)
+    
+    # available mentorships service to be sold in this service and plan
     mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
                                                on_delete=models.CASCADE,
                                                blank=True,
