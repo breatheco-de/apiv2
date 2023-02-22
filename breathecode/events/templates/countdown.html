@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
+<script src="https://unpkg.com/dayjs@1.11.7/dayjs.min.js"></script>
 <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
@@ -52,8 +53,7 @@ header {
 <div id="root"></div>
 <script type="text/babel">
   const calculateTimeLeft = () => {
-    let year = new Date().getFullYear();
-    const difference = +new Date(`${year}-10-1`) - +new Date();
+    const difference = +new Date('{{ event.starting_at.isoformat }}') - +new Date();
     let timeLeft = {};
 
     if (difference > 0) {
