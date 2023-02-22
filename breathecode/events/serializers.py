@@ -3,7 +3,7 @@ from typing import Any
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-from .models import Event, EventType, LiveClass, Organization, EventbriteWebhook
+from .models import Event, EventType, LiveClass, Organization, EventbriteWebhook, EventCheckin
 from slugify import slugify
 from rest_framework import serializers
 import serpy, logging
@@ -324,6 +324,26 @@ class EventTypeSerializerMixin(serializers.ModelSerializer):
     def validate(self, data: dict[str, Any]):
 
         return data
+
+
+class PUTEventCheckinSerializer(serializers.ModelSerializer):
+    attended_at = serializers.DateTimeField(required=False)
+
+    class Meta:
+        model = EventCheckin
+        exclude = ('event', 'created_at', 'updated_at', 'attendee')
+
+    def validate(self, data: dict[str, Any]):
+        return data
+
+    def update(self, instance, validated_data):
+
+        new_data = {}
+        # if "attended_at" not in data and self.instance.attended_at is None:
+        #     new_data['attended_at'] = timezone.now()
+
+        event_type = super().update(instance, {**validated_data, **new_data})
+        return event_type
 
 
 class PostEventTypeSerializer(EventTypeSerializerMixin):

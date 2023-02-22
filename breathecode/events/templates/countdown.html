@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block content %}
+
+<script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato&display=swap" rel="stylesheet">
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Lato', sans-serif;
+}
+
+header {
+  background: black;
+  color: white;
+  padding: 15px 0;
+}
+
+.clock{
+  display: flex;
+  margin: auto;
+  max-width: 300px;
+  text-align: center;
+}
+.clock > div{
+  border-radius: 5px;
+  border: 1px solid grey;
+  margin: 0 5px;
+  padding: 10px;
+  width: 33%;
+  height: 70px;
+  font-size: 40px;
+  position: relative;
+}
+.clock > div > span{
+  position: absolute;
+  left: 50%;
+  font-weight: 800;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.clock .interval{
+  display: block;
+  font-size: 20px;
+}
+</style>
+
+<div id="root"></div>
+<script type="text/babel">
+  const calculateTimeLeft = () => {
+    let year = new Date().getFullYear();
+    const difference = +new Date(`${year}-10-1`) - +new Date();
+    let timeLeft = {};
+
+    if (difference > 0) {
+      timeLeft = {
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+      };
+    }
+
+    return timeLeft;
+  };
+
+  function Clock(time) {
+
+    const [timeLeft, setTimeLeft] = React.useState(calculateTimeLeft());
+    const [year] = React.useState(new Date().getFullYear());
+
+    React.useEffect(() => {
+      setTimeout(() => {
+        setTimeLeft(calculateTimeLeft());
+      }, 1000);
+    });
+
+    const timerComponents = [];
+    Object.keys(timeLeft).forEach((interval) => {
+      if (!timeLeft[interval]) {
+        return;
+      }
+      timerComponents.push(<div><span>{timeLeft[interval]}</span><span class="interval">{interval}</span></div>);
+    });
+
+    const size = { width: (100 * timerComponents.length) + "px"}
+    return (<div>
+        <h3>This event will start in</h3>
+        <div className="clock" style={size}>
+            {timerComponents.length ?
+              timerComponents.map(t => <div><span>{t}</span></div>) :
+              <span>Time's up!</span>
+            }
+        </div>
+      </div>
+    );
+  }
+
+  function Body() {
+    return (
+      <main>
+        <header>
+          <div className="container">
+            <h1>{{ event.title }}</h1>
+          </div>
+        </header>
+        <div className="container">
+          <Clock />
+        </div>
+      </main>
+    );
+  }
+
+  function App() {
+    return (
+      <div>
+        <Body />
+      </div>
+    );
+  }
+  ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+
+{% endblock %}
