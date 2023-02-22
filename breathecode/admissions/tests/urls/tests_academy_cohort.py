@@ -263,7 +263,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -308,7 +308,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -352,7 +352,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -395,7 +395,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -425,7 +425,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        models_dict = self.all_cohort_dict()
+        models_dict = self.bc.database.list_of('admissions.Cohort')
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
@@ -441,7 +441,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -467,7 +467,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        models_dict = self.all_cohort_dict()
+        models_dict = self.bc.database.list_of('admissions.Cohort')
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
@@ -520,7 +520,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list,
                          [call(instance=cohort, sender=cohort.__class__, created=True)])
@@ -564,7 +564,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -592,7 +592,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        models_dict = self.all_cohort_dict()
+        models_dict = self.bc.database.list_of('admissions.Cohort')
         url = reverse_lazy('admissions:academy_cohort')
         ending_date = datetime.today() + timedelta(days=18)
         data = {
@@ -649,7 +649,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(),
                          [{
                              'id': 1,
@@ -688,7 +688,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        models_dict = self.all_cohort_dict()
+        models_dict = self.bc.database.list_of('admissions.Cohort')
         url = reverse_lazy('admissions:academy_cohort')
         ending_date = datetime.today() + timedelta(days=18)
         data = {
@@ -745,7 +745,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(),
                          [{
                              'id': 1,
@@ -1492,7 +1492,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self_all_cohort = self.all_cohort_dict()
+        self_all_cohort = self.bc.database.list_of('admissions.Cohort')
         for j in self_all_cohort:
             del j['ending_date']
             del j['kickoff_date']
@@ -1593,7 +1593,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        all_cohort_dict = self.all_cohort_dict()
+        all_cohort_dict = self.bc.database.list_of('admissions.Cohort')
         for cohort_dict in all_cohort_dict:
             del cohort_dict['ending_date']
             del cohort_dict['kickoff_date']
@@ -1900,7 +1900,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self_all_cohort = self.all_cohort_dict()
+        self_all_cohort = self.bc.database.list_of('admissions.Cohort')
         for j in self_all_cohort:
             del j['ending_date']
             del j['kickoff_date']
@@ -1934,7 +1934,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
             **self.model_to_dict(model, 'cohort'),
         }])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
@@ -1973,7 +1973,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-            self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+                **self.model_to_dict(model, 'cohort')
+            }])
             self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

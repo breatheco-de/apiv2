@@ -68,7 +68,10 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.notify.actions import send_email_message
 
         task = {'revision_status': 'PENDING'}
-        model = self.bc.database.create(task=task, cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=task, cohort=1)
+
+        Logger.debug.call_args_list = []
 
         student_task_notification.delay(1)
 
@@ -95,7 +98,8 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.notify.actions import send_email_message
 
         task = {'revision_status': 'PENDING'}
-        model = self.bc.database.create(task=task, cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=task, cohort=1)
 
         student_task_notification.delay(1)
 
@@ -123,7 +127,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
         task = {'revision_status': 'PENDING'}
         cohort = {'language': 'es'}
-        model = self.bc.database.create(task=task, cohort=cohort)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=task, cohort=cohort)
 
         student_task_notification.delay(1)
 
@@ -154,7 +159,8 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.notify.actions import send_email_message
 
         task = {'revision_status': 'APPROVED'}
-        model = self.bc.database.create(task=task, cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=task, cohort=1)
 
         student_task_notification.delay(1)
 
@@ -181,7 +187,8 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.notify.actions import send_email_message
 
         task = {'revision_status': 'APPROVED'}
-        model = self.bc.database.create(task=task, cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=task, cohort=1)
 
         student_task_notification.delay(1)
 
@@ -209,7 +216,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
         task = {'revision_status': 'APPROVED'}
         cohort = {'language': 'es'}
-        model = self.bc.database.create(task=task, cohort=cohort)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=task, cohort=cohort)
 
         student_task_notification.delay(1)
 
@@ -240,7 +248,8 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.notify.actions import send_email_message
 
         task = {'revision_status': 'REJECTED'}
-        model = self.bc.database.create(task=task, cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=task, cohort=1)
 
         student_task_notification.delay(1)
 
@@ -267,7 +276,8 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.notify.actions import send_email_message
 
         task = {'revision_status': 'REJECTED'}
-        model = self.bc.database.create(task=task, cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=task, cohort=1)
 
         student_task_notification.delay(1)
 
@@ -295,7 +305,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
         task = {'revision_status': 'REJECTED'}
         cohort = {'language': 'es'}
-        model = self.bc.database.create(task=task, cohort=cohort)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=task, cohort=cohort)
 
         student_task_notification.delay(1)
 

@@ -1,6 +1,6 @@
 import logging, os
 from celery import shared_task, Task
-from breathecode.admissions.models import Cohort
+from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from .models import Activity
 from breathecode.utils import NDB
@@ -81,6 +81,52 @@ def get_attendancy_log(self, cohort_id: int):
                 offset += 1
 
     cohort.history_log = days
-    cohort.save()
+    cohort.save_history_log()
+
+    logger.info('History log saved')
+
+    for cohort_user in CohortUser.objects.filter(cohort=cohort).exclude(educational_status='DROPPED'):
+        get_attendancy_log_per_cohort_user.delay(cohort_user.id)
+
+
+@shared_task(bind=False, base=BaseTaskWithRetry)
+def get_attendancy_log_per_cohort_user(cohort_user_id: int):
+    logger.info('Executing get_attendancy_log_per_cohort_user')
+    cohort_user = CohortUser.objects.filter(id=cohort_user_id).first()
+
+    if not cohort_user:
+        logger.error('Cohort user not found')
+        return
+
+    cohort = cohort_user.cohort
+    user = cohort_user.user
+
+    if not cohort.history_log:
+        logger.error(f'Cohort {cohort.slug} has no log yet')
+        return
+
+    cohort_history_log = cohort.history_log or {}
+    user_history_log = cohort_user.history_log or {}
+
+    user_history_log['attendance'] = {}
+    user_history_log['unattendance'] = {}
+
+    for day in cohort_history_log:
+        updated_at = cohort_history_log[day]['updated_at']
+        current_module = cohort_history_log[day]['current_module']
+
+        log = {
+            'updated_at': updated_at,
+            'current_module': current_module,
+        }
+
+        if user.id in cohort_history_log[day]['attendance_ids']:
+            user_history_log['attendance'][day] = log
+
+        else:
+            user_history_log['unattendance'][day] = log
+
+    cohort_user.history_log = user_history_log
+    cohort_user.save()
 
     logger.info('History log saved')

@@ -51,7 +51,8 @@ class AnswerIdTestSuite(MarketingTestCase):
     def test_add_cohort_slug_as_acp_tag__without_active_campaign_academy(self):
         import logging
 
-        model = self.generate_models(academy=True)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(academy=True)
 
         add_cohort_slug_as_acp_tag.delay(1, 1)
 
@@ -96,10 +97,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         import logging
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
-        model = self.generate_models(academy=True,
-                                     cohort=1,
-                                     active_campaign_academy=True,
-                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(academy=True,
+                                         cohort=1,
+                                         active_campaign_academy=True,
+                                         active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
         add_cohort_slug_as_acp_tag.delay(1, 1)
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [{
@@ -130,10 +132,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         import logging
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
-        model = self.generate_models(academy=True,
-                                     cohort=1,
-                                     active_campaign_academy=True,
-                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(academy=True,
+                                         cohort=1,
+                                         active_campaign_academy=True,
+                                         active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
         add_cohort_slug_as_acp_tag.delay(1, 1)
         self.assertEqual(self.bc.database.list_of('marketing.Tag')[0]['tag_type'], 'COHORT')
@@ -160,12 +163,13 @@ class AnswerIdTestSuite(MarketingTestCase):
         tag_kwargs = {'slug': 'they-killed-kenny'}
         cohort_kwargs = {'slug': 'they-killed-kenny'}
 
-        model = self.generate_models(tag=True,
-                                     academy=True,
-                                     active_campaign_academy=True,
-                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs,
-                                     tag_kwargs=tag_kwargs,
-                                     cohort=cohort_kwargs)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(tag=True,
+                                         academy=True,
+                                         active_campaign_academy=True,
+                                         active_campaign_academy_kwargs=active_campaign_academy_kwargs,
+                                         tag_kwargs=tag_kwargs,
+                                         cohort=cohort_kwargs)
 
         add_cohort_slug_as_acp_tag.delay(1, 1)
 
@@ -189,10 +193,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         import logging
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
-        model = self.generate_models(academy=True,
-                                     cohort=1,
-                                     active_campaign_academy=True,
-                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(academy=True,
+                                         cohort=1,
+                                         active_campaign_academy=True,
+                                         active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
         add_cohort_slug_as_acp_tag.delay(1, 1)
 

@@ -34,7 +34,8 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.debug', MagicMock())
     def test_when_survey_is_none(self):
 
-        model = self.generate_models(cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(cohort=1)
 
         send_cohort_survey(user_id=None, survey_id=None)
 
@@ -48,7 +49,8 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.debug', MagicMock())
     def test_when_user_is_none(self):
 
-        model = self.generate_models(cohort=1, survey=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(cohort=1, survey=1)
 
         send_cohort_survey(survey_id=1, user_id=None)
 
@@ -65,7 +67,8 @@ class SendCohortSurvey(FeedbackTestCase):
         created = timezone.now() - timedelta(hours=48, minutes=1)
         duration = timedelta(hours=48)
 
-        model = self.generate_models(cohort=1, survey={'duration': duration}, user=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(cohort=1, survey={'duration': duration}, user=1)
 
         model.survey.created_at = created
 
@@ -84,7 +87,8 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_send_cohort_when_student_does_not_belong_to_cohort(self):
 
-        model = self.generate_models(cohort=1, user=1, survey=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(cohort=1, user=1, survey=1)
 
         send_cohort_survey(survey_id=1, user_id=1)
 
@@ -103,7 +107,8 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_when_student_not_found(self):
 
-        model = self.generate_models(cohort=1, user=1, survey=1, cohort_user={'role': 'STUDENT'})
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(cohort=1, user=1, survey=1, cohort_user={'role': 'STUDENT'})
 
         send_cohort_survey(survey_id=1, user_id=1)
 
@@ -129,7 +134,8 @@ class SendCohortSurvey(FeedbackTestCase):
             c = statuses[n]
             cohort_users = [{'educational_status': c}, {'role': 'STUDENT', 'educational_status': c}]
 
-            model = self.generate_models(cohort=1, user=1, survey=1, cohort_user=cohort_users)
+            with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+                model = self.generate_models(cohort=1, user=1, survey=1, cohort_user=cohort_users)
 
             send_cohort_survey(survey_id=model.survey.id, user_id=model.user.id)
 
@@ -173,12 +179,13 @@ class SendCohortSurvey(FeedbackTestCase):
             c = statuses[n]
             cohort_user = {'role': 'STUDENT', 'educational_status': c}
 
-            model = self.generate_models(cohort=1,
-                                         slack_user=1,
-                                         slack_team=1,
-                                         user=1,
-                                         survey=1,
-                                         cohort_user=cohort_user)
+            with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+                model = self.generate_models(cohort=1,
+                                             slack_user=1,
+                                             slack_team=1,
+                                             user=1,
+                                             survey=1,
+                                             cohort_user=cohort_user)
 
             send_cohort_survey(survey_id=model.survey.id, user_id=model.user.id)
 

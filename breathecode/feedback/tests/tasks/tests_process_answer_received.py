@@ -29,8 +29,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         import logging
 
-        model = self.generate_models()
-
         process_answer_received.delay(1)
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
@@ -71,7 +69,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         import logging
 
-        model = self.generate_models(answer=1, survey=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(answer=1, survey=1)
         survey_db = self.model_to_dict(model, 'survey')
 
         process_answer_received.delay(1)
@@ -105,7 +104,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         import logging
 
         answer = {'score': 7, 'status': 'ANSWERED'}
-        model = self.generate_models(answer=answer, survey=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(answer=answer, survey=1)
         survey_db = self.model_to_dict(model, 'survey')
 
         process_answer_received.delay(1)
@@ -140,7 +140,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         import logging
 
         answer = {'score': 7, 'status': 'ANSWERED'}
-        model = self.generate_models(answer=answer, survey=1, academy=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(answer=answer, survey=1, academy=1)
         survey_db = self.model_to_dict(model, 'survey')
 
         process_answer_received.delay(1)
@@ -176,7 +177,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         import logging, os
 
         answer_kwargs = {'score': 7}
-        model = self.generate_models(answer=answer_kwargs, survey=1, academy=1, user=1, cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(answer=answer_kwargs, survey=1, academy=1, user=1, cohort=1)
         survey_db = self.model_to_dict(model, 'survey')
 
         process_answer_received.delay(1)
@@ -219,7 +221,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         answer_kwargs = {'score': 7}
         academy_kwargs = {'feedback_email': 'someone@email.com'}
-        model = self.generate_models(answer=answer_kwargs, survey=1, academy=academy_kwargs, user=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(answer=answer_kwargs, survey=1, academy=academy_kwargs, user=1)
         survey_db = self.model_to_dict(model, 'survey')
 
         process_answer_received.delay(1)
@@ -269,7 +272,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         import logging, os
 
         answer_kwargs = {'score': 7}
-        model = self.generate_models(answer=answer_kwargs, survey=1, academy=1, user=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(answer=answer_kwargs, survey=1, academy=1, user=1)
         survey_db = self.model_to_dict(model, 'survey')
 
         process_answer_received.delay(1)
@@ -320,7 +324,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         answer_kwargs = {'score': 7}
         academy_kwargs = {'feedback_email': 'someone@email.com'}
-        model = self.generate_models(answer=answer_kwargs, survey=1, academy=academy_kwargs, user=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(answer=answer_kwargs, survey=1, academy=academy_kwargs, user=1)
         survey_db = self.model_to_dict(model, 'survey')
 
         process_answer_received.delay(1)
@@ -365,7 +370,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         import logging
 
         answer = {'score': 10, 'status': 'ANSWERED'}
-        model = self.generate_models(answer=answer, survey=1, academy=1, user=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.generate_models(answer=answer, survey=1, academy=1, user=1)
         survey_db = self.model_to_dict(model, 'survey')
 
         process_answer_received.delay(1)
