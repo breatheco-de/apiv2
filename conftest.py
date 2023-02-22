@@ -10,6 +10,7 @@ from faker import Faker
 os.environ['ENV'] = 'test'
 
 FAKE = Faker()
+pytest_plugins = ('celery.contrib.pytest', )
 
 
 @pytest.fixture(autouse=True)

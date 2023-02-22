@@ -494,7 +494,7 @@ class AbstractIOweYou(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    
+
     # Add this three foreign keys, but we have to make sure this 3 items match exactly with the possible
     # cohorts, service sets and eventtype sets that the PlanServiceItem is allowing.
     #
@@ -781,7 +781,7 @@ class PlanServiceItem(models.Model):
 
     # available cohorts to be sold in this service and plan
     cohorts = models.ManyToManyField(Cohort, blank=True)
-    
+
     # available mentorships service to be sold in this service and plan
     mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
                                                on_delete=models.CASCADE,

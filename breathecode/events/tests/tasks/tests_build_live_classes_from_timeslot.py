@@ -55,7 +55,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'debug', MagicMock())
     def test_one_cohort_time_slot_with_cohort_never_ends(self):
         cohort = {'never_ends': True, 'ending_date': None}
-        model = self.bc.database.create(cohort_time_slot=1, cohort=cohort)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(cohort_time_slot=1, cohort=cohort)
 
         build_live_classes_from_timeslot(1)
 
@@ -96,7 +97,8 @@ class AcademyEventTestSuite(EventTestCase):
             'removed_at': None,
         }
 
-        model = self.bc.database.create(cohort_time_slot=cohort_time_slot, cohort=cohort)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(cohort_time_slot=cohort_time_slot, cohort=cohort)
 
         build_live_classes_from_timeslot(1)
 
@@ -146,7 +148,8 @@ class AcademyEventTestSuite(EventTestCase):
             'removed_at': None,
         }
 
-        model = self.bc.database.create(cohort_time_slot=cohort_time_slot, cohort=cohort)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(cohort_time_slot=cohort_time_slot, cohort=cohort)
 
         build_live_classes_from_timeslot(1)
 
@@ -247,7 +250,8 @@ class AcademyEventTestSuite(EventTestCase):
             'removed_at': None,
         }
 
-        model = self.bc.database.create(cohort_time_slot=cohort_time_slot, cohort=cohort)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(cohort_time_slot=cohort_time_slot, cohort=cohort)
 
         build_live_classes_from_timeslot(1)
 
@@ -300,7 +304,8 @@ class AcademyEventTestSuite(EventTestCase):
             'removed_at': None,
         }
 
-        model = self.bc.database.create(cohort_time_slot=cohort_time_slot, cohort=cohort)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(cohort_time_slot=cohort_time_slot, cohort=cohort)
 
         build_live_classes_from_timeslot(1)
 

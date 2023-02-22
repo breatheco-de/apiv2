@@ -10,7 +10,6 @@ class TokenTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('sys.stdout.write', MagicMock())
-    @patch('sys.stderr.write', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_run_handler(self):
         surveys = [{'cohort_id': n} for n in range(1, 4)]
@@ -53,19 +52,24 @@ class TokenTestSuite(FeedbackTestCase):
             'score': None,
         } for n in range(1, 4)]
 
-        model = self.bc.database.create(user=3,
-                                        survey=surveys,
-                                        answer=answers,
-                                        cohort=3,
-                                        cohort_user=cohort_users)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+
+            model = self.bc.database.create(user=3,
+                                            survey=surveys,
+                                            answer=answers,
+                                            cohort=3,
+                                            cohort_user=cohort_users)
 
         answer_db = self.bc.format.to_dict(model.answer)
 
         # reset in this line because some people left print in some places
         sys.stdout.write.call_args_list = []
 
-        command = Command()
-        command.handle()
+        with patch('sys.stderr.write', MagicMock()):
+            command = Command()
+            command.handle()
+
+            self.assertEqual(sys.stderr.write.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), self.bc.format.to_dict(model.survey))
 
@@ -87,4 +91,3 @@ class TokenTestSuite(FeedbackTestCase):
 
         self.assertEqual(str(sys.stdout.write.call_args_list),
                          str([call('Successfully deleted invalid answers\n')]))
-        self.assertEqual(sys.stderr.write.call_args_list, [])

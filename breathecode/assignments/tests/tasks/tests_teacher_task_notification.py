@@ -15,7 +15,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value=None))
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
@@ -29,7 +29,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
         self.assertEqual(send_email_message.call_args_list, [])
         self.assertEqual(os.getenv.call_args_list, [call('TEACHER_URL')])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list,
                          [call('TEACHER_URL is not set as environment variable')])
         self.assertEqual(signals.assignment_created.send.call_args_list, [])
@@ -39,7 +39,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url'))
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
@@ -55,7 +55,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
         self.assertEqual(send_email_message.call_args_list, [])
         self.assertEqual(os.getenv.call_args_list, [call('TEACHER_URL')])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [call('Task not found')])
         self.assertEqual(signals.assignment_created.send.call_args_list, [])
 
@@ -64,7 +64,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url'))
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
@@ -75,12 +75,14 @@ class MediaTestSuite(AssignmentsTestCase):
 
         model = self.bc.database.create(task=1)
 
+        Logger.info.call_args_list = []
+
         teacher_task_notification.delay(1)
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [])
         self.assertEqual(os.getenv.call_args_list, [call('TEACHER_URL')])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [call('Can\'t determine the student cohort')])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
@@ -90,7 +92,6 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url'))
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
@@ -99,9 +100,12 @@ class MediaTestSuite(AssignmentsTestCase):
         from logging import Logger
         from breathecode.notify.actions import send_email_message
 
-        model = self.bc.database.create(task=1, cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=1, cohort=1)
 
-        teacher_task_notification.delay(1)
+        with patch('logging.Logger.info', MagicMock()):
+            teacher_task_notification.delay(1)
+            self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
@@ -121,7 +125,6 @@ class MediaTestSuite(AssignmentsTestCase):
                 call('ENV', ''),  # this is coming from Academy.save
                 call('TEACHER_URL'),
             ])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
@@ -131,7 +134,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url'))
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
@@ -141,7 +144,10 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.notify.actions import send_email_message
 
         cohort = {'language': 'es'}
-        model = self.bc.database.create(task=1, cohort=cohort)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=1, cohort=cohort)
+
+        Logger.info.call_args_list = []
 
         teacher_task_notification.delay(1)
 
@@ -163,7 +169,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 call('ENV', ''),  # this is coming from Academy.save
                 call('TEACHER_URL'),
             ])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
@@ -173,7 +179,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value='https://hardcoded.url/'))
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
@@ -182,7 +188,10 @@ class MediaTestSuite(AssignmentsTestCase):
         from logging import Logger
         from breathecode.notify.actions import send_email_message
 
-        model = self.bc.database.create(task=1, cohort=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(task=1, cohort=1)
+
+        Logger.info.call_args_list = []
 
         teacher_task_notification.delay(1)
 
@@ -204,7 +213,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 call('ENV', ''),  # this is coming from Academy.save
                 call('TEACHER_URL'),
             ])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting teacher_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])

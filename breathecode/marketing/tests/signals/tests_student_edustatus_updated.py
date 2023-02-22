@@ -16,7 +16,8 @@ class LeadTestSuite(MarketingTestCase):
 
         model = self.generate_models(cohort_user=True)
 
-        self.assertEqual(self.all_cohort_user_dict(), [self.model_to_dict(model, 'cohort_user')])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'),
+                         [self.model_to_dict(model, 'cohort_user')])
         self.assertEqual(add_cohort_task_to_student.delay.call_args_list, [])
         self.assertEqual(logging.Logger.warn.call_args_list, [])
 
@@ -33,7 +34,8 @@ class LeadTestSuite(MarketingTestCase):
         cohort_user_kwargs = {'educational_status': 'ACTIVE'}
         model = self.generate_models(cohort_user=True, cohort_user_kwargs=cohort_user_kwargs)
 
-        self.assertEqual(self.all_cohort_user_dict(), [self.model_to_dict(model, 'cohort_user')])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'),
+                         [self.model_to_dict(model, 'cohort_user')])
         self.assertEqual(add_cohort_task_to_student.delay.call_args_list, [
             call(model.user.id, model.cohort.id, model.cohort.academy.id),
         ])

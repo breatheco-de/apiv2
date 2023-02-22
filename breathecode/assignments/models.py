@@ -53,6 +53,8 @@ TASK_TYPE = (
 
 # Create your models here.
 class Task(models.Model):
+    _current_task_status = None
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     associated_slug = models.SlugField(max_length=150)
     title = models.CharField(max_length=150)
@@ -79,13 +81,26 @@ class Task(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    def save(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._current_task_status = self.task_status
 
-        creating = self.pk is None
+    def save(self, *args, **kwargs):
+        # check the fields before saving
+        self.full_clean()
+
+        creating = not self.pk
+
         super().save(*args, **kwargs)
+
+        if not creating and self.task_status != self._current_task_status:
+            signals.assignment_status_updated.send(instance=self, sender=self.__class__)
+
         # only validate this on creation
         if creating:
-            signals.assignment_created.send(instance=self, sender=Task)
+            signals.assignment_created.send(instance=self, sender=self.__class__)
+
+        self._current_task_status = self.task_status
 
 
 class UserProxy(User):

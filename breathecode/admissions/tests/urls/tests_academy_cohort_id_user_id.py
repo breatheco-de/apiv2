@@ -149,13 +149,13 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     if update:
-        self.assertEqual(self.all_cohort_user_dict(),
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'),
                          [{
                              **self.model_to_dict(model, 'cohort_user'),
                              'role': 'TEACHER',
                          }])
     else:
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
             'educational_status': None,
             'finantial_status': None,
@@ -219,7 +219,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
             'educational_status': None,
             'finantial_status': None,
@@ -227,6 +227,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'role': 'STUDENT',
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }])
 
     """
@@ -278,7 +279,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
             'educational_status': None,
             'finantial_status': None,
@@ -286,6 +287,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'role': 'TEACHER',
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }, {
             'cohort_id': 2,
             'educational_status': None,
@@ -294,6 +296,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'role': 'TEACHER',
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }])
 
     """
@@ -325,11 +328,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [{
-            **self.model_to_dict(model, 'cohort_user'),
-            'role': 'STUDENT',
-            'watching': False,
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'),
+                         [{
+                             **self.model_to_dict(model, 'cohort_user'),
+                             'role': 'STUDENT',
+                             'watching': False,
+                         }])
 
     """
     🔽🔽🔽 Put teacher
@@ -359,7 +363,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(),
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'),
                          [{
                              **self.model_to_dict(model, 'cohort_user'),
                              'role': 'STUDENT',
@@ -391,11 +395,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [{
-            **self.model_to_dict(model, 'cohort_user'),
-            'role': 'TEACHER',
-            'watching': False,
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'),
+                         [{
+                             **self.model_to_dict(model, 'cohort_user'),
+                             'role': 'TEACHER',
+                             'watching': False,
+                         }])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_academy_cohort_id_user__post__one_teacher__with_role_staff(self):

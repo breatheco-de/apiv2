@@ -65,6 +65,7 @@ def cohort_user_field(data={}):
         'role': 'STUDENT',
         'user_id': 0,
         'watching': False,
+        'history_log': {},
         **data,
     }
 
@@ -116,13 +117,13 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     if update:
-        self.assertEqual(self.all_cohort_user_dict(),
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'),
                          [{
                              **self.model_to_dict(model, 'cohort_user'),
                              'role': 'TEACHER',
                          }])
     else:
-        self.assertEqual(self.all_cohort_user_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
             'educational_status': None,
             'finantial_status': None,
@@ -130,6 +131,7 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
             'role': 'TEACHER',
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }])
 
 
@@ -402,6 +404,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'role': 'STUDENT',
             'user_id': 1,
             'watching': False,
+            'history_log': {},
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -442,7 +445,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 1,
             'role': 'STUDENT',
             'user_id': 2,
-            'watching': False
+            'watching': False,
+            'history_log': {},
         }, {
             'cohort_id': 1,
             'educational_status': None,
@@ -450,7 +454,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'id': 2,
             'role': 'STUDENT',
             'user_id': 3,
-            'watching': False
+            'watching': False,
+            'history_log': {},
         }])
 
     """
