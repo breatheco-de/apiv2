@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def preview_template(request, slug):
-    template = get_template_content(slug, request.GET, formats=['html])
+    template = get_template_content(slug, request.GET, formats=['html'])
     return HttpResponse(template['html'])
 
 
