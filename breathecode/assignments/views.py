@@ -248,15 +248,9 @@ class FinalProjectMeView(APIView):
         if isinstance(request.data, list) == False:
             payload = [request.data]
 
-        print('request')
-        print(request.data)
         members_set = set(payload[0]['members'])
         members_set.add(user_id)
         payload[0]['members'] = list(members_set)
-
-        # files = self.upload(request)
-        # print('files')
-        # print(files)
 
         serializer = PostFinalProjectSerializer(data=payload,
                                                 context={
