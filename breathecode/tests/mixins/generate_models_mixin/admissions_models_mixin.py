@@ -55,6 +55,9 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    subscription=False,
                                    event_type_visibility_setting=False,
                                    mentorship_service_set=False,
+                                   event_type_set=False,
+                                   event_type_set_translation=False,
+                                   mentorship_service_set_translation=False,
                                    live_class=False,
                                    country_kwargs={},
                                    city_kwargs={},
@@ -94,7 +97,9 @@ class AdmissionsModelsMixin(ModelsMixin):
                 or is_valid(monitor_script) or is_valid(mentorship_service) or is_valid(mentor_profile)
                 or is_valid(user_specialty) or is_valid(asset_category) or is_valid(keyword_cluster)
                 or is_valid(asset_keyword) or is_valid(bag) or is_valid(subscription) or is_valid(event_type)
-                or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set)):
+                or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set)
+                or is_valid(event_type_set) or is_valid(event_type_set_translation)
+                or is_valid(mentorship_service_set) or is_valid(mentorship_service_set_translation)):
             kargs = {}
 
             if 'country' in models:

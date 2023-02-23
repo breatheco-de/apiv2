@@ -25,6 +25,9 @@ class PaymentsModelsMixin(ModelsMixin):
                                  bag=False,
                                  plan_service_item_handler=False,
                                  mentorship_service_set=False,
+                                 mentorship_service_set_translation=False,
+                                 event_type_set=False,
+                                 event_type_set_translation=False,
                                  subscription_service_item=False,
                                  plan_service_item=False,
                                  plan_financing=False,
@@ -166,6 +169,56 @@ class PaymentsModelsMixin(ModelsMixin):
             models['plan_offer_translation'] = create_models(plan_offer_translation,
                                                              'payments.PlanOfferTranslation', **kargs)
 
+        if not 'mentorship_service_set' in models and (is_valid(mentorship_service_set)
+                                                       or is_valid(mentorship_service_set_translation)):
+            kargs = {}
+
+            if 'mentorship_service' in models:
+                kargs['mentorship_services'] = get_list(models['mentorship_service'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['mentorship_service_set'] = create_models(mentorship_service_set,
+                                                             'payments.MentorshipServiceSet', **kargs)
+
+        if not 'mentorship_service_set_translation' in models and is_valid(
+                mentorship_service_set_translation):
+            kargs = {}
+
+            if 'mentorship_service_set' in models:
+                kargs['mentorship_service_set'] = get_list(models['mentorship_service_set'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['mentorship_service_set_translation'] = create_models(
+                mentorship_service_set_translation, 'payments.MentorshipServiceSetTranslation', **kargs)
+
+        if not 'event_type_set' in models and (is_valid(event_type_set)
+                                               or is_valid(event_type_set_translation)):
+            kargs = {}
+
+            if 'event_type' in models:
+                kargs['event_types'] = get_list(models['event_type'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['event_type_set'] = create_models(event_type_set, 'payments.EventTypeSet', **kargs)
+
+        if not 'event_type_set_translation' in models and is_valid(event_type_set_translation):
+            kargs = {}
+
+            if 'event_type_sets' in models:
+                kargs['event_type_sets'] = get_list(models['event_type_set'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['event_type_set_translation'] = create_models(event_type_set_translation,
+                                                                 'payments.EventTypeSetTranslation', **kargs)
+
         if not 'bag' in models and (is_valid(bag) or is_valid(invoice)):
             kargs = {}
 
@@ -219,18 +272,6 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['plans'] = get_list(models['plan'])
 
             models['subscription'] = create_models(subscription, 'payments.Subscription', **kargs)
-
-        if not 'mentorship_service_set' in models and is_valid(mentorship_service_set):
-            kargs = {}
-
-            if 'mentorship_service' in models:
-                kargs['mentorship_services'] = get_list(models['mentorship_service'])
-
-            if 'academy' in models:
-                kargs['academy'] = just_one(models['academy'])
-
-            models['mentorship_service_set'] = create_models(mentorship_service_set,
-                                                             'payments.MentorshipServiceSet', **kargs)
 
         if not 'subscription_service_item' in models and is_valid(subscription_service_item):
             kargs = {}
