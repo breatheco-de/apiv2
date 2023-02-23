@@ -573,9 +573,10 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 if key != 'status' and data[key] != getattr(self.instance, key):
                     raise ValidationException(f'You are only allowed to change the status of this asset',
                                               status.HTTP_400_BAD_REQUEST)
-            if 'status' in data and data['status'] not in ['DRAFT', 'WRITING', 'UNASSIGNED']:
-                raise ValidationException(f'You can only set the status to draft, writing or unassigned',
-                                          status.HTTP_400_BAD_REQUEST)
+            if 'status' in data and data['status'] not in ['DRAFT', 'WRITING', 'UNASSIGNED', 'OPTIMIZED']:
+                raise ValidationException(
+                    f'You can only set the status to draft, writing, optimized, or unassigned',
+                    status.HTTP_400_BAD_REQUEST)
 
             if self.instance.author is None and data['status'] != 'UNASSIGNED':
                 data['author'] = session_user
