@@ -230,6 +230,54 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     currency = GetCurrencySmallSerializer()
 
 
+class GetMentorshipServiceSerializer(serpy.Serializer):
+
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    description = serpy.Field()
+    logo_url = serpy.Field()
+    duration = serpy.Field()
+    max_duration = serpy.Field()
+    language = serpy.Field()
+    missed_meeting_duration = serpy.Field()
+    status = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+
+
+class GetMentorshipServiceSetSerializer(serpy.Serializer):
+
+    id = serpy.Field()
+    slug = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+    mentorship_services = serpy.MethodField()
+
+    def get_mentorship_services(self, obj):
+        return GetMentorshipServiceSerializer(obj.mentorship_services.filter(), many=True).data
+
+
+class GetEventTypeSerializer(serpy.Serializer):
+
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    description = serpy.Field()
+    icon_url = serpy.Field()
+    lang = serpy.Field()
+    allow_shared_creation = serpy.Field()
+
+
+class GetEventTypeSetSerializer(serpy.Serializer):
+
+    id = serpy.Field()
+    slug = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+    event_types = serpy.MethodField()
+
+    def get_event_types(self, obj):
+        return GetEventTypeSerializer(obj.event_types.filter(), many=True).data
+
+
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     id = serpy.Field()
@@ -238,6 +286,10 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     user = GetUserSmallSerializer(many=False)
     academy = GetAcademySmallSerializer(many=False)
+
+    cohort_selected = GetCohortSerializer(many=False, required=False)
+    mentorship_service_set_selected = GetMentorshipServiceSetSerializer(many=False, required=False)
+    event_type_set_selected = GetEventTypeSetSerializer(many=False, required=False)
 
     plans = serpy.MethodField()
     invoices = serpy.MethodField()

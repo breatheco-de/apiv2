@@ -415,7 +415,7 @@ class MeConsumableView(APIView):
 
 class MeSubscriptionView(APIView):
     # this cannot support cache because the cache does not support associated two models to a response yet
-    extensions = APIViewExtensions(sort='-created_at')
+    extensions = APIViewExtensions(sort='-id')
 
     def get_lookup(self, key, value):
         args = ()
@@ -476,32 +476,45 @@ class MeSubscriptionView(APIView):
 
         if invoice := request.GET.get('invoice'):
             ids = [int(x) for x in invoice if x.isnumeric()]
-            subscriptions = subscriptions.filter(invoices__id__in=ids).distinct()
-            plan_financings = plan_financings.filter(invoices__id__in=ids).distinct()
+            subscriptions = subscriptions.filter(invoices__id__in=ids)
+            plan_financings = plan_financings.filter(invoices__id__in=ids)
 
         if service := request.GET.get('service'):
             service_items_args, service_items_kwargs = self.get_lookup('service_items__service', service)
             plans_args, plans_kwargs = self.get_lookup('plans__service_items__service', service)
 
             if service_items_args:
-                subscriptions = subscriptions.filter(Q(*service_items_args) | Q(*plans_args)).distinct()
-                plan_financings = plan_financings.filter(*plans_args).distinct()
+                subscriptions = subscriptions.filter(Q(*service_items_args) | Q(*plans_args))
+                plan_financings = plan_financings.filter(*plans_args)
 
             else:
-                subscriptions = subscriptions.filter(Q(**plans_kwargs) | Q(**service_items_kwargs)).distinct()
-                plan_financings = plan_financings.filter(**plans_kwargs).distinct()
+                subscriptions = subscriptions.filter(Q(**plans_kwargs) | Q(**service_items_kwargs))
+                plan_financings = plan_financings.filter(**plans_kwargs)
 
         if plan := request.GET.get('plan'):
             args, kwargs = self.get_lookup('plans', plan)
-            subscriptions = subscriptions.filter(*args, **kwargs).distinct()
-            plan_financings = plan_financings.filter(**kwargs).distinct()
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
 
-        # this can't support pagination
-        subscriptions = handler.queryset(subscriptions)
+        if cohort_selected := request.GET.get('cohort-selected'):
+            args, kwargs = self.get_lookup('cohort_selected', cohort_selected)
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
+
+        if mentorship_service_set_selected := request.GET.get('mentorship-service-set-selected'):
+            args, kwargs = self.get_lookup('mentorship_service_set_selected', mentorship_service_set_selected)
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
+
+        if event_type_set_selected := request.GET.get('event-type-set-selected'):
+            args, kwargs = self.get_lookup('event_type_set_selected', event_type_set_selected)
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
+
+        subscriptions = handler.queryset(subscriptions.distinct())
         subscription_serializer = GetSubscriptionSerializer(subscriptions, many=True)
 
-        # this can't support pagination
-        plan_financings = handler.queryset(plan_financings)
+        plan_financings = handler.queryset(plan_financings.distinct())
         plan_financing_serializer = GetPlanFinancingSerializer(plan_financings, many=True)
 
         return handler.response({

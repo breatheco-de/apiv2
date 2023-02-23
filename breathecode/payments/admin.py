@@ -1,7 +1,8 @@
 from django.contrib import admin
 
-from breathecode.payments.models import (Bag, Consumable, Currency, FinancialReputation, FinancingOption,
-                                         Invoice, MentorshipServiceSet, PaymentContact, Plan, PlanFinancing,
+from breathecode.payments.models import (Bag, Consumable, Currency, EventTypeSet, EventTypeSetTranslation,
+                                         FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
+                                         MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing,
                                          PlanServiceItem, PlanServiceItemHandler, PlanTranslation, Service,
                                          ServiceItem, ServiceItemFeature, ServiceStockScheduler,
                                          ServiceTranslation, Subscription, SubscriptionServiceItem)
@@ -107,9 +108,30 @@ class PlanFinancingAdmin(admin.ModelAdmin):
 
 @admin.register(MentorshipServiceSet)
 class MentorshipServiceSetAdmin(admin.ModelAdmin):
-    list_display = ('id', 'slug', 'name', 'academy')
+    list_display = ('id', 'slug', 'academy')
     list_filter = ['academy__slug']
-    search_fields = ['slug', 'name', 'academy__slug', 'academy__name']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
+@admin.register(MentorshipServiceSetTranslation)
+class MentorshipServiceSetTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'mentorship_service_set', 'lang', 'title', 'description', 'short_description')
+    list_filter = ['lang']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
+@admin.register(EventTypeSet)
+class EventTypeSetAdmin(admin.ModelAdmin):
+    list_display = ('id', 'slug', 'academy')
+    list_filter = ['academy__slug']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
+@admin.register(EventTypeSetTranslation)
+class EventTypeSetTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'event_type_set', 'lang', 'title', 'description', 'short_description')
+    list_filter = ['lang']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
 
 
 @admin.register(PlanServiceItem)
