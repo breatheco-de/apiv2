@@ -514,6 +514,28 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_student_id__put__without_required_fields(self):
+        """Test /academy/:id/member/:id"""
+        role = 'crud_member'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='crud_member',
+                                     profile_academy=1)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
+
+        response = self.client.put(url)
+
+        json = response.json()
+        expected = {'detail': 'first-name-not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
     """
     🔽🔽🔽 PUT with data, changing values
     """
