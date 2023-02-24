@@ -632,7 +632,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.put(url, data, format='json')
 
         json = response.json()
-        expected = {'detail': 'Unable to find first name on this user', 'status_code': 400}
+        expected = {'detail': 'first-name-not-found', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -10,6 +10,9 @@ from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.authenticate.models import Token
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
+from breathecode.utils.i18n import translation
+
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.payments.consumers import mentorship_service_by_url_param
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -748,6 +751,8 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('crud_mentorship_mentor')
     def put(self, request, mentor_id=None, academy_id=None):
+        lang = get_user_language(request)
+
         if mentor_id is None:
             raise ValidationException('Missing mentor ID on the URL', 404)
 

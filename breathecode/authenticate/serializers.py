@@ -429,6 +429,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                   'status')
 
     def validate(self, data):
+        lang = data.get('lang', 'en')
 
         if 'email' in data and data['email']:
             data['email'] = data['email'].lower()
