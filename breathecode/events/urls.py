@@ -45,6 +45,9 @@ urlpatterns = [
     path('academy/eventype/<slug:event_type_slug>/visibilitysetting',
          EventTypeVisibilitySettingView.as_view(),
          name='academy_eventype_slug_visibilitysetting'),
+    path('academy/eventype/<slug:event_type_slug>/visibilitysetting/<int:visibility_setting_id>',
+         EventTypeVisibilitySettingView.as_view(),
+         name='academy_eventype_slug_visibilitysetting_id'),
     path('academy/checkin', EventCheckinView.as_view(), name='academy_checkin'),
     path('eventbrite/webhook/<int:organization_id>', eventbrite_webhook, name='eventbrite_webhook_id'),
 ]
