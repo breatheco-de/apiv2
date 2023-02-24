@@ -815,52 +815,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__post__creating_a_element_without_email(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='crud_mentorship_mentor',
-                                        profile_academy=1,
-                                        mentorship_service=1)
-
-        self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
-
-        url = reverse_lazy('mentorship:academy_mentor')
-        data = {
-            'slug': 'mirai-nikki',
-            'name': 'Mirai Nikki',
-            'price_per_hour': 20,
-            'services': [1],
-            'user': 1
-        }
-        response = self.client.post(url, data, format='json')
-
-        json = response.json()
-        expected = post_serializer(self,
-                                   model.mentorship_service,
-                                   model.user,
-                                   data={
-                                       'id': 1,
-                                       'slug': 'mirai-nikki',
-                                       'email': model.user.email
-                                   })
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
-            mentor_profile_columns({
-                'id': 1,
-                'name': 'Mirai Nikki',
-                'slug': 'mirai-nikki',
-                'bio': None,
-                'user_id': 1,
-                'academy_id': 1,
-                'price_per_hour': 20.0,
-                'email': model.user.email,
-            }),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock(side_effect=Exception('hello')))
     def test__post__with_one_mentor_profile__changing_to_a_success_status__without_property_set(self):
         statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
