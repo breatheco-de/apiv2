@@ -173,6 +173,27 @@ class MemberPutDuckTestSuite(AuthTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_academy_id_member_id__with_wrong_required_fields(self):
+        model = self.bc.database.create(authenticate=True,
+                                        capability='crud_member',
+                                        role='role',
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy('authenticate:academy_id_member_id',
+                           kwargs={
+                               'academy_id': 1,
+                               'user_id_or_email': '1'
+                           })
+        response = self.client.put(url)
+
+        json = response.json()
+        expected = {'detail': 'first-name-not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     """
     🔽🔽🔽 Check the param is being passed
     """
