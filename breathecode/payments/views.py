@@ -16,8 +16,9 @@ from breathecode.payments import tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
-from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, PlanFinancing,
-                                         PlanServiceItem, Service, ServiceItem, Subscription)
+from breathecode.payments.models import (Bag, Consumable, EventTypeSet, FinancialReputation, Invoice,
+                                         MentorshipServiceSet, Plan, PlanFinancing, PlanServiceItem, Service,
+                                         ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetInvoiceSerializer,
                                               GetInvoiceSmallSerializer, GetPlanFinancingSerializer,
                                               GetPlanSerializer, GetServiceItemWithFeaturesSerializer,
@@ -395,19 +396,20 @@ class MeConsumableView(APIView):
         items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None),
                                           user=request.user)
 
-        mentorship_services = MentorshipService.objects.none()
-        mentorship_services = filter_consumables(request, items, mentorship_services, 'mentorship_service')
+        mentorship_services = MentorshipServiceSet.objects.none()
+        mentorship_services = filter_consumables(request, items, mentorship_services,
+                                                 'mentorship_service_set')
 
         cohorts = Cohort.objects.none()
         cohorts = filter_consumables(request, items, cohorts, 'cohort')
 
-        event_types = EventType.objects.none()
-        event_types = filter_consumables(request, items, event_types, 'event_type')
+        event_types = EventTypeSet.objects.none()
+        event_types = filter_consumables(request, items, event_types, 'event_type_set')
 
         balance = {
-            'mentorship_services': get_balance_by_resource(mentorship_services, 'mentorship_service'),
+            'mentorship_service_sets': get_balance_by_resource(mentorship_services, 'mentorship_service_set'),
             'cohorts': get_balance_by_resource(cohorts, 'cohort'),
-            'event_types': get_balance_by_resource(event_types, 'event_type'),
+            'event_type_sets': get_balance_by_resource(event_types, 'event_type_set'),
         }
 
         return Response(balance)
@@ -496,18 +498,20 @@ class MeSubscriptionView(APIView):
             subscriptions = subscriptions.filter(*args, **kwargs)
             plan_financings = plan_financings.filter(*args, **kwargs)
 
-        if cohort_selected := request.GET.get('cohort-selected'):
-            args, kwargs = self.get_lookup('cohort_selected', cohort_selected)
+        if selected_cohort := (request.GET.get('cohort-selected') or request.GET.get('selected-cohort')):
+            args, kwargs = self.get_lookup('selected_cohort', selected_cohort)
             subscriptions = subscriptions.filter(*args, **kwargs)
             plan_financings = plan_financings.filter(*args, **kwargs)
 
-        if mentorship_service_set_selected := request.GET.get('mentorship-service-set-selected'):
-            args, kwargs = self.get_lookup('mentorship_service_set_selected', mentorship_service_set_selected)
+        if selected_mentorship_service_set := (request.GET.get('mentorship-service-set-selected')
+                                               or request.GET.get('selected-mentorship-service-set')):
+            args, kwargs = self.get_lookup('selected_mentorship_service_set', selected_mentorship_service_set)
             subscriptions = subscriptions.filter(*args, **kwargs)
             plan_financings = plan_financings.filter(*args, **kwargs)
 
-        if event_type_set_selected := request.GET.get('event-type-set-selected'):
-            args, kwargs = self.get_lookup('event_type_set_selected', event_type_set_selected)
+        if selected_event_type_set := (request.GET.get('event-type-set-selected')
+                                       or request.GET.get('selected-event-type-set')):
+            args, kwargs = self.get_lookup('selected_event_type_set', selected_event_type_set)
             subscriptions = subscriptions.filter(*args, **kwargs)
             plan_financings = plan_financings.filter(*args, **kwargs)
 

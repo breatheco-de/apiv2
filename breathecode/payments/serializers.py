@@ -287,9 +287,9 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     user = GetUserSmallSerializer(many=False)
     academy = GetAcademySmallSerializer(many=False)
 
-    cohort_selected = GetCohortSerializer(many=False, required=False)
-    mentorship_service_set_selected = GetMentorshipServiceSetSerializer(many=False, required=False)
-    event_type_set_selected = GetEventTypeSetSerializer(many=False, required=False)
+    selected_cohort = GetCohortSerializer(many=False, required=False)
+    selected_mentorship_service_set = GetMentorshipServiceSetSerializer(many=False, required=False)
+    selected_event_type_set = GetEventTypeSetSerializer(many=False, required=False)
 
     plans = serpy.MethodField()
     invoices = serpy.MethodField()

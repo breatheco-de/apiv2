@@ -120,55 +120,6 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['financing_option'] = create_models(financing_option, 'payments.FinancingOption', **kargs)
 
-        if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation)
-                                     or is_valid(plan_service_item) or is_valid(plan_offer)):
-            kargs = {}
-
-            if 'currency' in models:
-                kargs['currency'] = just_one(models['currency'])
-
-            if 'payment_service_scheduler' in models:
-                kargs['schedulers'] = get_list(models['payment_service_scheduler'])
-
-            if 'financing_option' in models:
-                kargs['financing_options'] = get_list(models['financing_option'])
-
-            if 'academy' in models:
-                kargs['owner'] = just_one(models['academy'])
-
-            models['plan'] = create_models(plan, 'payments.Plan', **kargs)
-
-        if not 'plan_translation' in models and is_valid(plan_translation):
-            kargs = {}
-
-            if 'plan' in models:
-                kargs['plan'] = just_one(models['plan'])
-
-            models['plan_translation'] = create_models(plan_translation, 'payments.PlanTranslation', **kargs)
-
-        if not 'plan_offer' in models and (is_valid(plan_translation) or is_valid(plan_offer_translation)):
-            kargs = {}
-
-            if 'plan' in models:
-                kargs['original_plan'] = just_one(models['plan'])
-
-            if 'syllabus' in models:
-                kargs['from_syllabus'] = get_list(models['syllabus'])
-
-            if 'plan' in models:
-                kargs['suggested_plans'] = get_list(models['plan'])
-
-            models['plan_offer'] = create_models(plan_offer, 'payments.PlanOffer', **kargs)
-
-        if not 'plan_offer_translation' in models and is_valid(plan_offer_translation):
-            kargs = {}
-
-            if 'offer' in models:
-                kargs['offer'] = just_one(models['plan_offer'])
-
-            models['plan_offer_translation'] = create_models(plan_offer_translation,
-                                                             'payments.PlanOfferTranslation', **kargs)
-
         if not 'mentorship_service_set' in models and (is_valid(mentorship_service_set)
                                                        or is_valid(mentorship_service_set_translation)):
             kargs = {}
@@ -219,6 +170,64 @@ class PaymentsModelsMixin(ModelsMixin):
             models['event_type_set_translation'] = create_models(event_type_set_translation,
                                                                  'payments.EventTypeSetTranslation', **kargs)
 
+        if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation)
+                                     or is_valid(plan_service_item) or is_valid(plan_offer)):
+            kargs = {}
+
+            if 'currency' in models:
+                kargs['currency'] = just_one(models['currency'])
+
+            if 'payment_service_scheduler' in models:
+                kargs['schedulers'] = get_list(models['payment_service_scheduler'])
+
+            if 'financing_option' in models:
+                kargs['financing_options'] = get_list(models['financing_option'])
+
+            if 'academy' in models:
+                kargs['owner'] = just_one(models['academy'])
+
+            if 'mentorship_service_set' in models:
+                kargs['available_mentorship_service_sets'] = get_list(models['mentorship_service_set'])
+
+            if 'event_type_set' in models:
+                kargs['available_event_type_sets'] = get_list(models['event_type_set'])
+
+            if 'cohort' in models:
+                kargs['available_cohorts'] = get_list(models['cohort'])
+
+            models['plan'] = create_models(plan, 'payments.Plan', **kargs)
+
+        if not 'plan_translation' in models and is_valid(plan_translation):
+            kargs = {}
+
+            if 'plan' in models:
+                kargs['plan'] = just_one(models['plan'])
+
+            models['plan_translation'] = create_models(plan_translation, 'payments.PlanTranslation', **kargs)
+
+        if not 'plan_offer' in models and (is_valid(plan_translation) or is_valid(plan_offer_translation)):
+            kargs = {}
+
+            if 'plan' in models:
+                kargs['original_plan'] = just_one(models['plan'])
+
+            if 'syllabus' in models:
+                kargs['from_syllabus'] = get_list(models['syllabus'])
+
+            if 'plan' in models:
+                kargs['suggested_plans'] = get_list(models['plan'])
+
+            models['plan_offer'] = create_models(plan_offer, 'payments.PlanOffer', **kargs)
+
+        if not 'plan_offer_translation' in models and is_valid(plan_offer_translation):
+            kargs = {}
+
+            if 'offer' in models:
+                kargs['offer'] = just_one(models['plan_offer'])
+
+            models['plan_offer_translation'] = create_models(plan_offer_translation,
+                                                             'payments.PlanOfferTranslation', **kargs)
+
         if not 'bag' in models and (is_valid(bag) or is_valid(invoice)):
             kargs = {}
 
@@ -233,6 +242,15 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'service_item' in models:
                 kargs['service_items'] = get_list(models['service_item'])
+
+            if 'cohort' in models:
+                kargs['selected_cohorts'] = get_list(models['cohort'])
+
+            if 'mentorship_service_set' in models:
+                kargs['selected_mentorship_service_sets'] = get_list(models['mentorship_service_set'])
+
+            if 'event_type_set' in models:
+                kargs['selected_event_type_sets'] = get_list(models['event_type_set'])
 
             if 'plan' in models:
                 kargs['plans'] = get_list(models['plan'])
@@ -264,6 +282,15 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
+
+            if 'cohort' in models:
+                kargs['selected_cohort'] = just_one(models['cohort'])
+
+            if 'mentorship_service_set' in models:
+                kargs['selected_mentorship_service_set'] = just_one(models['mentorship_service_set'])
+
+            if 'event_type_set' in models:
+                kargs['selected_event_type_set'] = just_one(models['event_type_set'])
 
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
@@ -300,6 +327,15 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
+            if 'cohort' in models:
+                kargs['selected_cohort'] = just_one(models['cohort'])
+
+            if 'mentorship_service_set' in models:
+                kargs['selected_mentorship_service_set'] = just_one(models['mentorship_service_set'])
+
+            if 'event_type_set' in models:
+                kargs['selected_event_type_set'] = just_one(models['event_type_set'])
+
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
@@ -320,8 +356,11 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'cohort' in models:
                 kargs['cohort'] = just_one(models['cohort'])
 
-            if 'mentorship_service' in models:
-                kargs['mentorship_service'] = just_one(models['mentorship_service'])
+            if 'mentorship_service_set' in models:
+                kargs['mentorship_service_set'] = just_one(models['mentorship_service_set'])
+
+            if 'event_type_set' in models:
+                kargs['event_type_set'] = just_one(models['event_type_set'])
 
             models['consumable'] = create_models(consumable, 'payments.Consumable', **kargs)
 
@@ -346,12 +385,6 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'service_item' in models:
                 kargs['service_item'] = just_one(models['service_item'])
-
-            if 'mentorship_service_set' in models:
-                kargs['mentorship_service_set'] = just_one(models['mentorship_service_set'])
-
-            if 'cohort' in models:
-                kargs['cohorts'] = get_list(models['cohort'])
 
             models['plan_service_item'] = create_models(plan_service_item, 'payments.PlanServiceItem',
                                                         **kargs)
