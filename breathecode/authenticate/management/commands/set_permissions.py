@@ -44,6 +44,11 @@ PERMISSIONS = [
         'description': 'Join mentorship',
         'codename': 'join_mentorship',
     },
+    {
+        'name': 'Get my containers',
+        'description': 'Get provisioning containers',
+        'codename': 'get_containers',
+    },
 ]
 
 GROUPS = [
@@ -57,7 +62,7 @@ GROUPS = [
     },
     {
         'name': 'Student',
-        'permissions': ['get_my_certificate'],
+        'permissions': ['get_my_certificate', 'get_containers'],
     },
     {
         'name': 'Teacher',
