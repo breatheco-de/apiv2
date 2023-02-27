@@ -549,6 +549,7 @@ class AssetThumbnailGenerator:
 
         response = None
         try:
+            logger.debug(f'Generating screenshot with URL {url}')
             query_string = urlencode({
                 'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
                 'url': url,
