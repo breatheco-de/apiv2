@@ -358,7 +358,8 @@ class AssetThumbnailView(APIView):
 
         generator = AssetThumbnailGenerator(asset, width, height)
 
-        asset = generator.create()
+        # wait one second
+        asset = generator.create(delay=1000)
 
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
