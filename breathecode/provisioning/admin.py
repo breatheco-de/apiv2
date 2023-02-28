@@ -2,7 +2,7 @@ import logging, secrets
 from django.contrib import admin, messages
 from django import forms
 from .models import (ProvisioningVendor, ProvisioningMachineTypes, ProvisioningAcademy, ProvisioningBill,
-                     ProvisioningActivity, Container)
+                     ProvisioningActivity, ProvisioningContainer)
 # from .actions import ()
 from django.utils import timezone
 from breathecode.utils.validation_exception import ValidationException
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @admin.register(ProvisioningVendor)
 class ProvisioningVendorAdmin(admin.ModelAdmin):
-    form = CustomForm
+    # form = CustomForm
     search_fields = ['name']
     list_display = ('id', 'name')
 

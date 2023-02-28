@@ -6,5 +6,5 @@ from .views import (
 app_name = 'provisioning'
 urlpatterns = [
     path('me/container', ContainerMeView.as_view()),
-    # path('me/<slug:plan_slug>', PlanView.as_view()),
+    path('me/container/<int:container_id>', ContainerMeView.as_view()),
 ]

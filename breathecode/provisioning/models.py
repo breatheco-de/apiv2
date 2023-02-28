@@ -1,3 +1,4 @@
+import logging
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
@@ -13,23 +14,29 @@ class ProvisioningVendor(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def __str__(self):
+        return self.name
+
 
 class ProvisioningMachineTypes(models.Model):
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=80)
     description = models.CharField(max_length=255)
-    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL)
+    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
 
-    cpu_cores = models.IntegerField(max_length=2)
-    ram_in_bytes = models.IntegerField(max_length=15)
-    disk_in_bytes = models.IntegerField(max_length=15)
+    cpu_cores = models.IntegerField()
+    ram_in_bytes = models.IntegerField()
+    disk_in_bytes = models.IntegerField()
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def __str__(self):
+        return self.name
+
 
 class ProvisioningAcademy(models.Model):
-    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL)
+    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     credentials_key = models.CharField(max_length=200, blank=True)
     credentials_token = models.CharField(max_length=200, blank=True)
@@ -38,10 +45,13 @@ class ProvisioningAcademy(models.Model):
         default=15, help_text='If the container is idle for X amount of minutes, it will be shut down')
     max_active_containers = models.IntegerField(
         default=2, help_text='If you already have X active containers you wont be able to create new ones. ')
-    allowed_machine_types = models.ManyToManyField(ProvisioningMachineTypes)
+    allowed_machine_types = models.ManyToManyField(ProvisioningMachineTypes, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return str(self.academy) + ' on ' + str(self.vendor)
 
 
 DUE = 'DUE'
@@ -66,6 +76,10 @@ class ProvisioningBill(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return str(self.id) + ' ' + str(self.academy) + ' - ' + str(self.total_amount) + str(
+            self.currency_code)
 
 
 PENDING = 'PENDING'
