@@ -203,6 +203,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'academy': {
                 'id': model.academy.id,
                 'slug': model.academy.slug,
@@ -604,6 +605,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             model['cohort'].timezone,
             'is_hidden_on_prework':
             model['cohort'].is_hidden_on_prework,
+            'available_as_saas':
+            model['cohort'].available_as_saas,
             'timeslots': [{
                 'ending_at':
                 DatetimeInteger.to_iso_string(model.academy.timezone, syllabus_schedule_time_slot.ending_at),
@@ -673,7 +676,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
-                             'is_hidden_on_prework': True
+                             'is_hidden_on_prework': True,
+                             'available_as_saas': model['cohort'].available_as_saas
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
@@ -767,6 +771,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             model['cohort'].timezone,
             'is_hidden_on_prework':
             model['cohort'].is_hidden_on_prework,
+            'available_as_saas':
+            model['cohort'].available_as_saas,
             'timeslots': [{
                 'ending_at':
                 DatetimeInteger.to_iso_string(model.cohort.timezone, syllabus_schedule_time_slot.ending_at),
@@ -835,7 +841,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': 'Europe/Monaco',
-                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework
+                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+                             'available_as_saas': model['cohort'].available_as_saas
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
@@ -935,6 +942,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             model['cohort'].timezone,
             'is_hidden_on_prework':
             model['cohort'].is_hidden_on_prework,
+            'available_as_saas':
+            model['cohort'].available_as_saas,
             'timeslots': [{
                 'ending_at':
                 DatetimeInteger.to_iso_string(model.academy.timezone, syllabus_schedule_time_slot.ending_at),
@@ -1004,7 +1013,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
-                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework
+                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+                             'available_as_saas': model['cohort'].available_as_saas
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
@@ -1105,6 +1115,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'timeslots': [],
             'is_hidden_on_prework':
             model['cohort'].is_hidden_on_prework,
+            'available_as_saas':
+            model['cohort'].available_as_saas,
             'schedule': {
                 'id': model2.syllabus_schedule.id,
                 'name': model2.syllabus_schedule.name,
@@ -1161,7 +1173,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'syllabus_version_id': model['cohort'].syllabus_version.id,
                              'schedule_id': model2.syllabus_schedule.id,
                              'timezone': None,
-                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework
+                             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+                             'available_as_saas': model['cohort'].available_as_saas
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
@@ -1211,6 +1224,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1321,6 +1335,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,

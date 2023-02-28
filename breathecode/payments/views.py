@@ -449,11 +449,10 @@ class MeSubscriptionView(APIView):
 
         now = timezone.now()
 
-        subscriptions = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
-                                                    user=request.user)
+        subscriptions = Subscription.objects.filter(user=request.user)
 
         #NOTE: this is before feature/add-plan-duration branch, this will be outdated
-        plan_financings = PlanFinancing.objects.filter(valid_until__gte=now, user=request.user)
+        plan_financings = PlanFinancing.objects.filter(user=request.user)
 
         if subscription := request.GET.get('subscription'):
             subscriptions = subscriptions.filter(id=int(subscription))
@@ -514,6 +513,11 @@ class MeSubscriptionView(APIView):
             args, kwargs = self.get_lookup('selected_event_type_set', selected_event_type_set)
             subscriptions = subscriptions.filter(*args, **kwargs)
             plan_financings = plan_financings.filter(*args, **kwargs)
+
+        only_valid = request.GET.get('only_valid')
+        if only_valid == True or only_valid == 'true':
+            subscriptions = subscriptions.filter(Q(valid_until__gte=now) | Q(valid_until=None))
+            plan_financings = plan_financings.filter(valid_until__gte=now)
 
         subscriptions = handler.queryset(subscriptions.distinct())
         subscription_serializer = GetSubscriptionSerializer(subscriptions, many=True)

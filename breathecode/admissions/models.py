@@ -330,6 +330,9 @@ class Cohort(models.Model):
         blank=True,
         help_text='Determines if the cohort will be shown in the dashboard if it\'s status is \'PREWORK\'')
 
+    available_as_saas = models.BooleanField(
+        default=False, help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com')
+
     language = models.CharField(max_length=2, default='en')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
