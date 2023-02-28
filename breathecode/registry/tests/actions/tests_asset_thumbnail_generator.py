@@ -543,10 +543,10 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(self.bc.database.list_of('media.Media'), [])
         self.assertEqual(self.bc.database.list_of('media.MediaResolution'), [])
 
-        self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
-        self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [
+        self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [
             call(model.asset.slug),
         ])
+        self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [])
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
 
     """
@@ -579,9 +579,8 @@ class RegistryTestSuite(RegistryTestCase):
 
         self.assertEqual(self.bc.database.list_of('media.MediaResolution'), [])
 
-        self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
-        self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list,
-                         [call(model.asset.slug)])
+        self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [call(model.asset.slug)])
+        self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [])
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
 
     """
