@@ -322,7 +322,7 @@ class AssetAdmin(admin.ModelAdmin):
         async_regenerate_readme,
         async_generate_thumbnail,
         download_and_replace_images,
-    ] + change_field(['DRAFT', 'UNASSIGNED', 'PUBLISHED'], name='status') + change_field(['us', 'es'],
+    ] + change_field(['DRAFT', 'UNASSIGNED', 'PUBLISHED', 'OPTIMIZED'], name='status') + change_field(['us', 'es'],
                                                                                          name='lang')
 
     def get_form(self, request, obj=None, **kwargs):
@@ -355,6 +355,7 @@ class AssetAdmin(admin.ModelAdmin):
             'WARNING': 'bg-warning',
             None: 'bg-warning',
             'DRAFT': 'bg-error',
+            'OPTIMIZED': 'bg-error', 
             'PENDING_TRANSLATION': 'bg-error',
             'PENDING': 'bg-warning',
             'WARNING': 'bg-warning',
