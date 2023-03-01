@@ -61,6 +61,7 @@ class PlanAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'status', 'trial_duration', 'trial_duration_unit', 'owner')
     list_filter = ['trial_duration_unit', 'owner']
     search_fields = ['lang', 'title']
+    raw_id_fields = ['owner']
 
 
 @admin.register(PlanTranslation)
@@ -75,12 +76,14 @@ class ConsumableAdmin(admin.ModelAdmin):
     list_display = ('id', 'unit_type', 'how_many', 'service_item', 'user', 'valid_until')
     list_filter = ['unit_type']
     search_fields = ['service_item__service__slug']
+    raw_id_fields = ['user', 'service_item', 'cohort', 'event_type_set', 'mentorship_service_set']
 
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = ('id', 'amount', 'currency', 'paid_at', 'status', 'stripe_id', 'user', 'academy')
     list_filter = ['status', 'academy']
+    raw_id_fields = ['user', 'currency', 'bag', 'academy']
 
 
 @admin.register(Subscription)
@@ -89,6 +92,9 @@ class SubscriptionAdmin(admin.ModelAdmin):
                     'pay_every_unit', 'user')
     list_filter = ['status', 'is_refundable', 'pay_every_unit']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = [
+        'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
+    ]
 
 
 @admin.register(SubscriptionServiceItem)
@@ -104,6 +110,9 @@ class PlanFinancingAdmin(admin.ModelAdmin):
     list_display = ('id', 'next_payment_at', 'valid_until', 'status', 'user')
     list_filter = ['status']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = [
+        'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
+    ]
 
 
 @admin.register(MentorshipServiceSet)
@@ -125,6 +134,7 @@ class EventTypeSetAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'academy')
     list_filter = ['academy__slug']
     search_fields = ['slug', 'academy__slug', 'academy__name']
+    raw_id_fields = ['academy']
 
 
 @admin.register(EventTypeSetTranslation)
@@ -132,6 +142,7 @@ class EventTypeSetTranslationAdmin(admin.ModelAdmin):
     list_display = ('id', 'event_type_set', 'lang', 'title', 'description', 'short_description')
     list_filter = ['lang']
     search_fields = ['slug', 'academy__slug', 'academy__name']
+    raw_id_fields = ['event_type_set']
 
 
 @admin.register(PlanServiceItem)
@@ -172,6 +183,7 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
 class PaymentContactAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'stripe_id')
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = ['user']
 
 
 @admin.register(FinancialReputation)
@@ -179,6 +191,7 @@ class FinancialReputationAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'in_4geeks', 'in_stripe')
     list_filter = ['in_4geeks', 'in_stripe']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = ['user']
 
 
 @admin.register(Bag)
@@ -187,3 +200,4 @@ class BagAdmin(admin.ModelAdmin):
                     'was_delivered')
     list_filter = ['status', 'type', 'chosen_period', 'academy', 'is_recurrent']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = ['user', 'academy']
