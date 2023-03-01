@@ -1,9 +1,10 @@
 from django.urls import path
 
-from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, AcademyServiceView,
-                    AcademySubscriptionView, BagView, CardView, CheckingView, MeConsumableView, MeInvoiceView,
-                    AcademyInvoiceView, MeSubscriptionChargeView, PayView, PlanView, ServiceItemView,
-                    ServiceView, MeSubscriptionView)
+from .views import (AcademyPlanCohortView, AcademyPlanEventTypeSetView, AcademyPlanMentorshipServiceSetView,
+                    AcademyPlanView, AcademyPlanView, AcademyServiceView, AcademySubscriptionView, BagView,
+                    CardView, CheckingView, MeConsumableView, MeInvoiceView, AcademyInvoiceView,
+                    MeSubscriptionChargeView, PayView, PlanView, ServiceItemView, ServiceView,
+                    MeSubscriptionView)
 
 # /v1/payment/offer
 # /v1/payment/planoffer?original_plan=<>&from_syllabus=<>
@@ -16,7 +17,11 @@ urlpatterns = [
     path('academy/plan/<int:plan_id>', AcademyPlanView.as_view()),
     path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view()),
     path('academy/plan/<int:plan_id>/cohort', AcademyPlanCohortView.as_view()),
+    path('academy/plan/<int:plan_id>/mentorshipserviceset', AcademyPlanMentorshipServiceSetView.as_view()),
+    path('academy/plan/<int:plan_id>/eventtypeset', AcademyPlanEventTypeSetView.as_view()),
     path('academy/plan/<slug:plan_slug>/cohort', AcademyPlanCohortView.as_view()),
+    path('academy/plan/<slug:plan_slug>/mentorshipserviceset', AcademyPlanMentorshipServiceSetView.as_view()),
+    path('academy/plan/<slug:plan_slug>/eventtypeset', AcademyPlanEventTypeSetView.as_view()),
     #FIXME
     # path('academy/plan/<slug:plan_slug>/financingoption', AcademyPlanView.as_view()),
     path('service', ServiceView.as_view()),
