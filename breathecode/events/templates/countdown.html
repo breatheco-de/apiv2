@@ -103,8 +103,8 @@ header {
         <h3>This event will start in</h3>
         <div className="clock" style={size}>
             {timerComponents.length ?
-              timerComponents.map(t => <div><span>{t}</span></div>) :
-              <a href="{{ event.live_stream_url }}" class="button">Click here to join</a>
+              timerComponents.map((t, i) => <div key={i}><span>{t}</span></div>) :
+              <a href="{{ event.live_stream_url }}" className="button">Click here to join</a>
             }
         </div>
       </div>
