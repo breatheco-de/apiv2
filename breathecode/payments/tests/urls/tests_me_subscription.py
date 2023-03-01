@@ -1273,8 +1273,8 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort=2)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('payments:me_subscription') + (f'?cohort-selected={random.choice([1, "slug1"])},'
-                                                          f'{random.choice([2, "slug2"])}')
+        url = reverse_lazy('payments:me_subscription') + (f'?cohort-selected={random.choice([3, "slug1"])},'
+                                                          f'{random.choice([4, "slug2"])}')
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
 

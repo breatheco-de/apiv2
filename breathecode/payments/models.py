@@ -363,12 +363,9 @@ class AcademyService(models.Model):
         help_text='Available mentorship service sets to be sold in this service and plan')
 
     def __str__(self) -> str:
-        return f'{self.lang}: {self.title}'
+        return f'{self.academy.slug} -> {self.service.slug}'
 
     def clean(self) -> None:
-        if not isinstance(self.available_cohorts, list):
-            raise forms.ValidationError('available_cohorts must be an array')
-
         if self.id and len([
                 x for x in [
                     self.available_cohorts.count(),
@@ -376,7 +373,8 @@ class AcademyService(models.Model):
                     self.available_event_type_sets.count()
                 ] if x
         ]) > 1:
-            raise forms.ValidationError('Only one of available_cohorts, available_mentorship_service_sets, ')
+            raise forms.ValidationError('Only one of available_cohorts, available_mentorship_service_sets or '
+                                        'available_event_type_sets can be set')
 
         return super().clean()
 

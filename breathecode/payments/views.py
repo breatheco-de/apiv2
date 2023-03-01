@@ -14,6 +14,7 @@ from django.db.models import CharField, Q, Value
 
 from breathecode.payments import tasks
 from breathecode.admissions import tasks as admissions_tasks
+from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
 from breathecode.payments.models import (Bag, Consumable, EventTypeSet, FinancialReputation, Invoice,
@@ -85,7 +86,7 @@ class PlanView(APIView):
 
 
 class AcademyPlanView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('read_plan')
     def get(self, request, plan_id=None, plan_slug=None, service_slug=None, academy_id=None):
@@ -189,7 +190,7 @@ class AcademyPlanView(APIView):
 
 
 class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('crud_plan')
     def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
@@ -204,26 +205,89 @@ class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
                                                   slug='not-found'),
                                       code=404)
 
-        if not (cohorts := Cohort.objects.filter(**lookups)):
+        if not (items := Cohort.objects.filter(**lookups)):
             raise ValidationException(translation(lang,
                                                   en='Cohort not found',
                                                   es='Cohort no encontrada',
                                                   slug='cohort-not-found'),
                                       code=404)
 
-        items = PlanServiceItem.objects.filter(plan=plan)
+        created = False
+        for item in items:
+            if item not in plan.available_cohorts.all():
+                created = True
+                plan.available_cohorts.add(item)
+
+        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class AcademyPlanMentorshipServiceSetView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    @capable_of('crud_plan')
+    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id', 'slug'])
+        lang = get_user_language(request)
+
+        if not (plan := Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
+                                            owner__id=academy_id).exclude(status='DELETED').first()):
+            raise ValidationException(translation(lang,
+                                                  en='Plan not found',
+                                                  es='Plan no encontrado',
+                                                  slug='not-found'),
+                                      code=404)
+
+        created = False
+        if not (items := MentorshipServiceSet.objects.filter(**lookups)):
+            raise ValidationException(translation(lang,
+                                                  en='MentorshipServiceSet not found',
+                                                  es='MentorshipServiceSet no encontrada',
+                                                  slug='mentorship-service-set-not-found'),
+                                      code=404)
 
         for item in items:
-            for cohort in cohorts:
-                if cohort not in item.cohorts.all():
-                    item.cohorts.add(cohorts)
+            if item not in plan.available_mentorship_service_sets.all():
+                created = True
+                plan.available_mentorship_service_sets.add(item)
 
-        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class AcademyPlanEventTypeSetView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    @capable_of('crud_plan')
+    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id', 'slug'])
+        lang = get_user_language(request)
+
+        if not (plan := Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
+                                            owner__id=academy_id).exclude(status='DELETED').first()):
+            raise ValidationException(translation(lang,
+                                                  en='Plan not found',
+                                                  es='Plan no encontrado',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if not (items := EventTypeSet.objects.filter(**lookups)):
+            raise ValidationException(translation(lang,
+                                                  en='EventTypeSet not found',
+                                                  es='EventTypeSet no encontrada',
+                                                  slug='event-type-set-not-found'),
+                                      code=404)
+
+        created = False
+        for item in items:
+            if item not in plan.available_event_type_sets.all():
+                created = True
+                plan.available_event_type_sets.add(item)
+
+        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class ServiceView(APIView):
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request, service_slug=None):
         handler = self.extensions(request)
@@ -267,7 +331,7 @@ class ServiceView(APIView):
 
 
 class AcademyServiceView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('read_service')
     def get(self, request, service_slug=None, academy_id=None):
@@ -532,7 +596,7 @@ class MeSubscriptionView(APIView):
 
 
 class MeSubscriptionChargeView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def put(self, request, subscription_id):
         utc_now = timezone.now()
@@ -564,7 +628,7 @@ class MeSubscriptionChargeView(APIView):
 
 
 class MePlanFinancingChargeView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def put(self, request, plan_financing_id):
         utc_now = timezone.now()
@@ -598,7 +662,7 @@ class MePlanFinancingChargeView(APIView):
 
 class AcademySubscriptionView(APIView):
 
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('read_subscription')
     def get(self, request, subscription_id=None):
@@ -646,7 +710,7 @@ class AcademySubscriptionView(APIView):
 
 
 class MeInvoiceView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request, invoice_id=None):
         handler = self.extensions(request)
@@ -677,7 +741,7 @@ class MeInvoiceView(APIView):
 
 
 class AcademyInvoiceView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('read_invoice')
     def get(self, request, invoice_id=None, academy_id=None):
@@ -709,7 +773,7 @@ class AcademyInvoiceView(APIView):
 
 
 class CardView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def post(self, request):
         lang = get_user_language(request)
@@ -741,7 +805,7 @@ class CardView(APIView):
 
 
 class BagView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request):
         handler = self.extensions(request)
@@ -760,8 +824,7 @@ class BagView(APIView):
         return handler.response(serializer.data)
 
     def put(self, request):
-        handler = self.extensions(request)
-        language = handler.language.get()
+        lang = get_user_language(request)
 
         settings = get_user_settings(request.user.id)
         language = language or settings.lang or 'en'
@@ -772,7 +835,8 @@ class BagView(APIView):
 
         # do no show the bags of type preview they are build
         bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type='BAG')
-        add_items_to_bag(request, settings, bag)
+        add_items_to_bag(request, bag, lang)
+        actions.check_dependencies_in_bag(bag, lang)
 
         serializer = GetBagSerializer(bag, many=False)
         return Response(serializer.data)
@@ -784,20 +848,20 @@ class BagView(APIView):
 
 
 class CheckingView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def put(self, request):
         bag_type = request.data.get('type', 'BAG').upper()
         created = False
 
-        settings = get_user_settings(request.user.id)
+        lang = get_user_language(request)
 
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
                 if bag_type == 'BAG' and not (bag := Bag.objects.filter(
                         user=request.user, status='CHECKING', type=bag_type).first()):
-                    raise ValidationException(translation(settings.lang,
+                    raise ValidationException(translation(lang,
                                                           en='Bag not found',
                                                           es='Bolsa no encontrada',
                                                           slug='not-found'),
@@ -829,7 +893,7 @@ class CheckingView(APIView):
 
                     if not academy:
                         raise ValidationException(translation(
-                            settings.lang,
+                            lang,
                             en='Academy not found or not configured properly',
                             es='Academia no encontrada o no configurada correctamente',
                             slug='not-found'),
@@ -840,7 +904,8 @@ class CheckingView(APIView):
                                                              type=bag_type,
                                                              academy=academy,
                                                              currency=academy.main_currency)
-                    add_items_to_bag(request, settings, bag)
+                    add_items_to_bag(request, bag, lang)
+                    actions.check_dependencies_in_bag(bag, lang)
 
                 utc_now = timezone.now()
 
@@ -860,7 +925,7 @@ class CheckingView(APIView):
                     amount = 1
 
                 if amount == 0 and PlanFinancing.objects.filter(plans__in=plans).count():
-                    raise ValidationException(translation(settings.lang,
+                    raise ValidationException(translation(lang,
                                                           en='Your free trial was already took',
                                                           es='Tu prueba gratuita ya fue tomada',
                                                           slug='your-free-trial-was-already-took'),
@@ -879,7 +944,7 @@ class CheckingView(APIView):
 
 
 class PayView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def post(self, request):
         utc_now = timezone.now()
@@ -984,6 +1049,8 @@ class PayView(APIView):
                                                           es='Tu prueba gratuita ya fue tomada',
                                                           slug='your-free-trial-was-already-took'),
                                               code=500)
+
+                actions.check_dependencies_in_bag(bag, lang)
 
                 if amount >= 0.50:
                     s = Stripe()

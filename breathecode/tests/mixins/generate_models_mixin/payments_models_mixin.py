@@ -21,6 +21,7 @@ class PaymentsModelsMixin(ModelsMixin):
                                  service_stock_scheduler=False,
                                  payment_contact=False,
                                  financial_reputation=False,
+                                 academy_service=False,
                                  academy=False,
                                  bag=False,
                                  plan_service_item_handler=False,
@@ -169,6 +170,27 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['event_type_set_translation'] = create_models(event_type_set_translation,
                                                                  'payments.EventTypeSetTranslation', **kargs)
+
+        if not 'academy_service' in models and is_valid(academy_service):
+            kargs = {}
+
+            if 'service' in models:
+                kargs['service'] = just_one(models['service'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'mentorship_service_set' in models:
+                kargs['available_mentorship_service_sets'] = get_list(models['mentorship_service_set'])
+
+            if 'event_type_set' in models:
+                kargs['available_event_type_sets'] = get_list(models['event_type_set'])
+
+            if 'cohort' in models:
+                kargs['available_cohorts'] = get_list(models['cohort'])
+
+            models['event_type_set_translation'] = create_models(academy_service, 'payments.AcademyService',
+                                                                 **kargs)
 
         if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation)
                                      or is_valid(plan_service_item) or is_valid(plan_offer)):
