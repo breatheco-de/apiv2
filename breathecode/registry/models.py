@@ -235,14 +235,16 @@ DIFFICULTY = (
     (BEGINNER, 'Beginner'),
 )
 
-DRAFT = 'DRAFT'
 UNASSIGNED = 'UNASSIGNED'
 WRITING = 'WRITING'
+DRAFT = 'DRAFT'
+OPTIMIZED = 'OPTIMIZED'
 PUBLISHED = 'PUBLISHED'
 ASSET_STATUS = (
     (UNASSIGNED, 'Unassigned'),
     (WRITING, 'Writing'),
     (DRAFT, 'Draft'),
+    (OPTIMIZED, 'Optimized'),
     (PUBLISHED, 'Published'),
 )
 

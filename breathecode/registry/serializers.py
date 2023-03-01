@@ -2,13 +2,13 @@ import serpy, base64
 from slugify import slugify
 from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
 from django.db.models import Count
+from django.utils import timezone
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from breathecode.utils.validation_exception import ValidationException
-from django.utils import timezone
 
 
 class ProfileSerializer(serpy.Serializer):
@@ -137,6 +137,7 @@ class AssetSerializer(serpy.Serializer):
     external = serpy.Field()
     solution_video_url = serpy.Field()
     intro_video_url = serpy.Field()
+    published_at = serpy.Field()
 
     translations = serpy.MethodField()
     technologies = serpy.MethodField()
@@ -578,9 +579,10 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 if key != 'status' and data[key] != getattr(self.instance, key):
                     raise ValidationException(f'You are only allowed to change the status of this asset',
                                               status.HTTP_400_BAD_REQUEST)
-            if 'status' in data and data['status'] not in ['DRAFT', 'WRITING', 'UNASSIGNED']:
-                raise ValidationException(f'You can only set the status to draft, writing or unassigned',
-                                          status.HTTP_400_BAD_REQUEST)
+            if 'status' in data and data['status'] not in ['DRAFT', 'WRITING', 'UNASSIGNED', 'OPTIMIZED']:
+                raise ValidationException(
+                    f'You can only set the status to draft, writing, optimized, or unassigned',
+                    status.HTTP_400_BAD_REQUEST)
 
             if self.instance.author is None and data['status'] != 'UNASSIGNED':
                 data['author'] = session_user
@@ -617,3 +619,16 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
         validated_data = super().validate(data)
         return validated_data
+
+    def update(self, instance, validated_data):
+
+        data = {}
+
+        if 'status' in validated_data:
+            if validated_data['status'] == 'PUBLISHED' and instance.status != 'PUBLISHED':
+                now = timezone.now()
+                data['published_at'] = now
+            elif validated_data['status'] != 'PUBLISHED':
+                data['published_at'] = None
+
+        return super().update(instance, {**validated_data, **data})

@@ -538,7 +538,7 @@ class AssetThumbnailGenerator:
 
         return bool((self.width and not self.height) or (not self.width and self.height))
 
-    def create(self):
+    def create(self, delay=600):
 
         preview_url = self.asset.get_preview_generation_url()
         if preview_url is None:
@@ -549,10 +549,12 @@ class AssetThumbnailGenerator:
 
         response = None
         try:
+            logger.debug(f'Generating screenshot with URL {url}')
             query_string = urlencode({
                 'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
                 'url': url,
                 'device': 'desktop',
+                'delay': delay,
                 'cacheLimit': '0',
                 'dimension': '1024x707',
             })

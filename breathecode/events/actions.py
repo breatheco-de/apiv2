@@ -4,11 +4,12 @@ import re
 import logging
 
 from datetime import datetime, timedelta
+from django.db.models.query_utils import Q
 from django.utils import timezone
-from breathecode.admissions.models import Cohort, CohortTimeSlot, TimeSlot
+from breathecode.admissions.models import Cohort, CohortTimeSlot, TimeSlot, CohortUser
 from breathecode.utils.datetime_interger import DatetimeInteger
 
-from .models import Organization, Venue, Event, Organizer
+from .models import Organization, Venue, Event, Organizer, EventType
 from .utils import Eventbrite
 from django.db.models import QuerySet
 
@@ -22,6 +23,85 @@ status_map = {
     'ended': 'ACTIVE',
     'canceled': 'DELETED',
 }
+
+
+def get_my_events(_user):
+
+    def build_query_params(cohort=None, syllabus=None, academy=None):
+        """
+        Build the query params to the visibility options.
+        """
+
+        return {
+            'visibility_settings__cohort': cohort,
+            'visibility_settings__syllabus': syllabus,
+            'visibility_settings__academy': academy,
+        }
+
+    def get_related_resources():
+        """
+        Get the resources related to this user.
+        """
+
+        syllabus = []
+        academies = []
+        cohorts = []
+        cohort_users = CohortUser.objects.filter(user=_user)
+        cohort_users_with_syllabus = cohort_users.filter(cohort__syllabus_version__isnull=False)
+
+        for cohort_user in cohort_users_with_syllabus:
+            if cohort_user.cohort.syllabus_version.syllabus not in cohorts:
+                syllabus.append({
+                    'syllabus': cohort_user.cohort.syllabus_version.syllabus,
+                    'academy': cohort_user.cohort.academy,
+                })
+
+        for cohort_user in cohort_users:
+            if cohort_user.cohort.academy not in cohorts:
+                academies.append(cohort_user.cohort.academy)
+
+        for cohort_user in cohort_users:
+            if cohort_user.cohort not in cohorts:
+                cohorts.append(cohort_user.cohort)
+
+        return academies, cohorts, syllabus
+
+    def my_events():
+
+        query = None
+        academies, cohorts, syllabus = get_related_resources()
+
+        # shared with the whole academy
+        for academy in academies:
+            kwargs = build_query_params(academy=academy)
+            if query:
+                query |= Q(**kwargs, academy=academy) | Q(**kwargs, allow_shared_creation=True)
+            else:
+                query = Q(**kwargs, academy=academy) | Q(**kwargs, allow_shared_creation=True)
+
+        # shared with a specific cohort
+        for cohort in cohorts:
+            kwargs = build_query_params(academy=cohort.academy, cohort=cohort)
+            # is not necessary provided the syllabus
+            if query:
+                query |= Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
+            else:
+                query = Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
+
+        # shared with a specific syllabus
+        for s in syllabus:
+            kwargs = build_query_params(academy=s['academy'], syllabus=s['syllabus'])
+            if query:
+                query |= Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
+            else:
+                query = Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
+
+        if query:
+            return EventType.objects.filter(query)
+        else:
+            return EventType.objects.none()
+
+    return my_events()
 
 
 def sync_org_venues(org):
