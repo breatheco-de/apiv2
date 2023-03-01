@@ -35,6 +35,7 @@ def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
 
     # last two character only with uppercase
     elif not is_short and not from_kwargs and not code[2:].isupper():
+        assert 0
         raise MalformedLanguageCode('Country code is not uppercase')
 
     separator = '_' if from_kwargs else '-'
