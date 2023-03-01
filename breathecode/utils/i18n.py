@@ -29,6 +29,13 @@ def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
     if not code[:2].islower():
         raise MalformedLanguageCode('Lang code is not lowercase')
 
+    print('==================')
+    print('==================')
+    print('==================')
+    print(is_short, from_kwargs, code, code[3:].islower(), code[2:].isupper())
+    print('==================')
+    print('==================')
+    print('==================')
     # last two character only with lowercase
     if not is_short and from_kwargs and not code[3:].islower():
         raise MalformedLanguageCode('Country code is not lowercase')
