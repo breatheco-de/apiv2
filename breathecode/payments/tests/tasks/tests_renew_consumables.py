@@ -20,10 +20,10 @@ UTC_NOW = timezone.now()
 def consumable_item(data={}):
     return {
         'cohort_id': None,
-        'event_type_id': None,
+        'event_type_set_id': None,
         'how_many': -1,
         'id': 0,
-        'mentorship_service_id': None,
+        'mentorship_service_set_id': None,
         'service_item_id': 0,
         'unit_type': 'UNIT',
         'user_id': 0,
@@ -145,7 +145,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The PlanServiceItem or the ServiceItem not have a resource linked to it '
+            call('The Plan not have a resource linked to it '
                  'for the ServiceStockScheduler 1'),
         ])
 
@@ -179,7 +179,6 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting renew_consumables for service stock scheduler 1'),
             call('The consumable 1 for cohort 1 was built'),
-            call('The consumable 2 for cohort 2 was built'),
             call('The scheduler 1 was renewed'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -188,13 +187,6 @@ class PaymentsTestSuite(PaymentsTestCase):
             consumable_item({
                 'cohort_id': 1,
                 'id': 1,
-                'service_item_id': 1,
-                'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=5),
-            }),
-            consumable_item({
-                'cohort_id': 2,
-                'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
                 'valid_until': UTC_NOW + relativedelta(minutes=5),
@@ -253,11 +245,14 @@ class PaymentsTestSuite(PaymentsTestCase):
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
+        service = {'type': 'MENTORSHIP_SERVICE_SET'}
+
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
                                         mentorship_service=2,
-                                        mentorship_service_set=1)
+                                        mentorship_service_set=1,
+                                        service=service)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -266,23 +261,15 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting renew_consumables for service stock scheduler 1'),
-            call('The consumable 1 for mentorship service 1 was built'),
-            call('The consumable 2 for mentorship service 2 was built'),
+            call('The consumable 1 for mentorship service set 1 was built'),
             call('The scheduler 1 was renewed'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
             consumable_item({
-                'mentorship_service_id': 1,
+                'mentorship_service_set_id': 1,
                 'id': 1,
-                'service_item_id': 1,
-                'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=5),
-            }),
-            consumable_item({
-                'mentorship_service_id': 2,
-                'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
                 'valid_until': UTC_NOW + relativedelta(minutes=5),
@@ -420,7 +407,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The PlanServiceItem or the ServiceItem not have a resource linked to it '
+            call('The Plan not have a resource linked to it '
                  'for the ServiceStockScheduler 1'),
         ])
 
@@ -454,7 +441,6 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting renew_consumables for service stock scheduler 1'),
             call('The consumable 1 for cohort 1 was built'),
-            call('The consumable 2 for cohort 2 was built'),
             call('The scheduler 1 was renewed'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -463,13 +449,6 @@ class PaymentsTestSuite(PaymentsTestCase):
             consumable_item({
                 'cohort_id': 1,
                 'id': 1,
-                'service_item_id': 1,
-                'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=5),
-            }),
-            consumable_item({
-                'cohort_id': 2,
-                'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
                 'valid_until': UTC_NOW + relativedelta(minutes=5),
@@ -491,11 +470,14 @@ class PaymentsTestSuite(PaymentsTestCase):
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
+        service = {'type': 'MENTORSHIP_SERVICE_SET'}
+
         model = self.bc.database.create(service_stock_scheduler=1,
                                         subscription=subscription,
                                         plan_service_item_handler=1,
                                         mentorship_service=2,
-                                        mentorship_service_set=1)
+                                        mentorship_service_set=1,
+                                        service=service)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -504,23 +486,15 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting renew_consumables for service stock scheduler 1'),
-            call('The consumable 1 for mentorship service 1 was built'),
-            call('The consumable 2 for mentorship service 2 was built'),
+            call('The consumable 1 for mentorship service set 1 was built'),
             call('The scheduler 1 was renewed'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
             consumable_item({
-                'mentorship_service_id': 1,
+                'mentorship_service_set_id': 1,
                 'id': 1,
-                'service_item_id': 1,
-                'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=5),
-            }),
-            consumable_item({
-                'mentorship_service_id': 2,
-                'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
                 'valid_until': UTC_NOW + relativedelta(minutes=5),
@@ -658,7 +632,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The PlanServiceItem or the ServiceItem not have a resource linked to it '
+            call('The Plan not have a resource linked to it '
                  'for the ServiceStockScheduler 1'),
         ])
 
@@ -692,7 +666,6 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting renew_consumables for service stock scheduler 1'),
             call('The consumable 1 for cohort 1 was built'),
-            call('The consumable 2 for cohort 2 was built'),
             call('The scheduler 1 was renewed'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -701,13 +674,6 @@ class PaymentsTestSuite(PaymentsTestCase):
             consumable_item({
                 'cohort_id': 1,
                 'id': 1,
-                'service_item_id': 1,
-                'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
-            }),
-            consumable_item({
-                'cohort_id': 2,
-                'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
                 'valid_until': UTC_NOW + relativedelta(minutes=3),
@@ -729,11 +695,14 @@ class PaymentsTestSuite(PaymentsTestCase):
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
+        service = {'type': 'MENTORSHIP_SERVICE_SET'}
+
         model = self.bc.database.create(service_stock_scheduler=1,
                                         subscription=subscription,
                                         subscription_service_item=1,
                                         mentorship_service=2,
-                                        mentorship_service_set=1)
+                                        mentorship_service_set=1,
+                                        service=service)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -742,23 +711,15 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting renew_consumables for service stock scheduler 1'),
-            call('The consumable 1 for mentorship service 1 was built'),
-            call('The consumable 2 for mentorship service 2 was built'),
+            call('The consumable 1 for mentorship service set 1 was built'),
             call('The scheduler 1 was renewed'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
             consumable_item({
-                'mentorship_service_id': 1,
+                'mentorship_service_set_id': 1,
                 'id': 1,
-                'service_item_id': 1,
-                'user_id': 1,
-                'valid_until': UTC_NOW + relativedelta(minutes=3),
-            }),
-            consumable_item({
-                'mentorship_service_id': 2,
-                'id': 2,
                 'service_item_id': 1,
                 'user_id': 1,
                 'valid_until': UTC_NOW + relativedelta(minutes=3),

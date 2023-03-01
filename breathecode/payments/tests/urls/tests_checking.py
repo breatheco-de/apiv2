@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, call, patch
 from django.urls import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
+from breathecode.payments import actions
 
 from breathecode.payments.tests.mixins.payments_test_case import PaymentsTestCase
 
@@ -118,6 +119,7 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 GET without auth
     """
 
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__without_auth(self):
         url = reverse_lazy('payments:checking')
         response = self.client.put(url)
@@ -130,12 +132,14 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     """
     🔽🔽🔽 Get with zero Bag
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__without_bag(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
@@ -154,12 +158,14 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Bag, type is BAG
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__with_bag__type_bag(self):
         bag = {
             'status': 'CHECKING',
@@ -215,12 +221,14 @@ class SignalTestSuite(PaymentsTestCase):
             # teardown
             self.bc.database.delete('payments.Bag', model.bag.id)
             self.bc.database.delete('authenticate.UserSetting', model.bag.id)
+            self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing nothing
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__with_bag__type_bag__passing_nothing(self):
         bag = {
             'status': 'CHECKING',
@@ -247,12 +255,14 @@ class SignalTestSuite(PaymentsTestCase):
                 'user_id': model.user.id,
             }),
         ])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__with_bag__type_bag__passing_type_preview(self):
         bag = {
             'status': 'CHECKING',
@@ -304,12 +314,14 @@ class SignalTestSuite(PaymentsTestCase):
                 'user_id': model.user.id,
             }),
         ])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan that not found
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__with_bag__type_bag__passing_type_preview__service_item_not_is_object(self):
         bag = {
             'status': 'CHECKING',
@@ -341,12 +353,14 @@ class SignalTestSuite(PaymentsTestCase):
                 'user_id': model.user.id,
             }),
         ])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan that not found
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__with_bag__type_bag__passing_type_preview__service_item_object_malformed(self):
         bag = {
             'status': 'CHECKING',
@@ -378,12 +392,14 @@ class SignalTestSuite(PaymentsTestCase):
                 'user_id': model.user.id,
             }),
         ])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan that not found
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__with_bag__type_bag__passing_type_preview__items_not_found(self):
         bag = {
             'status': 'CHECKING',
@@ -423,6 +439,7 @@ class SignalTestSuite(PaymentsTestCase):
                 'user_id': model.user.id,
             }),
         ])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -430,6 +447,7 @@ class SignalTestSuite(PaymentsTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__with_bag__type_bag__passing_type_preview__items_found__academy_without_the_currency(self):
         bag = {
             'status': 'CHECKING',
@@ -478,6 +496,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -485,6 +504,7 @@ class SignalTestSuite(PaymentsTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__with_bag__type_bag__passing_type_preview__items_found__with_the_correct_currency__with_service_item(
             self):
         bag = {
@@ -510,7 +530,6 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
-        plan_service_item = {'cohorts': []}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
@@ -519,7 +538,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=service_item,
                                         service=service,
                                         plan=plan,
-                                        plan_service_item=plan_service_item,
+                                        plan_service_item=1,
                                         currency=currency)
         self.bc.request.authenticate(model.user)
 
@@ -531,6 +550,7 @@ class SignalTestSuite(PaymentsTestCase):
             'academy': 1,
             'type': 'PREVIEW',
             'plans': [1],
+            'cohort': 1,
             'service_items': [{
                 'how_many': how_many2,
                 'service': 1
@@ -561,13 +581,120 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
+    # """
+    # 🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
+    # with the correct Currency and Price
+    # """
+
+    # @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    # def test__with_bag__type_bag__passing_type_preview__items_found__with_the_correct_currency__without_service_item(
+    #         self):
+    #     bag = {
+    #         'status': 'CHECKING',
+    #         'type': 'PREVIEW',
+    #         'plans': [],
+    #         'service_items': [],
+    #     }
+
+    #     currency = {'code': 'USD', 'name': 'United States dollar'}
+
+    #     plan = {
+    #         'price_per_month': random.random() * 100,
+    #         'price_per_quarter': random.random() * 100,
+    #         'price_per_half': random.random() * 100,
+    #         'price_per_year': random.random() * 100,
+    #     }
+
+    #     service = {
+    #         'price_per_unit': random.random() * 100,
+    #     }
+
+    #     how_many1 = random.randint(1, 5)
+    #     how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+    #     service_item = {'how_many': how_many1}
+    #     plan_service_item = {'cohorts': []}
+
+    #     model = self.bc.database.create(user=1,
+    #                                     bag=bag,
+    #                                     academy=1,
+    #                                     cohort=1,
+    #                                     service_item=service_item,
+    #                                     service=service,
+    #                                     plan=plan,
+    #                                     plan_service_item=plan_service_item,
+    #                                     currency=currency)
+    #     self.bc.request.authenticate(model.user)
+
+    #     service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
+    #     service_item.how_many = how_many2
+
+    #     url = reverse_lazy('payments:checking')
+    #     data = {
+    #         'academy': 1,
+    #         'type': 'PREVIEW',
+    #         'plans': [1],
+    #     }
+
+    #     token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+    #     with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+    #         response = self.client.put(url, data, format='json')
+
+    #     json = response.json()
+
+    #     price_per_month = model.plan.price_per_month
+    #     price_per_quarter = model.plan.price_per_quarter
+    #     price_per_half = model.plan.price_per_half
+    #     price_per_year = model.plan.price_per_year
+    #     expected = get_serializer(
+    #         model.bag,
+    #         [model.plan],
+    #         [model.service_item],
+    #         [],
+    #         model.service,
+    #         [model.cohort],
+    #         data={
+    #             'amount_per_month': price_per_month,
+    #             'amount_per_quarter': price_per_quarter,
+    #             'amount_per_half': price_per_half,
+    #             'amount_per_year': price_per_year,
+    #             'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+    #             'token': token,
+    #         },
+    #     )
+
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    #     self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+    #         {
+    #             **self.bc.format.to_dict(model.bag),
+    #             'amount_per_month': price_per_month,
+    #             'amount_per_quarter': price_per_quarter,
+    #             'amount_per_half': price_per_half,
+    #             'amount_per_year': price_per_year,
+    #             'expires_at': UTC_NOW + timedelta(minutes=60),
+    #             'token': token,
+    #         },
+    #     ])
+    #     self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+    #         format_user_setting({
+    #             'lang': 'en',
+    #             'id': model.user.id,
+    #             'user_id': model.user.id,
+    #         }),
+    #     ])
+    #     self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
+    #     self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    #     self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
     with the correct Currency and Price
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
     def test__with_bag__type_bag__passing_type_preview__items_found__with_the_correct_currency__without_service_item(
             self):
         bag = {
@@ -584,6 +711,7 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_quarter': random.random() * 100,
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
+            # 'available_cohorts': [],
         }
 
         service = {
@@ -593,7 +721,6 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
-        plan_service_item = {'cohorts': []}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
@@ -602,112 +729,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=service_item,
                                         service=service,
                                         plan=plan,
-                                        plan_service_item=plan_service_item,
-                                        currency=currency)
-        self.bc.request.authenticate(model.user)
-
-        service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
-        service_item.how_many = how_many2
-
-        url = reverse_lazy('payments:checking')
-        data = {
-            'academy': 1,
-            'type': 'PREVIEW',
-            'plans': [1],
-        }
-
-        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
-        with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
-            response = self.client.put(url, data, format='json')
-
-        json = response.json()
-
-        price_per_month = model.plan.price_per_month
-        price_per_quarter = model.plan.price_per_quarter
-        price_per_half = model.plan.price_per_half
-        price_per_year = model.plan.price_per_year
-        expected = get_serializer(
-            model.bag,
-            [model.plan],
-            [model.service_item],
-            [],
-            model.service,
-            [model.cohort],
-            data={
-                'amount_per_month': price_per_month,
-                'amount_per_quarter': price_per_quarter,
-                'amount_per_half': price_per_half,
-                'amount_per_year': price_per_year,
-                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
-                'token': token,
-            },
-        )
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
-            {
-                **self.bc.format.to_dict(model.bag),
-                'amount_per_month': price_per_month,
-                'amount_per_quarter': price_per_quarter,
-                'amount_per_half': price_per_half,
-                'amount_per_year': price_per_year,
-                'expires_at': UTC_NOW + timedelta(minutes=60),
-                'token': token,
-            },
-        ])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({
-                'lang': 'en',
-                'id': model.user.id,
-                'user_id': model.user.id,
-            }),
-        ])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-
-    """
-    🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
-    with the correct Currency and Price
-    """
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__with_bag__type_bag_________passing_type_preview__items_found__with_the_correct_currency__without_service_item(
-            self):
-        bag = {
-            'status': 'CHECKING',
-            'type': 'PREVIEW',
-            'plans': [],
-            'service_items': [],
-        }
-
-        currency = {'code': 'USD', 'name': 'United States dollar'}
-
-        plan = {
-            'price_per_month': random.random() * 100,
-            'price_per_quarter': random.random() * 100,
-            'price_per_half': random.random() * 100,
-            'price_per_year': random.random() * 100,
-        }
-
-        service = {
-            'price_per_unit': random.random() * 100,
-        }
-
-        how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
-        service_item = {'how_many': how_many1}
-        plan_service_item = {'cohorts': []}
-
-        model = self.bc.database.create(user=1,
-                                        bag=bag,
-                                        academy=1,
-                                        cohort=1,
-                                        service_item=service_item,
-                                        service=service,
-                                        plan=plan,
-                                        plan_service_item=plan_service_item,
+                                        plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
         self.bc.request.authenticate(model.user)
@@ -720,6 +742,7 @@ class SignalTestSuite(PaymentsTestCase):
             'academy': 1,
             'type': 'PREVIEW',
             'plans': [1],
+            'cohort': 1,
         }
 
         token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
@@ -774,3 +797,4 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
