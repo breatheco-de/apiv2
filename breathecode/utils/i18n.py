@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import date, datetime, time
 from functools import cache
@@ -14,6 +15,7 @@ from breathecode.utils.exceptions import MalformedLanguageCode
 __all__ = ['translation', 'format_date', 'format_datetime', 'format_time', 'format_timedelta']
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
+logger = logging.getLogger(__name__)
 
 
 def get_short_code(code: str) -> str:
@@ -29,13 +31,17 @@ def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
     if not code[:2].islower():
         raise MalformedLanguageCode('Lang code is not lowercase')
 
-    print('==================')
-    print('==================')
-    print('==================')
-    print(is_short, from_kwargs, code, code[3:].islower(), code[2:].isupper())
-    print('==================')
-    print('==================')
-    print('==================')
+    logger.info('==================')
+    logger.info('==================')
+    logger.info('==================')
+    logger.info('is_short', is_short)
+    logger.info('from_kwargs', from_kwargs)
+    logger.info('code', code)
+    logger.info('code[3:].islower()', code[3:].islower())
+    logger.info('code[2:].isupper()', code[2:].isupper())
+    logger.info('==================')
+    logger.info('==================')
+    logger.info('==================')
     # last two character only with lowercase
     if not is_short and from_kwargs and not code[3:].islower():
         raise MalformedLanguageCode('Country code is not lowercase')
@@ -151,6 +157,16 @@ def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) 
         code = 'en'
 
     code = format_and_assert_code(code)
+
+    logger.info('---------------')
+    logger.info('---------------')
+    logger.info('---------------')
+    logger.info('code', code)
+    logger.info('slug', slug)
+    logger.info('kwargs', kwargs)
+    logger.info('---------------')
+    logger.info('---------------')
+    logger.info('---------------')
 
     # do the assertions
     for key in kwargs:
