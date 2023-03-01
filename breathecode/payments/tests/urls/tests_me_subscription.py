@@ -198,9 +198,9 @@ def get_plan_financing_serializer(self,
         'next_payment_at': self.bc.datetime.to_iso_string(plan_financing.next_payment_at),
         'plan_expires_at': self.bc.datetime.to_iso_string(plan_financing.plan_expires_at),
         'plans': [plan_serializer(self, plan, service, groups, permissions, service_items) for plan in plans],
-        'mentorship_service_set_selected': mentorship_service_set,
-        'event_type_set_selected': event_type_set,
-        'cohort_selected': cohort,
+        'selected_mentorship_service_set': mentorship_service_set,
+        'selected_event_type_set': event_type_set,
+        'selected_cohort': cohort,
         'status': plan_financing.status,
         'monthly_price': plan_financing.monthly_price,
         'status_message': plan_financing.status_message,
@@ -261,11 +261,11 @@ def get_subscription_serializer(self,
         subscription.pay_every,
         'pay_every_unit':
         subscription.pay_every_unit,
-        'mentorship_service_set_selected':
+        'selected_mentorship_service_set':
         mentorship_service_set,
-        'event_type_set_selected':
+        'selected_event_type_set':
         event_type_set,
-        'cohort_selected':
+        'selected_cohort':
         cohort,
         'user':
         user_serializer(user),
@@ -1110,13 +1110,13 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_wrong_cohort(self):
         subscriptions = [{
             'valid_until': x,
-            'cohort_selected_id': None,
+            'selected_cohort_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
             'monthly_price': random.random() * 99.99 + 0.01,
-            'cohort_selected_id': None,
+            'selected_cohort_id': None,
         } for _ in range(1, 3)]
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -1155,13 +1155,13 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_good_cohort(self):
         subscriptions = [{
             'valid_until': x,
-            'cohort_selected_id': y,
+            'selected_cohort_id': y,
         } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
             'monthly_price': random.random() * 99.99 + 0.01,
-            'cohort_selected_id': x,
+            'selected_cohort_id': x,
         } for x in range(1, 3)]
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -1251,13 +1251,13 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_wrong_mentorship_service_set(self):
         subscriptions = [{
             'valid_until': x,
-            'mentorship_service_set_selected_id': None,
+            'selected_mentorship_service_set_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
             'monthly_price': random.random() * 99.99 + 0.01,
-            'mentorship_service_set_selected_id': None,
+            'selected_mentorship_service_set_id': None,
         } for _ in range(1, 3)]
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -1273,8 +1273,8 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort=2)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('payments:me_subscription') + (f'?cohort-selected={random.choice([1, "slug1"])},'
-                                                          f'{random.choice([2, "slug2"])}')
+        url = reverse_lazy('payments:me_subscription') + (f'?cohort-selected={random.choice([3, "slug1"])},'
+                                                          f'{random.choice([4, "slug2"])}')
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
 
@@ -1296,15 +1296,15 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_good_mentorship_service_set(self):
         subscriptions = [{
             'valid_until': x,
-            'mentorship_service_set_selected_id': y,
-            'event_type_set_selected_id': None,
+            'selected_mentorship_service_set_id': y,
+            'selected_event_type_set_id': None,
         } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
             'monthly_price': random.random() * 99.99 + 0.01,
-            'mentorship_service_set_selected_id': x,
-            'event_type_set_selected_id': None,
+            'selected_mentorship_service_set_id': x,
+            'selected_event_type_set_id': None,
         } for x in range(1, 3)]
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -1395,13 +1395,13 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_wrong_event_type_set(self):
         subscriptions = [{
             'valid_until': x,
-            'event_type_set_selected_id': None,
+            'selected_event_type_set_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
             'monthly_price': random.random() * 99.99 + 0.01,
-            'event_type_set_selected_id': None,
+            'selected_event_type_set_id': None,
         } for _ in range(1, 3)]
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -1441,13 +1441,13 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_good_event_type_set(self):
         subscriptions = [{
             'valid_until': x,
-            'event_type_set_selected_id': y,
+            'selected_event_type_set_id': y,
         } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
             'monthly_price': random.random() * 99.99 + 0.01,
-            'event_type_set_selected_id': x,
+            'selected_event_type_set_id': x,
         } for x in range(1, 3)]
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]

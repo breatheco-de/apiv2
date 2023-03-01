@@ -18,7 +18,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from rest_framework.request import Request
 
-from .models import SERVICE_UNITS, Bag, Consumable, Currency, Plan, PlanFinancing, PlanServiceItem, Service, ServiceItem, Subscription
+from .models import SERVICE_UNITS, AcademyService, Bag, Consumable, Currency, EventTypeSet, MentorshipServiceSet, Plan, PlanFinancing, PlanServiceItem, Service, ServiceItem, Subscription
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -163,172 +163,369 @@ class PlanFinder:
         return self.get_plans_belongs(**additional_args)
 
 
-def add_items_to_bag(request, settings: UserSetting, bag: Bag):
-    service_items = request.data.get('service_items')
-    plans = request.data.get('plans')
-    cohort = request.data.get('cohort')
+class BagHandler:
 
-    if cohort and not isinstance(cohort, int) and not isinstance(cohort, str):
-        raise ValidationException(translation(settings.lang,
-                                              en='The cohort needs to be a id or slug',
-                                              es='El cohort debe ser un id o slug'),
-                                  slug='cohort-not-id-or-slug')
+    def __init__(self, request: Request, bag: Bag, lang: str) -> None:
+        self.request = request
+        self.lang = lang
+        self.bag = bag
 
-    cohorts = [cohort] if cohort else []
+        self.service_items = request.data.get('service_items')
+        self.plans = request.data.get('plans')
+        self.selected_cohort = request.data.get('cohort')
+        self.selected_event_type_set = request.data.get('event_type_set')
+        self.selected_mentorship_service_set = request.data.get('mentorship_service_set')
 
-    bag.service_items.clear()
-    bag.plans.clear()
-    bag.token = None
-    bag.expires_at = None
+        self.plans_not_found = set()
+        self.service_items_not_found = set()
+        self.cohorts_not_found = set()
 
-    services_not_found = set()
-    plans_not_found = set()
-    cohorts_not_found = set()
+    def _lookups(self, value, offset=''):
+        kwargs = {}
 
-    plan_service_items = PlanServiceItem.objects.none()
+        if isinstance(value, int) or value.isnumeric():
+            kwargs[offset + 'id'] = int(value)
 
-    cohort_ids = []
+        else:
+            kwargs[offset + 'slug'] = value
 
-    if isinstance(service_items, list):
-        for item in service_items:
-            if not isinstance(item, dict):
-                raise ValidationException(translation(settings.lang,
-                                                      en='The service item needs to be a object',
-                                                      es='El service item debe ser un objeto'),
-                                          slug='service-item-not-object')
+        return kwargs
 
-            if 'how_many' not in item or 'service' not in item or not isinstance(
-                    item['how_many'], int) or not isinstance(item['service'], int):
-                raise ValidationException(translation(
-                    settings.lang,
-                    en='The service item needs to have the keys of the integer type how_many and service',
-                    es='El service item debe tener las llaves de tipo entero how_many y service'),
-                                          slug='service-item-malformed')
+    def _more_than_one_generator(self, en, es):
+        return translation(self.lang,
+                           en=f'You can only select one {en}',
+                           es=f'Solo puedes seleccionar una {es}',
+                           slug=f'more-than-one-{en}-selected')
 
-    if isinstance(service_items, list):
-        for service_item in service_items:
-            kwargs = {}
+    def _validate_selected_resources(self):
+        if self.selected_cohort and not isinstance(self.selected_cohort, int) and not isinstance(
+                self.selected_cohort, str):
+            raise ValidationException(translation(self.lang,
+                                                  en='The cohort needs to be a id or slug',
+                                                  es='El cohort debe ser un id o slug'),
+                                      slug='cohort-not-id-or-slug')
 
-            if service_item['service'] and (isinstance(service_item['service'], int)
-                                            or service_item['service'].isnumeric()):
-                kwargs['id'] = int(service_item['service'])
-            else:
-                kwargs['slug'] = service_item['service']
+        if self.selected_event_type_set and not isinstance(
+                self.selected_event_type_set, int) and not isinstance(self.selected_event_type_set, str):
+            raise ValidationException(translation(self.lang,
+                                                  en='The event type set needs to be a id or slug',
+                                                  es='El event type set debe ser un id o slug'),
+                                      slug='event-type-set-not-id-or-slug')
 
-            if not Service.objects.filter(**kwargs):
-                services_not_found.add(service_item['service'])
+        if self.selected_mentorship_service_set and not isinstance(
+                self.selected_mentorship_service_set, int) and not isinstance(
+                    self.selected_mentorship_service_set, str):
+            raise ValidationException(translation(self.lang,
+                                                  en='The mentorship service set needs to be a id or slug',
+                                                  es='El mentorship service set debe ser un id o slug'),
+                                      slug='mentorship-service-set-not-id-or-slug')
 
-    if isinstance(cohorts, list):
-        for cohort in cohorts:
-            kwargs = {}
+    def _reset_bag(self):
+        if 'checking' in self.request.build_absolute_uri():
+            self.bag.service_items.clear()
+            self.bag.plans.clear()
+            self.bag.token = None
+            self.bag.expires_at = None
 
-            if isinstance(cohort, int) or cohort.isnumeric():
-                kwargs['id'] = int(cohort)
+    def _validate_service_items_format(self):
+        if isinstance(self.service_items, list):
+            for item in self.service_items:
+                if not isinstance(item, dict):
+                    raise ValidationException(translation(self.lang,
+                                                          en='The service item needs to be a object',
+                                                          es='El service item debe ser un objeto'),
+                                              slug='service-item-not-object')
 
-            else:
-                kwargs['slug'] = cohort
+                if 'how_many' not in item or 'service' not in item or not isinstance(
+                        item['how_many'], int) or not isinstance(item['service'], int):
+                    raise ValidationException(translation(
+                        self.lang,
+                        en='The service item needs to have the keys of the integer type how_many and service',
+                        es='El service item debe tener las llaves de tipo entero how_many y service'),
+                                              slug='service-item-malformed')
 
-            if c := Cohort.objects.filter(**kwargs).first():
-                cohort_ids.append(c.id)
+    def _get_service_items_that_not_found(self):
+        if isinstance(self.service_items, list):
+            for service_item in self.service_items:
+                kwargs = {}
 
-            if not c:
-                cohorts_not_found.add(cohort)
+                if service_item['service'] and (isinstance(service_item['service'], int)
+                                                or service_item['service'].isnumeric()):
+                    kwargs['id'] = int(service_item['service'])
+                else:
+                    kwargs['slug'] = service_item['service']
 
-    if isinstance(plans, list):
-        for plan in plans:
-            kwargs = {}
+                if not Service.objects.filter(**kwargs):
+                    self.service_items_not_found.add(service_item['service'])
 
-            if plan and (isinstance(plan, int) or plan.isnumeric()):
-                kwargs['id'] = int(plan)
-            else:
-                kwargs['slug'] = plan
+    def _validate_just_select_one_resource_per_type(self):
+        if self.selected_cohort and (x :=
+                                     Cohort.objects.filter(**self._lookups(self.selected_cohort)).first()):
+            self.selected_cohort = x
 
-            if not Plan.objects.filter(**kwargs):
-                plans_not_found.add(plan)
+        if self.selected_event_type_set and (x := EventTypeSet.objects.filter(
+                **self._lookups(self.selected_event_type_set)).first()):
+            self.selected_event_type_set = x
 
-    if services_not_found or plans_not_found or plans_not_found:
-        raise ValidationException(translation(
-            settings.lang,
-            en=f'Items not found: services={services_not_found}, plans={plans_not_found}, '
-            f'cohorts={cohorts_not_found}',
-            es=f'Elementos no encontrados: servicios={services_not_found}, planes={plans_not_found}, '
-            f'cohortes={cohorts_not_found}',
-            slug='some-items-not-found'),
-                                  code=404)
+        if self.selected_mentorship_service_set and (x := MentorshipServiceSet.objects.filter(
+                **self._lookups(self.selected_mentorship_service_set)).first()):
+            self.selected_mentorship_service_set = x
 
-    too_many_cohorts_error = translation(settings.lang,
-                                         en='You can only select one cohort',
-                                         es='Solo puedes seleccionar una cohorte',
-                                         slug='more-than-one-cohort-selected')
+    def _get_plans_that_not_found(self):
+        if isinstance(self.plans, list):
+            for plan in self.plans:
+                kwargs = {}
 
-    if len(cohort_ids) > 1:
-        raise ValidationException(too_many_cohorts_error, code=400)
+                if plan and (isinstance(plan, int) or plan.isnumeric()):
+                    kwargs['id'] = int(plan)
+                else:
+                    kwargs['slug'] = plan
 
-    if isinstance(service_items, list):
-        for service_item in service_items:
-            kwargs = {}
+                if not Plan.objects.filter(
+                        **kwargs,
+                        available_cohorts=self.selected_cohort,
+                        available_mentorship_service_sets=self.selected_mentorship_service_set,
+                        available_event_type_sets=self.selected_event_type_set):
+                    self.plans_not_found.add(plan)
 
-            if service_item['service'] and (isinstance(service_item['service'], int)
-                                            or service_item['service'].isnumeric()):
-                kwargs['id'] = int(service_item['service'])
-            else:
-                kwargs['slug'] = service_item['service']
-
-            service = Service.objects.filter(**kwargs).first()
-            service_item, _ = ServiceItem.objects.get_or_create(service=service,
-                                                                how_many=service_item['how_many'])
-            bag.service_items.add(service_item)
-
-    if isinstance(plans, list):
-        for plan in plans:
-            kwargs = {}
-
-            if plan and (isinstance(plan, int) or plan.isnumeric()):
-                kwargs['id'] = int(plan)
-            else:
-                kwargs['slug'] = plan
-
-            p = Plan.objects.filter(**kwargs).first()
-            plan_service_items |= PlanServiceItem.objects.filter(plan=p, cohorts__id__gte=1)
-            bag.plans.add(p)
-
-    how_many_plans = bag.plans.count()
-    if how_many_plans > 1:
-        raise ValidationException(too_many_cohorts_error, code=400)
-
-    plan_service_items = plan_service_items.distinct()
-    for cohort in cohort_ids:
-        plan_service_item = plan_service_items.filter(cohorts__id=cohort).first()
-        if not plan_service_item:
+    def _report_items_not_found(self):
+        if self.service_items_not_found or self.plans_not_found or self.plans_not_found:
             raise ValidationException(translation(
-                settings.lang,
-                en='The selected cohort is not available for the selected plan items',
-                es='La cohorte seleccionada no está disponible para los items de plan seleccionados',
-                slug='cohort-not-available-for-plan'),
+                self.lang,
+                en=f'Items not found: services={self.service_items_not_found}, plans={self.plans_not_found}, '
+                f'cohorts={self.cohorts_not_found}',
+                es=f'Elementos no encontrados: servicios={self.service_items_not_found}, '
+                f'planes={self.plans_not_found}, cohortes={self.cohorts_not_found}',
+                slug='some-items-not-found'),
+                                      code=404)
+
+    def _add_service_items_to_bag(self):
+        if isinstance(self.service_items, list):
+            for service_item in self.service_items:
+                kwargs = self._lookups(service_item['service'])
+
+                service = Service.objects.filter(**kwargs).first()
+                service_item, _ = ServiceItem.objects.get_or_create(service=service,
+                                                                    how_many=service_item['how_many'])
+                self.bag.service_items.add(service_item)
+
+    def _add_plans_to_bag(self):
+        if isinstance(self.plans, list):
+            for plan in self.plans:
+                kwargs = {}
+
+                kwargs = self._lookups(plan)
+
+                p = Plan.objects.filter(
+                    **kwargs,
+                    available_cohorts=self.selected_cohort,
+                    available_mentorship_service_sets=self.selected_mentorship_service_set,
+                    available_event_type_sets=self.selected_event_type_set).first()
+
+                if p:
+                    self.bag.plans.add(p)
+
+    def _validate_just_one_plan(self):
+        how_many_plans = self.bag.plans.count()
+
+        if how_many_plans > 1:
+
+            raise ValidationException(self._more_than_one_generator(en='plan', es='plan'), code=400)
+
+    def _validate_buy_plans_or_service_items(self):
+        if self.bag.plans.count() and self.bag.service_items.count():
+            raise ValidationException(translation(
+                self.lang,
+                en="You can't select a plan and a services at the same time",
+                es='No puedes seleccionar un plan y servicios al mismo tiempo',
+                slug='one-plan-and-many-services'),
                                       code=400)
 
-        bag.selected_cohorts.add(cohort)
-        plan_service_items = plan_service_items.exclude(id=plan_service_item.id)
+    def execute(self):
+        self._reset_bag()
 
-    #TODO: add the same for the service items
-    if plan_service_items:
-        slugs = ', '.join({plan_service_item.plan.slug for plan_service_item in plan_service_items})
-        raise ValidationException(translation(settings.lang,
-                                              en=f'The cohorts was not provided for the plans: {slugs}',
-                                              es=f'No se proporcionaron cohortes para los planes: {slugs}',
-                                              slug='plan-service-item-without-its-selected-cohort'),
+        self._validate_selected_resources()
+        self._validate_service_items_format()
+
+        self._get_service_items_that_not_found()
+        self._validate_just_select_one_resource_per_type()
+        self._get_plans_that_not_found()
+        self._report_items_not_found()
+        self._add_service_items_to_bag()
+        self._add_plans_to_bag()
+        self._validate_just_one_plan()
+
+        self._validate_buy_plans_or_service_items()
+
+        self.bag.save()
+
+
+def add_items_to_bag(request, bag: Bag, lang: str):
+    return BagHandler(request, bag, lang).execute()
+
+
+def check_dependencies_in_bag(bag: Bag, lang: str):
+    cohorts = bag.selected_cohorts.all()
+    mentorship_service_sets = bag.selected_mentorship_service_sets.all()
+    event_type_sets = bag.selected_event_type_sets.all()
+
+    pending_cohorts_for_dependency_resolution = set(cohorts)
+    pending_mentorship_service_sets_for_dependency_resolution = set(mentorship_service_sets)
+    pending_event_type_sets_for_dependency_resolution = set(event_type_sets)
+
+    for service_item in bag.service_items.all():
+        service = service_item.service
+
+        if service.type == 'COHORT':
+            for cohort in cohorts:
+                service = service_item.service
+
+                if not AcademyService.objects.filter(service=service, academy=cohort.academy).first():
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'The service {service.slug} is not available for the cohort {cohort.slug}',
+                        es=f'El servicio {service.slug} no está disponible para el cohorte {cohort.slug}',
+                        slug='service-not-available-for-cohort'),
+                                              code=400)
+
+                pending_cohorts_for_dependency_resolution.discard(cohort)
+
+        if service.type == 'MENTORSHIP_SERVICE_SET':
+            for mentorship_service_set in mentorship_service_sets:
+                if not AcademyService.objects.filter(service=service,
+                                                     academy=mentorship_service_set.academy).first():
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'The service {service.slug} is not available for the mentorship service set '
+                        f'{mentorship_service_set.slug}',
+                        es=f'El servicio {service.slug} no está disponible para el conjunto '
+                        f'de servicios de mentoría {mentorship_service_set.slug}',
+                        slug='service-not-available-for-mentorship-service-set'),
+                                              code=400)
+
+                if not mentorship_service_set.mentorship_services.count():
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'The mentorship service set {mentorship_service_set.slug} is not ready to be sold',
+                        es=f'El conjunto de servicios de mentoría {mentorship_service_set.slug} no está '
+                        f'listo para ser vendido',
+                        slug='mentorship-service-set-not-ready-to-be-sold'),
+                                              code=400)
+
+                pending_mentorship_service_sets_for_dependency_resolution.discard(mentorship_service_set)
+
+        if service.type == 'EVENT_TYPE_SET':
+            for event_type_set in event_type_sets:
+                if not AcademyService.objects.filter(service=service_item.service,
+                                                     academy=event_type_set.academy).first():
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'The service {service.slug} is not available for the event type set '
+                        f'{event_type_set.slug}',
+                        es=f'El servicio {service.slug} no está disponible para el conjunto '
+                        f'de tipos de eventos {event_type_set.slug}',
+                        slug='service-not-available-for-event-type-set'),
+                                              code=400)
+
+                if not event_type_set.event_types.count():
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'The event type set {event_type_set.slug} is not ready to be sold',
+                        es=
+                        f'El conjunto de tipos de eventos {event_type_set.slug} no está listo para ser vendido',
+                        slug='event-type-set-not-ready-to-be-sold'),
+                                              code=400)
+
+                pending_event_type_sets_for_dependency_resolution.discard(event_type_set)
+
+    for plan in bag.plans.all():
+        for cohort in cohorts:
+            if cohort not in plan.available_cohorts.all():
+                raise ValidationException(translation(
+                    lang,
+                    en=f'The plan {plan.slug} is not available for the cohort {cohort.slug}',
+                    es=f'El plan {plan.slug} no está disponible para el cohorte {cohort.slug}',
+                    slug='plan-not-available-for-cohort'),
+                                          code=400)
+
+            pending_cohorts_for_dependency_resolution.discard(cohort)
+
+        for mentorship_service_set in mentorship_service_sets:
+            if mentorship_service_set not in plan.available_mentorship_service_sets.all():
+                raise ValidationException(translation(
+                    lang,
+                    en=f'The plan {plan.slug} is not available for the mentorship service set '
+                    f'{mentorship_service_set.slug}',
+                    es=f'El plan {plan.slug} no está disponible para el conjunto de servicios de mentoría '
+                    f'{mentorship_service_set.slug}',
+                    slug='plan-not-available-for-mentorship-service-set'),
+                                          code=400)
+
+            if not mentorship_service_set.mentorship_services.count():
+                raise ValidationException(translation(
+                    lang,
+                    en=f'The mentorship service set {mentorship_service_set.slug} is not ready to be sold',
+                    es=f'El conjunto de servicios de mentoría {mentorship_service_set.slug} no está '
+                    f'listo para ser vendido',
+                    slug='mentorship-service-set-not-ready-to-be-sold'),
+                                          code=400)
+
+            pending_mentorship_service_sets_for_dependency_resolution.discard(mentorship_service_set)
+
+        for event_type_set in event_type_sets:
+            if event_type_set not in plan.available_event_type_sets.all():
+                raise ValidationException(translation(
+                    lang,
+                    en=f'The plan {plan.slug} is not available for the event type set '
+                    f'{event_type_set.slug}',
+                    es=f'El plan {plan.slug} no está disponible para el conjunto de tipos de evento '
+                    f'{event_type_set.slug}',
+                    slug='plan-not-available-for-event-type-set'),
+                                          code=400)
+
+            if not event_type_set.event_types.count():
+                raise ValidationException(translation(
+                    lang,
+                    en=f'The event type set {event_type_set.slug} is not ready to be sold',
+                    es=f'El conjunto de tipos de eventos {event_type_set.slug} no está listo para ser vendido',
+                    slug='event-type-set-not-ready-to-be-sold'),
+                                          code=400)
+
+            pending_event_type_sets_for_dependency_resolution.discard(event_type_set)
+
+    if pending_cohorts_for_dependency_resolution:
+        raise ValidationException(translation(
+            lang,
+            en=f'The cohorts {", ".join([c.slug for c in pending_cohorts_for_dependency_resolution])} '
+            f'are not available for any selected plan',
+            es=f'Los cohortes {", ".join([c.slug for c in pending_cohorts_for_dependency_resolution])} '
+            f'no están disponibles para ningún plan seleccionado',
+            slug='cohorts-not-available-for-any-selected-plan'),
                                   code=400)
 
-    if how_many_plans == 1 and bag.service_items.count():
-        raise ValidationException(translation(settings.lang,
-                                              en="You can't select a plan and a services at the same time",
-                                              es='No puedes seleccionar un plan y servicios al mismo tiempo',
-                                              slug='one-plan-and-many-services'),
+    if pending_mentorship_service_sets_for_dependency_resolution:
+        raise ValidationException(translation(
+            lang,
+            en='The mentorship service sets '
+            f'{", ".join([mss.slug for mss in pending_mentorship_service_sets_for_dependency_resolution])} '
+            f'are not available for any selected plan',
+            es='Los conjuntos de servicios de mentoría '
+            f'{", ".join([mss.slug for mss in pending_mentorship_service_sets_for_dependency_resolution])} '
+            f'no están disponibles para ningún plan seleccionado',
+            slug='mentorship-service-sets-not-available-for-any-selected-plan'),
                                   code=400)
 
-    bag.save()
-
-    return bag
+    if pending_event_type_sets_for_dependency_resolution:
+        raise ValidationException(translation(
+            lang,
+            en='The event type sets '
+            f'{", ".join([ets.slug for ets in pending_event_type_sets_for_dependency_resolution])} '
+            f'are not available for any selected plan',
+            es='Los conjuntos de tipos de eventos '
+            f'{", ".join([ets.slug for ets in pending_event_type_sets_for_dependency_resolution])} '
+            f'no están disponibles para ningún plan seleccionado',
+            slug='event-type-sets-not-available-for-any-selected-plan'),
+                                  code=400)
 
 
 def get_amount(bag: Bag, currency: Currency) -> tuple[float, float, float, float]:
