@@ -778,7 +778,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         published_before = request.GET.get('published_before', '')
         if published_before != '':
             items = items.filter(published_at__lte=published_before)
-            
+
         published_after = request.GET.get('published_after', '')
         if published_after != '':
             items = items.filter(published_at__gte=published_after)

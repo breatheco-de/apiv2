@@ -16,7 +16,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        assets = Asset.objects.filter(published_at__isnull=True, status='PUBLISHED',category__isnull=False)
+        assets = Asset.objects.filter(published_at__isnull=True, status='PUBLISHED', category__isnull=False)
         for a in assets:
             a.published_at = a.updated_at
             a.save()
