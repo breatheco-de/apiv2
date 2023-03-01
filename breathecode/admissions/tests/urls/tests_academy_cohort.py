@@ -73,7 +73,6 @@ def cohort_field(data={}):
         'syllabus_version_id': 1,
         'timezone': 'America/Caracas',
         'is_hidden_on_prework': True,
-        'available_as_saas': False,
         **data,
     }
 
@@ -824,6 +823,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             cohort_field({
                 'stage': stage,
                 'kickoff_date': UTC_NOW,
+                'available_as_saas': False
             }),
         ])
         self.assertEqual(self.all_cohort_time_slot_dict(),
@@ -904,6 +904,249 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             cohort_field({
                 'stage': stage,
                 'kickoff_date': UTC_NOW,
+                'available_as_saas': False
+            }),
+        ])
+        self.assertEqual(self.all_cohort_time_slot_dict(),
+                         [{
+                             'id': 1,
+                             'cohort_id': 1,
+                             'removed_at': model.syllabus_schedule_time_slot.removed_at,
+                             'starting_at': model.syllabus_schedule_time_slot.starting_at,
+                             'ending_at': model.syllabus_schedule_time_slot.ending_at,
+                             'recurrent': model.syllabus_schedule_time_slot.recurrent,
+                             'recurrency_type': model.syllabus_schedule_time_slot.recurrency_type,
+                             'timezone': model.academy.timezone,
+                         }])
+
+        cohort = self.get_cohort(1)
+
+        self.assertEqual(cohort_saved.send.call_args_list, [
+            call(instance=cohort, sender=cohort.__class__, created=True),
+        ])
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_academy_cohort__post__passing_available_as_saas_with__true(self):
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs,
+                                        academy_kwargs=academy_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        url = reverse_lazy('admissions:academy_cohort')
+
+        stage = random.choice(['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED', 'DELETED'])
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'stage': stage.lower(),
+            'kickoff_date': UTC_NOW.isoformat(),
+            'never_ends': True,
+            'remote_available': True,
+            'schedule': 1,
+            'available_as_saas': True
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = post_serializer(self,
+                                   model.academy,
+                                   model.syllabus,
+                                   model.syllabus_version,
+                                   data={
+                                       'id': 1,
+                                       'timezone': 'America/Caracas',
+                                       'stage': stage,
+                                       'slug': 'they-killed-kenny',
+                                       'name': 'They killed kenny',
+                                       'schedule': 1,
+                                       'available_as_saas': True
+                                   })
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
+            cohort_field({
+                'stage': stage,
+                'kickoff_date': UTC_NOW,
+                'available_as_saas': True
+            }),
+        ])
+        self.assertEqual(self.all_cohort_time_slot_dict(),
+                         [{
+                             'id': 1,
+                             'cohort_id': 1,
+                             'removed_at': model.syllabus_schedule_time_slot.removed_at,
+                             'starting_at': model.syllabus_schedule_time_slot.starting_at,
+                             'ending_at': model.syllabus_schedule_time_slot.ending_at,
+                             'recurrent': model.syllabus_schedule_time_slot.recurrent,
+                             'recurrency_type': model.syllabus_schedule_time_slot.recurrency_type,
+                             'timezone': model.academy.timezone,
+                         }])
+
+        cohort = self.get_cohort(1)
+
+        self.assertEqual(cohort_saved.send.call_args_list, [
+            call(instance=cohort, sender=cohort.__class__, created=True),
+        ])
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_academy_cohort__post__passing_available_as_saas_with__false(self):
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs,
+                                        academy_kwargs=academy_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        url = reverse_lazy('admissions:academy_cohort')
+
+        stage = random.choice(['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED', 'DELETED'])
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'stage': stage.lower(),
+            'kickoff_date': UTC_NOW.isoformat(),
+            'never_ends': True,
+            'remote_available': True,
+            'schedule': 1,
+            'available_as_saas': False
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = post_serializer(self,
+                                   model.academy,
+                                   model.syllabus,
+                                   model.syllabus_version,
+                                   data={
+                                       'id': 1,
+                                       'timezone': 'America/Caracas',
+                                       'stage': stage,
+                                       'slug': 'they-killed-kenny',
+                                       'name': 'They killed kenny',
+                                       'schedule': 1,
+                                       'available_as_saas': False
+                                   })
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
+            cohort_field({
+                'stage': stage,
+                'kickoff_date': UTC_NOW,
+                'available_as_saas': False
+            }),
+        ])
+        self.assertEqual(self.all_cohort_time_slot_dict(),
+                         [{
+                             'id': 1,
+                             'cohort_id': 1,
+                             'removed_at': model.syllabus_schedule_time_slot.removed_at,
+                             'starting_at': model.syllabus_schedule_time_slot.starting_at,
+                             'ending_at': model.syllabus_schedule_time_slot.ending_at,
+                             'recurrent': model.syllabus_schedule_time_slot.recurrent,
+                             'recurrency_type': model.syllabus_schedule_time_slot.recurrency_type,
+                             'timezone': model.academy.timezone,
+                         }])
+
+        cohort = self.get_cohort(1)
+
+        self.assertEqual(cohort_saved.send.call_args_list, [
+            call(instance=cohort, sender=cohort.__class__, created=True),
+        ])
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_academy_cohort__post__not_passing_available_as_saas(self):
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs,
+                                        academy_kwargs=academy_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        url = reverse_lazy('admissions:academy_cohort')
+
+        stage = random.choice(['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED', 'DELETED'])
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'stage': stage.lower(),
+            'kickoff_date': UTC_NOW.isoformat(),
+            'never_ends': True,
+            'remote_available': True,
+            'schedule': 1
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = post_serializer(self,
+                                   model.academy,
+                                   model.syllabus,
+                                   model.syllabus_version,
+                                   data={
+                                       'id': 1,
+                                       'timezone': 'America/Caracas',
+                                       'stage': stage,
+                                       'slug': 'they-killed-kenny',
+                                       'name': 'They killed kenny',
+                                       'schedule': 1,
+                                       'available_as_saas': model.academy.available_as_saas
+                                   })
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
+            cohort_field({
+                'stage': stage,
+                'kickoff_date': UTC_NOW,
+                'available_as_saas': model.academy.available_as_saas
             }),
         ])
         self.assertEqual(self.all_cohort_time_slot_dict(),
