@@ -805,10 +805,16 @@ def get_github_token(request, token=None):
         else:
             url = url + f'&user={token}'
 
+    scope = request.query_params.get('scope', 'user repo read:org')
+    try:
+        scope = base64.b64decode(scope.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     params = {
         'client_id': os.getenv('GITHUB_CLIENT_ID', ''),
         'redirect_uri': os.getenv('GITHUB_REDIRECT_URL', '') + f'?url={url}',
-        'scope': 'user repo read:org',
+        'scope': scope,
     }
 
     logger.debug('Redirecting to github')

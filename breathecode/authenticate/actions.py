@@ -11,11 +11,13 @@ from django.core.handlers.wsgi import WSGIRequest
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.actions import send_email_message
 from breathecode.utils import ValidationException
+from breathecode.services.github import Github
 
-from .models import CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Role, Token, UserSetting
+from .models import (CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Role, Token, UserSetting,
+                     AcademyAuthSettings, GithubAcademyUser)
 
 logger = logging.getLogger(__name__)
 
@@ -319,3 +321,197 @@ def get_user_language(request: WSGIRequest):
         lang = 'en'
 
     return lang
+
+
+def add_to_organization(cohort_id, user_id):
+
+    cohort_user = CohortUser.objects.filter(cohort__id=cohort_id, user__id=user_id).first()
+    if cohort_user is None:
+        raise ValidationException(
+            translation(en=f'User {user_id} does not belong to cohort {cohort_id}',
+                        es=f'El usuario {user_id} no pertenece a esta cohort {cohort_id}',
+                        slug='invalid-cohort-user'))
+
+    academy = cohort_user.cohort.academy
+    user = cohort_user.user
+
+    try:
+        github_user = GithubAcademyUser.objects.filter(user=user, academy=academy).first()
+        if github_user is None:
+            github_user = GithubAcademyUser(academy=academy,
+                                            user=user,
+                                            storage_status='PENDING',
+                                            storage_action='ADD',
+                                            storage_synch_at=timezone.now())
+            github_user.save()
+
+        github_user.storage_status = 'PENDING'
+        github_user.storage_action = 'ADD'
+        github_user.log(f'Scheduled to add to organization because in cohort={cohort_user.cohort.slug}')
+        github_user.save()
+        return True
+    except Exception as e:
+        github_user.log(str(e))
+        github_user.save()
+        return False
+
+
+def remove_from_organization(cohort_id, user_id):
+
+    cohort_user = CohortUser.objects.filter(cohort__id=cohort_id, user__id=user_id).first()
+    if cohort_user is None:
+        raise ValidationException(
+            translation(en=f'User {user_id} does not belong to cohort {cohort_id}',
+                        es=f'El usuario {user_id} no pertenece a esta cohort {cohort_id}',
+                        slug='invalid-cohort-user'))
+    academy = cohort_user.cohort.academy
+    user = cohort_user.user
+    github_user = GithubAcademyUser.objects.filter(user=user, academy=academy).first()
+    try:
+
+        active_cohorts_in_academy = CohortUser.objects.filter(user=user,
+                                                              cohort__academy=academy,
+                                                              educational_status='ACTIVE').first()
+        if active_cohorts_in_academy is not None:
+            raise ValidationException(
+                translation(
+                    en=
+                    f'Cannot remove user={user.id} from organization because edu_status is ACTIVE in {active_cohorts_in_academy.cohort.slug}',
+                    es=
+                    f'No se pudo remover usuario id={user.id} de la organization su edu_status=ACTIVE en cohort={active_cohorts_in_academy.cohort.slug}',
+                    slug='still-active'))
+
+        if github_user is None:
+            raise ValidationException(
+                translation(
+                    en=
+                    f'Cannot remove user id={user.id} from organization because it was not found on its list of current members',
+                    es=
+                    f'No se pudo remover usuario id={user.id} de la organization porque no se encontro en su lista de miembros',
+                    slug='user-not-found-in-org'))
+
+        github_user.storage_status = 'PENDING'
+        github_user.storage_action = 'DELETE'
+        github_user.log(
+            f'Scheduled to remove from organization because edu_status={cohort_user.educational_status} in cohort={cohort_user.slug}'
+        )
+        github_user.save()
+        return True
+    except Exception as e:
+        if github_user is not None:
+            github_user.log(str(e))
+            github_user.save()
+        return False
+
+
+def sync_organization_members(academy_id, only_status=[]):
+
+    settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
+    if settings is None or not settings.github_is_sync:
+        return False
+
+    siblings = AcademyAuthSettings.objects.filter(github_username=settings.github_username)
+    without_sync_active = siblings.filter(github_is_sync=False).values_list('academy__slug', flat=True)
+    academy_slugs = siblings.values_list('academy__slug', flat=True)
+    if len(without_sync_active) > 0:
+        raise ValidationException(
+            translation(
+                en=
+                f"All organizations with the same username '{settings.github_username}' must activate with github synch before starting to sync members: {academy_slugs.join(', ')}",
+                es=
+                f"Todas las organizaciones con el mismo username '{settings.github_username}' deben tener github_synch activo para poder empezar la sincronizacion: {academy_slugs.join(', ')}",
+                slug='not-everyone-in-synch'))
+
+    if settings.github_owner is None or settings.github_owner.credentialsgithub is None:
+        raise ValidationException(
+            translation(en=f'Organization has no owner or it has no github credentials',
+                        es=f'La organizacion no tiene dueño o no este tiene credenciales para github',
+                        slug='invalid-owner'))
+
+    # users without github credentials are marked as error
+    GithubAcademyUser.objects.filter(user__credentialsgithub__isnull=True).exclude(storage_status='ERROR')\
+                .update(storage_status='ERROR', storage_log=[GithubAcademyUser.create_log('Github credentials not found')])
+
+    gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
+    members = gb.get_org_members()
+
+    remaining_usernames = set([m['login'] for m in members])
+
+    org_users = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
+                                                 storage_status__in=only_status)
+    for _member in org_users:
+        if _member.storage_status == 'PENDING' and _member.storage_action == 'ADD':
+            if _member.credentialsgithub.username in remaining_usernames:
+                _member.log('User was already added to github')
+                _member.storage_status = 'SYNCHED'
+                _member.save()
+            else:
+                teams = [int(id) for id in settings.github_default_team_ids.split(',')]
+                gb.invite_org_member(_member.credentialsgithub.email, team_ids=teams)
+
+        if _member.storage_status == 'PENDING' and _member.storage_action == 'DELETE':
+            if _member.credentialsgithub.username not in remaining_usernames:
+                _member.log('User was already deleted from github')
+                _member.storage_status = 'SYNCHED'
+                _member.save()
+            else:
+                added_elsewere = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
+                                                                  storage_status__in=['ADD']).first()
+                if added_elsewere is None:
+                    gb.delete_org_member(_member.credentialsgithub.username)
+
+        remaining_usernames = set(
+            [username for username in remaining_usernames if username != _member.credentialsgithub.username])
+
+    # there are some users from github we could not find in the cohorts
+    now = timezone.now()
+    for u in remaining_usernames:
+        _user = CredentialsGithub.objects.filter(username=u).first()
+        if _user is not None:
+            _user = _user.user
+
+        uknown_user = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
+                                                       user=_user,
+                                                       username=u).first()
+        if uknown_user is None:
+            uknown_user = GithubAcademyUser(academy=settings.academy,
+                                            user=_user,
+                                            username=u,
+                                            storage_status='UNKNOWN',
+                                            storage_action='IGNORE',
+                                            storage_synch_at=now)
+            uknown_user.save()
+
+        uknown_user.storage_status = 'UNKNOWN',
+        uknown_user.storage_action = 'IGNORE',
+        uknown_user.storage_synch_at = now
+        uknown_user.log("This user is coming from github but we don't know if it should be deleted",
+                        reset=True)
+        uknown_user.save()
+
+
+def invite_org_member(academy_id, org_member_id):
+
+    settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
+    if settings is None or not settings.github_is_sync:
+        return False
+
+    _member = GithubAcademyUser.objects.filter(id=org_member_id)
+    if _member is None or _member.storage_status != 'PENDING' and _member.storage_action != 'INVITE':
+        # no need to invite
+        return False
+
+    gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
+    teams = [int(id) for id in settings.github_default_team_ids.split(',')]
+    resp = gb.invite_org_member(_member.credentialsgithub.email, team_ids=teams)
+    if resp.status_code == 200:
+        _member.storage_status = 'SYNCHED'
+        _member.log('Invited to github organization')
+        _member.save()
+        return True
+
+    else:
+        _member.storage_status = 'ERROR'
+        _member.log('Error inviting member to organization')
+        _member.save()
+        return False
