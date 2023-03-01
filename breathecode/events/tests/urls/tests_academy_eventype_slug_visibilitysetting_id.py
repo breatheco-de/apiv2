@@ -62,6 +62,10 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
             profile_academy=1,
             role=1,
             capability='crud_event_type',
+            event_type={
+                'slug': 'funny_event',
+                'icon_url': 'https://www.google.com'
+            },
             event_type_visibility_setting=True,
         )
 

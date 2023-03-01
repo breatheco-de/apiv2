@@ -84,7 +84,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
 
-    def test_post_visibilitysetting_with_bad_academy(self):
+    def test_post_visibilitysetting_with_bad_syllabus(self):
         self.bc.request.set_headers(academy=1)
 
         url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
@@ -100,10 +100,34 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
             },
         )
 
-        data = {'academy': 2}
+        data = {'syllabus': 1}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': 'academy-not-found', 'status_code': 400}
+        expected = {'detail': 'syllabus-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+
+    def test_post_visibilitysetting_with_bad_cohort(self):
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
+                           kwargs={'event_type_slug': 'funny_event'})
+        self.generate_models(
+            authenticate=True,
+            profile_academy=1,
+            role=1,
+            capability='crud_event_type',
+            event_type={
+                'slug': 'funny_event',
+                'icon_url': 'https://www.google.com'
+            },
+        )
+
+        data = {'cohort': 2}
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {'detail': 'cohort-not-found', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)

@@ -667,48 +667,51 @@ class EventTypeVisibilitySettingView(APIView):
     def post(self, request, event_type_slug, academy_id=None):
         handler = self.extensions(request)
 
-        event_type = EventType.objects.filter(slug=event_type_slug).first()
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        event_type = EventType.objects.filter(slug=event_type_slug, academy=academy_id).first()
         if not event_type:
             raise ValidationException('Event type not found', slug='event-type-not-found')
 
-        academy = Academy.objects.filter(id=request.data['academy']).first()
-        if not academy:
-            raise ValidationException('Academy not found', slug='academy-not-found')
-
         syllabus = None
         if 'syllabus' in request.data:
-            syllabus = Syllabus.objects.filter(id=request.data['syllabus']).first()
+            syllabus = Syllabus.objects.filter(id=request.data['syllabus'], academy_owner=academy_id).first()
+            if syllabus is None:
+                raise ValidationException('Syllabus not found', slug='syllabus-not-found')
 
         cohort = None
         if 'cohort' in request.data:
-            cohort = Cohort.objects.filter(id=request.data['cohort']).first()
+            cohort = Cohort.objects.filter(id=request.data['cohort'], academy=academy_id).first()
+            if cohort is None:
+                raise ValidationException('Cohort not found', slug='cohort-not-found')
 
         visibility_setting, created = EventTypeVisibilitySetting.objects.get_or_create(syllabus=syllabus,
                                                                                        academy=academy,
                                                                                        cohort=cohort)
+
+        event_type.visibility_settings.add(visibility_setting)
 
         serializer = EventTypeVisibilitySettingSerializer(visibility_setting, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
     @capable_of('crud_event_type')
     def delete(self, request, event_type_slug, visibility_setting_id=None, academy_id=None):
-        item = EventTypeVisibilitySetting.objects.filter(id=visibility_setting_id).first()
+        item = EventTypeVisibilitySetting.objects.filter(id=visibility_setting_id, academy=academy_id).first()
+
+        event_type = EventType.objects.filter(slug=event_type_slug, academy=academy_id).first()
+        if not event_type:
+            raise ValidationException('Event type not found', slug='event-type-not-found')
 
         if not item:
             raise ValidationException('Event type visibility setting not found',
                                       404,
                                       slug='event-type-visibility-setting-not-found')
 
-        event_type = EventType.objects.filter(slug=event_type_slug).first()
-        if not event_type:
-            raise ValidationException('Event type not found', slug='event-type-not-found')
-
-        other_event_type = EventType.objects.filter(visibility_settings__id=visibility_setting_id).exclude(
-            slug=event_type_slug).first()
+        other_event_type = EventType.objects.filter(visibility_settings__id=visibility_setting_id,
+                                                    academy=academy_id).exclude(slug=event_type_slug).first()
 
         if other_event_type is not None:
             event_type.visibility_settings.remove(item)
-            event_type.save()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         item.delete()
