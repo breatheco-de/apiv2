@@ -9,6 +9,8 @@ from babel.dates import format_datetime as babel_format_datetime
 from babel.dates import format_time as babel_format_time
 from babel.dates import format_timedelta as babel_format_timedelta
 
+from breathecode.utils.exceptions import MalformedLanguageCode
+
 __all__ = ['translation', 'format_date', 'format_datetime', 'format_time', 'format_timedelta']
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
@@ -24,20 +26,22 @@ def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
     is_short = len(code) == 2
 
     # first two character only with lowercase
-    assert code[:2].islower(), 'lang code is not lowercase'
+    if not code[:2].islower():
+        raise MalformedLanguageCode('Lang code is not lowercase')
 
     # last two character only with lowercase
-    if not is_short and from_kwargs:
-        assert code[3:].islower(), 'country code is not lowercase'
+    if not is_short and from_kwargs and not code[3:].islower():
+        raise MalformedLanguageCode('Country code is not lowercase')
 
     # last two character only with uppercase
-    elif not is_short:
-        assert code[2:].isupper(), 'country code is not uppercase'
+    elif not is_short and not from_kwargs and not code[2:].isupper():
+        raise MalformedLanguageCode('Country code is not uppercase')
 
     separator = '_' if from_kwargs else '-'
 
     #the format is en or en-US
-    assert len(code) == 2 or (len(code) == 5 and code[2] == separator), 'code malformed'
+    if not (len(code) == 2 or (len(code) == 5 and code[2] == separator)):
+        raise MalformedLanguageCode('Code malformed')
 
     if not from_kwargs:
         return code.replace(separator, '_')
@@ -94,6 +98,43 @@ def format_timedelta(code: Optional[str], date: time):
     return babel_format_timedelta(date, locale=code)
 
 
+def format_languages(code: str, **kwargs: str) -> list:
+    """Translate the language to the local language"""
+
+    languages = set()
+
+    code.replace(' ', '')
+
+    codes = [x for x in code.split(',') if x]
+
+    for code in codes:
+        priority = 1
+        if ';q=' in code:
+            s = code.split(';q=')
+            code = s[0]
+            try:
+                priority = float(s[1])
+            except:
+                raise MalformedLanguageCode('The priority is not a float, example: "en;q=0.5"',
+                                            slug='malformed-quantity-language-code')
+
+        languages.add((priority, code))
+
+    return [x[1] for x in sorted(languages, key=lambda x: (x[0], '-' in x[1], x[1]), reverse=True)]
+
+
+def try_to_translate(code, **kwargs: str) -> str | None:
+    is_short = len(code) == 2
+
+    if code.lower() in kwargs:
+        return kwargs[code.lower()]
+
+    elif not is_short and (short_code := get_short_code(code)) in kwargs:
+        return kwargs[short_code]
+
+    return None
+
+
 @cache
 def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) -> str:
     """Get the translation"""
@@ -108,20 +149,21 @@ def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) 
         format_and_assert_code(key, from_kwargs=True)
 
     # the english if mandatory
-    assert 'en' in kwargs or 'en_us' in kwargs, 'The english translation is mandatory'
+    if not ('en' in kwargs or 'en_us' in kwargs):
+        raise MalformedLanguageCode('The english translation is mandatory')
 
     if slug and IS_TEST_ENV:
         return slug
 
-    is_short = len(code) == 2
+    languages = format_languages(code)
 
-    if code.lower() in kwargs:
-        return kwargs[code.lower()]
+    for language in languages:
+        v = try_to_translate(language, **kwargs)
 
-    elif not is_short and (short_code := get_short_code(code)) in kwargs:
-        return kwargs[short_code]
+        if v:
+            return v
 
-    elif 'en_us' in kwargs:
+    if 'en_us' in kwargs:
         return kwargs['en_us']
 
     return kwargs['en']
