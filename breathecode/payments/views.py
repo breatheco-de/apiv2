@@ -983,7 +983,11 @@ class PayView(APIView):
                     logger.info('oooooooooooooooooooooooooooooooooooo')
                     logger.info('oooooooooooooooooooooooooooooooooooo')
 
+                logger.info('not available_for_free_trial: %s' % (not available_for_free_trial))
+                logger.info('not how_many_installments: %s' % (not how_many_installments))
+                logger.info('not chosen_period: %s' % (not chosen_period))
                 if not available_for_free_trial and not how_many_installments and not chosen_period:
+                    logger.info('here!')
                     raise ValidationException(translation(lang,
                                                           en='Missing chosen period',
                                                           es='Falta el periodo elegido',
@@ -1031,7 +1035,8 @@ class PayView(APIView):
                 else:
                     amount = 0
 
-                if amount == 0 and PlanFinancing.objects.filter(plans__in=bag.plans.all()).count():
+                if amount == 0 and Subscription.objects.filter(user=request.user,
+                                                               plans__in=bag.plans.all()).count():
                     raise ValidationException(translation(lang,
                                                           en='Your free trial was already took',
                                                           es='Tu prueba gratuita ya fue tomada',
