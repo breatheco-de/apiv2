@@ -432,7 +432,7 @@ class CohortUser(models.Model):
         default=False, help_text='You can active students to the watch list and monitor them closely')
 
     history_log = models.JSONField(
-        default={},
+        default=dict(),
         blank=True,
         null=False,
         help_text='The cohort user log will save attendancy and information about progress on each class')
