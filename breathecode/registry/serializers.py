@@ -332,9 +332,21 @@ class PostAssetSerializer(serializers.ModelSerializer):
         validated_data = super().validate(data)
 
         if 'category' not in data or data['category'] is None:
-            category = AssetCategory.objects.filter(
-                id=validated_data['all_translations'][0].category.id).first()
+            asset_translation = Asset.objects.filter(slug=validated_data['all_translations'][0]).first()
+
+            if asset_translation is None:
+                raise ValidationException(f'No asset translation found for slug ({validated_data["slug"]})')
+
+            category = AssetCategory.objects.filter(id=asset_translation.category.id).first()
+
+            if category is None:
+                raise ValidationException(f'No category found for id ({asset_translation.category.id})')
+
             category_translation = category.all_translations.filter(lang=validated_data['lang']).first()
+            if category_translation is None:
+                raise ValidationException(
+                    f'No category translation found for lang ({validated_data["lang"]})')
+
             validated_data['category'] = category_translation
 
         academy_id = self.context['academy']
