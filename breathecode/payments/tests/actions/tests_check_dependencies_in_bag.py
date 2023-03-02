@@ -37,7 +37,8 @@ class PaymentsTestSuite(PaymentsTestCase):
         model = self.bc.database.create(bag=1, cohort=1)
         db = self.bc.format.to_dict(model.bag)
 
-        with self.assertRaisesMessage(ValidationException, 'cohorts-not-available-for-any-selected-plan'):
+        with self.assertRaisesMessage(ValidationException,
+                                      'cohorts-not-available-for-any-selected-plan-or-service'):
             check_dependencies_in_bag(model.bag, 'en')
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [db])
@@ -64,33 +65,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         model = self.bc.database.create(bag=1, mentorship_service_set=1)
         db = self.bc.format.to_dict(model.bag)
 
-        with self.assertRaisesMessage(ValidationException,
-                                      'mentorship-service-sets-not-available-for-any-selected-plan'):
-            check_dependencies_in_bag(model.bag, 'en')
-
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [db])
-
-    patch('logging.Logger.info', MagicMock())
-
-    @patch('logging.Logger.error', MagicMock())
-    def test_bag__mentorship_service_set_not_available_for_any_plan__because_is_not_available_in_selected_plan(
-            self):
-        plan = {'available_mentorship_service_sets': []}
-        model = self.bc.database.create(bag=1, mentorship_service_set=1, plan=plan)
-        db = self.bc.format.to_dict(model.bag)
-
-        with self.assertRaisesMessage(ValidationException, 'plan-not-available-for-mentorship-service-set'):
-            check_dependencies_in_bag(model.bag, 'en')
-
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [db])
-
-    @patch('logging.Logger.error', MagicMock())
-    def test_bag__mentorship_service_set_not_available_for_any_plan__because_not_have_mentorship_services_yet(
-            self):
-        model = self.bc.database.create(bag=1, mentorship_service_set=1, plan=1)
-        db = self.bc.format.to_dict(model.bag)
-
-        with self.assertRaisesMessage(ValidationException, 'mentorship-service-set-not-ready-to-be-sold'):
+        with self.assertRaisesMessage(
+                ValidationException,
+                'mentorship-service-sets-not-available-for-any-selected-plan-or-service'):
             check_dependencies_in_bag(model.bag, 'en')
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [db])
@@ -106,30 +83,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         db = self.bc.format.to_dict(model.bag)
 
         with self.assertRaisesMessage(ValidationException,
-                                      'event-type-sets-not-available-for-any-selected-plan'):
-            check_dependencies_in_bag(model.bag, 'en')
-
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [db])
-
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    def test_bag__event_type_set_not_available_for_any_plan__because_is_not_available_in_selected_plan(self):
-        plan = {'available_event_type_sets': []}
-        model = self.bc.database.create(bag=1, event_type_set=1, plan=plan)
-        db = self.bc.format.to_dict(model.bag)
-
-        with self.assertRaisesMessage(ValidationException, 'plan-not-available-for-event-type-set'):
-            check_dependencies_in_bag(model.bag, 'en')
-
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [db])
-
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    def test_bag__event_type_set_not_available_for_any_plan__because_not_have_event_types_yet(self):
-        model = self.bc.database.create(bag=1, event_type_set=1, plan=1)
-        db = self.bc.format.to_dict(model.bag)
-
-        with self.assertRaisesMessage(ValidationException, 'event-type-set-not-ready-to-be-sold'):
+                                      'event-type-sets-not-available-for-any-selected-plan-or-service'):
             check_dependencies_in_bag(model.bag, 'en')
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [db])
@@ -154,11 +108,15 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_bag__mentorship_session_set_alright(self):
-        model = self.bc.database.create(bag=1, mentorship_session_set=1, plan=1, mentorship_session=1)
+    def test_bag__mentorship_service_set_alright(self):
+        service = {'type': 'MENTORSHIP_SERVICE_SET'}
+        model = self.bc.database.create(bag=1, mentorship_service_set=1, plan=1, service=service)
         db = self.bc.format.to_dict(model.bag)
 
-        check_dependencies_in_bag(model.bag, 'en')
+        with self.assertRaisesMessage(
+                ValidationException,
+                'mentorship-service-sets-not-available-for-any-selected-plan-or-service'):
+            check_dependencies_in_bag(model.bag, 'en')
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [db])
 
@@ -170,10 +128,17 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     def test_bag__event_type_set_alright(self):
         event_type = {'icon_url': self.bc.fake.url()}
-        model = self.bc.database.create(bag=1, event_type_set=1, plan=1, event_type=event_type)
+        service = {'type': 'EVENT_TYPE_SET'}
+        model = self.bc.database.create(bag=1,
+                                        event_type_set=1,
+                                        plan=1,
+                                        event_type=event_type,
+                                        service=service)
         db = self.bc.format.to_dict(model.bag)
 
-        check_dependencies_in_bag(model.bag, 'en')
+        with self.assertRaisesMessage(ValidationException,
+                                      'event-type-sets-not-available-for-any-selected-plan-or-service'):
+            check_dependencies_in_bag(model.bag, 'en')
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [db])
 

@@ -456,15 +456,20 @@ class Plan(AbstractPriceByTime):
     available_cohorts = models.ManyToManyField(
         Cohort, blank=True, help_text='Available cohorts to be sold in this this service and plan')
 
-    available_mentorship_service_sets = models.ManyToManyField(
+    mentorship_service_set = models.ForeignKey(
         MentorshipServiceSet,
+        on_delete=models.SET_NULL,
         blank=True,
-        help_text='Available mentorship service sets to be sold in this service and plan')
+        null=True,
+        default=None,
+        help_text='Mentorship service sets to be sold in this service and plan')
 
-    available_event_type_sets = models.ManyToManyField(
-        EventTypeSet,
-        blank=True,
-        help_text='Available mentorship service sets to be sold in this service and plan')
+    event_type_set = models.ForeignKey(EventTypeSet,
+                                       on_delete=models.SET_NULL,
+                                       blank=True,
+                                       null=True,
+                                       default=None,
+                                       help_text='Event type sets to be sold in this service and plan')
 
     def __str__(self) -> str:
         return self.slug
