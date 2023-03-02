@@ -161,7 +161,8 @@ def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) 
     if not code:
         code = 'en'
 
-    code = format_and_assert_code(code)
+    languages = [format_and_assert_code(language) for language in format_languages(code)]
+    print(languages)
 
     logger.info('---------------')
     logger.info('---------------')
@@ -186,8 +187,6 @@ def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) 
 
     if slug and IS_TEST_ENV:
         return slug
-
-    languages = format_languages(code)
 
     for language in languages:
         v = try_to_translate(language, **kwargs)
