@@ -117,7 +117,7 @@ def format_timedelta(code: Optional[str], date: time):
     return babel_format_timedelta(date, locale=code)
 
 
-def format_languages(code: str, **kwargs: str) -> list:
+def format_languages(code: str) -> list:
     """Translate the language to the local language"""
 
     languages = set()
@@ -161,11 +161,14 @@ def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) 
     if not code:
         code = 'en'
 
-    code = format_and_assert_code(code)
+    languages = [format_and_assert_code(language) for language in format_languages(code)]
+    print(languages)
 
     logger.info('---------------')
     logger.info('---------------')
     logger.info('---------------')
+    logger.info('languages')
+    logger.info(languages)
     logger.info('code')
     logger.info(code)
     logger.info('slug')
@@ -186,8 +189,6 @@ def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) 
 
     if slug and IS_TEST_ENV:
         return slug
-
-    languages = format_languages(code)
 
     for language in languages:
         v = try_to_translate(language, **kwargs)
