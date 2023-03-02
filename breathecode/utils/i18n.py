@@ -117,7 +117,7 @@ def format_timedelta(code: Optional[str], date: time):
     return babel_format_timedelta(date, locale=code)
 
 
-def format_languages(code: str, **kwargs: str) -> list:
+def format_languages(code: str) -> list:
     """Translate the language to the local language"""
 
     languages = set()
