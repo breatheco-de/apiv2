@@ -943,8 +943,8 @@ class PayView(APIView):
                                                 and bag.amount_per_half == 0 and bag.amount_per_year == 0)
 
                     plan = bag.plans.first()
-                    available_for_free_trial = available_for_free_trial and (plan.financing_options.filter(
-                        how_many_months=bag.how_many_installments).exists() if plan else False)
+                    available_for_free_trial = available_for_free_trial and (
+                        not plan.financing_options.filter().exists() if plan else False)
 
                 if not available_for_free_trial and not how_many_installments and not chosen_period:
                     raise ValidationException(translation(lang,
