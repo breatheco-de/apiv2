@@ -49,7 +49,8 @@ class Github:
             return data
         else:
             print(url, resp.json())
-            raise Exception(f'Unable to communicate with Github API, error: {resp.status_code}')
+            raise Exception(
+                f'Unable to communicate with Github API for {action_name}, error: {resp.status_code}')
 
     def get_machines_types(self, repo_name):
         return self.get(f'/repos/{self.org}/{repo_name}/codespaces/machines')

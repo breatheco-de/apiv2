@@ -95,7 +95,7 @@ def format_timedelta(code: Optional[str], date: time):
 
 
 @cache
-def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) -> str:
+def translation(code: Optional[str] = 'en', slug: Optional[str] = None, **kwargs: str) -> str:
     """Get the translation"""
 
     if not code:

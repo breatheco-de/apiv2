@@ -21,6 +21,10 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      credentials_slack=False,
                                      credentials_facebook=False,
                                      credentials_quick_books=False,
+                                     academy_auth_settings=False,
+                                     github_academy_user=False,
+                                     cohort=False,
+                                     cohort_user=False,
                                      token=False,
                                      device_id=False,
                                      user_setting=False,
@@ -30,11 +34,15 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      role_kwargs={},
                                      user_invite_kwargs={},
                                      profile_academy_kwargs={},
+                                     cohort_user_kwargs={},
                                      credentials_github_kwargs={},
                                      credentials_slack_kwargs={},
                                      credentials_facebook_kwargs={},
                                      credentials_quick_books_kwargs={},
                                      token_kwargs={},
+                                     cohort_kwargs={},
+                                     github_academy_user_kwargs={},
+                                     academy_auth_settings_kwargs={},
                                      models={},
                                      **kwargs):
         models = models.copy()
@@ -117,6 +125,21 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 **profile_academy_kwargs
             })
 
+        if not 'academy_auth_settings' in models and is_valid(academy_auth_settings):
+            kargs = {}
+
+            if 'user' in models:
+                kargs['github_owner'] = just_one(models['user'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['academy_auth_settings'] = create_models(credentials_github,
+                                                            'authenticate.AcademyAuthSettings', **{
+                                                                **kargs,
+                                                                **academy_auth_settings_kwargs
+                                                            })
+
         if not 'credentials_github' in models and is_valid(credentials_github):
             kargs = {}
 
@@ -155,6 +178,38 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                                                **kargs,
                                                                **credentials_facebook_kwargs
                                                            })
+
+        if not 'cohort_user' in models and is_valid(cohort_user):
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'cohort' in models:
+                kargs['cohort'] = just_one(models['cohort'])
+
+            models['cohort_user'] = create_models(cohort_user, 'admissions.CohortUser', **{
+                **kargs,
+                **cohort_user_kwargs
+            })
+
+        if not 'github_academy_user' in models and is_valid(github_academy_user):
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['github_academy_user'] = create_models(github_academy_user,
+                                                          'authenticate.GithubAcademyUser', **{
+                                                              **kargs,
+                                                              **github_academy_user_kwargs
+                                                          })
 
         if not 'credentials_quick_books' in models and is_valid(credentials_quick_books):
             kargs = {}

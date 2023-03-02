@@ -267,6 +267,7 @@ class GithubAcademyUser(models.Model):
     username = models.SlugField(max_length=40,
                                 default=None,
                                 null=True,
+                                blank=True,
                                 help_text='Only used when the username has not been found on 4Geeks')
     storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
     storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
