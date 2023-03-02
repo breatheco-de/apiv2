@@ -948,7 +948,7 @@ class PayView(APIView):
 
                 available_for_free_trial = False
                 if not how_many_installments and not chosen_period:
-                    available_for_free_trial = (bag.amount_per_month == 0 and bag.amount_per_quarter
+                    available_for_free_trial = (bag.amount_per_month == 0 and bag.amount_per_quarter == 0
                                                 and bag.amount_per_half == 0 and bag.amount_per_year == 0)
 
                     logger.info('---------------------')
