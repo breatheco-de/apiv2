@@ -221,70 +221,6 @@ class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
         return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
-class AcademyPlanMentorshipServiceSetView(APIView, GenerateLookupsMixin):
-    extensions = APIViewExtensions(sort='-id', paginate=True)
-
-    @capable_of('crud_plan')
-    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
-        lookups = self.generate_lookups(request, many_fields=['id', 'slug'])
-        lang = get_user_language(request)
-
-        if not (plan := Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
-                                            owner__id=academy_id).exclude(status='DELETED').first()):
-            raise ValidationException(translation(lang,
-                                                  en='Plan not found',
-                                                  es='Plan no encontrado',
-                                                  slug='not-found'),
-                                      code=404)
-
-        created = False
-        if not (items := MentorshipServiceSet.objects.filter(**lookups)):
-            raise ValidationException(translation(lang,
-                                                  en='MentorshipServiceSet not found',
-                                                  es='MentorshipServiceSet no encontrada',
-                                                  slug='mentorship-service-set-not-found'),
-                                      code=404)
-
-        for item in items:
-            if item not in plan.available_mentorship_service_sets.all():
-                created = True
-                plan.available_mentorship_service_sets.add(item)
-
-        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
-
-
-class AcademyPlanEventTypeSetView(APIView, GenerateLookupsMixin):
-    extensions = APIViewExtensions(sort='-id', paginate=True)
-
-    @capable_of('crud_plan')
-    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
-        lookups = self.generate_lookups(request, many_fields=['id', 'slug'])
-        lang = get_user_language(request)
-
-        if not (plan := Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
-                                            owner__id=academy_id).exclude(status='DELETED').first()):
-            raise ValidationException(translation(lang,
-                                                  en='Plan not found',
-                                                  es='Plan no encontrado',
-                                                  slug='not-found'),
-                                      code=404)
-
-        if not (items := EventTypeSet.objects.filter(**lookups)):
-            raise ValidationException(translation(lang,
-                                                  en='EventTypeSet not found',
-                                                  es='EventTypeSet no encontrada',
-                                                  slug='event-type-set-not-found'),
-                                      code=404)
-
-        created = False
-        for item in items:
-            if item not in plan.available_event_type_sets.all():
-                created = True
-                plan.available_event_type_sets.add(item)
-
-        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
-
-
 class ServiceView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(sort='-id', paginate=True)
@@ -1000,22 +936,34 @@ class PayView(APIView):
 
                 how_many_installments = request.data.get('how_many_installments')
                 chosen_period = request.data.get('chosen_period', '').upper()
+
+                available_for_free_trial = False
                 if not how_many_installments and not chosen_period:
+                    available_for_free_trial = (bag.amount_per_month == 0 and bag.amount_per_quarter
+                                                and bag.amount_per_half == 0 and bag.amount_per_year == 0)
+
+                    plan = bag.plans.first()
+                    available_for_free_trial = available_for_free_trial and (plan.financing_options.filter(
+                        how_many_months=bag.how_many_installments).exists() if plan else False)
+
+                if not available_for_free_trial and not how_many_installments and not chosen_period:
                     raise ValidationException(translation(lang,
                                                           en='Missing chosen period',
                                                           es='Falta el periodo elegido',
                                                           slug='missing-chosen-period'),
                                               code=400)
 
-                if not how_many_installments and chosen_period not in ['MONTH', 'QUARTER', 'HALF', 'YEAR']:
+                if not available_for_free_trial and not how_many_installments and chosen_period not in [
+                        'MONTH', 'QUARTER', 'HALF', 'YEAR'
+                ]:
                     raise ValidationException(translation(lang,
                                                           en='Invalid chosen period',
                                                           es='Periodo elegido inválido',
                                                           slug='invalid-chosen-period'),
                                               code=400)
 
-                if not chosen_period and (not isinstance(how_many_installments, int)
-                                          or how_many_installments <= 0):
+                if not available_for_free_trial and not chosen_period and (
+                        not isinstance(how_many_installments, int) or how_many_installments <= 0):
                     raise ValidationException(translation(
                         lang,
                         en='how_many_installments must be a positive number greather than 0',
@@ -1023,10 +971,10 @@ class PayView(APIView):
                         slug='invalid-how-many-installments'),
                                               code=400)
 
-                if not chosen_period and how_many_installments:
+                if not available_for_free_trial and not chosen_period and how_many_installments:
                     bag.how_many_installments = how_many_installments
 
-                if bag.how_many_installments > 0:
+                if not available_for_free_trial and bag.how_many_installments > 0:
                     try:
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(
@@ -1040,8 +988,11 @@ class PayView(APIView):
                             es='La bolsa esta mal configurada, relacionado a la opción de financiamiento',
                             slug='invalid-bag-configured-by-installments'),
                                                   code=500)
-                else:
+                elif not available_for_free_trial:
                     amount = get_amount_by_chosen_period(bag, chosen_period, lang)
+
+                else:
+                    amount = 0
 
                 if amount == 0 and PlanFinancing.objects.filter(plans__in=bag.plans.all()).count():
                     raise ValidationException(translation(lang,

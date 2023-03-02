@@ -622,8 +622,15 @@ def build_subscription(self, bag_id: int, invoice_id: int):
         months = 12
 
     cohort = bag.selected_cohorts.first()
+    plan = bag.plans.first()
+
     event_type_set = bag.selected_event_type_sets.first()
+    if plan and event_type_set:
+        event_type_set = plan.event_type_set
+
     mentorship_service_set = bag.selected_mentorship_service_sets.first()
+    if plan and mentorship_service_set:
+        mentorship_service_set = plan.mentorship_service_set
 
     subscription = Subscription.objects.create(user=bag.user,
                                                paid_at=invoice.paid_at,
@@ -682,8 +689,15 @@ def build_plan_financing(self, bag_id: int, invoice_id: int):
             delta = new_delta
 
     cohort = bag.selected_cohorts.first()
+    plan = bag.plans.first()
+
     event_type_set = bag.selected_event_type_sets.first()
+    if plan and event_type_set:
+        event_type_set = plan.event_type_set
+
     mentorship_service_set = bag.selected_mentorship_service_sets.first()
+    if plan and mentorship_service_set:
+        mentorship_service_set = plan.mentorship_service_set
 
     financing = PlanFinancing.objects.create(user=bag.user,
                                              next_payment_at=invoice.paid_at + relativedelta(months=1),
@@ -739,8 +753,14 @@ def build_free_trial(self, bag_id: int, invoice_id: int):
         until = invoice.paid_at + delta
 
         cohort = bag.selected_cohorts.first()
+
         event_type_set = bag.selected_event_type_sets.first()
+        if event_type_set:
+            event_type_set = plan.event_type_set
+
         mentorship_service_set = bag.selected_mentorship_service_sets.first()
+        if mentorship_service_set:
+            mentorship_service_set = plan.mentorship_service_set
 
         subscription = Subscription.objects.create(user=bag.user,
                                                    paid_at=invoice.paid_at,

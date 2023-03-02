@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import date, datetime, time
 from functools import cache
@@ -14,6 +15,7 @@ from breathecode.utils.exceptions import MalformedLanguageCode
 __all__ = ['translation', 'format_date', 'format_datetime', 'format_time', 'format_timedelta']
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
+logger = logging.getLogger(__name__)
 
 
 def get_short_code(code: str) -> str:
@@ -35,6 +37,7 @@ def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
 
     # last two character only with uppercase
     elif not is_short and not from_kwargs and not code[2:].isupper():
+        assert 0
         raise MalformedLanguageCode('Country code is not uppercase')
 
     separator = '_' if from_kwargs else '-'
@@ -98,7 +101,7 @@ def format_timedelta(code: Optional[str], date: time):
     return babel_format_timedelta(date, locale=code)
 
 
-def format_languages(code: str, **kwargs: str) -> list:
+def format_languages(code: str) -> list:
     """Translate the language to the local language"""
 
     languages = set()
@@ -142,7 +145,7 @@ def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) 
     if not code:
         code = 'en'
 
-    code = format_and_assert_code(code)
+    languages = [format_and_assert_code(language) for language in format_languages(code)]
 
     # do the assertions
     for key in kwargs:
@@ -154,8 +157,6 @@ def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) 
 
     if slug and IS_TEST_ENV:
         return slug
-
-    languages = format_languages(code)
 
     for language in languages:
         v = try_to_translate(language, **kwargs)

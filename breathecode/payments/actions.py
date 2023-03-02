@@ -282,11 +282,7 @@ class BagHandler:
                 else:
                     kwargs['slug'] = plan
 
-                if not Plan.objects.filter(
-                        **kwargs,
-                        available_cohorts=self.selected_cohort,
-                        available_mentorship_service_sets=self.selected_mentorship_service_set,
-                        available_event_type_sets=self.selected_event_type_set):
+                if not Plan.objects.filter(**kwargs, available_cohorts=self.selected_cohort):
                     self.plans_not_found.add(plan)
 
     def _report_items_not_found(self):
@@ -317,11 +313,7 @@ class BagHandler:
 
                 kwargs = self._lookups(plan)
 
-                p = Plan.objects.filter(
-                    **kwargs,
-                    available_cohorts=self.selected_cohort,
-                    available_mentorship_service_sets=self.selected_mentorship_service_set,
-                    available_event_type_sets=self.selected_event_type_set).first()
+                p = Plan.objects.filter(**kwargs, available_cohorts=self.selected_cohort).first()
 
                 if p:
                     self.bag.plans.add(p)
@@ -451,57 +443,14 @@ def check_dependencies_in_bag(bag: Bag, lang: str):
 
             pending_cohorts_for_dependency_resolution.discard(cohort)
 
-        for mentorship_service_set in mentorship_service_sets:
-            if mentorship_service_set not in plan.available_mentorship_service_sets.all():
-                raise ValidationException(translation(
-                    lang,
-                    en=f'The plan {plan.slug} is not available for the mentorship service set '
-                    f'{mentorship_service_set.slug}',
-                    es=f'El plan {plan.slug} no está disponible para el conjunto de servicios de mentoría '
-                    f'{mentorship_service_set.slug}',
-                    slug='plan-not-available-for-mentorship-service-set'),
-                                          code=400)
-
-            if not mentorship_service_set.mentorship_services.count():
-                raise ValidationException(translation(
-                    lang,
-                    en=f'The mentorship service set {mentorship_service_set.slug} is not ready to be sold',
-                    es=f'El conjunto de servicios de mentoría {mentorship_service_set.slug} no está '
-                    f'listo para ser vendido',
-                    slug='mentorship-service-set-not-ready-to-be-sold'),
-                                          code=400)
-
-            pending_mentorship_service_sets_for_dependency_resolution.discard(mentorship_service_set)
-
-        for event_type_set in event_type_sets:
-            if event_type_set not in plan.available_event_type_sets.all():
-                raise ValidationException(translation(
-                    lang,
-                    en=f'The plan {plan.slug} is not available for the event type set '
-                    f'{event_type_set.slug}',
-                    es=f'El plan {plan.slug} no está disponible para el conjunto de tipos de evento '
-                    f'{event_type_set.slug}',
-                    slug='plan-not-available-for-event-type-set'),
-                                          code=400)
-
-            if not event_type_set.event_types.count():
-                raise ValidationException(translation(
-                    lang,
-                    en=f'The event type set {event_type_set.slug} is not ready to be sold',
-                    es=f'El conjunto de tipos de eventos {event_type_set.slug} no está listo para ser vendido',
-                    slug='event-type-set-not-ready-to-be-sold'),
-                                          code=400)
-
-            pending_event_type_sets_for_dependency_resolution.discard(event_type_set)
-
     if pending_cohorts_for_dependency_resolution:
         raise ValidationException(translation(
             lang,
             en=f'The cohorts {", ".join([c.slug for c in pending_cohorts_for_dependency_resolution])} '
-            f'are not available for any selected plan',
+            f'are not available for any selected service',
             es=f'Los cohortes {", ".join([c.slug for c in pending_cohorts_for_dependency_resolution])} '
-            f'no están disponibles para ningún plan seleccionado',
-            slug='cohorts-not-available-for-any-selected-plan'),
+            f'no están disponibles para ningún servicio seleccionado',
+            slug='cohorts-not-available-for-any-selected-plan-or-service'),
                                   code=400)
 
     if pending_mentorship_service_sets_for_dependency_resolution:
@@ -509,11 +458,11 @@ def check_dependencies_in_bag(bag: Bag, lang: str):
             lang,
             en='The mentorship service sets '
             f'{", ".join([mss.slug for mss in pending_mentorship_service_sets_for_dependency_resolution])} '
-            f'are not available for any selected plan',
+            f'are not available for any selected service',
             es='Los conjuntos de servicios de mentoría '
             f'{", ".join([mss.slug for mss in pending_mentorship_service_sets_for_dependency_resolution])} '
-            f'no están disponibles para ningún plan seleccionado',
-            slug='mentorship-service-sets-not-available-for-any-selected-plan'),
+            f'no están disponibles para ningún servicio seleccionado',
+            slug='mentorship-service-sets-not-available-for-any-selected-plan-or-service'),
                                   code=400)
 
     if pending_event_type_sets_for_dependency_resolution:
@@ -521,11 +470,11 @@ def check_dependencies_in_bag(bag: Bag, lang: str):
             lang,
             en='The event type sets '
             f'{", ".join([ets.slug for ets in pending_event_type_sets_for_dependency_resolution])} '
-            f'are not available for any selected plan',
+            f'are not available for any selected service',
             es='Los conjuntos de tipos de eventos '
             f'{", ".join([ets.slug for ets in pending_event_type_sets_for_dependency_resolution])} '
-            f'no están disponibles para ningún plan seleccionado',
-            slug='event-type-sets-not-available-for-any-selected-plan'),
+            f'no están disponibles para ningún servicio seleccionado',
+            slug='event-type-sets-not-available-for-any-selected-plan-or-service'),
                                   code=400)
 
 
