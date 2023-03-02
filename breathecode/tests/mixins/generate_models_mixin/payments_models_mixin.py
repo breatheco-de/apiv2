@@ -209,10 +209,10 @@ class PaymentsModelsMixin(ModelsMixin):
                 kargs['owner'] = just_one(models['academy'])
 
             if 'mentorship_service_set' in models:
-                kargs['available_mentorship_service_sets'] = get_list(models['mentorship_service_set'])
+                kargs['mentorship_service_set'] = just_one(models['mentorship_service_set'])
 
             if 'event_type_set' in models:
-                kargs['available_event_type_sets'] = get_list(models['event_type_set'])
+                kargs['event_type_set'] = just_one(models['event_type_set'])
 
             if 'cohort' in models:
                 kargs['available_cohorts'] = get_list(models['cohort'])
