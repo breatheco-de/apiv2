@@ -4,7 +4,7 @@ Test mentorhips
 import json
 from breathecode.authenticate.models import Token
 from unittest.mock import MagicMock, call, patch
-# from ...models import Syllabus
+from ...models import GithubAcademyUser
 from ..mixins.new_auth_test_case import AuthTestCase
 from ...actions import add_to_organization, remove_from_organization, sync_organization_members
 from breathecode.utils.validation_exception import ValidationException
@@ -221,17 +221,61 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         """
 
-        models = self.bc.database.create(user=True,
-                                         user_kwargs={'credentialsgithub': None},
-                                         academy=True,
-                                         academy_auth_settings=True,
-                                         github_academy_user=True,
-                                         academy_auth_settings_kwargs={
-                                             'github_is_sync': True,
-                                             'github_username': 'some-username'
-                                         })
+        models = self.bc.database.create(
+            user=True,
+            #  user_kwargs={'credentialsgithub': None},
+            academy=True,
+            academy_auth_settings=True,
+            github_academy_user=True,
+            academy_auth_settings_kwargs={
+                'github_is_sync': True,
+                'github_username': 'some-username'
+            })
 
         with self.assertRaises(ValidationException) as context:
             sync_organization_members(models.academy.id)
 
         self.assertEqual(context.exception.slug, 'invalid-owner')
+
+    @patch('breathecode.services.github.Github.get_org_members', MagicMock(side_effect=get_org_members))
+    @patch('breathecode.services.github.Github.invite_org_member', MagicMock())
+    @patch('breathecode.services.github.Github.delete_org_member', MagicMock())
+    def test_sync_organization_members_invalid_owner_no_githubcredentials(self):
+        """
+
+        """
+
+        models = self.bc.database.create(user=True,
+                                         credentials_github=True,
+                                         academy=True,
+                                         academy_auth_settings=True,
+                                         academy_auth_settings_kwargs={
+                                             'github_is_sync': True,
+                                             'github_username': 'some-username'
+                                         })
+
+        models2 = self.bc.database.create(user=True,
+                                          credentials_github=False,
+                                          github_academy_user=True,
+                                          github_academy_user_kwargs={
+                                              'storage_status': 'PENDING',
+                                              'academy': models.academy
+                                          })
+
+        models3 = self.bc.database.create(user=True,
+                                          credentials_github=True,
+                                          github_academy_user=True,
+                                          github_academy_user_kwargs={
+                                              'storage_status': 'PENDING',
+                                              'academy': models.academy
+                                          })
+
+        sync_organization_members(models.academy.id)
+
+        users = self.bc.database.list_of('authenticate.GithubAcademyUser')
+        print(users[1]['id'], models2.user.id)
+        self.assertEqual(users[1]['storage_status'], 'ERROR')
+        # self.assertEqual(
+        #     users[1]['storage_log'],
+        #     [GithubAcademyUser.create_log('This user needs connect to github')]
+        # )

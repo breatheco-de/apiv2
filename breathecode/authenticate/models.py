@@ -272,7 +272,7 @@ class GithubAcademyUser(models.Model):
     storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
     storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
     storage_log = models.JSONField(default=None, null=True, blank=True)
-    storage_synch_at = models.DateTimeField()
+    storage_synch_at = models.DateTimeField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

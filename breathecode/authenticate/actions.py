@@ -415,6 +415,8 @@ def remove_from_organization(cohort_id, user_id):
 
 def sync_organization_members(academy_id, only_status=[]):
 
+    now = timezone.now()
+
     settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
     if settings is None or not settings.github_is_sync:
         return False
@@ -431,7 +433,8 @@ def sync_organization_members(academy_id, only_status=[]):
         ),
                                   slug='not-everyone-in-synch')
 
-    if settings.github_owner is None or settings.github_owner.credentialsgithub is None:
+    credentials = CredentialsGithub.objects.filter(user=settings.github_owner).first()
+    if settings.github_owner is None or credentials is None:
         raise ValidationException(translation(
             en=f'Organization has no owner or it has no github credentials',
             es=f'La organizacion no tiene dueño o no este tiene credenciales para github'),
@@ -440,11 +443,16 @@ def sync_organization_members(academy_id, only_status=[]):
     print('Procesing following slugs', academy_slugs)
     # retry errored users
     GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
-                                     storage_status='ERROR').update(storage_status='PENDING')
+                                     storage_status='ERROR')\
+                        .update(storage_status='PENDING', storage_synch_at=None)
 
     # users without github credentials are marked as error
-    GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs, user__credentialsgithub__isnull=True)\
-                .update(storage_status='ERROR', storage_log=[GithubAcademyUser.create_log('This user needs connect to github')])
+    no_github_credentials = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
+                                                             user__credentialsgithub__isnull=True)
+    print('no_github_credentials', [u.id for u in no_github_credentials])
+    no_github_credentials.update(
+        storage_status='ERROR',
+        storage_log=[GithubAcademyUser.create_log('This user needs connect to github')])
 
     gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
     members = gb.get_org_members()
@@ -458,6 +466,7 @@ def sync_organization_members(academy_id, only_status=[]):
             if _member.credentialsgithub.username in remaining_usernames:
                 _member.log('User was already added to github')
                 _member.storage_status = 'SYNCHED'
+                _member.storage_synch_at = now
                 _member.save()
             else:
                 print('adding user to github org')
@@ -466,12 +475,14 @@ def sync_organization_members(academy_id, only_status=[]):
                 _member.storage_status = 'SYNCHED'
                 _member.log(f'Sent invitation to {_member.credentialsgithub.email}')
                 _member.storage_action == 'INVITE'
+                _member.storage_synch_at = now
                 _member.save()
 
         if _member.storage_status in ['PENDING'] and _member.storage_action == 'DELETE':
             if _member.credentialsgithub.username not in remaining_usernames:
                 _member.log('User was already deleted from github')
                 _member.storage_status = 'SYNCHED'
+                _member.storage_synch_at = now
                 _member.save()
             else:
                 added_elsewere = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs).exclude(
@@ -484,13 +495,13 @@ def sync_organization_members(academy_id, only_status=[]):
                         f"User belongs to another academy '{added_elsewere.academy.slug}', it will have to be marked as deleted there before it can be deleted from github organization"
                     )
                 _member.storage_status = 'SYNCHED'
+                _member.storage_synch_at = now
                 _member.save()
 
         remaining_usernames = set(
             [username for username in remaining_usernames if username != _member.credentialsgithub.username])
 
     # there are some users from github we could not find in the cohorts
-    now = timezone.now()
     for u in remaining_usernames:
         _user = CredentialsGithub.objects.filter(username=u).first()
         if _user is not None:
