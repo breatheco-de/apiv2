@@ -1,4 +1,5 @@
 from django.contrib import admin
+from breathecode.payments import tasks
 
 from breathecode.payments.models import (Bag, Consumable, Currency, EventTypeSet, EventTypeSetTranslation,
                                          FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
@@ -86,6 +87,11 @@ class InvoiceAdmin(admin.ModelAdmin):
     raw_id_fields = ['user', 'currency', 'bag', 'academy']
 
 
+def renew_subscription_consumables(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.renew_subscription_consumables.delay(item.id)
+
+
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ('id', 'paid_at', 'status', 'is_refundable', 'next_payment_at', 'pay_every',
@@ -95,6 +101,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     raw_id_fields = [
         'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
     ]
+    actions = [renew_subscription_consumables]
 
 
 @admin.register(SubscriptionServiceItem)
@@ -105,6 +112,11 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
     ]
 
 
+def renew_plan_financing_consumables(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.renew_plan_financing_consumables.delay(item.id)
+
+
 @admin.register(PlanFinancing)
 class PlanFinancingAdmin(admin.ModelAdmin):
     list_display = ('id', 'next_payment_at', 'valid_until', 'status', 'user')
@@ -113,6 +125,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
     raw_id_fields = [
         'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
     ]
+    actions = [renew_plan_financing_consumables]
 
 
 @admin.register(MentorshipServiceSet)
@@ -156,9 +169,15 @@ class PlanServiceItemHandlerAdmin(admin.ModelAdmin):
     list_display = ('id', 'handler', 'subscription', 'plan_financing')
 
 
+def renew_consumables(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.renew_consumables.delay(item.id)
+
+
 @admin.register(ServiceStockScheduler)
 class ServiceStockSchedulerAdmin(admin.ModelAdmin):
     list_display = ('id', 'subscription', 'service_item', 'plan_financing', 'valid_until')
+    actions = [renew_consumables]
 
     def subscription(self, obj):
         if obj.subscription_handler:

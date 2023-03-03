@@ -123,11 +123,8 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [
             service_stock_scheduler_item({
-                'valid_until':
-                UTC_NOW +
-                calculate_relative_delta(model.service_item.renew_at, model.service_item.renew_at_unit),
-                'plan_handler_id':
-                1,
+                'valid_until': None,
+                'plan_handler_id': 1,
             }),
         ])
 
@@ -170,11 +167,8 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [
             service_stock_scheduler_item({
-                'plan_handler_id':
-                1,
-                'valid_until':
-                UTC_NOW +
-                calculate_relative_delta(model.service_item.renew_at, model.service_item.renew_at_unit),
+                'plan_handler_id': 1,
+                'valid_until': None,
             }),
         ])
 
@@ -226,39 +220,23 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [
             service_stock_scheduler_item({
-                'id':
-                1,
-                'plan_handler_id':
-                1,
-                'valid_until':
-                UTC_NOW +
-                calculate_relative_delta(model.service_item[0].renew_at, model.service_item[0].renew_at_unit),
+                'id': 1,
+                'plan_handler_id': 1,
+                'valid_until': None,
             }),
             service_stock_scheduler_item({
-                'id':
-                2,
-                'plan_handler_id':
-                2,
-                'valid_until':
-                UTC_NOW +
-                calculate_relative_delta(model.service_item[1].renew_at, model.service_item[1].renew_at_unit),
+                'id': 2,
+                'plan_handler_id': 2,
+                'valid_until': None,
             }),
             service_stock_scheduler_item({
-                'id':
-                3,
-                'plan_handler_id':
-                3,
-                'valid_until':
-                UTC_NOW +
-                calculate_relative_delta(model.service_item[2].renew_at, model.service_item[2].renew_at_unit),
+                'id': 3,
+                'plan_handler_id': 3,
+                'valid_until': None,
             }),
             service_stock_scheduler_item({
-                'id':
-                4,
-                'plan_handler_id':
-                4,
-                'valid_until':
-                UTC_NOW +
-                calculate_relative_delta(model.service_item[3].renew_at, model.service_item[3].renew_at_unit),
+                'id': 4,
+                'plan_handler_id': 4,
+                'valid_until': None,
             }),
         ])
