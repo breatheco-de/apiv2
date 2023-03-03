@@ -90,7 +90,7 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT') -> No
     else:
         role = 'student'
 
-    profile, created = ProfileAcademy.objects.get_or_create(cohort=cohort,
+    profile, created = ProfileAcademy.objects.get_or_create(academy=cohort.academy,
                                                             user=user,
                                                             role=role,
                                                             defaults={
