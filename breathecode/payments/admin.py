@@ -169,10 +169,10 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
 
     def service_item(self, obj):
         if obj.subscription_handler:
-            return obj.subscription_handler.service_item
+            return obj.subscription_handler.handler.service_item
 
         if obj.plan_handler:
-            return obj.plan_handler.service_item
+            return obj.plan_handler.handler.service_item
 
     def plan_financing(self, obj):
         if obj.plan_handler:

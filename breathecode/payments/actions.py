@@ -315,7 +315,7 @@ class BagHandler:
 
                 p = Plan.objects.filter(**kwargs, available_cohorts=self.selected_cohort).first()
 
-                if p:
+                if p and p not in self.bag.plans.filter():
                     self.bag.plans.add(p)
 
     def _validate_just_one_plan(self):
