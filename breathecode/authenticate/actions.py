@@ -10,7 +10,7 @@ from django.core.handlers.wsgi import WSGIRequest
 
 from django.contrib.auth.models import User
 from django.utils import timezone
-
+from django.db.models import Q
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.actions import send_email_message
 from breathecode.utils import ValidationException
@@ -440,7 +440,7 @@ def sync_organization_members(academy_id, only_status=[]):
             es=f'La organizacion no tiene dueño o no este tiene credenciales para github'),
                                   slug='invalid-owner')
 
-    print('Procesing following slugs', academy_slugs)
+    # print('Procesing following slugs', academy_slugs)
     # retry errored users
     GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
                                      storage_status='ERROR')\
@@ -459,36 +459,48 @@ def sync_organization_members(academy_id, only_status=[]):
 
     remaining_usernames = set([m['login'] for m in members])
 
-    org_users = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
-                                                 storage_status__in=only_status)
+    org_users = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs)
+
+    # if we only want to process a particular storage_action, E.g: ADD
+    if len(only_status) > 0:
+        org_users = org_users.filter(storage_action__in=only_status)
+
     for _member in org_users:
-        if _member.storage_status in ['PENDING'] and _member.storage_action == 'ADD':
-            if _member.credentialsgithub.username in remaining_usernames:
+        github = CredentialsGithub.objects.filter(user=_member.user).first()
+        if _member.storage_status in ['PENDING'] and _member.storage_action in ['ADD', 'INVITE']:
+            if github.username in remaining_usernames:
                 _member.log('User was already added to github')
                 _member.storage_status = 'SYNCHED'
+                # chage action to ADD just in case it was INVITE (its a confirmation)
+                _member.storage_action = 'ADD'
                 _member.storage_synch_at = now
                 _member.save()
             else:
-                print('adding user to github org')
-                teams = [int(id) for id in settings.github_default_team_ids.split(',')]
-                gb.invite_org_member(_member.credentialsgithub.email, team_ids=teams)
+
+                teams = []
+                if settings.github_default_team_ids != '':
+                    teams = [int(id) for id in settings.github_default_team_ids.split(',')]
+
+                gb.invite_org_member(github.email, team_ids=teams)
                 _member.storage_status = 'SYNCHED'
-                _member.log(f'Sent invitation to {_member.credentialsgithub.email}')
+                _member.log(f'Sent invitation to {github.email}')
                 _member.storage_action == 'INVITE'
                 _member.storage_synch_at = now
                 _member.save()
 
         if _member.storage_status in ['PENDING'] and _member.storage_action == 'DELETE':
-            if _member.credentialsgithub.username not in remaining_usernames:
+            if github.username not in remaining_usernames:
                 _member.log('User was already deleted from github')
                 _member.storage_status = 'SYNCHED'
                 _member.storage_synch_at = now
                 _member.save()
             else:
-                added_elsewere = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs).exclude(
-                    storage_status__in=['DELETE']).first()
+                added_elsewere = GithubAcademyUser.objects.filter(
+                    Q(user=_member.user)
+                    | Q(username=github.username)).filter(academy__slug__in=academy_slugs).exclude(
+                        storage_status__in=['DELETE']).exclude(id=_member.id).first()
                 if added_elsewere is None:
-                    gb.delete_org_member(_member.credentialsgithub.username)
+                    gb.delete_org_member(github.username)
                     _member.log('Successfully deleted in github organization')
                 else:
                     _member.log(
@@ -498,8 +510,9 @@ def sync_organization_members(academy_id, only_status=[]):
                 _member.storage_synch_at = now
                 _member.save()
 
+        github_username = github.username if github is not None else ''
         remaining_usernames = set(
-            [username for username in remaining_usernames if username != _member.credentialsgithub.username])
+            [username for username in remaining_usernames if username != github_username])
 
     # there are some users from github we could not find in the cohorts
     for u in remaining_usernames:
@@ -507,9 +520,9 @@ def sync_organization_members(academy_id, only_status=[]):
         if _user is not None:
             _user = _user.user
 
-        uknown_user = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
-                                                       user=_user,
-                                                       username=u).first()
+        uknown_user = GithubAcademyUser.objects.filter(
+            academy__slug__in=academy_slugs).filter(Q(user=_user) | Q(username=u)).first()
+
         if uknown_user is None:
             uknown_user = GithubAcademyUser(academy=settings.academy,
                                             user=_user,
@@ -519,38 +532,43 @@ def sync_organization_members(academy_id, only_status=[]):
                                             storage_synch_at=now)
             uknown_user.save()
 
-        uknown_user.storage_status = 'UNKNOWN',
-        uknown_user.storage_action = 'IGNORE',
+        uknown_user.storage_status = 'UNKNOWN'
+        uknown_user.storage_action = 'IGNORE'
         uknown_user.storage_synch_at = now
-        uknown_user.log("This user is coming from github but we don't know if it should be deleted",
-                        reset=True)
+        uknown_user.log(
+            "This user is coming from github, it's not a student from your academy, but we don't know if it should be deleted, keep it as IGNORED to avoid deletion",
+            reset=True)
         uknown_user.save()
 
     return True
 
 
-def invite_org_member(academy_id, org_member_id):
+# def invite_org_member(academy_id, org_member_id):
 
-    settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
-    if settings is None or not settings.github_is_sync:
-        return False
+#     settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
+#     if settings is None or not settings.github_is_sync:
+#         return False
 
-    _member = GithubAcademyUser.objects.filter(id=org_member_id)
-    if _member is None or _member.storage_status != 'PENDING' and _member.storage_action != 'INVITE':
-        # no need to invite
-        return False
+#     _member = GithubAcademyUser.objects.filter(id=org_member_id)
+#     if _member is None or _member.storage_status != 'PENDING' and _member.storage_action != 'INVITE':
+#         # no need to invite
+#         return False
 
-    gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
-    teams = [int(id) for id in settings.github_default_team_ids.split(',')]
-    resp = gb.invite_org_member(_member.credentialsgithub.email, team_ids=teams)
-    if resp.status_code == 200:
-        _member.storage_status = 'SYNCHED'
-        _member.log('Invited to github organization')
-        _member.save()
-        return True
+#     gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
 
-    else:
-        _member.storage_status = 'ERROR'
-        _member.log('Error inviting member to organization')
-        _member.save()
-        return False
+#     teams = []
+#     if settings.github_default_team_ids != "":
+#         teams = [int(id) for id in settings.github_default_team_ids.split(',')]
+
+#     resp = gb.invite_org_member(_member.credentialsgithub.email, team_ids=teams)
+#     if resp.status_code == 200:
+#         _member.storage_status = 'SYNCHED'
+#         _member.log('Invited to github organization')
+#         _member.save()
+#         return True
+
+#     else:
+#         _member.storage_status = 'ERROR'
+#         _member.log('Error inviting member to organization')
+#         _member.save()
+#         return False

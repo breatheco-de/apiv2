@@ -277,6 +277,12 @@ class GithubAcademyUser(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def __str__(self):
+        if self.user is None:
+            return str(self.id) + ' ' + str(self.username)
+        else:
+            return str(self.user) + ' ' + str(self.username)
+
     @staticmethod
     def create_log(msg):
         return {'msg': msg, 'at': str(timezone.now())}
