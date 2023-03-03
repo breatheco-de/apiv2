@@ -35,6 +35,8 @@ MIME_ALLOW = [
     'application/pdf', 'image/jpg'
 ]
 
+IMAGES_MIME_ALLOW = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/jpg']
+
 USER_ASSIGNMENTS_BUCKET = os.getenv('USER_ASSIGNMENTS_BUCKET', None)
 
 
@@ -148,9 +150,9 @@ class FinalProjectScreenshotView(APIView):
 
         for index in range(0, len(files)):
             file = files[index]
-            if file.content_type not in MIME_ALLOW:
+            if file.content_type not in IMAGES_MIME_ALLOW:
                 raise ValidationException(
-                    f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}')
+                    f'You can upload only files on the following formats: {",".join(IMAGES_MIME_ALLOW)}')
 
         for index in range(0, len(files)):
             file = files[index]
@@ -162,10 +164,7 @@ class FinalProjectScreenshotView(APIView):
             slugs.append(slug)
             data = {
                 'hash': hash,
-                'slug': slug,
                 'mime': file.content_type,
-                'name': name,
-                'categories': [],
             }
 
             # upload file section
@@ -173,7 +172,6 @@ class FinalProjectScreenshotView(APIView):
             cloud_file = storage.file(USER_ASSIGNMENTS_BUCKET, hash)
             cloud_file.upload(file, content_type=file.content_type)
             data['url'] = cloud_file.url()
-            data['thumbnail'] = data['url'] + '-thumbnail'
 
         return data
 
@@ -236,8 +234,7 @@ class FinalProjectMeView(APIView):
     def post(self, request, user_id=None):
 
         # only create tasks for yourself
-        if user_id is None:
-            user_id = request.user.id
+        user_id = request.user.id
 
         payload = request.data
 
