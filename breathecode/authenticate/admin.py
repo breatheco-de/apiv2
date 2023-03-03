@@ -308,11 +308,15 @@ class GitpodUserAdmin(admin.ModelAdmin):
                 f"<span class='badge bg-success'>In {from_now(obj.expires_at, include_days=True)}</span>")
 
 
+def hardcore_delete_user_from_github(modeladmin, request, queryset):
+    queryset.all().update(storage_status='PENDING', storage_action='DELETE')
+
+
 @admin.register(GithubAcademyUser)
 class GithubAcademyUserAdmin(admin.ModelAdmin):
     list_display = ('academy', 'user', 'username', 'storage_status', 'storage_action')
     search_fields = ['github_username', 'user__email', 'user__first_name', 'user__last_name', 'assignee_id']
-    actions = []
+    actions = [hardcore_delete_user_from_github]
     list_filter = ('academy', 'storage_status', 'storage_action')
 
 

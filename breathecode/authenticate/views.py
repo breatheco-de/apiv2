@@ -44,19 +44,20 @@ from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
 from .actions import (generate_academy_token, resend_invite, reset_password, set_gitpod_user_expiration,
-                      update_gitpod_users)
+                      update_gitpod_users, sync_organization_members)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
 from .models import (CredentialsFacebook, CredentialsGithub, CredentialsGoogle, CredentialsSlack, GitpodUser,
-                     Profile, ProfileAcademy, Role, Token, UserInvite, GithubAcademyUser)
+                     Profile, ProfileAcademy, Role, Token, UserInvite, GithubAcademyUser, AcademyAuthSettings)
 from .serializers import (AuthSerializer, GetGitpodUserSerializer, GetProfileAcademySerializer,
                           GetProfileAcademySmallSerializer, GetProfileSerializer, GitpodUserSmallSerializer,
                           MemberPOSTSerializer, MemberPUTSerializer, ProfileAcademySmallSerializer,
                           ProfileSerializer, RoleBigSerializer, RoleSmallSerializer, StudentPOSTSerializer,
                           TokenSmallSerializer, UserInviteSerializer, UserInviteSmallSerializer,
                           UserInviteWaitingListSerializer, UserMeSerializer, UserSerializer,
-                          UserSmallSerializer, UserTinySerializer, GithubUserSerializer)
+                          UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
+                          PUTGithubUserSerializer)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -1908,6 +1909,34 @@ class GithubUserView(APIView, GenerateLookupsMixin):
             _item = serializer.save()
             return Response(GithubUserSerializer(_item, many=False).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyGithubSyncView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of('sync_organization_users')
+    def put(self, request, academy_id):
+
+        settings = AcademyAuthSettings.objects.filter(academy__id=academy_id).first()
+        if settings is None:
+            raise ValidationException(translation(
+                en='Github Settings not found for this academy',
+                es='No se ha encontrado una configuracion para esta academy en Github'),
+                                      slug='settings-not-found')
+
+        if not settings.github_is_sync:
+            raise ValidationException(translation(
+                en='Github sync is turned off in the academy settings',
+                es='La sincronización con github esta desactivada para esta academia'),
+                                      slug='github-sync-off')
+
+        try:
+            result = sync_organization_members(academy_id)
+        except Exception as e:
+            raise ValidationException(str(e))
+
+        _status = status.HTTP_200_OK if result else status.HTTP_400_BAD_REQUEST
+        return Response(None, status=_status)
 
 
 class GitpodUserView(APIView, GenerateLookupsMixin):

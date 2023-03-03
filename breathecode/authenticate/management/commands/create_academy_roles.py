@@ -300,6 +300,10 @@ CAPABILITIES = [
         'description': 'Update github user expiration based on available information'
     },
     {
+        'slug': 'sync_organization_users',
+        'description': 'Calls for the github API and brings all org users, then tries to synch them'
+    },
+    {
         'slug': 'read_technology',
         'description': 'Read asset technologies'
     },

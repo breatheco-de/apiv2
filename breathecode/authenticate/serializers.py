@@ -827,15 +827,21 @@ class PUTGithubUserSerializer(serializers.ModelSerializer):
 
     #     return data
 
-    # def update(self, instance, validated_data):
+    def update(self, instance, validated_data):
 
-    #     if instance.user.first_name is None or instance.user.first_name == '':
-    #         instance.user.first_name = instance.first_name or ''
-    #     if instance.user.last_name is None or instance.user.last_name == '':
-    #         instance.user.last_name = instance.last_name or ''
-    #     instance.user.save()
+        if instance.storage_action != validated_data['storage_action']:
+            # manually ignoring a contact is synched immediately
+            if validated_data['storage_action'] == 'IGNORED':
+                validated_data['storage_status'] = 'SYNCHED'
+            # anything else has to be processed later
+            else:
+                validated_data['storage_status'] = 'PENDING'
+            validated_data['storage_log'] = [
+                GithubAcademyUser.create_log('User was manually scheduled to be ' +
+                                             validated_data['storage_action'])
+            ]
 
-    #     return super().update(instance, validated_data)
+        return super().update(instance, validated_data)
 
 
 class AuthSerializer(serializers.Serializer):

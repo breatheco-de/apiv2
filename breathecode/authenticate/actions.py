@@ -514,14 +514,17 @@ def sync_organization_members(academy_id, only_status=[]):
         remaining_usernames = set(
             [username for username in remaining_usernames if username != github_username])
 
+    print('remaining_usernames', remaining_usernames)
     # there are some users from github we could not find in the cohorts
     for u in remaining_usernames:
         _user = CredentialsGithub.objects.filter(username=u).first()
         if _user is not None:
             _user = _user.user
 
-        uknown_user = GithubAcademyUser.objects.filter(
-            academy__slug__in=academy_slugs).filter(Q(user=_user) | Q(username=u)).first()
+        _query = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs).filter(username=u)
+        if _user is not None:
+            _query = _query.filter(user__user=_user)
+        uknown_user = _query.first()
 
         if uknown_user is None:
             uknown_user = GithubAcademyUser(academy=settings.academy,
@@ -536,7 +539,7 @@ def sync_organization_members(academy_id, only_status=[]):
         uknown_user.storage_action = 'IGNORE'
         uknown_user.storage_synch_at = now
         uknown_user.log(
-            "This user is coming from github, it's not a student from your academy, but we don't know if it should be deleted, keep it as IGNORED to avoid deletion",
+            "This user is coming from github, we don't know if its a student from your academy or if it should be added or deleted, keep it as IGNORED to avoid deletion",
             reset=True)
         uknown_user.save()
 
