@@ -840,6 +840,7 @@ class CheckingView(APIView):
                                                              type=bag_type,
                                                              academy=academy,
                                                              currency=academy.main_currency)
+
                     add_items_to_bag(request, bag, lang)
                     actions.check_dependencies_in_bag(bag, lang)
 
@@ -937,57 +938,16 @@ class PayView(APIView):
                 how_many_installments = request.data.get('how_many_installments')
                 chosen_period = request.data.get('chosen_period', '').upper()
 
-                logger.info('===============================')
-                logger.info('===============================')
-                logger.info('===============================')
-                logger.info('how_many_installments: %s' % how_many_installments)
-                logger.info('chosen_period: %s' % chosen_period)
-                logger.info('===============================')
-                logger.info('===============================')
-                logger.info('===============================')
-
                 available_for_free_trial = False
                 if not how_many_installments and not chosen_period:
                     available_for_free_trial = (bag.amount_per_month == 0 and bag.amount_per_quarter == 0
                                                 and bag.amount_per_half == 0 and bag.amount_per_year == 0)
 
-                    logger.info('---------------------')
-                    logger.info('---------------------')
-                    logger.info('---------------------')
-                    logger.info('available_for_free_trial: %s' % available_for_free_trial)
-                    logger.info('bag.amount_per_month: %s' % bag.amount_per_month)
-                    logger.info('bag.amount_per_quarter: %s' % bag.amount_per_quarter)
-                    logger.info('bag.amount_per_half: %s' % bag.amount_per_half)
-                    logger.info('bag.amount_per_year: %s' % bag.amount_per_year)
-                    logger.info('---------------------')
-                    logger.info('---------------------')
-                    logger.info('---------------------')
-
                     plan = bag.plans.first()
                     available_for_free_trial = available_for_free_trial and (
                         not plan.financing_options.filter().exists() if plan else False)
 
-                    logger.info('oooooooooooooooooooooooooooooooooooo')
-                    logger.info('oooooooooooooooooooooooooooooooooooo')
-                    logger.info('oooooooooooooooooooooooooooooooooooo')
-                    logger.info('available_for_free_trial: %s' % available_for_free_trial)
-                    logger.info('plan: %s' % plan)
-                    if plan:
-                        logger.info('plan: %s' % plan)
-                        logger.info('plan.financing_options.filter().exists(): %s' %
-                                    plan.financing_options.filter().exists())
-                        logger.info('not plan.financing_options.filter().exists() if plan else False: %s' %
-                                    (not plan.financing_options.filter().exists() if plan else False))
-
-                    logger.info('oooooooooooooooooooooooooooooooooooo')
-                    logger.info('oooooooooooooooooooooooooooooooooooo')
-                    logger.info('oooooooooooooooooooooooooooooooooooo')
-
-                logger.info('not available_for_free_trial: %s' % (not available_for_free_trial))
-                logger.info('not how_many_installments: %s' % (not how_many_installments))
-                logger.info('not chosen_period: %s' % (not chosen_period))
                 if not available_for_free_trial and not how_many_installments and not chosen_period:
-                    logger.info('here!')
                     raise ValidationException(translation(lang,
                                                           en='Missing chosen period',
                                                           es='Falta el periodo elegido',
