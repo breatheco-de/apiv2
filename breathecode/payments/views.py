@@ -840,6 +840,7 @@ class CheckingView(APIView):
                                                              type=bag_type,
                                                              academy=academy,
                                                              currency=academy.main_currency)
+
                     add_items_to_bag(request, bag, lang)
                     actions.check_dependencies_in_bag(bag, lang)
 
@@ -939,12 +940,12 @@ class PayView(APIView):
 
                 available_for_free_trial = False
                 if not how_many_installments and not chosen_period:
-                    available_for_free_trial = (bag.amount_per_month == 0 and bag.amount_per_quarter
+                    available_for_free_trial = (bag.amount_per_month == 0 and bag.amount_per_quarter == 0
                                                 and bag.amount_per_half == 0 and bag.amount_per_year == 0)
 
                     plan = bag.plans.first()
-                    available_for_free_trial = available_for_free_trial and (plan.financing_options.filter(
-                        how_many_months=bag.how_many_installments).exists() if plan else False)
+                    available_for_free_trial = available_for_free_trial and (
+                        not plan.financing_options.filter().exists() if plan else False)
 
                 if not available_for_free_trial and not how_many_installments and not chosen_period:
                     raise ValidationException(translation(lang,
@@ -994,7 +995,8 @@ class PayView(APIView):
                 else:
                     amount = 0
 
-                if amount == 0 and PlanFinancing.objects.filter(plans__in=bag.plans.all()).count():
+                if amount == 0 and Subscription.objects.filter(user=request.user,
+                                                               plans__in=bag.plans.all()).count():
                     raise ValidationException(translation(lang,
                                                           en='Your free trial was already took',
                                                           es='Tu prueba gratuita ya fue tomada',

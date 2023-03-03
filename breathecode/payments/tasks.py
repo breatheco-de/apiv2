@@ -198,6 +198,9 @@ def renew_subscription_consumables(self, subscription_id: int):
     for scheduler in ServiceStockScheduler.objects.filter(subscription_handler__subscription=subscription):
         renew_consumables.delay(scheduler.id)
 
+    for scheduler in ServiceStockScheduler.objects.filter(plan_handler__subscription=subscription):
+        renew_consumables.delay(scheduler.id)
+
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def renew_plan_financing_consumables(self, plan_financing_id: int):
@@ -506,10 +509,7 @@ def build_service_stock_scheduler_from_subscription(self,
         if subscription.valid_until and valid_until > subscription.valid_until:
             valid_until = subscription.valid_until
 
-        ServiceStockScheduler.objects.get_or_create(subscription_handler=handler,
-                                                    defaults={
-                                                        'valid_until': valid_until,
-                                                    })
+        ServiceStockScheduler.objects.get_or_create(subscription_handler=handler)
 
     for plan in subscription.plans.all():
         for handler in PlanServiceItem.objects.filter(plan=plan):
@@ -527,10 +527,7 @@ def build_service_stock_scheduler_from_subscription(self,
             handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription,
                                                                       handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler,
-                                                        defaults={
-                                                            'valid_until': valid_until,
-                                                        })
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
 
     renew_subscription_consumables.delay(subscription.id)
 
@@ -590,10 +587,7 @@ def build_service_stock_scheduler_from_plan_financing(self,
             handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing,
                                                                       handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler,
-                                                        defaults={
-                                                            'valid_until': valid_until,
-                                                        })
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
 
     renew_plan_financing_consumables.delay(plan_financing.id)
 
@@ -625,11 +619,11 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     plan = bag.plans.first()
 
     event_type_set = bag.selected_event_type_sets.first()
-    if plan and event_type_set:
+    if plan and not event_type_set:
         event_type_set = plan.event_type_set
 
     mentorship_service_set = bag.selected_mentorship_service_sets.first()
-    if plan and mentorship_service_set:
+    if plan and not mentorship_service_set:
         mentorship_service_set = plan.mentorship_service_set
 
     subscription = Subscription.objects.create(user=bag.user,
@@ -692,11 +686,11 @@ def build_plan_financing(self, bag_id: int, invoice_id: int):
     plan = bag.plans.first()
 
     event_type_set = bag.selected_event_type_sets.first()
-    if plan and event_type_set:
+    if plan and not event_type_set:
         event_type_set = plan.event_type_set
 
     mentorship_service_set = bag.selected_mentorship_service_sets.first()
-    if plan and mentorship_service_set:
+    if plan and not mentorship_service_set:
         mentorship_service_set = plan.mentorship_service_set
 
     financing = PlanFinancing.objects.create(user=bag.user,
@@ -755,11 +749,11 @@ def build_free_trial(self, bag_id: int, invoice_id: int):
         cohort = bag.selected_cohorts.first()
 
         event_type_set = bag.selected_event_type_sets.first()
-        if event_type_set:
+        if not event_type_set:
             event_type_set = plan.event_type_set
 
         mentorship_service_set = bag.selected_mentorship_service_sets.first()
-        if mentorship_service_set:
+        if not mentorship_service_set:
             mentorship_service_set = plan.mentorship_service_set
 
         subscription = Subscription.objects.create(user=bag.user,

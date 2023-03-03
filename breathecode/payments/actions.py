@@ -177,6 +177,18 @@ class BagHandler:
         self.selected_event_type_set = request.data.get('event_type_set')
         self.selected_mentorship_service_set = request.data.get('mentorship_service_set')
 
+        # change the selection
+        if self.selected_cohort:
+            bag.selected_cohorts.clear()
+
+        # change the selection
+        if self.selected_event_type_set:
+            bag.selected_event_type_sets.clear()
+
+        # change the selection
+        if self.selected_mentorship_service_set:
+            bag.selected_mentorship_service_sets.clear()
+
         self.plans_not_found = set()
         self.service_items_not_found = set()
         self.cohorts_not_found = set()
@@ -315,7 +327,7 @@ class BagHandler:
 
                 p = Plan.objects.filter(**kwargs, available_cohorts=self.selected_cohort).first()
 
-                if p:
+                if p and p not in self.bag.plans.filter():
                     self.bag.plans.add(p)
 
     def _validate_just_one_plan(self):
@@ -334,6 +346,11 @@ class BagHandler:
                 slug='one-plan-and-many-services'),
                                       code=400)
 
+    def _add_resources_to_bag(self):
+        if self.selected_cohort:
+            if self.bag.selected_cohorts not in self.bag.selected_cohorts.all():
+                self.bag.selected_cohorts.add(self.selected_cohort)
+
     def execute(self):
         self._reset_bag()
 
@@ -341,6 +358,7 @@ class BagHandler:
         self._validate_service_items_format()
 
         self._get_service_items_that_not_found()
+        self._add_resources_to_bag()
         self._validate_just_select_one_resource_per_type()
         self._get_plans_that_not_found()
         self._report_items_not_found()
