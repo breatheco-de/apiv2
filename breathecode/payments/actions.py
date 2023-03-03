@@ -334,6 +334,11 @@ class BagHandler:
                 slug='one-plan-and-many-services'),
                                       code=400)
 
+    def _add_resources_to_bag(self):
+        if self.selected_cohort:
+            if self.bag.selected_cohorts not in self.bag.selected_cohorts.all():
+                self.bag.selected_cohorts.add(self.selected_cohort)
+
     def execute(self):
         self._reset_bag()
 
@@ -341,6 +346,7 @@ class BagHandler:
         self._validate_service_items_format()
 
         self._get_service_items_that_not_found()
+        self._add_resources_to_bag()
         self._validate_just_select_one_resource_per_type()
         self._get_plans_that_not_found()
         self._report_items_not_found()
