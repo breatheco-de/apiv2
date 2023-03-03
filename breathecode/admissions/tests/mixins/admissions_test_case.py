@@ -203,6 +203,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].timezone,
                 'is_hidden_on_prework':
                 model['cohort'].is_hidden_on_prework,
+                'available_as_saas':
+                model['cohort'].available_as_saas,
                 'timeslots': [{
                     'ending_at':
                     self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
@@ -330,6 +332,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].timezone,
                 'is_hidden_on_prework':
                 model['cohort'].is_hidden_on_prework,
+                'available_as_saas':
+                model['cohort'].available_as_saas,
                 'timeslots': [{
                     'ending_at':
                     self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),

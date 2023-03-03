@@ -88,6 +88,7 @@ class EventTypeAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'academy')
     list_filter = ['academy']
     search_fields = ['slug', 'name']
+    raw_id_fields = ['academy']
 
 
 # Register your models here.
@@ -125,6 +126,7 @@ class EventTypeVisibilitySettingAdmin(admin.ModelAdmin):
         'academy__slug', 'academy__name', 'syllabus__slug', 'syllabus__name', 'cohort__slug', 'cohort__name'
     ]
     actions = [reattempt_eventbrite_webhook]
+    raw_id_fields = ['syllabus', 'cohort', 'academy']
 
 
 @admin.register(LiveClass)

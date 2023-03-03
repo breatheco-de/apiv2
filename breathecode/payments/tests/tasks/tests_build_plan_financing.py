@@ -22,15 +22,15 @@ def plan_financing_item(data={}):
         'id': 1,
         'academy_id': 1,
         'monthly_price': 0,
-        # 'is_refundable': True,
         'plan_expires_at': UTC_NOW,
-        # 'pay_every': 1,
-        # 'pay_every_unit': 'MONTH',
         'status': 'ACTIVE',
         'status_message': None,
         'user_id': 1,
         'valid_until': UTC_NOW,
         'next_payment_at': UTC_NOW,
+        'selected_cohort_id': None,
+        'selected_event_type_set_id': None,
+        'selected_mentorship_service_set_id': None,
         **data,
     }
 
@@ -203,3 +203,212 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list,
                          [call(1)])
+
+    """
+    🔽🔽🔽 With Bag with Cohort and Invoice with amount
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay', MagicMock())
+    def test_subscription_was_created__bag_with_cohort(self):
+        amount = (random.random() * 99) + 1
+        bag = {
+            'status': 'PAID',
+            'was_delivered': False,
+            'chosen_period': random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR']),
+        }
+        invoice = {'status': 'FULFILLED', 'amount': amount}
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=1, cohort=1)
+
+        # remove prints from mixer
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        months = model.bag.how_many_installments
+
+        build_plan_financing.delay(1, 1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
+            self.bc.format.to_dict(model.cohort),
+        ])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting build_plan_financing for bag 1'),
+            call('PlanFinancing was created with id 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'was_delivered': True,
+            },
+        ])
+        self.assertEqual(
+            self.bc.database.list_of('payments.Invoice'),
+            [
+                {
+                    **self.bc.format.to_dict(model.invoice),
+                    # 'monthly_price': amount,
+                },
+            ])
+        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
+            plan_financing_item({
+                'monthly_price':
+                model.invoice.amount,
+                'selected_cohort_id':
+                1,
+                'valid_until':
+                model.invoice.paid_at + relativedelta(months=months),
+                'next_payment_at':
+                model.invoice.paid_at + relativedelta(months=1),
+                'plan_expires_at':
+                model.invoice.paid_at +
+                calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
+            }),
+        ])
+
+        self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [
+            call(1),
+        ])
+
+    """
+    🔽🔽🔽 With Bag with EventTypeSet and Invoice with amount
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay', MagicMock())
+    def test_subscription_was_created__bag_with_event_type_set(self):
+        amount = (random.random() * 99) + 1
+        bag = {
+            'status': 'PAID',
+            'was_delivered': False,
+            'chosen_period': random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR']),
+        }
+        invoice = {'status': 'FULFILLED', 'amount': amount}
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=1, event_type_set=1)
+
+        # remove prints from mixer
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        months = model.bag.how_many_installments
+
+        build_plan_financing.delay(1, 1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting build_plan_financing for bag 1'),
+            call('PlanFinancing was created with id 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'was_delivered': True,
+            },
+        ])
+        self.assertEqual(
+            self.bc.database.list_of('payments.Invoice'),
+            [
+                {
+                    **self.bc.format.to_dict(model.invoice),
+                    # 'monthly_price': amount,
+                },
+            ])
+        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
+            plan_financing_item({
+                'monthly_price':
+                model.invoice.amount,
+                'selected_event_type_set_id':
+                1,
+                'valid_until':
+                model.invoice.paid_at + relativedelta(months=months),
+                'next_payment_at':
+                model.invoice.paid_at + relativedelta(months=1),
+                'plan_expires_at':
+                model.invoice.paid_at +
+                calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
+            }),
+        ])
+
+        self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [
+            call(1),
+        ])
+
+    """
+    🔽🔽🔽 With Bag with MentorshipServiceSet and Invoice with amount
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay', MagicMock())
+    def test_subscription_was_created__bag_with_mentorship_service_set(self):
+        amount = (random.random() * 99) + 1
+        bag = {
+            'status': 'PAID',
+            'was_delivered': False,
+            'chosen_period': random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR']),
+        }
+        invoice = {'status': 'FULFILLED', 'amount': amount}
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=1, mentorship_service_set=1)
+
+        # remove prints from mixer
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        months = model.bag.how_many_installments
+
+        build_plan_financing.delay(1, 1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting build_plan_financing for bag 1'),
+            call('PlanFinancing was created with id 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'was_delivered': True,
+            },
+        ])
+        self.assertEqual(
+            self.bc.database.list_of('payments.Invoice'),
+            [
+                {
+                    **self.bc.format.to_dict(model.invoice),
+                    # 'monthly_price': amount,
+                },
+            ])
+        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
+            plan_financing_item({
+                'monthly_price':
+                model.invoice.amount,
+                'selected_mentorship_service_set_id':
+                1,
+                'valid_until':
+                model.invoice.paid_at + relativedelta(months=months),
+                'next_payment_at':
+                model.invoice.paid_at + relativedelta(months=1),
+                'plan_expires_at':
+                model.invoice.paid_at +
+                calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
+            }),
+        ])
+
+        self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [
+            call(1),
+        ])

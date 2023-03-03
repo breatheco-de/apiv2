@@ -48,12 +48,21 @@ header {
   display: block;
   font-size: 20px;
 }
+  
+.button{
+  background: #0097cd;
+  display: inline-block;
+  padding: 10px 15px;
+  color: white;
+  font-weight: 700;
+  border-radius: 3px;
+}
 </style>
 
 <div id="root"></div>
 <script type="text/babel">
   const calculateTimeLeft = () => {
-    const difference = +new Date('{{ event.starting_at.isoformat }}') - +new Date();
+    const difference = +new Date('{{ event.starting_at.isoformat }}') - +new Date(Date.now() + 5000 * 60);
     let timeLeft = {};
 
     if (difference > 0) {
@@ -75,7 +84,9 @@ header {
 
     React.useEffect(() => {
       setTimeout(() => {
-        setTimeLeft(calculateTimeLeft());
+        let _tl = calculateTimeLeft();
+        if(Object.keys(_tl).length == 0) window.location.href = "{{ event.live_stream_url }}";
+        setTimeLeft(_tl);
       }, 1000);
     });
 
@@ -92,8 +103,8 @@ header {
         <h3>This event will start in</h3>
         <div className="clock" style={size}>
             {timerComponents.length ?
-              timerComponents.map(t => <div><span>{t}</span></div>) :
-              <span>Time's up!</span>
+              timerComponents.map((t, i) => <div key={i}><span>{t}</span></div>) :
+              <a href="{{ event.live_stream_url }}" className="button">Click here to join</a>
             }
         </div>
       </div>

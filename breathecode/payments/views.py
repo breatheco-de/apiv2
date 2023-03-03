@@ -14,10 +14,12 @@ from django.db.models import CharField, Q, Value
 
 from breathecode.payments import tasks
 from breathecode.admissions import tasks as admissions_tasks
+from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
-from breathecode.payments.models import (Bag, Consumable, FinancialReputation, Invoice, Plan, PlanFinancing,
-                                         PlanServiceItem, Service, ServiceItem, Subscription)
+from breathecode.payments.models import (Bag, Consumable, EventTypeSet, FinancialReputation, Invoice,
+                                         MentorshipServiceSet, Plan, PlanFinancing, PlanServiceItem, Service,
+                                         ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetInvoiceSerializer,
                                               GetInvoiceSmallSerializer, GetPlanFinancingSerializer,
                                               GetPlanSerializer, GetServiceItemWithFeaturesSerializer,
@@ -84,7 +86,7 @@ class PlanView(APIView):
 
 
 class AcademyPlanView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('read_plan')
     def get(self, request, plan_id=None, plan_slug=None, service_slug=None, academy_id=None):
@@ -188,7 +190,7 @@ class AcademyPlanView(APIView):
 
 
 class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('crud_plan')
     def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
@@ -203,26 +205,25 @@ class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
                                                   slug='not-found'),
                                       code=404)
 
-        if not (cohorts := Cohort.objects.filter(**lookups)):
+        if not (items := Cohort.objects.filter(**lookups)):
             raise ValidationException(translation(lang,
                                                   en='Cohort not found',
                                                   es='Cohort no encontrada',
                                                   slug='cohort-not-found'),
                                       code=404)
 
-        items = PlanServiceItem.objects.filter(plan=plan)
-
+        created = False
         for item in items:
-            for cohort in cohorts:
-                if cohort not in item.cohorts.all():
-                    item.cohorts.add(cohorts)
+            if item not in plan.available_cohorts.all():
+                created = True
+                plan.available_cohorts.add(item)
 
-        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class ServiceView(APIView):
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request, service_slug=None):
         handler = self.extensions(request)
@@ -266,7 +267,7 @@ class ServiceView(APIView):
 
 
 class AcademyServiceView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('read_service')
     def get(self, request, service_slug=None, academy_id=None):
@@ -395,19 +396,20 @@ class MeConsumableView(APIView):
         items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None),
                                           user=request.user)
 
-        mentorship_services = MentorshipService.objects.none()
-        mentorship_services = filter_consumables(request, items, mentorship_services, 'mentorship_service')
+        mentorship_services = MentorshipServiceSet.objects.none()
+        mentorship_services = filter_consumables(request, items, mentorship_services,
+                                                 'mentorship_service_set')
 
         cohorts = Cohort.objects.none()
         cohorts = filter_consumables(request, items, cohorts, 'cohort')
 
-        event_types = EventType.objects.none()
-        event_types = filter_consumables(request, items, event_types, 'event_type')
+        event_types = EventTypeSet.objects.none()
+        event_types = filter_consumables(request, items, event_types, 'event_type_set')
 
         balance = {
-            'mentorship_services': get_balance_by_resource(mentorship_services, 'mentorship_service'),
+            'mentorship_service_sets': get_balance_by_resource(mentorship_services, 'mentorship_service_set'),
             'cohorts': get_balance_by_resource(cohorts, 'cohort'),
-            'event_types': get_balance_by_resource(event_types, 'event_type'),
+            'event_type_sets': get_balance_by_resource(event_types, 'event_type_set'),
         }
 
         return Response(balance)
@@ -415,7 +417,7 @@ class MeConsumableView(APIView):
 
 class MeSubscriptionView(APIView):
     # this cannot support cache because the cache does not support associated two models to a response yet
-    extensions = APIViewExtensions(sort='-created_at')
+    extensions = APIViewExtensions(sort='-id')
 
     def get_lookup(self, key, value):
         args = ()
@@ -447,11 +449,10 @@ class MeSubscriptionView(APIView):
 
         now = timezone.now()
 
-        subscriptions = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
-                                                    user=request.user)
+        subscriptions = Subscription.objects.filter(user=request.user)
 
         #NOTE: this is before feature/add-plan-duration branch, this will be outdated
-        plan_financings = PlanFinancing.objects.filter(valid_until__gte=now, user=request.user)
+        plan_financings = PlanFinancing.objects.filter(user=request.user)
 
         if subscription := request.GET.get('subscription'):
             subscriptions = subscriptions.filter(id=int(subscription))
@@ -476,32 +477,52 @@ class MeSubscriptionView(APIView):
 
         if invoice := request.GET.get('invoice'):
             ids = [int(x) for x in invoice if x.isnumeric()]
-            subscriptions = subscriptions.filter(invoices__id__in=ids).distinct()
-            plan_financings = plan_financings.filter(invoices__id__in=ids).distinct()
+            subscriptions = subscriptions.filter(invoices__id__in=ids)
+            plan_financings = plan_financings.filter(invoices__id__in=ids)
 
         if service := request.GET.get('service'):
             service_items_args, service_items_kwargs = self.get_lookup('service_items__service', service)
             plans_args, plans_kwargs = self.get_lookup('plans__service_items__service', service)
 
             if service_items_args:
-                subscriptions = subscriptions.filter(Q(*service_items_args) | Q(*plans_args)).distinct()
-                plan_financings = plan_financings.filter(*plans_args).distinct()
+                subscriptions = subscriptions.filter(Q(*service_items_args) | Q(*plans_args))
+                plan_financings = plan_financings.filter(*plans_args)
 
             else:
-                subscriptions = subscriptions.filter(Q(**plans_kwargs) | Q(**service_items_kwargs)).distinct()
-                plan_financings = plan_financings.filter(**plans_kwargs).distinct()
+                subscriptions = subscriptions.filter(Q(**plans_kwargs) | Q(**service_items_kwargs))
+                plan_financings = plan_financings.filter(**plans_kwargs)
 
         if plan := request.GET.get('plan'):
             args, kwargs = self.get_lookup('plans', plan)
-            subscriptions = subscriptions.filter(*args, **kwargs).distinct()
-            plan_financings = plan_financings.filter(**kwargs).distinct()
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
 
-        # this can't support pagination
-        subscriptions = handler.queryset(subscriptions)
+        if selected_cohort := (request.GET.get('cohort-selected') or request.GET.get('selected-cohort')):
+            args, kwargs = self.get_lookup('selected_cohort', selected_cohort)
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
+
+        if selected_mentorship_service_set := (request.GET.get('mentorship-service-set-selected')
+                                               or request.GET.get('selected-mentorship-service-set')):
+            args, kwargs = self.get_lookup('selected_mentorship_service_set', selected_mentorship_service_set)
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
+
+        if selected_event_type_set := (request.GET.get('event-type-set-selected')
+                                       or request.GET.get('selected-event-type-set')):
+            args, kwargs = self.get_lookup('selected_event_type_set', selected_event_type_set)
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
+
+        only_valid = request.GET.get('only_valid')
+        if only_valid == True or only_valid == 'true':
+            subscriptions = subscriptions.filter(Q(valid_until__gte=now) | Q(valid_until=None))
+            plan_financings = plan_financings.filter(valid_until__gte=now)
+
+        subscriptions = handler.queryset(subscriptions.distinct())
         subscription_serializer = GetSubscriptionSerializer(subscriptions, many=True)
 
-        # this can't support pagination
-        plan_financings = handler.queryset(plan_financings)
+        plan_financings = handler.queryset(plan_financings.distinct())
         plan_financing_serializer = GetPlanFinancingSerializer(plan_financings, many=True)
 
         return handler.response({
@@ -511,7 +532,7 @@ class MeSubscriptionView(APIView):
 
 
 class MeSubscriptionChargeView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def put(self, request, subscription_id):
         utc_now = timezone.now()
@@ -543,7 +564,7 @@ class MeSubscriptionChargeView(APIView):
 
 
 class MePlanFinancingChargeView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def put(self, request, plan_financing_id):
         utc_now = timezone.now()
@@ -577,7 +598,7 @@ class MePlanFinancingChargeView(APIView):
 
 class AcademySubscriptionView(APIView):
 
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('read_subscription')
     def get(self, request, subscription_id=None):
@@ -625,7 +646,7 @@ class AcademySubscriptionView(APIView):
 
 
 class MeInvoiceView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request, invoice_id=None):
         handler = self.extensions(request)
@@ -656,7 +677,7 @@ class MeInvoiceView(APIView):
 
 
 class AcademyInvoiceView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('read_invoice')
     def get(self, request, invoice_id=None, academy_id=None):
@@ -688,7 +709,7 @@ class AcademyInvoiceView(APIView):
 
 
 class CardView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def post(self, request):
         lang = get_user_language(request)
@@ -720,7 +741,7 @@ class CardView(APIView):
 
 
 class BagView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request):
         handler = self.extensions(request)
@@ -739,8 +760,7 @@ class BagView(APIView):
         return handler.response(serializer.data)
 
     def put(self, request):
-        handler = self.extensions(request)
-        language = handler.language.get()
+        lang = get_user_language(request)
 
         settings = get_user_settings(request.user.id)
         language = language or settings.lang or 'en'
@@ -751,7 +771,8 @@ class BagView(APIView):
 
         # do no show the bags of type preview they are build
         bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type='BAG')
-        add_items_to_bag(request, settings, bag)
+        add_items_to_bag(request, bag, lang)
+        actions.check_dependencies_in_bag(bag, lang)
 
         serializer = GetBagSerializer(bag, many=False)
         return Response(serializer.data)
@@ -763,20 +784,20 @@ class BagView(APIView):
 
 
 class CheckingView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def put(self, request):
         bag_type = request.data.get('type', 'BAG').upper()
         created = False
 
-        settings = get_user_settings(request.user.id)
+        lang = get_user_language(request)
 
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
                 if bag_type == 'BAG' and not (bag := Bag.objects.filter(
                         user=request.user, status='CHECKING', type=bag_type).first()):
-                    raise ValidationException(translation(settings.lang,
+                    raise ValidationException(translation(lang,
                                                           en='Bag not found',
                                                           es='Bolsa no encontrada',
                                                           slug='not-found'),
@@ -808,7 +829,7 @@ class CheckingView(APIView):
 
                     if not academy:
                         raise ValidationException(translation(
-                            settings.lang,
+                            lang,
                             en='Academy not found or not configured properly',
                             es='Academia no encontrada o no configurada correctamente',
                             slug='not-found'),
@@ -819,7 +840,8 @@ class CheckingView(APIView):
                                                              type=bag_type,
                                                              academy=academy,
                                                              currency=academy.main_currency)
-                    add_items_to_bag(request, settings, bag)
+                    add_items_to_bag(request, bag, lang)
+                    actions.check_dependencies_in_bag(bag, lang)
 
                 utc_now = timezone.now()
 
@@ -839,7 +861,7 @@ class CheckingView(APIView):
                     amount = 1
 
                 if amount == 0 and PlanFinancing.objects.filter(plans__in=plans).count():
-                    raise ValidationException(translation(settings.lang,
+                    raise ValidationException(translation(lang,
                                                           en='Your free trial was already took',
                                                           es='Tu prueba gratuita ya fue tomada',
                                                           slug='your-free-trial-was-already-took'),
@@ -858,7 +880,7 @@ class CheckingView(APIView):
 
 
 class PayView(APIView):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def post(self, request):
         utc_now = timezone.now()
@@ -914,22 +936,75 @@ class PayView(APIView):
 
                 how_many_installments = request.data.get('how_many_installments')
                 chosen_period = request.data.get('chosen_period', '').upper()
+
+                logger.info('===============================')
+                logger.info('===============================')
+                logger.info('===============================')
+                logger.info('how_many_installments: %s' % how_many_installments)
+                logger.info('chosen_period: %s' % chosen_period)
+                logger.info('===============================')
+                logger.info('===============================')
+                logger.info('===============================')
+
+                available_for_free_trial = False
                 if not how_many_installments and not chosen_period:
+                    available_for_free_trial = (bag.amount_per_month == 0 and bag.amount_per_quarter == 0
+                                                and bag.amount_per_half == 0 and bag.amount_per_year == 0)
+
+                    logger.info('---------------------')
+                    logger.info('---------------------')
+                    logger.info('---------------------')
+                    logger.info('available_for_free_trial: %s' % available_for_free_trial)
+                    logger.info('bag.amount_per_month: %s' % bag.amount_per_month)
+                    logger.info('bag.amount_per_quarter: %s' % bag.amount_per_quarter)
+                    logger.info('bag.amount_per_half: %s' % bag.amount_per_half)
+                    logger.info('bag.amount_per_year: %s' % bag.amount_per_year)
+                    logger.info('---------------------')
+                    logger.info('---------------------')
+                    logger.info('---------------------')
+
+                    plan = bag.plans.first()
+                    available_for_free_trial = available_for_free_trial and (
+                        not plan.financing_options.filter().exists() if plan else False)
+
+                    logger.info('oooooooooooooooooooooooooooooooooooo')
+                    logger.info('oooooooooooooooooooooooooooooooooooo')
+                    logger.info('oooooooooooooooooooooooooooooooooooo')
+                    logger.info('available_for_free_trial: %s' % available_for_free_trial)
+                    logger.info('plan: %s' % plan)
+                    if plan:
+                        logger.info('plan: %s' % plan)
+                        logger.info('plan.financing_options.filter().exists(): %s' %
+                                    plan.financing_options.filter().exists())
+                        logger.info('not plan.financing_options.filter().exists() if plan else False: %s' %
+                                    (not plan.financing_options.filter().exists() if plan else False))
+
+                    logger.info('oooooooooooooooooooooooooooooooooooo')
+                    logger.info('oooooooooooooooooooooooooooooooooooo')
+                    logger.info('oooooooooooooooooooooooooooooooooooo')
+
+                logger.info('not available_for_free_trial: %s' % (not available_for_free_trial))
+                logger.info('not how_many_installments: %s' % (not how_many_installments))
+                logger.info('not chosen_period: %s' % (not chosen_period))
+                if not available_for_free_trial and not how_many_installments and not chosen_period:
+                    logger.info('here!')
                     raise ValidationException(translation(lang,
                                                           en='Missing chosen period',
                                                           es='Falta el periodo elegido',
                                                           slug='missing-chosen-period'),
                                               code=400)
 
-                if not how_many_installments and chosen_period not in ['MONTH', 'QUARTER', 'HALF', 'YEAR']:
+                if not available_for_free_trial and not how_many_installments and chosen_period not in [
+                        'MONTH', 'QUARTER', 'HALF', 'YEAR'
+                ]:
                     raise ValidationException(translation(lang,
                                                           en='Invalid chosen period',
                                                           es='Periodo elegido inválido',
                                                           slug='invalid-chosen-period'),
                                               code=400)
 
-                if not chosen_period and (not isinstance(how_many_installments, int)
-                                          or how_many_installments <= 0):
+                if not available_for_free_trial and not chosen_period and (
+                        not isinstance(how_many_installments, int) or how_many_installments <= 0):
                     raise ValidationException(translation(
                         lang,
                         en='how_many_installments must be a positive number greather than 0',
@@ -937,10 +1012,10 @@ class PayView(APIView):
                         slug='invalid-how-many-installments'),
                                               code=400)
 
-                if not chosen_period and how_many_installments:
+                if not available_for_free_trial and not chosen_period and how_many_installments:
                     bag.how_many_installments = how_many_installments
 
-                if bag.how_many_installments > 0:
+                if not available_for_free_trial and bag.how_many_installments > 0:
                     try:
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(
@@ -954,15 +1029,21 @@ class PayView(APIView):
                             es='La bolsa esta mal configurada, relacionado a la opción de financiamiento',
                             slug='invalid-bag-configured-by-installments'),
                                                   code=500)
-                else:
+                elif not available_for_free_trial:
                     amount = get_amount_by_chosen_period(bag, chosen_period, lang)
 
-                if amount == 0 and PlanFinancing.objects.filter(plans__in=bag.plans.all()).count():
+                else:
+                    amount = 0
+
+                if amount == 0 and Subscription.objects.filter(user=request.user,
+                                                               plans__in=bag.plans.all()).count():
                     raise ValidationException(translation(lang,
                                                           en='Your free trial was already took',
                                                           es='Tu prueba gratuita ya fue tomada',
                                                           slug='your-free-trial-was-already-took'),
                                               code=500)
+
+                actions.check_dependencies_in_bag(bag, lang)
 
                 if amount >= 0.50:
                     s = Stripe()

@@ -216,7 +216,7 @@ def get_template_content(slug, data={}, formats=None):
     if formats is not None and 'html' in formats:
         html = get_template(slug + '.html')
         templates['html'] = html.render(z)
-        
+
     if formats is not None and 'slack' in formats:
         fms = get_template(slug + '.slack')
         templates['slack'] = fms.render(z)

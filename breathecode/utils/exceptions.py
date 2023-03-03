@@ -1,4 +1,6 @@
-__all__ = ['ProgramingError']
+__all__ = ['ProgramingError', 'MalformedLanguageCode']
+
+from breathecode.utils.validation_exception import ValidationException
 
 
 class ProgramingError(Exception):
@@ -6,4 +8,8 @@ class ProgramingError(Exception):
 
 
 class TestError(Exception):
+    pass
+
+
+class MalformedLanguageCode(ValidationException):
     pass

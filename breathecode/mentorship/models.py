@@ -7,6 +7,7 @@ from datetime import timedelta
 import breathecode.mentorship.signals as signals
 from slugify import slugify
 from breathecode.notify.models import SlackChannel
+from breathecode.utils.validators.language import validate_language_code
 # settings customizable for each academy
 # class AcademySettings(models.Model):
 #     is_video_streaming_active = models.BooleanField(default=False)
@@ -57,7 +58,11 @@ class MentorshipService(models.Model):
 
     status = models.CharField(max_length=15, choices=MENTORSHIP_STATUS, default=DRAFT)
 
-    language = models.CharField(max_length=2, default='en')
+    language = models.CharField(
+        max_length=5,
+        default='en',
+        validators=[validate_language_code],
+        help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
 
     allow_mentee_to_extend = models.BooleanField(
         default=True, help_text='If true, mentees will be able to extend mentorship session')
