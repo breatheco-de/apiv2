@@ -523,7 +523,7 @@ def sync_organization_members(academy_id, only_status=[]):
 
         _query = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs).filter(username=u)
         if _user is not None:
-            _query = _query.filter(user__user=_user)
+            _query = _query.filter(user=_user)
         uknown_user = _query.first()
 
         if uknown_user is None:
