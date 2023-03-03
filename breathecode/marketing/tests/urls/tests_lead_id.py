@@ -201,6 +201,9 @@ class CohortLeadIdSuite(MarketingTestCase):
             'ac_deal_id': model.form_entry[0].ac_deal_id,
             'ac_contact_id': model.form_entry[0].ac_contact_id,
             'sentiment': model.form_entry[0].sentiment,
+            'ac_expected_cohort_date': model.form_entry[0].ac_expected_cohort_date,
+            'ac_deal_owner_id': model.form_entry[0].ac_deal_owner_id,
+            'ac_deal_owner_full_name': model.form_entry[0].ac_deal_owner_full_name,
             'academy': {
                 'id': model.form_entry[0].academy.id,
                 'name': model.form_entry[0].academy.name,
@@ -334,6 +337,9 @@ class CohortLeadIdSuite(MarketingTestCase):
             'zip_code': model.form_entry.zip_code,
             'sentiment': model.form_entry.sentiment,
             'lead_generation_app': model.form_entry.lead_generation_app,
+            'ac_deal_owner_full_name': model.form_entry.ac_deal_owner_full_name,
+            'ac_deal_owner_id': model.form_entry.ac_deal_owner_id,
+            'ac_expected_cohort_date': model.form_entry.ac_expected_cohort_date,
             **data
         }
 

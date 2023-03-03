@@ -1,14 +1,17 @@
 from django.urls import path
 from .views import (AcademyEventTypeView, AcademyLiveClassView, EventMeView, EventTypeVisibilitySettingView,
-                    EventView, EventTypeView, EventCheckinView, MeLiveClassJoinView, MeLiveClassView,
+                    EventView, EventTypeView, AcademyEventCheckinView, MeLiveClassJoinView, MeLiveClassView,
                     get_events, eventbrite_webhook, AcademyEventView, AcademyVenueView, ICalCohortsView,
                     ICalEventView, ICalStudentView, AcademyOrganizationView, OrganizationWebhookView,
-                    AcademyOrganizerView, AcademyOrganizationOrganizerView, AcademyLiveClassJoinView)
+                    AcademyOrganizerView, AcademyOrganizationOrganizerView, AcademyLiveClassJoinView,
+                    join_event, EventMeCheckinView)
 
 app_name = 'events'
 urlpatterns = [
     path('', EventView.as_view(), name='root'),
     path('me', EventMeView.as_view(), name='me'),
+    path('me/event/<int:event_id>/checkin', EventMeCheckinView.as_view(), name='me_event_id_checkin'),
+    path('me/event/<int:event_id>/join', join_event, name='me_event_id_join'),
     path('me/event/<int:event_id>', EventMeView.as_view(), name='me_event_id'),
     # move this
     path('me/event/liveclass', MeLiveClassView.as_view(), name='me_event_liveclass'),
@@ -45,6 +48,6 @@ urlpatterns = [
     path('academy/eventype/<slug:event_type_slug>/visibilitysetting',
          EventTypeVisibilitySettingView.as_view(),
          name='academy_eventype_slug_visibilitysetting'),
-    path('academy/checkin', EventCheckinView.as_view(), name='academy_checkin'),
+    path('academy/checkin', AcademyEventCheckinView.as_view(), name='academy_checkin'),
     path('eventbrite/webhook/<int:organization_id>', eventbrite_webhook, name='eventbrite_webhook_id'),
 ]

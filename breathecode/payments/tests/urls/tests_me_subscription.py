@@ -101,18 +101,95 @@ def plan_serializer(self, plan, service, groups=[], permissions=[], service_item
     }
 
 
+def get_mentorship_service_serializer(mentorship_service, academy):
+    return {
+        'academy': {
+            'id': academy.id,
+            'name': academy.name,
+            'slug': academy.slug,
+        },
+        'id': mentorship_service.id,
+    }
+
+
+def get_mentorship_service_set_serializer(mentorship_service_set, academy, mentorship_services=[]):
+    return {
+        'academy': {
+            'id': academy.id,
+            'name': academy.name,
+            'slug': academy.slug,
+        },
+        'id':
+        mentorship_service_set.id,
+        'mentorship_services': [
+            get_mentorship_service_serializer(mentorship_service, academy)
+            for mentorship_service in mentorship_services
+        ],
+        'slug':
+        mentorship_service_set.slug,
+    }
+
+
+def get_event_type_serializer(event_type, academy):
+    return {
+        'academy': {
+            'id': academy.id,
+            'name': academy.name,
+            'slug': academy.slug,
+        },
+        'id': event_type.id,
+    }
+
+
+def get_event_type_set_serializer(event_type_set, academy, event_types=[]):
+    return {
+        'academy': {
+            'id': academy.id,
+            'name': academy.name,
+            'slug': academy.slug,
+        },
+        'id': event_type_set.id,
+        'event_types': [get_event_type_serializer(event_type, academy) for event_type in event_types],
+        'slug': event_type_set.slug,
+    }
+
+
+def get_cohort_serializer(cohort):
+    return {
+        'id': cohort.id,
+        'slug': cohort.slug,
+        'name': cohort.name,
+    }
+
+
 def get_plan_financing_serializer(self,
                                   plan_financing,
                                   academy,
                                   currency,
                                   user,
                                   service,
+                                  mentorship_service_set=None,
+                                  event_type_set=None,
+                                  cohort=None,
                                   invoices=[],
                                   financing_options=[],
                                   plans=[],
                                   groups=[],
                                   permissions=[],
-                                  service_items=[]):
+                                  service_items=[],
+                                  mentorship_services=[],
+                                  event_types=[]):
+
+    if cohort:
+        cohort = get_cohort_serializer(cohort)
+
+    if mentorship_service_set:
+        mentorship_service_set = get_mentorship_service_set_serializer(
+            mentorship_service_set, academy, mentorship_services=mentorship_services)
+
+    if event_type_set:
+        event_type_set = get_event_type_set_serializer(event_type_set, academy, event_types=event_types)
+
     return {
         'id': plan_financing.id,
         'academy': academy_serializer(academy),
@@ -121,6 +198,9 @@ def get_plan_financing_serializer(self,
         'next_payment_at': self.bc.datetime.to_iso_string(plan_financing.next_payment_at),
         'plan_expires_at': self.bc.datetime.to_iso_string(plan_financing.plan_expires_at),
         'plans': [plan_serializer(self, plan, service, groups, permissions, service_items) for plan in plans],
+        'selected_mentorship_service_set': mentorship_service_set,
+        'selected_event_type_set': event_type_set,
+        'selected_cohort': cohort,
         'status': plan_financing.status,
         'monthly_price': plan_financing.monthly_price,
         'status_message': plan_financing.status_message,
@@ -134,14 +214,30 @@ def get_subscription_serializer(self,
                                 currency,
                                 user,
                                 service,
+                                mentorship_service_set=None,
+                                event_type_set=None,
+                                cohort=None,
                                 invoices=[],
                                 financing_options=[],
                                 plans=[],
                                 groups=[],
                                 permissions=[],
-                                service_items=[]):
+                                service_items=[],
+                                mentorship_services=[],
+                                event_types=[]):
     valid_until = self.bc.datetime.to_iso_string(
         subscription.valid_until) if subscription.valid_until else None
+
+    if cohort:
+        cohort = get_cohort_serializer(cohort)
+
+    if mentorship_service_set:
+        mentorship_service_set = get_mentorship_service_set_serializer(
+            mentorship_service_set, academy, mentorship_services=mentorship_services)
+
+    if event_type_set:
+        event_type_set = get_event_type_set_serializer(event_type_set, academy, event_types=event_types)
+
     return {
         'id':
         subscription.id,
@@ -165,6 +261,12 @@ def get_subscription_serializer(self,
         subscription.pay_every,
         'pay_every_unit':
         subscription.pay_every_unit,
+        'selected_mentorship_service_set':
+        mentorship_service_set,
+        'selected_event_type_set':
+        event_type_set,
+        'selected_cohort':
+        cohort,
         'user':
         user_serializer(user),
         'service_items': [
@@ -246,7 +348,7 @@ class SignalTestSuite(PaymentsTestCase):
         expected = {
             'plan_financings': [
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[0],
+                                              model.plan_financing[1],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -256,7 +358,7 @@ class SignalTestSuite(PaymentsTestCase):
                                               plans=[model.plan[0], model.plan[1]],
                                               service_items=[model.service_item[0], model.service_item[1]]),
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[1],
+                                              model.plan_financing[0],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -268,7 +370,7 @@ class SignalTestSuite(PaymentsTestCase):
             ],
             'subscriptions': [
                 get_subscription_serializer(self,
-                                            model.subscription[0],
+                                            model.subscription[1],
                                             model.academy,
                                             model.currency,
                                             model.user,
@@ -278,7 +380,7 @@ class SignalTestSuite(PaymentsTestCase):
                                             plans=[model.plan[0], model.plan[1]],
                                             service_items=[model.service_item[0], model.service_item[1]]),
                 get_subscription_serializer(self,
-                                            model.subscription[1],
+                                            model.subscription[0],
                                             model.academy,
                                             model.currency,
                                             model.user,
@@ -550,7 +652,7 @@ class SignalTestSuite(PaymentsTestCase):
         expected = {
             'plan_financings': [
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[0],
+                                              model.plan_financing[1],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -560,7 +662,7 @@ class SignalTestSuite(PaymentsTestCase):
                                               plans=[model.plan[0], model.plan[1]],
                                               service_items=[model.service_item[0], model.service_item[1]]),
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[1],
+                                              model.plan_financing[0],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -572,7 +674,7 @@ class SignalTestSuite(PaymentsTestCase):
             ],
             'subscriptions': [
                 get_subscription_serializer(self,
-                                            model.subscription[0],
+                                            model.subscription[1],
                                             model.academy,
                                             model.currency,
                                             model.user,
@@ -582,7 +684,7 @@ class SignalTestSuite(PaymentsTestCase):
                                             plans=[model.plan[0], model.plan[1]],
                                             service_items=[model.service_item[0], model.service_item[1]]),
                 get_subscription_serializer(self,
-                                            model.subscription[1],
+                                            model.subscription[0],
                                             model.academy,
                                             model.currency,
                                             model.user,
@@ -682,7 +784,7 @@ class SignalTestSuite(PaymentsTestCase):
         expected = {
             'plan_financings': [
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[0],
+                                              model.plan_financing[1],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -692,7 +794,7 @@ class SignalTestSuite(PaymentsTestCase):
                                               plans=[model.plan[0], model.plan[1]],
                                               service_items=[model.service_item[0], model.service_item[1]]),
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[1],
+                                              model.plan_financing[0],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -704,7 +806,7 @@ class SignalTestSuite(PaymentsTestCase):
             ],
             'subscriptions': [
                 get_subscription_serializer(self,
-                                            model.subscription[0],
+                                            model.subscription[1],
                                             model.academy,
                                             model.currency,
                                             model.user,
@@ -714,7 +816,7 @@ class SignalTestSuite(PaymentsTestCase):
                                             plans=[model.plan[0], model.plan[1]],
                                             service_items=[model.service_item[0], model.service_item[1]]),
                 get_subscription_serializer(self,
-                                            model.subscription[1],
+                                            model.subscription[0],
                                             model.academy,
                                             model.currency,
                                             model.user,
@@ -817,7 +919,7 @@ class SignalTestSuite(PaymentsTestCase):
         expected = {
             'plan_financings': [
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[0],
+                                              model.plan_financing[1],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -827,7 +929,7 @@ class SignalTestSuite(PaymentsTestCase):
                                               plans=[model.plan[0], model.plan[1]],
                                               service_items=[model.service_item[0], model.service_item[1]]),
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[1],
+                                              model.plan_financing[0],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -839,7 +941,7 @@ class SignalTestSuite(PaymentsTestCase):
             ],
             'subscriptions': [
                 get_subscription_serializer(self,
-                                            model.subscription[0],
+                                            model.subscription[1],
                                             model.academy,
                                             model.currency,
                                             model.user,
@@ -849,7 +951,7 @@ class SignalTestSuite(PaymentsTestCase):
                                             plans=[model.plan[0], model.plan[1]],
                                             service_items=[model.service_item[0], model.service_item[1]]),
                 get_subscription_serializer(self,
-                                            model.subscription[1],
+                                            model.subscription[0],
                                             model.academy,
                                             model.currency,
                                             model.user,
@@ -952,7 +1054,7 @@ class SignalTestSuite(PaymentsTestCase):
         expected = {
             'plan_financings': [
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[0],
+                                              model.plan_financing[1],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -962,7 +1064,7 @@ class SignalTestSuite(PaymentsTestCase):
                                               plans=[model.plan[0], model.plan[1]],
                                               service_items=[model.service_item[0], model.service_item[1]]),
                 get_plan_financing_serializer(self,
-                                              model.plan_financing[1],
+                                              model.plan_financing[0],
                                               model.academy,
                                               model.currency,
                                               model.user,
@@ -974,7 +1076,7 @@ class SignalTestSuite(PaymentsTestCase):
             ],
             'subscriptions': [
                 get_subscription_serializer(self,
-                                            model.subscription[0],
+                                            model.subscription[1],
                                             model.academy,
                                             model.currency,
                                             model.user,
@@ -984,11 +1086,435 @@ class SignalTestSuite(PaymentsTestCase):
                                             plans=[model.plan[0], model.plan[1]],
                                             service_items=[model.service_item[0], model.service_item[1]]),
                 get_subscription_serializer(self,
+                                            model.subscription[0],
+                                            model.academy,
+                                            model.currency,
+                                            model.user,
+                                            model.service,
+                                            invoices=[model.invoice[0], model.invoice[1]],
+                                            financing_options=[],
+                                            plans=[model.plan[0], model.plan[1]],
+                                            service_items=[model.service_item[0], model.service_item[1]]),
+            ],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    """
+    🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong cohort
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__with_many_items__filter_by_wrong_cohort(self):
+        subscriptions = [{
+            'valid_until': x,
+            'selected_cohort_id': None,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
+        plan_financings = [{
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'selected_cohort_id': None,
+        } for _ in range(1, 3)]
+        plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
+        plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
+        subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
+        subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        model = self.bc.database.create(subscription=subscriptions,
+                                        plan_financing=plan_financings,
+                                        plan_service_item=plan_service_items,
+                                        subscription_service_item=subscription_service_items,
+                                        invoice=2,
+                                        plan=2,
+                                        service_item=2,
+                                        cohort=2)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:me_subscription') + (f'?cohort-selected={random.choice([1, "slug1"])},'
+                                                          f'{random.choice([2, "slug2"])}')
+        response = self.client.get(url)
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            'plan_financings': [],
+            'subscriptions': [],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    """
+    🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by good cohort
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__with_many_items__filter_by_good_cohort(self):
+        subscriptions = [{
+            'valid_until': x,
+            'selected_cohort_id': y,
+        } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
+        plan_financings = [{
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'selected_cohort_id': x,
+        } for x in range(1, 3)]
+        plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
+        plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
+        subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
+        subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        model = self.bc.database.create(subscription=subscriptions,
+                                        plan_financing=plan_financings,
+                                        plan_service_item=plan_service_items,
+                                        subscription_service_item=subscription_service_items,
+                                        invoice=2,
+                                        plan=2,
+                                        service_item=2,
+                                        cohort=2)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:me_subscription') + (
+            f'?cohort-selected={random.choice([model.cohort[0].id, model.cohort[0].slug])},'
+            f'{random.choice([model.cohort[1].id, model.cohort[1].slug])}')
+        response = self.client.get(url)
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            'plan_financings': [
+                get_plan_financing_serializer(self,
+                                              model.plan_financing[1],
+                                              model.academy,
+                                              model.currency,
+                                              model.user,
+                                              model.service,
+                                              cohort=model.cohort[1],
+                                              invoices=[model.invoice[0], model.invoice[1]],
+                                              financing_options=[],
+                                              plans=[model.plan[0], model.plan[1]],
+                                              service_items=[model.service_item[0], model.service_item[1]]),
+                get_plan_financing_serializer(self,
+                                              model.plan_financing[0],
+                                              model.academy,
+                                              model.currency,
+                                              model.user,
+                                              model.service,
+                                              cohort=model.cohort[0],
+                                              invoices=[model.invoice[0], model.invoice[1]],
+                                              financing_options=[],
+                                              plans=[model.plan[0], model.plan[1]],
+                                              service_items=[model.service_item[0], model.service_item[1]]),
+            ],
+            'subscriptions': [
+                get_subscription_serializer(self,
                                             model.subscription[1],
                                             model.academy,
                                             model.currency,
                                             model.user,
                                             model.service,
+                                            cohort=model.cohort[1],
+                                            invoices=[model.invoice[0], model.invoice[1]],
+                                            financing_options=[],
+                                            plans=[model.plan[0], model.plan[1]],
+                                            service_items=[model.service_item[0], model.service_item[1]]),
+                get_subscription_serializer(self,
+                                            model.subscription[0],
+                                            model.academy,
+                                            model.currency,
+                                            model.user,
+                                            model.service,
+                                            cohort=model.cohort[0],
+                                            invoices=[model.invoice[0], model.invoice[1]],
+                                            financing_options=[],
+                                            plans=[model.plan[0], model.plan[1]],
+                                            service_items=[model.service_item[0], model.service_item[1]]),
+            ],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    ###########33
+    ##############3
+    ################3
+    ###################
+    """
+    🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong MentorshipServiceSet
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__with_many_items__filter_by_wrong_mentorship_service_set(self):
+        subscriptions = [{
+            'valid_until': x,
+            'selected_mentorship_service_set_id': None,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
+        plan_financings = [{
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'selected_mentorship_service_set_id': None,
+        } for _ in range(1, 3)]
+        plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
+        plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
+        subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
+        subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        model = self.bc.database.create(subscription=subscriptions,
+                                        plan_financing=plan_financings,
+                                        plan_service_item=plan_service_items,
+                                        subscription_service_item=subscription_service_items,
+                                        invoice=2,
+                                        plan=2,
+                                        service_item=2,
+                                        cohort=2)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:me_subscription') + (f'?cohort-selected={random.choice([3, "slug1"])},'
+                                                          f'{random.choice([4, "slug2"])}')
+        response = self.client.get(url)
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            'plan_financings': [],
+            'subscriptions': [],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    """
+    🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by good MentorshipServiceSet
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__with_many_items__filter_by_good_mentorship_service_set(self):
+        subscriptions = [{
+            'valid_until': x,
+            'selected_mentorship_service_set_id': y,
+            'selected_event_type_set_id': None,
+        } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
+        plan_financings = [{
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'selected_mentorship_service_set_id': x,
+            'selected_event_type_set_id': None,
+        } for x in range(1, 3)]
+        plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
+        plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
+        subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
+        subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        model = self.bc.database.create(subscription=subscriptions,
+                                        plan_financing=plan_financings,
+                                        plan_service_item=plan_service_items,
+                                        subscription_service_item=subscription_service_items,
+                                        invoice=2,
+                                        plan=2,
+                                        service_item=2,
+                                        mentorship_service_set=2)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:me_subscription') + (
+            '?mentorship-service-set-selected='
+            f'{random.choice([model.mentorship_service_set[0].id,model.mentorship_service_set[0].slug])},'
+            f'{random.choice([model.mentorship_service_set[1].id, model.mentorship_service_set[1].slug])}')
+        response = self.client.get(url)
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            'plan_financings': [
+                get_plan_financing_serializer(self,
+                                              model.plan_financing[1],
+                                              model.academy,
+                                              model.currency,
+                                              model.user,
+                                              model.service,
+                                              mentorship_service_set=model.mentorship_service_set[1],
+                                              invoices=[model.invoice[0], model.invoice[1]],
+                                              financing_options=[],
+                                              plans=[model.plan[0], model.plan[1]],
+                                              service_items=[model.service_item[0], model.service_item[1]]),
+                get_plan_financing_serializer(self,
+                                              model.plan_financing[0],
+                                              model.academy,
+                                              model.currency,
+                                              model.user,
+                                              model.service,
+                                              mentorship_service_set=model.mentorship_service_set[0],
+                                              invoices=[model.invoice[0], model.invoice[1]],
+                                              financing_options=[],
+                                              plans=[model.plan[0], model.plan[1]],
+                                              service_items=[model.service_item[0], model.service_item[1]]),
+            ],
+            'subscriptions': [
+                get_subscription_serializer(self,
+                                            model.subscription[1],
+                                            model.academy,
+                                            model.currency,
+                                            model.user,
+                                            model.service,
+                                            mentorship_service_set=model.mentorship_service_set[1],
+                                            invoices=[model.invoice[0], model.invoice[1]],
+                                            financing_options=[],
+                                            plans=[model.plan[0], model.plan[1]],
+                                            service_items=[model.service_item[0], model.service_item[1]]),
+                get_subscription_serializer(self,
+                                            model.subscription[0],
+                                            model.academy,
+                                            model.currency,
+                                            model.user,
+                                            model.service,
+                                            mentorship_service_set=model.mentorship_service_set[0],
+                                            invoices=[model.invoice[0], model.invoice[1]],
+                                            financing_options=[],
+                                            plans=[model.plan[0], model.plan[1]],
+                                            service_items=[model.service_item[0], model.service_item[1]]),
+            ],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    ###########33
+    ##############3
+    ################3
+    ###################
+    """
+    🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong EventTypeSet
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__with_many_items__filter_by_wrong_event_type_set(self):
+        subscriptions = [{
+            'valid_until': x,
+            'selected_event_type_set_id': None,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
+        plan_financings = [{
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'selected_event_type_set_id': None,
+        } for _ in range(1, 3)]
+        plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
+        plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
+        subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
+        subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        model = self.bc.database.create(subscription=subscriptions,
+                                        plan_financing=plan_financings,
+                                        plan_service_item=plan_service_items,
+                                        subscription_service_item=subscription_service_items,
+                                        invoice=2,
+                                        plan=2,
+                                        service_item=2,
+                                        cohort=2)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:me_subscription') + (
+            f'?event-type-set-selected={random.choice([1, "slug1"])},'
+            f'{random.choice([2, "slug2"])}')
+        response = self.client.get(url)
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            'plan_financings': [],
+            'subscriptions': [],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+    """
+    🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by good MentorshipServiceSet
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__with_many_items__filter_by_good_event_type_set(self):
+        subscriptions = [{
+            'valid_until': x,
+            'selected_event_type_set_id': y,
+        } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
+        plan_financings = [{
+            'valid_until': UTC_NOW + timedelta(days=1),
+            'plan_expires_at': UTC_NOW + timedelta(days=1),
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'selected_event_type_set_id': x,
+        } for x in range(1, 3)]
+        plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
+        plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
+        subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
+        subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        model = self.bc.database.create(subscription=subscriptions,
+                                        plan_financing=plan_financings,
+                                        plan_service_item=plan_service_items,
+                                        subscription_service_item=subscription_service_items,
+                                        invoice=2,
+                                        plan=2,
+                                        service_item=2,
+                                        event_type_set=2)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:me_subscription') + (
+            '?event-type-set-selected='
+            f'{random.choice([model.event_type_set[0].id,model.event_type_set[0].slug])},'
+            f'{random.choice([model.event_type_set[1].id, model.event_type_set[1].slug])}')
+        response = self.client.get(url)
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            'plan_financings': [
+                get_plan_financing_serializer(self,
+                                              model.plan_financing[1],
+                                              model.academy,
+                                              model.currency,
+                                              model.user,
+                                              model.service,
+                                              event_type_set=model.event_type_set[1],
+                                              invoices=[model.invoice[0], model.invoice[1]],
+                                              financing_options=[],
+                                              plans=[model.plan[0], model.plan[1]],
+                                              service_items=[model.service_item[0], model.service_item[1]]),
+                get_plan_financing_serializer(self,
+                                              model.plan_financing[0],
+                                              model.academy,
+                                              model.currency,
+                                              model.user,
+                                              model.service,
+                                              event_type_set=model.event_type_set[0],
+                                              invoices=[model.invoice[0], model.invoice[1]],
+                                              financing_options=[],
+                                              plans=[model.plan[0], model.plan[1]],
+                                              service_items=[model.service_item[0], model.service_item[1]]),
+            ],
+            'subscriptions': [
+                get_subscription_serializer(self,
+                                            model.subscription[1],
+                                            model.academy,
+                                            model.currency,
+                                            model.user,
+                                            model.service,
+                                            event_type_set=model.event_type_set[1],
+                                            invoices=[model.invoice[0], model.invoice[1]],
+                                            financing_options=[],
+                                            plans=[model.plan[0], model.plan[1]],
+                                            service_items=[model.service_item[0], model.service_item[1]]),
+                get_subscription_serializer(self,
+                                            model.subscription[0],
+                                            model.academy,
+                                            model.currency,
+                                            model.user,
+                                            model.service,
+                                            event_type_set=model.event_type_set[0],
                                             invoices=[model.invoice[0], model.invoice[1]],
                                             financing_options=[],
                                             plans=[model.plan[0], model.plan[1]],

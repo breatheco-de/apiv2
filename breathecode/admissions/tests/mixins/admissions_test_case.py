@@ -115,13 +115,13 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         if update:
-            self.assertEqual(self.all_cohort_user_dict(),
+            self.assertEqual(self.bc.database.list_of('admissions.CohortUser'),
                              [{
                                  **self.model_to_dict(model, 'cohort_user'),
                                  'role': 'TEACHER',
                              }])
         else:
-            self.assertEqual(self.all_cohort_user_dict(), [{
+            self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
                 'cohort_id': 1,
                 'educational_status': None,
                 'finantial_status': None,
@@ -203,6 +203,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].timezone,
                 'is_hidden_on_prework':
                 model['cohort'].is_hidden_on_prework,
+                'available_as_saas':
+                model['cohort'].available_as_saas,
                 'timeslots': [{
                     'ending_at':
                     self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
@@ -251,7 +253,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                         self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(cohort_saved.send.call_args_list, [])
         return models
 
@@ -329,6 +332,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].timezone,
                 'is_hidden_on_prework':
                 model['cohort'].is_hidden_on_prework,
+                'available_as_saas':
+                model['cohort'].available_as_saas,
                 'timeslots': [{
                     'ending_at':
                     self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
@@ -377,6 +382,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                         self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(cohort_saved.send.call_args_list, [])
         return models

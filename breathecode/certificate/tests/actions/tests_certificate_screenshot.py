@@ -15,7 +15,7 @@ from breathecode.services.google_cloud import Storage, File
 token = '12345a67890b12345c67890d'
 query_string = urlencode({
     'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
-    'url': f'https://certificate.breatheco.de/preview/{token}',
+    'url': f'https://certificate.4geeks.com/preview/{token}',
     'device': 'desktop',
     'cacheLimit': '0',
     'dimension': '1024x707',

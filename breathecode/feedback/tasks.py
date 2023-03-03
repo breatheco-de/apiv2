@@ -187,7 +187,7 @@ def send_cohort_survey(self, user_id, survey_id):
         'MESSAGE': strings[survey.lang]['survey_message'],
         'TRACKER_URL': f'{api_url()}/v1/feedback/survey/{survey_id}/tracker.png',
         'BUTTON': strings[survey.lang]['button_label'],
-        'LINK': f'https://nps.breatheco.de/survey/{survey_id}?token={token.key}',
+        'LINK': f'https://nps.4geeks.com/survey/{survey_id}?token={token.key}',
     }
 
     if user.email:
@@ -345,7 +345,7 @@ def send_mentorship_session_survey(self, session_id):
         'MESSAGE': answer.title,
         'TRACKER_URL': f'{api_url}/v1/feedback/answer/{answer.id}/tracker.png',
         'BUTTON': strings[answer.lang.lower()]['button_label'],
-        'LINK': f'https://nps.breatheco.de/{answer.id}?token={token.key}',
+        'LINK': f'https://nps.4geeks.com/{answer.id}?token={token.key}',
     }
 
     if session.mentee.email:

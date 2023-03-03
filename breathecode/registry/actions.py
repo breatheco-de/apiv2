@@ -2,12 +2,14 @@ import logging, json, os, re, pathlib, base64, hashlib, requests
 from typing import Optional
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
+from breathecode.utils.views import set_query_parameter
 from breathecode.utils.validation_exception import ValidationException
+from breathecode.services.google_cloud.storage import Storage
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.template.loader import get_template
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 from slugify import slugify
 from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
@@ -480,10 +482,7 @@ class AssetThumbnailGenerator:
             return (self._get_default_url(), False)
         media = self._get_media()
         if not media:
-            tasks.async_create_asset_thumbnail_legacy.delay(self.asset.slug)
-            # the new way of creating screenshots cannot be released yet until
-            # we fix the cloud function
-            # tasks.async_create_asset_thumbnail.delay(self.asset.slug)
+            tasks.async_create_asset_thumbnail.delay(self.asset.slug)
             return (self._get_asset_url(), False)
 
         if not self._the_client_want_resize():
@@ -539,6 +538,45 @@ class AssetThumbnailGenerator:
 
         return bool((self.width and not self.height) or (not self.width and self.height))
 
+    def create(self, delay=600):
+
+        preview_url = self.asset.get_preview_generation_url()
+        if preview_url is None:
+            raise Exception(f'Not able to retrieve a preview generation url')
+
+        filename = self.asset.get_thumbnail_name()
+        url = set_query_parameter(preview_url, 'slug', self.asset.slug)
+
+        response = None
+        try:
+            logger.debug(f'Generating screenshot with URL {url}')
+            query_string = urlencode({
+                'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
+                'url': url,
+                'device': 'desktop',
+                'delay': delay,
+                'cacheLimit': '0',
+                'dimension': '1024x707',
+            })
+            response = requests.get(f'https://api.screenshotmachine.com?{query_string}', stream=True)
+
+        except Exception as e:
+            raise Exception('Error calling service to generate thumbnail screenshot: ' + str(e))
+
+        if response.status_code >= 400:
+            raise Exception(
+                'Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
+                f'returns status code {response.status_code}')
+
+        storage = Storage()
+        cloud_file = storage.file(screenshots_bucket(), filename)
+        cloud_file.upload(response.content)
+
+        self.asset.preview = cloud_file.url()
+        self.asset.save()
+
+        return self.asset
+
 
 def pull_learnpack_asset(github, asset, override_meta):
 
@@ -585,10 +623,21 @@ def pull_learnpack_asset(github, asset, override_meta):
         asset.config = config
 
         # only replace title and description of English language
-        if 'title' in config and (lang == '' or asset.title == '' or asset.title is None):
-            asset.title = config['title']
-        if 'description' in config and (lang == '' or asset.description == '' or asset.description is None):
-            asset.description = config['description']
+        if 'title' in config:
+            if isinstance(config['title'], str):
+                if (lang == '' or asset.title == '' or asset.title is None):
+                    asset.title = config['title']
+            elif isinstance(config['title'], dict) and asset.lang in config['title']:
+                asset.title = config['title'][asset.lang]
+
+        if 'description' in config:
+            if isinstance(config['description'], str):
+                # avoid replacing descriptions for other languages
+                if (lang == '' or asset.description == '' or asset.description is None):
+                    asset.description = config['description']
+            # there are multiple translations, and the translation exists for this lang
+            elif isinstance(config['description'], dict) and asset.lang in config['description']:
+                asset.description = config['description'][asset.lang]
 
         if 'preview' in config:
             asset.preview = config['preview']

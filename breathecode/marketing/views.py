@@ -706,23 +706,42 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
         if academy is None:
             raise ValidationException(f'Academy {academy_id} not found', slug='academy-not-found')
 
-        lead = FormEntry.objects.filter(id=lead_id, academy__id=academy_id).first()
-        if lead is None:
-            raise ValidationException(f'Lead {lead_id} not found', slug='lead-not-found')
+        lookups = None
+        if lead_id is not None:
+            lookups = {'id': lead_id}
+        else:
+            lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if not lookups and lead_id is None:
+            raise ValidationException('Missing lead ids parameters in the querystring', code=400)
+
+        leads = FormEntry.objects.filter(**lookups, academy__id=academy_id)
+        if leads.count() == 0:
+            raise ValidationException(f'Leads not found', slug='lead-not-found')
 
         data = {**request.data}
 
-        serializer = PostFormEntrySerializer(lead,
-                                             data=data,
-                                             context={
-                                                 'request': request,
-                                                 'academy': academy_id
-                                             })
-        if serializer.is_valid():
-            serializer.save()
+        serializers = []
+        for lead in leads:
+            serializer = PostFormEntrySerializer(lead,
+                                                 data=data,
+                                                 context={
+                                                     'request': request,
+                                                     'academy': academy_id
+                                                 })
+            serializers.append(serializer)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        for s in serializers:
+            s.save()
+
+        if len(serializers) == 1:
             big_serializer = FormEntryBigSerializer(serializer.instance)
-            return Response(big_serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            big_serializer = FormEntryBigSerializer(leads, many=True)
+
+        return Response(big_serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_lead')
     def delete(self, request, academy_id=None):

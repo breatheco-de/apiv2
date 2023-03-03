@@ -73,6 +73,7 @@ def cohort_field(data={}):
         'syllabus_version_id': 1,
         'timezone': 'America/Caracas',
         'is_hidden_on_prework': True,
+        'available_as_saas': False,
         **data,
     }
 
@@ -263,7 +264,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -308,7 +309,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -352,7 +353,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -395,7 +396,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -425,7 +426,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        models_dict = self.all_cohort_dict()
+        models_dict = self.bc.database.list_of('admissions.Cohort')
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
@@ -441,7 +442,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -467,7 +468,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        models_dict = self.all_cohort_dict()
+        models_dict = self.bc.database.list_of('admissions.Cohort')
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
@@ -493,6 +494,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': cohort.timezone,
             'is_hidden_on_prework': cohort.is_hidden_on_prework,
+            'available_as_saas': cohort.available_as_saas,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -520,7 +522,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list,
                          [call(instance=cohort, sender=cohort.__class__, created=True)])
@@ -564,7 +566,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -592,7 +594,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        models_dict = self.all_cohort_dict()
+        models_dict = self.bc.database.list_of('admissions.Cohort')
         url = reverse_lazy('admissions:academy_cohort')
         ending_date = datetime.today() + timedelta(days=18)
         data = {
@@ -619,6 +621,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': model.academy.timezone,
+            'available_as_saas': cohort.available_as_saas,
             'is_hidden_on_prework': True,
             'academy': {
                 'id': cohort.academy.id,
@@ -649,7 +652,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(),
                          [{
                              'id': 1,
@@ -688,7 +691,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        models_dict = self.all_cohort_dict()
+        models_dict = self.bc.database.list_of('admissions.Cohort')
         url = reverse_lazy('admissions:academy_cohort')
         ending_date = datetime.today() + timedelta(days=18)
         data = {
@@ -717,6 +720,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': 'Pacific/Pago_Pago',
             'is_hidden_on_prework': cohort.is_hidden_on_prework,
+            'available_as_saas': cohort.available_as_saas,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -745,7 +749,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), models_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(),
                          [{
                              'id': 1,
@@ -796,6 +800,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'never_ends': True,
             'remote_available': True,
             'schedule': 1,
+            'available_as_saas': False
         }
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -810,6 +815,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                        'slug': 'they-killed-kenny',
                                        'name': 'They killed kenny',
                                        'schedule': 1,
+                                       'available_as_saas': False
                                    })
 
         self.assertEqual(json, expected)
@@ -874,6 +880,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'never_ends': True,
             'remote_available': True,
             'schedule': 1,
+            'available_as_saas': False
         }
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -888,6 +895,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                        'slug': 'they-killed-kenny',
                                        'name': 'They killed kenny',
                                        'schedule': 1,
+                                       'available_as_saas': False
                                    })
 
         self.assertEqual(json, expected)
@@ -1039,6 +1047,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1158,6 +1167,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1274,6 +1284,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'timeslots': [],
             'schedule': {
                 'id': model['cohort'].schedule.id,
@@ -1360,6 +1371,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1456,6 +1468,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1492,7 +1505,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self_all_cohort = self.all_cohort_dict()
+        self_all_cohort = self.bc.database.list_of('admissions.Cohort')
         for j in self_all_cohort:
             del j['ending_date']
             del j['kickoff_date']
@@ -1557,6 +1570,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1593,7 +1607,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        all_cohort_dict = self.all_cohort_dict()
+        all_cohort_dict = self.bc.database.list_of('admissions.Cohort')
         for cohort_dict in all_cohort_dict:
             del cohort_dict['ending_date']
             del cohort_dict['kickoff_date']
@@ -1679,6 +1693,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1764,6 +1779,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1863,6 +1879,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -1900,7 +1917,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self_all_cohort = self.all_cohort_dict()
+        self_all_cohort = self.bc.database.list_of('admissions.Cohort')
         for j in self_all_cohort:
             del j['ending_date']
             del j['kickoff_date']
@@ -1934,7 +1951,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
             **self.model_to_dict(model, 'cohort'),
         }])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
@@ -1973,7 +1990,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-            self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+                **self.model_to_dict(model, 'cohort')
+            }])
             self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

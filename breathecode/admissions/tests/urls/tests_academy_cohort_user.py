@@ -15,6 +15,20 @@ from ..mixins import AdmissionsTestCase
 UTC_NOW = timezone.now()
 
 
+def cohort_user_item(data={}):
+    return {
+        'cohort_id': 0,
+        'educational_status': None,
+        'finantial_status': None,
+        'id': 0,
+        'role': 'STUDENT',
+        'user_id': 0,
+        'watching': False,
+        'history_log': {},
+        **data,
+    }
+
+
 def post_serializer(self, cohort, user, profile_academy=None, data={}):
     return {
         'cohort': {
@@ -31,6 +45,8 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             cohort.slug,
             'stage':
             cohort.stage,
+            'available_as_saas':
+            cohort.available_as_saas,
         },
         'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
         'educational_status': None,
@@ -71,6 +87,8 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             cohort.slug,
             'stage':
             cohort.stage,
+            'available_as_saas':
+            cohort.available_as_saas,
         },
         'created_at': self.bc.datetime.to_iso_string(cohort_user.created_at),
         'educational_status': cohort_user.educational_status,
@@ -164,6 +182,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'user': {
                 'id': model['cohort_user'].user.id,
@@ -240,6 +259,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'user': {
                 'id': model['cohort_user'].user.id,
@@ -299,6 +319,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
@@ -367,6 +388,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'user': {
                 'id': model['cohort_user'].user.id,
@@ -430,6 +452,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -507,6 +530,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -558,6 +582,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -612,6 +637,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -662,6 +688,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -735,6 +762,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -764,7 +792,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     """
     🔽🔽🔽 Put bulk mode
@@ -785,7 +813,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     def test__put__in_bulk__without_data__without_id(self):
         """Test /cohort/user without auth"""
@@ -802,7 +830,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     def test__put__in_bulk__without_data__with_bad_id(self):
         """Test /cohort/user without auth"""
@@ -819,7 +847,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     def test__put__in_bulk__with_one_item(self):
         """Test /cohort/user without auth"""
@@ -846,15 +874,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [{
-            'id': 1,
-            'user_id': 1,
-            'cohort_id': 1,
-            'role': 'STUDENT',
-            'finantial_status': None,
-            'educational_status': None,
-            'watching': False,
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            self.bc.format.to_dict(model.cohort_user),
+        ])
 
     def test__put__in_bulk__with_two_items(self):
         """Test /cohort/user without auth"""
@@ -901,23 +923,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [{
-            'id': 1,
-            'user_id': 1,
-            'cohort_id': 1,
-            'role': 'STUDENT',
-            'finantial_status': 'LATE',
-            'educational_status': None,
-            'watching': False,
-        }, {
-            'id': 2,
-            'user_id': 2,
-            'cohort_id': 2,
-            'role': 'STUDENT',
-            'finantial_status': None,
-            'educational_status': 'GRADUATED',
-            'watching': False,
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            {
+                **self.bc.format.to_dict(model[0].cohort_user),
+                'finantial_status': 'LATE',
+            },
+            {
+                **self.bc.format.to_dict(model[1].cohort_user),
+                'educational_status': 'GRADUATED',
+            },
+        ])
 
     """
     🔽🔽🔽 Post bulk mode
@@ -939,7 +954,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__post__in_bulk__1_item(self):
@@ -971,15 +986,14 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_user_dict(), [{
-            'cohort_id': 1,
-            'educational_status': None,
-            'finantial_status': None,
-            'id': 1,
-            'role': 'STUDENT',
-            'user_id': 1,
-            'watching': False,
-        }])
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            cohort_user_item({
+                'cohort_id': 1,
+                'id': 1,
+                'user_id': 1,
+            }),
+        ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__post_in_bulk__2_items(self):
@@ -1013,23 +1027,18 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_user_dict(), [{
-            'cohort_id': 1,
-            'educational_status': None,
-            'finantial_status': None,
-            'id': 1,
-            'role': 'STUDENT',
-            'user_id': 2,
-            'watching': False,
-        }, {
-            'cohort_id': 1,
-            'educational_status': None,
-            'finantial_status': None,
-            'id': 2,
-            'role': 'STUDENT',
-            'user_id': 3,
-            'watching': False,
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            cohort_user_item({
+                'cohort_id': 1,
+                'id': 1,
+                'user_id': 2,
+            }),
+            cohort_user_item({
+                'cohort_id': 1,
+                'id': 2,
+                'user_id': 3,
+            }),
+        ])
 
     """
     🔽🔽🔽 Post in bulk, statuses in lowercase
@@ -1079,15 +1088,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_user_dict(), [{
-            'cohort_id': 1,
-            'role': role.upper(),
-            'finantial_status': finantial_status.upper(),
-            'educational_status': educational_status.upper(),
-            'id': 1,
-            'user_id': 1,
-            'watching': False,
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            cohort_user_item({
+                'cohort_id': 1,
+                'role': role.upper(),
+                'finantial_status': finantial_status.upper(),
+                'educational_status': educational_status.upper(),
+                'id': 1,
+                'user_id': 1,
+            }),
+        ])
 
     """
     🔽🔽🔽 Delete in bulk
@@ -1107,7 +1117,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_user_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     def test__delete__in_bulk__with_one(self):
         """Test /cohort/:id/user without auth"""
@@ -1134,7 +1144,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_cohort_user_dict(), [])
+            self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     def test__delete__in_bulk__with_two(self):
         """Test /cohort/:id/user without auth"""
@@ -1173,7 +1183,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_cohort_user_dict(), [])
+            self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     def test_academy_cohort_user__post__1_item(self):
 
@@ -1201,7 +1211,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(self.all_cohort_user_dict(), [])
+            self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     def test_academy_cohort_user__post__2_item(self):
         #incomplete test
@@ -1233,4 +1243,4 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(self.all_cohort_user_dict(), [])
+            self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])

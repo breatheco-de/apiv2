@@ -1,4 +1,5 @@
 from rest_framework.views import exception_handler
+from django.core.exceptions import ValidationError
 
 __all__ = ['breathecode_exception_handler']
 
@@ -19,7 +20,9 @@ def breathecode_exception_handler(exc, context):
     # Now add the HTTP status code to the response.
 
     if response is not None:
-        if isinstance(response.data, list):
+        if isinstance(exc, ValidationError):
+            response.data['status_code'] = 400
+        elif isinstance(response.data, list):
             if response.data[0].code != 'invalid':
                 response.data = {'status_code': response.data[0].code, 'details': str(response.data[0])}
             else:

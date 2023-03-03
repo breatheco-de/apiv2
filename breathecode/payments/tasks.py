@@ -17,7 +17,7 @@ from breathecode.payments.signals import consume_service
 from breathecode.utils.decorators import task
 from breathecode.utils.i18n import translation
 
-from .models import Bag, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, ServiceStockScheduler, Subscription, SubscriptionServiceItem
+from .models import AbstractIOweYou, Bag, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription, SubscriptionServiceItem
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,16 @@ def renew_consumables(self, scheduler_id: int):
     """
     The purpose of this function is renew every service items belongs to a subscription.
     """
+
+    def get_resource_lookup(i_owe_you: AbstractIOweYou, service: Service):
+        lookups = {}
+
+        key = service.type.lower()
+        value = getattr(i_owe_you, f'selected_{key}', None)
+        if value:
+            lookups[key] = value
+
+        return lookups
 
     logger.info(f'Starting renew_consumables for service stock scheduler {scheduler_id}')
 
@@ -104,31 +114,34 @@ def renew_consumables(self, scheduler_id: int):
         logger.info(f'The scheduler {scheduler.id} don\'t needs to be renewed')
         return
 
-    plan_service_item = None
     service_item = None
     resource_valid_until = None
+    selected_lookup = {}
 
     if scheduler.plan_handler and scheduler.plan_handler.subscription:
         user = scheduler.plan_handler.subscription.user
-        plan_service_item = scheduler.plan_handler.handler
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.subscription.valid_until
 
+        selected_lookup = get_resource_lookup(scheduler.plan_handler.subscription, service_item.service)
+
     elif scheduler.plan_handler and scheduler.plan_handler.plan_financing:
         user = scheduler.plan_handler.plan_financing.user
-        plan_service_item = scheduler.plan_handler.handler
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.plan_financing.valid_until
 
+        selected_lookup = get_resource_lookup(scheduler.plan_handler.plan_financing, service_item.service)
+
     elif scheduler.subscription_handler and scheduler.subscription_handler.subscription:
         user = scheduler.subscription_handler.subscription.user
-        plan_service_item = scheduler.subscription_handler
         service_item = scheduler.subscription_handler.service_item
         resource_valid_until = scheduler.subscription_handler.subscription.valid_until
 
-    unit = plan_service_item.service_item.renew_at if plan_service_item else service_item.renew_at
-    unit_type = (plan_service_item.service_item.renew_at_unit
-                 if plan_service_item else service_item.renew_at_unit)
+        selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription,
+                                              service_item.service)
+
+    unit = service_item.renew_at
+    unit_type = service_item.renew_at_unit
 
     delta = actions.calculate_relative_delta(unit, unit_type)
     scheduler.valid_until = scheduler.valid_until or utc_now
@@ -139,38 +152,25 @@ def renew_consumables(self, scheduler_id: int):
 
     scheduler.save()
 
-    if plan_service_item and plan_service_item.mentorship_service_set:
-        for mentorship_service in plan_service_item.mentorship_service_set.mentorship_services.all():
-            consumable = Consumable(service_item=service_item,
-                                    user=user,
-                                    valid_until=scheduler.valid_until,
-                                    mentorship_service=mentorship_service)
-
-            consumable.save()
-
-            scheduler.consumables.add(consumable)
-
-            logger.info(
-                f'The consumable {consumable.id} for mentorship service {mentorship_service.id} was built')
-
-    elif plan_service_item and (cohorts := plan_service_item.cohorts.all()):
-        for cohort in cohorts:
-            consumable = Consumable(service_item=service_item,
-                                    user=user,
-                                    valid_until=scheduler.valid_until,
-                                    cohort=cohort)
-
-            consumable.save()
-
-            scheduler.consumables.add(consumable)
-
-            logger.info(f'The consumable {consumable.id} for cohort {cohort.id} was built')
-
-    else:
-        logger.error('The PlanServiceItem or the ServiceItem not have a resource linked to it '
+    if not selected_lookup:
+        logger.error('The Plan not have a resource linked to it '
                      f'for the ServiceStockScheduler {scheduler.id}')
         return
 
+    consumable = Consumable(service_item=service_item,
+                            user=user,
+                            valid_until=scheduler.valid_until,
+                            **selected_lookup)
+
+    consumable.save()
+
+    scheduler.consumables.add(consumable)
+
+    key = list(selected_lookup.keys())[0]
+    id = selected_lookup[key].id
+    name = key.replace('selected_', '').replace('_', ' ')
+
+    logger.info(f'The consumable {consumable.id} for {name} {id} was built')
     logger.info(f'The scheduler {scheduler.id} was renewed')
 
 
@@ -196,6 +196,9 @@ def renew_subscription_consumables(self, subscription_id: int):
         return
 
     for scheduler in ServiceStockScheduler.objects.filter(subscription_handler__subscription=subscription):
+        renew_consumables.delay(scheduler.id)
+
+    for scheduler in ServiceStockScheduler.objects.filter(plan_handler__subscription=subscription):
         renew_consumables.delay(scheduler.id)
 
 
@@ -506,10 +509,7 @@ def build_service_stock_scheduler_from_subscription(self,
         if subscription.valid_until and valid_until > subscription.valid_until:
             valid_until = subscription.valid_until
 
-        ServiceStockScheduler.objects.get_or_create(subscription_handler=handler,
-                                                    defaults={
-                                                        'valid_until': valid_until,
-                                                    })
+        ServiceStockScheduler.objects.get_or_create(subscription_handler=handler)
 
     for plan in subscription.plans.all():
         for handler in PlanServiceItem.objects.filter(plan=plan):
@@ -527,10 +527,7 @@ def build_service_stock_scheduler_from_subscription(self,
             handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription,
                                                                       handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler,
-                                                        defaults={
-                                                            'valid_until': valid_until,
-                                                        })
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
 
     renew_subscription_consumables.delay(subscription.id)
 
@@ -590,10 +587,7 @@ def build_service_stock_scheduler_from_plan_financing(self,
             handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing,
                                                                       handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler,
-                                                        defaults={
-                                                            'valid_until': valid_until,
-                                                        })
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
 
     renew_plan_financing_consumables.delay(plan_financing.id)
 
@@ -621,9 +615,23 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     elif bag.chosen_period == 'YEAR':
         months = 12
 
+    cohort = bag.selected_cohorts.first()
+    plan = bag.plans.first()
+
+    event_type_set = bag.selected_event_type_sets.first()
+    if plan and not event_type_set:
+        event_type_set = plan.event_type_set
+
+    mentorship_service_set = bag.selected_mentorship_service_sets.first()
+    if plan and not mentorship_service_set:
+        mentorship_service_set = plan.mentorship_service_set
+
     subscription = Subscription.objects.create(user=bag.user,
                                                paid_at=invoice.paid_at,
                                                academy=bag.academy,
+                                               selected_cohort=cohort,
+                                               selected_event_type_set=event_type_set,
+                                               selected_mentorship_service_set=mentorship_service_set,
                                                valid_until=None,
                                                next_payment_at=invoice.paid_at + relativedelta(months=months),
                                                status='ACTIVE')
@@ -674,9 +682,23 @@ def build_plan_financing(self, bag_id: int, invoice_id: int):
         if utc_now + new_delta > utc_now + delta:
             delta = new_delta
 
+    cohort = bag.selected_cohorts.first()
+    plan = bag.plans.first()
+
+    event_type_set = bag.selected_event_type_sets.first()
+    if plan and not event_type_set:
+        event_type_set = plan.event_type_set
+
+    mentorship_service_set = bag.selected_mentorship_service_sets.first()
+    if plan and not mentorship_service_set:
+        mentorship_service_set = plan.mentorship_service_set
+
     financing = PlanFinancing.objects.create(user=bag.user,
                                              next_payment_at=invoice.paid_at + relativedelta(months=1),
                                              academy=bag.academy,
+                                             selected_cohort=cohort,
+                                             selected_event_type_set=event_type_set,
+                                             selected_mentorship_service_set=mentorship_service_set,
                                              valid_until=invoice.paid_at + relativedelta(months=months),
                                              plan_expires_at=invoice.paid_at + delta,
                                              monthly_price=invoice.amount,
@@ -724,10 +746,23 @@ def build_free_trial(self, bag_id: int, invoice_id: int):
 
         until = invoice.paid_at + delta
 
+        cohort = bag.selected_cohorts.first()
+
+        event_type_set = bag.selected_event_type_sets.first()
+        if not event_type_set:
+            event_type_set = plan.event_type_set
+
+        mentorship_service_set = bag.selected_mentorship_service_sets.first()
+        if not mentorship_service_set:
+            mentorship_service_set = plan.mentorship_service_set
+
         subscription = Subscription.objects.create(user=bag.user,
                                                    paid_at=invoice.paid_at,
                                                    academy=bag.academy,
                                                    valid_until=until,
+                                                   selected_cohort=cohort,
+                                                   selected_event_type_set=event_type_set,
+                                                   selected_mentorship_service_set=mentorship_service_set,
                                                    next_payment_at=until,
                                                    status='FREE_TRIAL')
 

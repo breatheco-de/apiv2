@@ -1,4 +1,3 @@
-from breathecode.events.actions import fix_datetime_weekday, update_timeslots_out_of_range
 import os
 
 from django.contrib.auth.models import User
@@ -8,6 +7,8 @@ from breathecode.events.caches import EventCache
 from breathecode.payments.consumers import cohort_schedule_by_url_param
 from breathecode.utils import APIException
 from datetime import datetime, timedelta
+from breathecode.utils.views import private_view, render_message, set_query_parameter
+from django.shortcuts import redirect, render
 import logging
 import re
 import pytz
@@ -17,7 +18,6 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.http.response import HttpResponse
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.cache import Cache
-from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -25,16 +25,18 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 
 from breathecode.utils.multi_status_response import MultiStatusResponse
+from .actions import fix_datetime_weekday, update_timeslots_out_of_range, get_my_events
 from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibilitySetting, Organization,
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (GetLiveClassJoinSerializer, GetLiveClassSerializer, LiveClassSerializer,
-                          EventSerializer, EventSmallSerializer, EventTypeSerializer, EventTypeBigSerializer,
-                          EventCheckinSerializer, EventSmallSerializerNoAcademy,
+from .serializers import (GetLiveClassJoinSerializer, EventBigSerializer, GetLiveClassSerializer,
+                          LiveClassSerializer, EventSerializer, EventSmallSerializer, EventTypeSerializer,
+                          EventTypeBigSerializer, EventCheckinSerializer, EventSmallSerializerNoAcademy,
                           EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
                           EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
-                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
+                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer,
+                          PUTEventCheckinSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -149,79 +151,23 @@ class EventMeView(APIView):
     List all snippets, or create a new snippet.
     """
 
-    def build_query_params(self, cohort=None, syllabus=None, academy=None):
-        """
-        Build the query params to the visibility options.
-        """
+    def get(self, request, event_id=None):
 
-        return {
-            'visibility_settings__cohort': cohort,
-            'visibility_settings__syllabus': syllabus,
-            'visibility_settings__academy': academy,
-        }
+        items = get_my_events(request.user)
 
-    def get_related_resources(self):
-        """
-        Get the resources related to this user.
-        """
+        if event_id is not None:
+            single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
+            _r = self.request.GET.get('redirect', 'false')
+            if _r == 'true':
+                if single_event is None:
+                    return render_message(request, 'Event not found or you dont have access')
+                if single_event.live_stream_url is None or single_event.live_stream_url == '':
+                    return render_message(request, 'Event live stream URL is not found')
+                return redirect(single_event.live_stream_url, permanent=True)
 
-        syllabus = []
-        academies = []
-        cohorts = []
-        cohort_users = CohortUser.objects.filter(user=self.request.user)
-        cohort_users_with_syllabus = cohort_users.filter(cohort__syllabus_version__isnull=False)
+            serializer = EventBigSerializer(single_event, many=False)
+            return Response(serializer.data)
 
-        for cohort_user in cohort_users_with_syllabus:
-            if cohort_user.cohort.syllabus_version.syllabus not in cohorts:
-                syllabus.append({
-                    'syllabus': cohort_user.cohort.syllabus_version.syllabus,
-                    'academy': cohort_user.cohort.academy,
-                })
-
-        for cohort_user in cohort_users:
-            if cohort_user.cohort.academy not in cohorts:
-                academies.append(cohort_user.cohort.academy)
-
-        for cohort_user in cohort_users:
-            if cohort_user.cohort not in cohorts:
-                cohorts.append(cohort_user.cohort)
-
-        return academies, cohorts, syllabus
-
-    def get(self, request):
-        query = None
-
-        academies, cohorts, syllabus = self.get_related_resources()
-
-        # shared with the whole academy
-        for academy in academies:
-            kwargs = self.build_query_params(academy=academy)
-            if query:
-                query |= Q(**kwargs, academy=academy) | Q(**kwargs, allow_shared_creation=True)
-            else:
-                query = Q(**kwargs, academy=academy) | Q(**kwargs, allow_shared_creation=True)
-
-        # shared with a specific cohort
-        for cohort in cohorts:
-            kwargs = self.build_query_params(academy=cohort.academy, cohort=cohort)
-            # is not necessary provided the syllabus
-            if query:
-                query |= Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
-            else:
-                query = Q(**kwargs, academy=cohort.academy) | Q(**kwargs, allow_shared_creation=True)
-
-        # shared with a specific syllabus
-        for s in syllabus:
-            kwargs = self.build_query_params(academy=s['academy'], syllabus=s['syllabus'])
-            if query:
-                query |= Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
-            else:
-                query = Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
-
-        if query:
-            items = EventType.objects.filter(query)
-        else:
-            items = EventType.objects.none()
         items = Event.objects.filter(event_type__in=items, status='ACTIVE').order_by('starting_at')
         lookup = {}
 
@@ -233,7 +179,7 @@ class EventMeView(APIView):
 
         items = items.filter(**lookup)
 
-        serializer = EventSerializer(items, many=True)
+        serializer = EventBigSerializer(items, many=True)
         return Response(serializer.data)
 
 
@@ -718,7 +664,62 @@ class EventTypeVisibilitySettingView(APIView):
         return handler.response(serializer.data)
 
 
-class EventCheckinView(APIView):
+@private_view()
+def join_event(request, token, event_id):
+
+    items = get_my_events(token.user)
+
+    event = Event.objects.filter(event_type__in=items, id=event_id).first()
+    if event is None:
+        return render_message(request, 'Event not found or you dont have access')
+    if event.live_stream_url is None or event.live_stream_url == '':
+        return render_message(request, 'Event live stream URL was not found')
+
+    now = timezone.now()
+    if event.ending_at < now:
+        return render_message(request, 'This event has already finished')
+
+    if event.starting_at > now:
+        return render(request, 'countdown.html', {
+            'token': token.key,
+            'event': EventSmallSerializer(event).data,
+        })
+
+    # if the event is happening right now and I have not joined yet
+    checkin = EventCheckin.objects.filter(event=event, attendee=token.user).first()
+    if checkin is None:
+        checkin = EventCheckin(event=event, attendee=token.user, email=token.user.email)
+
+    if checkin.attended_at is None:
+
+        checkin.status = 'DONE'
+        checkin.attended_at = now
+        checkin.save()
+
+    return redirect(event.live_stream_url, permanent=True)
+
+
+class EventMeCheckinView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    def put(self, request, event_id):
+
+        items = get_my_events(request.user)
+
+        event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        if event is None:
+            raise ValidationException('Event not found or you dont have access', slug='event-not-found')
+
+        serializer = PUTEventCheckinSerializer(event, request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyEventCheckinView(APIView):
     """
     List all snippets, or create a new snippet.
     """

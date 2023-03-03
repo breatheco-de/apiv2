@@ -79,6 +79,7 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Auth
     """
 
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_user_me_task__without_auth(self):
         url = reverse_lazy('assignments:user_me_task')
         response = self.client.get(url)
@@ -94,6 +95,7 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get without Task
     """
 
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_user_me_task__without_task(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
@@ -112,6 +114,7 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with one Task
     """
 
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_user_me_task__with_one_task(self):
         model = self.bc.database.create(user=1, task=1)
         self.bc.request.authenticate(model.user)
@@ -130,6 +133,7 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with two Task
     """
 
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_user_me_task__with_two_task(self):
         model = self.bc.database.create(user=1, task=2)
         self.bc.request.authenticate(model.user)
@@ -148,6 +152,7 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with one Task but the other user
     """
 
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_user_me_task__with_one_task__but_the_other_user(self):
         task = {'user_id': 2}
         model = self.bc.database.create(user=2, task=task)
@@ -167,6 +172,7 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with two Task but the other user
     """
 
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_user_me_task__with_two_tasks__but_the_other_user(self):
         task = {'user_id': 2}
         model = self.bc.database.create(user=2, task=(2, task))
@@ -186,6 +192,7 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Delete
     """
 
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_delete_tasks_in_bulk_found_and_deleted(self):
 
         model = self.bc.database.create(user=1, task=2)
@@ -198,6 +205,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
 
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_delete_tasks_in_bulk_tasks_not_found(self):
 
         model = self.bc.database.create(user=1)
@@ -230,6 +238,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
 
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_delete_task_in_bulk_associated_with_another_user(self):
 
         model = self.bc.database.create(user=2, task=2)
@@ -264,6 +273,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_put__without_task(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
@@ -281,6 +291,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test__put__without_task__passing_list(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
@@ -301,6 +312,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test__put__without_task__one_item_in_body(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
@@ -322,6 +334,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test__put__without_task__one_item_in_body__with_id(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
@@ -343,6 +356,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_put_passing_taks_id(self):
         model = self.bc.database.create(user=1, task=2)
@@ -362,8 +376,10 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test_put_passing_random_values_to_update_task(self):
-        model = self.bc.database.create(user=1, task=2, cohort=2)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(user=1, task=2, cohort=2)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task')
@@ -378,7 +394,8 @@ class MediaTestSuite(AssignmentsTestCase):
             'description': self.bc.fake.text()[:450],
             'cohort': random.randint(1, 2)
         } for n in range(1, 3)]
-        response = self.client.put(url, data, format='json')
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            response = self.client.put(url, data, format='json')
 
         json = response.json()
 
@@ -403,6 +420,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test__put__with_task__one_item_in_body__passing_revision_status(self):
         statuses = ['APPROVED', 'REJECTED', 'IGNORED']
         for index in range(0, 3):
@@ -440,6 +458,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     def test__put__with_task__one_item_in_body__passing_revision_status__teacher_token(self):
         statuses = ['APPROVED', 'REJECTED', 'IGNORED']
         for index in range(0, 3):
@@ -456,7 +475,8 @@ class MediaTestSuite(AssignmentsTestCase):
                     'user_id': (index * 2) + 2,
                 },
             ]
-            model = self.bc.database.create(user=2, task=task, cohort_user=cohort_users)
+            with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+                model = self.bc.database.create(user=2, task=task, cohort_user=cohort_users)
             self.bc.request.authenticate(model.user[1])
 
             url = reverse_lazy('assignments:user_me_task')
@@ -465,7 +485,8 @@ class MediaTestSuite(AssignmentsTestCase):
                 'revision_status': next_status,
             }]
             start = timezone.now()
-            response = self.client.put(url, data, format='json')
+            with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+                response = self.client.put(url, data, format='json')
             end = timezone.now()
 
             json = response.json()

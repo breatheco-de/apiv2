@@ -10,7 +10,8 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 from breathecode.utils.i18n import translation
-from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser
+from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser,
+                     GithubAcademyUser)
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort, Syllabus
 from rest_framework.exceptions import ValidationError
@@ -71,6 +72,22 @@ class GitpodUserSmallSerializer(serpy.Serializer):
     user = UserTinySerializer(required=False)
     academy = GetSmallAcademySerializer(required=False)
     target_cohort = GetSmallCohortSerializer(required=False)
+
+
+class GithubUserSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    academy = GetSmallAcademySerializer(required=False)
+    user = UserTinySerializer(required=False)
+    username = serpy.Field()
+
+    storage_status = serpy.Field()
+    storage_action = serpy.Field()
+    storage_log = serpy.Field()
+    storage_synch_at = serpy.Field()
+
+    created_at = serpy.Field()
 
 
 class AcademyTinySerializer(serpy.Serializer):
@@ -559,7 +576,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug('Sending invite email to ' + email)
 
-                params = {'callback': 'https://admin.breatheco.de'}
+                params = {'callback': 'https://admin.4geeks.com'}
                 querystr = urllib.parse.urlencode(params)
                 url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                     str(invite.token) + '?' + querystr
@@ -792,6 +809,37 @@ class MemberPUTSerializer(serializers.ModelSerializer):
         if instance.user.last_name is None or instance.user.last_name == '':
             instance.user.last_name = instance.last_name or ''
         instance.user.save()
+
+        return super().update(instance, validated_data)
+
+
+class PUTGithubUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = GithubAcademyUser
+        exclude = ('storage_status', 'user', 'academy', 'storage_log', 'storage_synch_at', 'username')
+
+    # def validate(self, data):
+
+    #     already = ProfileAcademy.objects.filter(user=data['user'], academy=data['academy']).first()
+    #     if not already:
+    #         raise ValidationError('User not found on this particular academy')
+
+    #     return data
+
+    def update(self, instance, validated_data):
+
+        if instance.storage_action != validated_data['storage_action']:
+            # manually ignoring a contact is synched immediately
+            if validated_data['storage_action'] == 'IGNORED':
+                validated_data['storage_status'] = 'SYNCHED'
+            # anything else has to be processed later
+            else:
+                validated_data['storage_status'] = 'PENDING'
+            validated_data['storage_log'] = [
+                GithubAcademyUser.create_log('User was manually scheduled to be ' +
+                                             validated_data['storage_action'])
+            ]
 
         return super().update(instance, validated_data)
 

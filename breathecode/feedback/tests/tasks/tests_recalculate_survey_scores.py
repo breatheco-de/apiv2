@@ -67,7 +67,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
            MagicMock(return_value=RESPONSE_RATE))
     def test_with_one_surveys(self):
-        model = self.bc.database.create(survey=1)
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(survey=1)
 
         logging.Logger.debug.call_args_list = []
 

@@ -22,7 +22,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         link_randomly_relations_to_cohorts(None, request, queryset)
 
-        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
     """
     🔽🔽🔽 With one Cohort
@@ -37,7 +37,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
         queryset = Cohort.objects.all()
 
         link_randomly_relations_to_cohorts(None, request, queryset)
-        self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
 
     """
     🔽🔽🔽 With one Cohort and SyllabusVersion
@@ -57,7 +59,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         queryset = Cohort.objects.all()
 
         link_randomly_relations_to_cohorts(None, request, queryset)
-        self.assertEqual(self.all_cohort_dict(),
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              **self.model_to_dict(model, 'cohort'),
                              'syllabus_version_id': 1,
@@ -82,7 +84,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         queryset = Cohort.objects.all()
 
         link_randomly_relations_to_cohorts(None, request, queryset)
-        self.assertEqual(self.all_cohort_dict(),
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              **self.model_to_dict(model, 'cohort'),
                              'syllabus_version_id': 1,

@@ -92,6 +92,7 @@ class AuthTestCase(APITestCase, ModelsMixin):
                         credentials_github=False,
                         profile=False,
                         profile_kwargs={},
+                        github_academy_user={},
                         models={}):
         """Generate models"""
         # TODO: rewrite authenticate tests to use the global generate_models

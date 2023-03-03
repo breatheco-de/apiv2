@@ -1,7 +1,9 @@
 from django.contrib import admin
+from breathecode.payments import tasks
 
-from breathecode.payments.models import (Bag, Consumable, Currency, FinancialReputation, FinancingOption,
-                                         Invoice, MentorshipServiceSet, PaymentContact, Plan, PlanFinancing,
+from breathecode.payments.models import (Bag, Consumable, Currency, EventTypeSet, EventTypeSetTranslation,
+                                         FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
+                                         MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing,
                                          PlanServiceItem, PlanServiceItemHandler, PlanTranslation, Service,
                                          ServiceItem, ServiceItemFeature, ServiceStockScheduler,
                                          ServiceTranslation, Subscription, SubscriptionServiceItem)
@@ -60,6 +62,7 @@ class PlanAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'status', 'trial_duration', 'trial_duration_unit', 'owner')
     list_filter = ['trial_duration_unit', 'owner']
     search_fields = ['lang', 'title']
+    raw_id_fields = ['owner']
 
 
 @admin.register(PlanTranslation)
@@ -74,12 +77,19 @@ class ConsumableAdmin(admin.ModelAdmin):
     list_display = ('id', 'unit_type', 'how_many', 'service_item', 'user', 'valid_until')
     list_filter = ['unit_type']
     search_fields = ['service_item__service__slug']
+    raw_id_fields = ['user', 'service_item', 'cohort', 'event_type_set', 'mentorship_service_set']
 
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = ('id', 'amount', 'currency', 'paid_at', 'status', 'stripe_id', 'user', 'academy')
     list_filter = ['status', 'academy']
+    raw_id_fields = ['user', 'currency', 'bag', 'academy']
+
+
+def renew_subscription_consumables(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.renew_subscription_consumables.delay(item.id)
 
 
 @admin.register(Subscription)
@@ -88,6 +98,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
                     'pay_every_unit', 'user')
     list_filter = ['status', 'is_refundable', 'pay_every_unit']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = [
+        'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
+    ]
+    actions = [renew_subscription_consumables]
 
 
 @admin.register(SubscriptionServiceItem)
@@ -98,18 +112,50 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
     ]
 
 
+def renew_plan_financing_consumables(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.renew_plan_financing_consumables.delay(item.id)
+
+
 @admin.register(PlanFinancing)
 class PlanFinancingAdmin(admin.ModelAdmin):
     list_display = ('id', 'next_payment_at', 'valid_until', 'status', 'user')
     list_filter = ['status']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = [
+        'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
+    ]
+    actions = [renew_plan_financing_consumables]
 
 
 @admin.register(MentorshipServiceSet)
 class MentorshipServiceSetAdmin(admin.ModelAdmin):
-    list_display = ('id', 'slug', 'name', 'academy')
+    list_display = ('id', 'slug', 'academy')
     list_filter = ['academy__slug']
-    search_fields = ['slug', 'name', 'academy__slug', 'academy__name']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
+@admin.register(MentorshipServiceSetTranslation)
+class MentorshipServiceSetTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'mentorship_service_set', 'lang', 'title', 'description', 'short_description')
+    list_filter = ['lang']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
+@admin.register(EventTypeSet)
+class EventTypeSetAdmin(admin.ModelAdmin):
+    list_display = ('id', 'slug', 'academy')
+    list_filter = ['academy__slug']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+    raw_id_fields = ['academy']
+
+
+@admin.register(EventTypeSetTranslation)
+class EventTypeSetTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'event_type_set', 'lang', 'title', 'description', 'short_description')
+    list_filter = ['lang']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+    raw_id_fields = ['event_type_set']
 
 
 @admin.register(PlanServiceItem)
@@ -123,9 +169,15 @@ class PlanServiceItemHandlerAdmin(admin.ModelAdmin):
     list_display = ('id', 'handler', 'subscription', 'plan_financing')
 
 
+def renew_consumables(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.renew_consumables.delay(item.id)
+
+
 @admin.register(ServiceStockScheduler)
 class ServiceStockSchedulerAdmin(admin.ModelAdmin):
     list_display = ('id', 'subscription', 'service_item', 'plan_financing', 'valid_until')
+    actions = [renew_consumables]
 
     def subscription(self, obj):
         if obj.subscription_handler:
@@ -136,10 +188,10 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
 
     def service_item(self, obj):
         if obj.subscription_handler:
-            return obj.subscription_handler.service_item
+            return obj.subscription_handler.handler.service_item
 
         if obj.plan_handler:
-            return obj.plan_handler.service_item
+            return obj.plan_handler.handler.service_item
 
     def plan_financing(self, obj):
         if obj.plan_handler:
@@ -150,6 +202,7 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
 class PaymentContactAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'stripe_id')
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = ['user']
 
 
 @admin.register(FinancialReputation)
@@ -157,6 +210,7 @@ class FinancialReputationAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'in_4geeks', 'in_stripe')
     list_filter = ['in_4geeks', 'in_stripe']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = ['user']
 
 
 @admin.register(Bag)
@@ -165,3 +219,4 @@ class BagAdmin(admin.ModelAdmin):
                     'was_delivered')
     list_filter = ['status', 'type', 'chosen_period', 'academy', 'is_recurrent']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = ['user', 'academy']

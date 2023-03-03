@@ -366,8 +366,9 @@ HOOK_EVENTS = {
     'profile_academy.changed': 'authenticate.ProfileAcademy.updated+',
     'cohort_user.added': 'admissions.CohortUser.created+',
     'cohort_user.changed': 'admissions.CohortUser.updated+',
+    'cohort_user.edu_status_updated': 'admissions.cohort_user.edu_status_updated',
     # and custom events, no extra meta data needed
-    # 'book.read':         'bookstore.Book.read',
+    'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
 }
 
 # Websocket

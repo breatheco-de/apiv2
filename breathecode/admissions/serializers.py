@@ -317,6 +317,7 @@ class GetCohortSerializer(serpy.Serializer):
     academy = GetAcademySerializer()
     timeslots = serpy.MethodField()
     is_hidden_on_prework = serpy.Field()
+    available_as_saas = serpy.Field()
 
     def get_timeslots(self, obj):
         timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
@@ -363,6 +364,7 @@ class GetSmallCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     stage = serpy.Field()
+    available_as_saas = serpy.Field()
 
 
 class GetTeacherAcademySmallSerializer(serpy.Serializer):
@@ -408,11 +410,23 @@ class GetMeCohortSerializer(serpy.Serializer):
     academy = GetAcademySerializer()
     stage = serpy.Field()
     is_hidden_on_prework = serpy.Field()
+    available_as_saas = serpy.Field()
 
 
 class GetPublicCohortUserSerializer(serpy.Serializer):
     user = UserPublicSerializer()
     role = serpy.Field()
+
+
+class CohortUserHookSerializer(serpy.Serializer):
+    id = serpy.Field()
+    user = UserSerializer()
+    cohort = GetSmallCohortSerializer()
+    role = serpy.Field()
+    finantial_status = serpy.Field()
+    educational_status = serpy.Field()
+    watching = serpy.Field()
+    created_at = serpy.Field()
 
 
 class GetCohortUserSerializer(serpy.Serializer):
@@ -615,6 +629,9 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                 raise ValidationException('Slug already exists for another cohort',
                                           slug='slug-already-exists')
 
+        if 'available_as_saas' not in data or data['available_as_saas'] is None:
+            data['available_as_saas'] = self.context['academy'].available_as_saas
+
         if self.instance:
             never_ends = (data['never_ends'] if 'never_ends' in data else self.instance.never_ends)
 
@@ -660,7 +677,7 @@ class CohortSerializer(CohortSerializerMixin):
         fields = ('id', 'slug', 'name', 'remote_available', 'kickoff_date', 'current_day', 'academy',
                   'syllabus', 'schedule', 'syllabus_version', 'ending_date', 'stage', 'language',
                   'created_at', 'updated_at', 'never_ends', 'online_meeting_url', 'timezone',
-                  'is_hidden_on_prework')
+                  'is_hidden_on_prework', 'available_as_saas')
 
     def create(self, validated_data):
         del self.context['request']
@@ -691,7 +708,8 @@ class CohortPUTSerializer(CohortSerializerMixin):
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'remote_available', 'current_day',
                   'stage', 'language', 'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private',
-                  'online_meeting_url', 'timezone', 'current_module', 'is_hidden_on_prework')
+                  'online_meeting_url', 'timezone', 'current_module', 'is_hidden_on_prework',
+                  'available_as_saas')
 
     def update(self, instance, validated_data):
         last_schedule = instance.schedule
