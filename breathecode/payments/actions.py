@@ -177,6 +177,18 @@ class BagHandler:
         self.selected_event_type_set = request.data.get('event_type_set')
         self.selected_mentorship_service_set = request.data.get('mentorship_service_set')
 
+        # change the selection
+        if self.selected_cohort:
+            bag.selected_cohorts.clear()
+
+        # change the selection
+        if self.selected_event_type_set:
+            bag.selected_event_type_sets.clear()
+
+        # change the selection
+        if self.selected_mentorship_service_set:
+            bag.selected_mentorship_service_sets.clear()
+
         self.plans_not_found = set()
         self.service_items_not_found = set()
         self.cohorts_not_found = set()
