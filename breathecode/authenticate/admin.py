@@ -315,7 +315,7 @@ def hardcore_delete_user_from_github(modeladmin, request, queryset):
 @admin.register(GithubAcademyUser)
 class GithubAcademyUserAdmin(admin.ModelAdmin):
     list_display = ('academy', 'user', 'username', 'storage_status', 'storage_action')
-    search_fields = ['github_username', 'user__email', 'user__first_name', 'user__last_name', 'assignee_id']
+    search_fields = ['username', 'user__email', 'user__first_name', 'user__last_name']
     actions = [hardcore_delete_user_from_github]
     list_filter = ('academy', 'storage_status', 'storage_action')
     raw_id_fields = ['user']
