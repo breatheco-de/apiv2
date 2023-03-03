@@ -318,6 +318,7 @@ class GithubAcademyUserAdmin(admin.ModelAdmin):
     search_fields = ['github_username', 'user__email', 'user__first_name', 'user__last_name', 'assignee_id']
     actions = [hardcore_delete_user_from_github]
     list_filter = ('academy', 'storage_status', 'storage_action')
+    raw_id_fields = ['user']
 
 
 def sync_github_members(modeladmin, request, queryset):
@@ -331,6 +332,7 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
     list_display = ('academy', 'github_is_sync', 'github_username', 'github_owner', 'authenticate')
     search_fields = ['academy__slug', 'academy__name', 'github__username', 'academy__id']
     actions = (sync_github_members, )
+    raw_id_fields = ['github_owner']
 
     def get_queryset(self, request):
 
