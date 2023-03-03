@@ -139,7 +139,7 @@ def try_to_translate(code, **kwargs: str) -> str | None:
 
 
 @cache
-def translation(code: Optional[str], slug: Optional[str] = None, **kwargs: str) -> str:
+def translation(code: Optional[str] = 'en', slug: Optional[str] = None, **kwargs: str) -> str:
     """Get the translation"""
 
     if not code:
