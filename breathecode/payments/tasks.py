@@ -506,10 +506,7 @@ def build_service_stock_scheduler_from_subscription(self,
         if subscription.valid_until and valid_until > subscription.valid_until:
             valid_until = subscription.valid_until
 
-        ServiceStockScheduler.objects.get_or_create(subscription_handler=handler,
-                                                    defaults={
-                                                        'valid_until': valid_until,
-                                                    })
+        ServiceStockScheduler.objects.get_or_create(subscription_handler=handler)
 
     for plan in subscription.plans.all():
         for handler in PlanServiceItem.objects.filter(plan=plan):
@@ -527,10 +524,7 @@ def build_service_stock_scheduler_from_subscription(self,
             handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription,
                                                                       handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler,
-                                                        defaults={
-                                                            'valid_until': valid_until,
-                                                        })
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
 
     renew_subscription_consumables.delay(subscription.id)
 
@@ -590,10 +584,7 @@ def build_service_stock_scheduler_from_plan_financing(self,
             handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing,
                                                                       handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler,
-                                                        defaults={
-                                                            'valid_until': valid_until,
-                                                        })
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
 
     renew_plan_financing_consumables.delay(plan_financing.id)
 
