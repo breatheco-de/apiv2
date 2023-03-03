@@ -1,7 +1,7 @@
 import logging, os
 from celery import shared_task, Task
 
-from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.models import ProfileAcademy, Role
 from .models import Cohort, CohortUser, SyllabusVersion
 from .actions import test_syllabus
 from django.utils import timezone
@@ -89,6 +89,8 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT') -> No
 
     else:
         role = 'student'
+
+    role = Role.objects.filter(slug=role).first()
 
     profile, created = ProfileAcademy.objects.get_or_create(academy=cohort.academy,
                                                             user=user,
