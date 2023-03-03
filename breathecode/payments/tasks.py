@@ -619,11 +619,11 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     plan = bag.plans.first()
 
     event_type_set = bag.selected_event_type_sets.first()
-    if plan and event_type_set:
+    if plan and not event_type_set:
         event_type_set = plan.event_type_set
 
     mentorship_service_set = bag.selected_mentorship_service_sets.first()
-    if plan and mentorship_service_set:
+    if plan and not mentorship_service_set:
         mentorship_service_set = plan.mentorship_service_set
 
     subscription = Subscription.objects.create(user=bag.user,
@@ -686,11 +686,11 @@ def build_plan_financing(self, bag_id: int, invoice_id: int):
     plan = bag.plans.first()
 
     event_type_set = bag.selected_event_type_sets.first()
-    if plan and event_type_set:
+    if plan and not event_type_set:
         event_type_set = plan.event_type_set
 
     mentorship_service_set = bag.selected_mentorship_service_sets.first()
-    if plan and mentorship_service_set:
+    if plan and not mentorship_service_set:
         mentorship_service_set = plan.mentorship_service_set
 
     financing = PlanFinancing.objects.create(user=bag.user,
@@ -749,11 +749,11 @@ def build_free_trial(self, bag_id: int, invoice_id: int):
         cohort = bag.selected_cohorts.first()
 
         event_type_set = bag.selected_event_type_sets.first()
-        if event_type_set:
+        if not event_type_set:
             event_type_set = plan.event_type_set
 
         mentorship_service_set = bag.selected_mentorship_service_sets.first()
-        if mentorship_service_set:
+        if not mentorship_service_set:
             mentorship_service_set = plan.mentorship_service_set
 
         subscription = Subscription.objects.create(user=bag.user,
