@@ -198,6 +198,9 @@ def renew_subscription_consumables(self, subscription_id: int):
     for scheduler in ServiceStockScheduler.objects.filter(subscription_handler__subscription=subscription):
         renew_consumables.delay(scheduler.id)
 
+    for scheduler in ServiceStockScheduler.objects.filter(plan_handler__subscription=subscription):
+        renew_consumables.delay(scheduler.id)
+
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def renew_plan_financing_consumables(self, plan_financing_id: int):
