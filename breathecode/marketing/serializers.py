@@ -267,7 +267,7 @@ class GetCourseSmallSerializer(serpy.Serializer):
         return obj.academy.id
 
     def get_syllabus(self, obj):
-        return obj.syllabus.id
+        return [x for x in obj.syllabus.all().values_list('id', flat=True)]
 
     def get_course_translation(self, obj):
         query_args = []
@@ -285,10 +285,13 @@ class GetCourseSmallSerializer(serpy.Serializer):
 
 class GetCourseSerializer(GetCourseSmallSerializer):
     slug = serpy.Field()
-    syllabus = GetSyllabusSmallSerializer()
+    syllabus = serpy.MethodField()
     academy = GetAcademySmallSerializer()
     status = serpy.Field()
     visibility = serpy.Field()
+
+    def get_syllabus(self, obj):
+        return GetSyllabusSmallSerializer(obj.syllabus.all(), many=True).data
 
 
 class PostFormEntrySerializer(serializers.ModelSerializer):

@@ -723,7 +723,7 @@ class Course(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+    syllabus = models.ManyToManyField(Syllabus, blank=True)
 
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
     visibility = models.CharField(max_length=15, choices=VISIBILITY_STATUS, default=PRIVATE)

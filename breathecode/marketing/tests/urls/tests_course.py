@@ -20,7 +20,7 @@ def course_translation_serializer(course_translation):
     }
 
 
-def get_serializer(course, academy, syllabus, course_translation=None, data={}):
+def get_serializer(course, academy, syllabus=[], course_translation=None, data={}):
     if course_translation:
         course_translation = course_translation_serializer(course_translation)
 
@@ -28,7 +28,7 @@ def get_serializer(course, academy, syllabus, course_translation=None, data={}):
         'slug': course.slug,
         'icon_url': course.icon_url,
         'academy': academy.id,
-        'syllabus': syllabus.id,
+        'syllabus': [x.id for x in syllabus],
         'course_translation': course_translation,
         **data,
     }
@@ -69,8 +69,8 @@ class LeadTestSuite(MarketingTestCase):
         json = response.json()
 
         expected = [
-            get_serializer(model.course[1], model.academy, model.syllabus),
-            get_serializer(model.course[0], model.academy, model.syllabus),
+            get_serializer(model.course[1], model.academy, [model.syllabus]),
+            get_serializer(model.course[0], model.academy, [model.syllabus]),
         ]
 
         self.assertEqual(json, expected)
@@ -122,8 +122,8 @@ class LeadTestSuite(MarketingTestCase):
         json = response.json()
 
         expected = [
-            get_serializer(model.course[1], model.academy, model.syllabus, model.course_translation[1]),
-            get_serializer(model.course[0], model.academy, model.syllabus, model.course_translation[0]),
+            get_serializer(model.course[1], model.academy, [model.syllabus], model.course_translation[1]),
+            get_serializer(model.course[0], model.academy, [model.syllabus], model.course_translation[0]),
         ]
 
         self.assertEqual(json, expected)
