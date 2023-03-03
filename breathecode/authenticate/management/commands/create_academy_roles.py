@@ -292,6 +292,14 @@ CAPABILITIES = [
         'description': 'Update gitpod user expiration based on available information'
     },
     {
+        'slug': 'get_github_user',
+        'description': 'List github user the academy is consuming'
+    },
+    {
+        'slug': 'update_github_user',
+        'description': 'Update github user expiration based on available information'
+    },
+    {
         'slug': 'read_technology',
         'description': 'Read asset technologies'
     },

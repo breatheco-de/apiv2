@@ -22,7 +22,7 @@ from .views import (AcademyInviteView, AcademyTokenView, GithubMeView, GitpodUse
                     get_slack_token, get_token_info, get_user_by_id_or_email, get_users, login_html_view,
                     pick_password, render_academy_invite, render_invite, render_user_invite,
                     reset_password_view, save_facebook_token, save_github_token, save_google_token,
-                    save_slack_token, sync_gitpod_users_view)
+                    save_slack_token, sync_gitpod_users_view, GithubUserView)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -91,6 +91,7 @@ urlpatterns = [
     path('google/<str:token>', get_google_token, name='google_token'),
     path('google/callback/', save_google_token, name='google_callback'),
     path('gitpod/sync', sync_gitpod_users_view, name='sync_gitpod_users'),
+    path('academy/github/user', GithubUserView.as_view(), name='github_user'),
     path('academy/gitpod/user', GitpodUserView.as_view(), name='gitpod_user'),
     path('academy/gitpod/user/<int:gitpoduser_id>', GitpodUserView.as_view(), name='gitpod_user_id'),
 ]

@@ -49,14 +49,14 @@ from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
 from .models import (CredentialsFacebook, CredentialsGithub, CredentialsGoogle, CredentialsSlack, GitpodUser,
-                     Profile, ProfileAcademy, Role, Token, UserInvite)
+                     Profile, ProfileAcademy, Role, Token, UserInvite, GithubAcademyUser)
 from .serializers import (AuthSerializer, GetGitpodUserSerializer, GetProfileAcademySerializer,
                           GetProfileAcademySmallSerializer, GetProfileSerializer, GitpodUserSmallSerializer,
                           MemberPOSTSerializer, MemberPUTSerializer, ProfileAcademySmallSerializer,
                           ProfileSerializer, RoleBigSerializer, RoleSmallSerializer, StudentPOSTSerializer,
                           TokenSmallSerializer, UserInviteSerializer, UserInviteSmallSerializer,
                           UserInviteWaitingListSerializer, UserMeSerializer, UserSerializer,
-                          UserSmallSerializer, UserTinySerializer)
+                          UserSmallSerializer, UserTinySerializer, GithubUserSerializer)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -1860,6 +1860,54 @@ def save_google_token(request):
     else:
         logger.error(resp.json())
         raise APIException('Error from google credentials')
+
+
+class GithubUserView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of('get_github_user')
+    def get(self, request, academy_id, githubuser_id=None):
+        handler = self.extensions(request)
+
+        if githubuser_id is not None:
+            item = GithubAcademyUser.objects.filter(id=githubuser_id, academy_id=academy_id).first()
+            if item is None:
+                raise ValidationException('Github User not found for this academy',
+                                          code=404,
+                                          slug='githubuser-not-found')
+
+            serializer = GithubUserSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = GithubAcademyUser.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(
+                Q(username__icontains=like) | Q(user__email__icontains=like)
+                | Q(user__first_name__icontains=like) | Q(user__last_name__icontains=like))
+
+        items = items.order_by(request.GET.get('sort', 'created_at'))
+
+        items = handler.queryset(items)
+        serializer = GithubUserSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of('update_github_user')
+    def put(self, request, academy_id, githubuser_id):
+
+        item = GithubAcademyUser.objects.filter(id=githubuser_id, academy_id=academy_id).first()
+        if item is None:
+            raise ValidationException('Github User not found for this academy',
+                                      code=404,
+                                      slug='githubuser-not-found')
+
+        serializer = PUTGithubUserSerializer(item, data=request.data)
+        if serializer.is_valid():
+            _item = serializer.save()
+            return Response(GithubUserSerializer(_item, many=False).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GitpodUserView(APIView, GenerateLookupsMixin):
