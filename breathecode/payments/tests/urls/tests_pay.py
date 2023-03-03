@@ -230,12 +230,13 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
-    def test__without_bag__passing_token__with_bag_filled(self):
+    def test__without_bag__passing_token__with_bag_filled__without_free_trial(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
             'expires_at': UTC_NOW,
             'status': 'CHECKING',
             'type': 'BAG',
+            random.choice(['amount_per_month', 'amount_per_quarter', 'amount_per_half', 'amount_per_year']): 1
         }
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
         self.bc.request.authenticate(model.user)
@@ -311,14 +312,12 @@ class SignalTestSuite(PaymentsTestCase):
             'status': 'CHECKING',
             'type': 'BAG',
         }
-        chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
         data = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'chosen_period': chosen_period,
         }
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
@@ -335,7 +334,6 @@ class SignalTestSuite(PaymentsTestCase):
                              'token': None,
                              'status': 'PAID',
                              'expires_at': None,
-                             'chosen_period': chosen_period,
                          }])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [format_invoice_item()])
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
@@ -460,6 +458,7 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_trial.delay', MagicMock())
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
@@ -521,4 +520,5 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [call(1, 1)])
+        self.assertEqual(tasks.build_free_trial.delay.call_args_list, [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
