@@ -7,6 +7,7 @@ from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from breathecode.utils.datetime_interger import duration_to_str
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.utils.i18n import translation
 
 
 class GetAcademySmallSerializer(serpy.Serializer):
@@ -490,7 +491,11 @@ class MentorSerializer(serializers.ModelSerializer):
             data['name'] = user.first_name + ' ' + user.last_name
         data['name'] = data['name'].strip()
         if not data['name']:
-            raise ValidationException('Unable to find name on this user', code=400)
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find name on this user',
+                                                  es='imposible encontrar el nombre en este usuario',
+                                                  slug='name-not-found'),
+                                      code=400)
 
         if 'email' not in data:
             data['email'] = ''
@@ -504,7 +509,11 @@ class MentorSerializer(serializers.ModelSerializer):
             data['email'] = data['user'].email
 
         if not data['email']:
-            raise ValidationException('Unable to find email on this user', code=400)
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find email on this user',
+                                                  es='Imposible encontrar el email en este usuario',
+                                                  slug='email-not-found'),
+                                      code=400)
 
         return data
 
@@ -545,7 +554,11 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
             data['name'] = user.first_name + ' ' + user.last_name
         data['name'] = data['name'].strip()
         if not data['name']:
-            raise ValidationException('Unable to find name on this user', code=400)
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find name on this user',
+                                                  es='Imposible encotrar el nombre en este usuario',
+                                                  slug='name-not-found'),
+                                      code=400)
 
         if 'email' not in data:
             data['email'] = self.instance.email
@@ -559,7 +572,11 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
             data['email'] = data['user'].email
 
         if not data['email']:
-            raise ValidationException('Unable to find email on this user', code=400)
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find email on this user',
+                                                  es='Imposible encontrar el email en este usuario',
+                                                  slug='email-not-found'),
+                                      code=400)
 
         return data
 

@@ -513,11 +513,11 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """
-    🔽🔽🔽 PUT passing email
+    🔽🔽🔽 POST without required fields
     """
 
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
-    def test_academy_member_id__put__passing_email(self):
+    def test_academy_member_id__post__without__first_name(self):
         """Test /academy/:id/member/:id"""
 
         profile_academy = {
@@ -533,14 +533,90 @@ class AuthenticateTestSuite(AuthTestCase):
             capability='crud_member',
             profile_academy=profile_academy,
         )
-        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': 'dude@dude.dude'})
+        url = reverse_lazy('authenticate:academy_member')
 
-        response = self.client.put(url)
+        data = {
+            'role': role,
+            'invite': True,
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
+        response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': 'user-id-is-not-numeric', 'status_code': 404}
+        expected = {'detail': 'first-name-not-found', 'status_code': 400}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__post__without__last_name(self):
+        """Test /academy/:id/member/:id"""
+
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(
+            authenticate=True,
+            role=role,
+            capability='crud_member',
+            profile_academy=profile_academy,
+        )
+        url = reverse_lazy('authenticate:academy_member')
+
+        data = {
+            'role': role,
+            'invite': True,
+            'first_name': self.bc.fake.first_name(),
+            'email': self.bc.fake.email()
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {'detail': 'last-name-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__post__without__email(self):
+        """Test /academy/:id/member/:id"""
+
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(
+            authenticate=True,
+            role=role,
+            capability='crud_member',
+            profile_academy=profile_academy,
+        )
+        url = reverse_lazy('authenticate:academy_member')
+
+        data = {
+            'role': role,
+            'invite': True,
+            'last_name': self.bc.fake.last_name(),
+            'first_name': self.bc.fake.first_name()
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {'detail': 'no-email-or-id', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
         ])
@@ -573,8 +649,71 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
+    def test_academy_member_id_put_without__first_name(self):
+        profile_academy = {
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email(),
+        }
+        for n in range(1, 4):
+            self.bc.request.set_headers(academy=n)
+            model = self.bc.database.create(authenticate=True,
+                                            capability='crud_member',
+                                            role='role',
+                                            profile_academy=profile_academy)
+
+            url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': n})
+            response = self.client.put(url)
+
+            json = response.json()
+            expected = {'detail': 'first-name-not-found', 'status_code': 404}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_academy_member_id_put_without__last_name(self):
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'email': self.bc.fake.email(),
+        }
+        for n in range(1, 4):
+            self.bc.request.set_headers(academy=n)
+            model = self.bc.database.create(authenticate=True,
+                                            capability='crud_member',
+                                            role='role',
+                                            profile_academy=profile_academy)
+
+            url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': n})
+            response = self.client.put(url)
+
+            json = response.json()
+            expected = {'detail': 'last-name-not-found', 'status_code': 404}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_academy_member_id_put_without__email(self):
+        profile_academy = {
+            'last_name': self.bc.fake.last_name(),
+            'first_name': self.bc.fake.first_name(),
+        }
+        for n in range(1, 4):
+            self.bc.request.set_headers(academy=n)
+            model = self.bc.database.create(authenticate=True,
+                                            capability='crud_member',
+                                            role='role',
+                                            profile_academy=profile_academy)
+
+            url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': n})
+            response = self.client.put(url)
+
+            json = response.json()
+            expected = {'detail': 'email-not-found', 'status_code': 404}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
-    def test_academy_member_id__put__without_required_fields(self):
+    def test_academy_member_id__put__without_first_name(self):
         """Test /academy/:id/member/:id"""
         profile_academy = {
             'first_name': self.bc.fake.first_name(),
@@ -583,21 +722,73 @@ class AuthenticateTestSuite(AuthTestCase):
         }
         role = 'konan'
         self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_member',
-                                     profile_academy=profile_academy)
-        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='crud_member',
+                                        profile_academy=profile_academy)
 
-        response = self.client.put(url)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '2'})
+
+        data = {'role': role, 'last_name': self.bc.fake.last_name(), 'email': self.bc.fake.email()}
+        response = self.client.put(url, data, format='json')
+
         json = response.json()
-        expected = {'role': ['This field is required.']}
+        expected = {'detail': 'first-name-not-found', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
-            self.bc.format.to_dict(model.profile_academy),
-        ])
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__without_last_name(self):
+        """Test /academy/:id/member/:id"""
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='crud_member',
+                                        profile_academy=profile_academy)
+
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '2'})
+
+        data = {'role': role, 'first_name': self.bc.fake.first_name(), 'email': self.bc.fake.email()}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'last-name-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__without_email(self):
+        """Test /academy/:id/member/:id"""
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email()
+        }
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='crud_member',
+                                        profile_academy=profile_academy)
+
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '2'})
+
+        data = {'role': role, 'last_name': self.bc.fake.last_name(), 'first_name': self.bc.fake.first_name()}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'user-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     """
     🔽🔽🔽 PUT role does not exists

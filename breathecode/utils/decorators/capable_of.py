@@ -33,6 +33,9 @@ def capable_of(capability=None):
             except IndexError:
                 raise ProgramingError('Missing request information, use this decorator with DRF View')
 
+            print(request.method)
+            print(args, kwargs, function)
+
             academy_id = get_academy_from_capability(kwargs, request, capability)
             if academy_id:
                 kwargs['academy_id'] = academy_id
