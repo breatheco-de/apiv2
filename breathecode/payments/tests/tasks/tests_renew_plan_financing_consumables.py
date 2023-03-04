@@ -35,6 +35,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_not_found(self):
         renew_plan_financing_consumables.delay(1)
 
@@ -54,6 +55,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_was_not_paid(self):
         subscription = {
             'next_payment_at': UTC_NOW - relativedelta(seconds=1),
@@ -91,6 +93,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_was_paid__without_stock_scheduler(self):
         subscription = {
             'valid_until': UTC_NOW + relativedelta(minutes=3),
@@ -126,6 +129,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_is_over(self):
         subscription = {
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
@@ -163,6 +167,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_was_not_paid__(self):
         plan_service_items = [{
             'plan_id': 1,

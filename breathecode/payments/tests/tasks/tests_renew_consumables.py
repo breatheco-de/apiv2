@@ -199,6 +199,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_plan_financing_with_plan_than_is_over(self):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
@@ -539,7 +540,6 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
 
-    ##########################################################3
     """
     🔽🔽🔽 ServiceStockScheduler with PlanFinancing that is over
     """

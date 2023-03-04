@@ -156,11 +156,7 @@ class GetServiceItemWithFeaturesSerializer(GetServiceItemSerializer):
         query_kwargs = {'service_item': obj}
         obj.lang = obj.lang or 'en'
 
-        if '-' in obj.lang:
-            query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]))
-
-        else:
-            query_kwargs['lang'] = obj.lang
+        query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
 
         items = ServiceItemFeature.objects.filter(*query_args, **query_kwargs)
         return GetServiceItemFeatureShortSerializer(items, many=True).data
