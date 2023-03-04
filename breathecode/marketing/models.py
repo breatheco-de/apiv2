@@ -1,3 +1,4 @@
+import re
 import secrets
 from django.db import models
 from datetime import timedelta
@@ -729,7 +730,7 @@ class Course(models.Model):
     visibility = models.CharField(max_length=15, choices=VISIBILITY_STATUS, default=PRIVATE)
 
     icon_url = models.URLField(help_text='Image icon to show on website')
-    technologies = models.SlugField(max_length=150, blank=False)
+    technologies = models.CharField(max_length=150, blank=False)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

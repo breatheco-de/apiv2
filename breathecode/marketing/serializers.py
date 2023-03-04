@@ -262,6 +262,7 @@ class GetCourseSmallSerializer(serpy.Serializer):
     academy = serpy.MethodField()
     syllabus = serpy.MethodField()
     course_translation = serpy.MethodField()
+    technologies = serpy.Field()
 
     def get_academy(self, obj):
         return obj.academy.id

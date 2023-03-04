@@ -27,6 +27,7 @@ def get_serializer(course, academy, syllabus=[], course_translation=None, data={
     return {
         'slug': course.slug,
         'icon_url': course.icon_url,
+        'technologies': course.technologies,
         'academy': academy.id,
         'syllabus': [x.id for x in syllabus],
         'course_translation': course_translation,
