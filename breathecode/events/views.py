@@ -675,7 +675,8 @@ class EventTypeVisibilitySettingView(APIView):
 
         syllabus = None
         if 'syllabus' in request.data:
-            syllabus = Syllabus.objects.filter(id=request.data['syllabus'], academy_owner=academy_id).first()
+            syllabus = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False),
+                                               id=request.data['syllabus']).first()
             if syllabus is None:
                 raise ValidationException('Syllabus not found', slug='syllabus-not-found')
 
@@ -689,28 +690,30 @@ class EventTypeVisibilitySettingView(APIView):
                                                                                        academy=academy,
                                                                                        cohort=cohort)
 
-        event_type.visibility_settings.add(visibility_setting)
+        if not event_type.visibility_settings.filter(id=visibility_setting.id).exists():
+            event_type.visibility_settings.add(visibility_setting)
 
         serializer = EventTypeVisibilitySettingSerializer(visibility_setting, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
     @capable_of('crud_event_type')
     def delete(self, request, event_type_slug, visibility_setting_id=None, academy_id=None):
-        item = EventTypeVisibilitySetting.objects.filter(id=visibility_setting_id, academy=academy_id).first()
-
         event_type = EventType.objects.filter(slug=event_type_slug, academy=academy_id).first()
         if not event_type:
             raise ValidationException('Event type not found', slug='event-type-not-found')
+
+        item = EventTypeVisibilitySetting.objects.filter(id=visibility_setting_id, academy=academy_id).first()
 
         if not item:
             raise ValidationException('Event type visibility setting not found',
                                       404,
                                       slug='event-type-visibility-setting-not-found')
 
-        other_event_type = EventType.objects.filter(visibility_settings__id=visibility_setting_id,
-                                                    academy=academy_id).exclude(slug=event_type_slug).first()
+        other_event_type = EventType.objects.filter(
+            visibility_settings__id=visibility_setting_id,
+            academy=academy_id).exclude(slug=event_type_slug).exists()
 
-        if other_event_type is not None:
+        if other_event_type:
             event_type.visibility_settings.remove(item)
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 

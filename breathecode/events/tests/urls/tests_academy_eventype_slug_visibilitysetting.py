@@ -11,22 +11,22 @@ from django.utils import timezone
 def get_serializer(visibility_setting, data={}):
 
     return {
-        'id': visibility_setting.id,
+        'id': visibility_setting['id'],
         'academy': {
-            'id': visibility_setting.academy.id,
-            'name': visibility_setting.academy.name,
-            'slug': visibility_setting.academy.slug,
+            'id': visibility_setting['academy']['id'],
+            'name': visibility_setting['academy']['name'],
+            'slug': visibility_setting['academy']['slug'],
         },
         'cohort': {
-            'id': visibility_setting.cohort.id,
-            'name': visibility_setting.cohort.name,
-            'slug': visibility_setting.cohort.slug,
-        } if visibility_setting.cohort else None,
+            'id': visibility_setting['cohort']['id'],
+            'name': visibility_setting['cohort']['name'],
+            'slug': visibility_setting['cohort']['slug'],
+        } if visibility_setting['cohort'] else None,
         'syllabus': {
-            'id': visibility_setting.syllabus.id,
-            'name': visibility_setting.syllabus.name,
-            'slug': visibility_setting.syllabus.slug,
-        } if visibility_setting.syllabus else None,
+            'id': visibility_setting['syllabus']['id'],
+            'name': visibility_setting['syllabus']['name'],
+            'slug': visibility_setting['syllabus']['slug'],
+        } if visibility_setting['syllabus'] else None,
         **data,
     }
 
@@ -34,7 +34,7 @@ def get_serializer(visibility_setting, data={}):
 class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
     cache = EventCache()
 
-    def test_post_event_type_vs_no_auth(self):
+    def test_post_event_type_with_no_auth(self):
 
         url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
                            kwargs={'event_type_slug': 'funny_event'})
@@ -64,6 +64,31 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
+
+    def test_get_visibilitysetting(self):
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
+                           kwargs={'event_type_slug': 'funny_event'})
+        self.generate_models(
+            authenticate=True,
+            profile_academy=1,
+            role=1,
+            event_type_visibility_setting=True,
+            event_type={
+                'slug': 'funny_event',
+                'icon_url': 'https://www.google.com',
+                'visibility_settings': 1
+            },
+            capability='read_event_type',
+        )
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = [get_serializer(vs) for vs in json]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
 
     def test_post_visibilitysetting_with_bad_slug(self):
         self.bc.request.set_headers(academy=1)
