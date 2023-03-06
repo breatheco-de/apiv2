@@ -21,7 +21,7 @@ class Github:
         return self._call('POST', action_name, json=request_data)
     
     def delete(self, action_name, request_data={}):
-        return self._call('DELETE', action_name, json=request_data)
+        return self._call('DELETE', action_name, params=request_data)
 
     def _call(self, method_name, action_name, params=None, json=None):
 
