@@ -466,13 +466,19 @@ class CohortUser(models.Model):
     def save(self, *args, **kwargs):
         # check the fields before saving
         self.full_clean()
-
+        
+        edu_status_updated = False
         if self.__old_edu_status != self.educational_status:
+            edu_status_updated = True
+
+        result = super().save(*args, **kwargs)  # Call the "real" save() method.
+        
+        if edu_status_updated:
             student_edu_status_updated.send(instance=self, sender=self.__class__)
 
-        super().save(*args, **kwargs)  # Call the "real" save() method.
-
         signals.cohort_log_saved.send(instance=self, sender=self.__class__)
+        
+        return result
 
 
 DAILY = 'DAILY'
