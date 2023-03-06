@@ -441,15 +441,14 @@ def sync_organization_members(academy_id, only_status=[]):
                                   slug='invalid-owner')
 
     # print('Procesing following slugs', academy_slugs)
-    # retry errored users
-    GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
+    # retry errored users only from this academy being synched
+    GithubAcademyUser.objects.filter(academy=settings.academy,
                                      storage_status='ERROR')\
                         .update(storage_status='PENDING', storage_synch_at=None)
 
     # users without github credentials are marked as error
-    no_github_credentials = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs,
+    no_github_credentials = GithubAcademyUser.objects.filter(academy=settings.academy,
                                                              user__credentialsgithub__isnull=True)
-    print('no_github_credentials', [u.id for u in no_github_credentials])
     no_github_credentials.update(
         storage_status='ERROR',
         storage_log=[GithubAcademyUser.create_log('This user needs connect to github')])
@@ -459,7 +458,8 @@ def sync_organization_members(academy_id, only_status=[]):
 
     remaining_usernames = set([m['login'] for m in members])
 
-    org_users = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs)
+    # only from this academy because we want to duplicate the users on the other academies
+    org_users = GithubAcademyUser.objects.filter(academy=settings.academy)
 
     # if we only want to process a particular storage_action, E.g: ADD
     if len(only_status) > 0:
@@ -495,6 +495,7 @@ def sync_organization_members(academy_id, only_status=[]):
                 _member.storage_synch_at = now
                 _member.save()
             else:
+                # we should not delete if another academy from the same org wants to keep it
                 added_elsewere = GithubAcademyUser.objects.filter(
                     Q(user=_member.user)
                     | Q(username=github.username)).filter(academy__slug__in=academy_slugs).exclude(
@@ -515,7 +516,7 @@ def sync_organization_members(academy_id, only_status=[]):
             [username for username in remaining_usernames if username != github_username])
 
     print('remaining_usernames', remaining_usernames)
-    # there are some users from github we could not find in the cohorts
+    # there are some users from github we could not find in THIS academy cohorts
     for u in remaining_usernames:
         _user = CredentialsGithub.objects.filter(username=u).first()
         if _user is not None:
