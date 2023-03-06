@@ -196,7 +196,7 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
 
     def get_financing_options(self, obj):
-        if not obj.is_renewable:
+        if obj.is_renewable:
             return []
 
         return GetFinancingOptionSerializer(obj.financing_options.all(), many=True).data
