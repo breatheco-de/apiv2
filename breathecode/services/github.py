@@ -44,7 +44,10 @@ class Github:
                                 timeout=2)
 
         if resp.status_code == 200:
-            data = resp.json()
+            data = None
+            if method_name != 'DELETE':
+                data = resp.json()
+                
             # if data['ok'] == False:
             #     raise Exception('Github API Error ' + data['error'])
             # else:
