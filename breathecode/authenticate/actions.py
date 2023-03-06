@@ -521,7 +521,11 @@ def sync_organization_members(academy_id, only_status=[]):
         if _user is not None:
             _user = _user.user
 
-        _query = GithubAcademyUser.objects.filter(academy__slug__in=academy_slugs).filter(username=u)
+        # we look if the user is present in this particular academy, not from academy_slugs because we do want
+        # to duplicate this users per academy, that way each academy can decide if wants to delete or not
+        # you should see in the code for deletion that users will only be deleted if all the academies for
+        # the same organization delete it
+        _query = GithubAcademyUser.objects.filter(academy=settings.academy).filter(username=u)
         if _user is not None:
             _query = _query.filter(user=_user)
         uknown_user = _query.first()
