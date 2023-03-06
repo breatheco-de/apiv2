@@ -54,7 +54,6 @@ class Github:
             logger.debug(f'Successfull call {method_name}: /{action_name}')
             return data
         else:
-            print(url, resp.json())
             raise Exception(
                 f'Unable to communicate with Github API for {action_name}, error: {resp.status_code}')
 
