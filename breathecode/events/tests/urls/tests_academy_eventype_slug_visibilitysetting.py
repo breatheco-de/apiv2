@@ -70,7 +70,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
                            kwargs={'event_type_slug': 'funny_event'})
-        self.generate_models(
+        model = self.generate_models(
             authenticate=True,
             profile_academy=1,
             role=1,
@@ -89,6 +89,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
+        self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [1])
 
     def test_post_visibilitysetting_with_bad_slug(self):
         self.bc.request.set_headers(academy=1)
@@ -114,7 +115,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
                            kwargs={'event_type_slug': 'funny_event'})
-        self.generate_models(
+        model = self.generate_models(
             authenticate=True,
             profile_academy=1,
             role=1,
@@ -132,13 +133,14 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
+        self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [])
 
     def test_post_visibilitysetting_with_bad_cohort(self):
         self.bc.request.set_headers(academy=1)
 
         url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
                            kwargs={'event_type_slug': 'funny_event'})
-        self.generate_models(
+        model = self.generate_models(
             authenticate=True,
             profile_academy=1,
             role=1,
@@ -156,6 +158,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
+        self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [])
 
     def test_post_visibilitysetting(self):
         self.bc.request.set_headers(academy=1)
@@ -199,3 +202,4 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
+        self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [1])

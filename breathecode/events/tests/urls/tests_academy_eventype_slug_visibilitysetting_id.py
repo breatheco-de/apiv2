@@ -64,7 +64,8 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
             capability='crud_event_type',
             event_type={
                 'slug': 'funny_event',
-                'icon_url': 'https://www.google.com'
+                'icon_url': 'https://www.google.com',
+                'visibility_settings': 1
             },
             event_type_visibility_setting=True,
         )
@@ -75,6 +76,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 404)
+        self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [1])
 
     def test_delete_visibilitysetting_with_bad_slug(self):
         self.bc.request.set_headers(academy=1)
@@ -90,6 +92,11 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
             role=1,
             capability='crud_event_type',
             event_type_visibility_setting=True,
+            event_type={
+                'slug': 'kenny',
+                'icon_url': 'https://www.google.com',
+                'visibility_settings': 1
+            },
         )
 
         response = self.client.delete(url)
@@ -98,6 +105,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
+        self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [1])
 
     def test_delete_visibilitysetting_with_no_other_event_type(self):
         self.bc.request.set_headers(academy=1)
