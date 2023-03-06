@@ -30,13 +30,13 @@ def keyword_density(client, report):
         h2s_with_keywords = []
         cleaned_title = remove_three_characters_words(keyword.title)
         for h2 in all_h2s:
-            if cleaned_title in remove_three_characters_words(h2):
+            if cleaned_title.lower() in remove_three_characters_words(h2).lower():
                 h2s_with_keywords.append(h2)
 
         if len(h2s_with_keywords) > 2:
             report.bad(
                 -20,
-                f'Too many h2 tags contain the target keyword "{keyword.title}", please consider a max of 2 h2 tags'
+                f'Too many h2 tags contain the target keyword "{keyword.title}", please consider a max of 2 h2 tags with the keyword'
             )
         elif len(h2s_with_keywords) == 0:
             report.bad(-20, f'Please add the target keyword "{keyword.title}" to at least one tag')
