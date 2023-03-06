@@ -19,6 +19,9 @@ class Github:
 
     def post(self, action_name, request_data={}):
         return self._call('POST', action_name, json=request_data)
+    
+    def delete(self, action_name, request_data={}):
+        return self._call('DELETE', action_name, json=request_data)
 
     def _call(self, method_name, action_name, params=None, json=None):
 
@@ -26,7 +29,7 @@ class Github:
             'Authorization': 'Bearer ' + self.token,
             'Content-type': 'application/json',
         }
-        if method_name == 'GET':
+        if method_name in ['GET', 'DELETE']:
             params = {
                 # 'token': self.token,
                 **params,
