@@ -1,7 +1,7 @@
 import logging
 import serpy
 from breathecode.admissions.models import Cohort
-from breathecode.payments.models import Plan, Service, ServiceItem, ServiceItemFeature, Subscription
+from breathecode.payments.models import Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature, Subscription
 from django.db.models.query_utils import Q
 
 from breathecode.utils import serializers, custom_serpy
@@ -209,7 +209,50 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     price_per_year = serpy.Field()
     currency = GetCurrencySmallSerializer()
     is_renewable = serpy.Field()
-    owner = GetAcademySmallSerializer()
+    owner = GetAcademySmallSerializer(required=False, many=False)
+
+
+class GetPlanOfferTranslationSerializer(custom_serpy.Serializer):
+    lang = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+    short_description = serpy.Field()
+
+
+class GetPlanOfferSerializer(custom_serpy.Serializer):
+    # original_plan = serpy.MethodField()
+    # suggested_plan = serpy.MethodField()
+    original_plan = GetPlanSerializer(required=False, many=False)
+    suggested_plan = GetPlanSerializer(required=False, many=False)
+    details = serpy.MethodField()
+    show_modal = serpy.Field()
+    expires_at = serpy.Field()
+
+    # def get_original_plan(self, obj):
+    #     print('obj.original_plan', obj.original_plan)
+    #     print('obj.suggested_plan', obj.suggested_plan)
+    #     if obj.original_plan:
+    #         return GetPlanSerializer(obj.original_plan, many=False).data
+
+    #     return None
+
+    # def get_suggested_plan(self, obj):
+    #     return GetPlanSerializer(obj.suggested_plan).data
+
+    def get_details(self, obj):
+        print('-0-0-0-0-0-11')
+        query_args = []
+        query_kwargs = {'offer': obj}
+        obj.lang = obj.lang or 'en'
+
+        query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
+
+        print('-0-0-0-0-0-22')
+        item = PlanOfferTranslation.objects.filter(*query_args, **query_kwargs).first()
+        if item:
+            return GetPlanOfferTranslationSerializer(item, many=False).data
+
+        return None
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):

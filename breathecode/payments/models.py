@@ -509,10 +509,23 @@ class PlanTranslation(models.Model):
 
 
 class PlanOffer(models.Model):
-    original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='original_plan')
-    from_syllabus = models.ManyToManyField('admissions.Syllabus',
-                                           help_text='Syllabus from which the plan is offered')
-    suggested_plans = models.ManyToManyField(Plan, related_name='+', help_text='Suggested plans')
+    original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='plan_offer_from')
+    suggested_plan = models.ForeignKey(Plan,
+                                       related_name='plan_offer_to',
+                                       help_text='Suggested plans',
+                                       null=True,
+                                       blank=False,
+                                       on_delete=models.CASCADE)
+    show_modal = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(default=None, blank=True, null=True)
+
+    def clean(self) -> None:
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+
+        super().save(*args, **kwargs)
 
 
 class PlanOfferTranslation(models.Model):
@@ -768,10 +781,70 @@ class AbstractIOweYou(models.Model):
         abstract = True
 
 
+class PlanFinancing(AbstractIOweYou):
+    """
+    Allows to financing a plan
+    """
+
+    # in this day the financing needs being paid again
+    next_payment_at = models.DateTimeField(help_text='Next payment date')
+
+    # in this moment the subscription will be expired
+    valid_until = models.DateTimeField(
+        help_text='Valid until, before this date each month the customer must pay, after this '
+        'date the plan financing will be destroyed and if it is belonging to a cohort, the certificate will '
+        'be issued after pay every installments')
+
+    # in this moment the subscription will be expired
+    plan_expires_at = models.DateTimeField(
+        default=None,
+        null=True,
+        blank=False,
+        help_text='Plan expires at, after this date the plan will not be renewed')
+
+    # this remember the current price per month
+    monthly_price = models.FloatField(
+        default=0, help_text='Monthly price, we keep this to avoid we changes him/her amount')
+
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.valid_until})'
+
+    def clean(self) -> None:
+        settings = get_user_settings(self.user.id)
+
+        if not self.monthly_price:
+            raise forms.ValidationError(
+                translation(settings.lang, en='Monthly price is required', es='Precio mensual es requerido'))
+
+        if not self.plan_expires_at:
+            raise forms.ValidationError(
+                translation(settings.lang,
+                            en='Plan expires at is required',
+                            es='Plan expires at es requerido'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
 class Subscription(AbstractIOweYou):
     """
     Allows to create a subscription to a plan and services.
     """
+
+    upgraded_subscription_to = models.ForeignKey('self',
+                                                 on_delete=models.SET_NULL,
+                                                 default=None,
+                                                 blank=True,
+                                                 null=True)
+
+    upgraded_plan_financing_to = models.ForeignKey(PlanFinancing,
+                                                   on_delete=models.SET_NULL,
+                                                   default=None,
+                                                   blank=True,
+                                                   null=True)
 
     # last time the subscription was paid
     paid_at = models.DateTimeField(help_text='Last time the subscription was paid')
@@ -833,54 +906,6 @@ class SubscriptionServiceItem(models.Model):
 
     def __str__(self) -> str:
         return str(self.service_item)
-
-
-class PlanFinancing(AbstractIOweYou):
-    """
-    Allows to financing a plan
-    """
-
-    # in this day the financing needs being paid again
-    next_payment_at = models.DateTimeField(help_text='Next payment date')
-
-    # in this moment the subscription will be expired
-    valid_until = models.DateTimeField(
-        help_text='Valid until, before this date each month the customer must pay, after this '
-        'date the plan financing will be destroyed and if it is belonging to a cohort, the certificate will '
-        'be issued after pay every installments')
-
-    # in this moment the subscription will be expired
-    plan_expires_at = models.DateTimeField(
-        default=None,
-        null=True,
-        blank=False,
-        help_text='Plan expires at, after this date the plan will not be renewed')
-
-    # this remember the current price per month
-    monthly_price = models.FloatField(
-        default=0, help_text='Monthly price, we keep this to avoid we changes him/her amount')
-
-    def __str__(self) -> str:
-        return f'{self.user.email} ({self.valid_until})'
-
-    def clean(self) -> None:
-        settings = get_user_settings(self.user.id)
-
-        if not self.monthly_price:
-            raise forms.ValidationError(
-                translation(settings.lang, en='Monthly price is required', es='Precio mensual es requerido'))
-
-        if not self.plan_expires_at:
-            raise forms.ValidationError(
-                translation(settings.lang,
-                            en='Plan expires at is required',
-                            es='Plan expires at es requerido'))
-
-        return super().clean()
-
-    def save(self, *args, **kwargs) -> None:
-        self.full_clean()
-        return super().save(*args, **kwargs)
 
 
 class Consumable(AbstractServiceItem):

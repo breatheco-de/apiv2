@@ -711,7 +711,9 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_quarter': random.random() * 100,
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
-            # 'available_cohorts': [],
+            'is_renewable': False,
+            'time_of_life': 0,
+            'time_of_life_unit': None,
         }
 
         service = {

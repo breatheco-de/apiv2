@@ -2,14 +2,14 @@ from django.urls import path
 
 from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, AcademyServiceView,
                     AcademySubscriptionView, BagView, CardView, CheckingView, MeConsumableView, MeInvoiceView,
-                    AcademyInvoiceView, MeSubscriptionChargeView, PayView, PlanView, ServiceItemView,
-                    ServiceView, MeSubscriptionView)
+                    AcademyInvoiceView, MeSubscriptionChargeView, PayView, PlanOfferView, PlanView,
+                    ServiceItemView, ServiceView, MeSubscriptionView)
 
 # /v1/payment/offer
-# /v1/payment/planoffer?original_plan=<>&from_syllabus=<>
 
 app_name = 'payments'
 urlpatterns = [
+    path('planoffer', PlanOfferView.as_view(), name='planoffer'),
     path('plan', PlanView.as_view(), name='plan'),
     path('plan/<slug:plan_slug>', PlanView.as_view()),
     path('academy/plan', AcademyPlanView.as_view()),
