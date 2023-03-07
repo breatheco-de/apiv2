@@ -787,8 +787,6 @@ class PlanOfferView(APIView):
         items = items.distinct()
         items = handler.queryset(items)
         items = items.annotate(lang=Value(lang, output_field=CharField()))
-        print('====================')
-        print(items)
         serializer = GetPlanOfferSerializer(items, many=True)
 
         return handler.response(serializer.data)
