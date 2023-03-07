@@ -16,7 +16,8 @@ from breathecode.payments import tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
-                                          get_amount_by_chosen_period, get_balance_by_resource)
+                                          get_amount_by_chosen_period, get_bag_for_upgrade,
+                                          get_bag_from_subscription, get_balance_by_resource)
 from breathecode.payments.models import (Bag, Consumable, EventTypeSet, FinancialReputation, Invoice,
                                          MentorshipServiceSet, Plan, PlanFinancing, PlanOffer,
                                          PlanServiceItem, Service, ServiceItem, Subscription)
@@ -559,6 +560,162 @@ class MeSubscriptionChargeView(APIView):
                                       code=400)
 
         tasks.charge_subscription.delay(subscription_id)
+
+        return Response({'status': 'loading'}, status=status.HTTP_202_ACCEPTED)
+
+
+class MeSubscriptionCancelView(APIView):
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def put(self, request, subscription_id):
+        lang = get_user_language(request)
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id, user=request.user).first()):
+            raise ValidationException(translation(lang,
+                                                  en='Subscription not found',
+                                                  es='No existe la suscripción',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if subscription.status == 'CANCELLED':
+            raise ValidationException(translation(lang,
+                                                  en='Subscription already cancelled',
+                                                  es='La suscripción ya está cancelada',
+                                                  slug='already-cancelled'),
+                                      code=400)
+
+        if subscription.status == 'DEPRECATED':
+            raise ValidationException(translation(
+                lang,
+                en='This subscription is deprecated, so is already cancelled',
+                es='Esta suscripción está obsoleta, por lo que ya está cancelada',
+                slug='deprecated'),
+                                      code=400)
+
+        subscription.status = 'CANCELLED'
+        subscription.save()
+
+        serializer = GetSubscriptionSerializer(subscription)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MeSubscriptionUpgradeView(APIView):
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def put(self, request, subscription_id, plan_offer_id):
+        lang = get_user_language(request)
+        utc_now = timezone.now()
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id, user=request.user).first()):
+            raise ValidationException(translation(lang,
+                                                  en='Subscription not found',
+                                                  es='No existe la suscripción',
+                                                  slug='not-found'),
+                                      code=404)
+
+        plan = subscription.plans.filter().first()
+        if not plan:
+            raise ValidationException(translation(lang,
+                                                  en='This subscription has no plan associated',
+                                                  es='Esta suscripción no tiene un plan asociado',
+                                                  slug='no-plan'),
+                                      code=400)
+
+        offer = PlanOffer.objects.filter(id=plan_offer_id).first()
+        if not offer:
+            raise ValidationException(translation(lang,
+                                                  en='Plan offer not found',
+                                                  es='No existe la oferta del plan',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if subscription.status == 'CANCELLED':
+            raise ValidationException(translation(lang,
+                                                  en='Subscription is already cancelled',
+                                                  es='La suscripción ya está cancelada',
+                                                  slug='already-cancelled'),
+                                      code=400)
+
+        if subscription.status == 'DEPRECATED':
+            raise ValidationException(translation(lang,
+                                                  en='This subscription is deprecated, cannot be upgraded',
+                                                  es='Esta suscripción está obsoleta, no se puede actualizar',
+                                                  slug='deprecated'),
+                                      code=400)
+
+        chosen_period = request.data.get('chosen_period')
+        if subscription.status == 'DEPRECATED':
+            raise ValidationException(translation(lang,
+                                                  en='This subscription is deprecated, cannot be upgraded',
+                                                  es='Esta suscripción está obsoleta, no se puede actualizar',
+                                                  slug='deprecated'),
+                                      code=400)
+
+        if subscription.valid_until and subscription.valid_until > utc_now:
+            raise ValidationException(translation(lang,
+                                                  en='Free trial is not over',
+                                                  es='El periodo de prueba no ha terminado',
+                                                  slug='free-trial-not-over'),
+                                      code=400)
+
+        if chosen_period:
+            raise ValidationException(translation(lang,
+                                                  en='Missing chosen period',
+                                                  es='Falta el periodo elegido',
+                                                  slug='missing-chosen-period'),
+                                      code=400)
+
+        if chosen_period not in ['MONTH', 'QUARTER', 'HALF', 'YEAR']:
+            raise ValidationException(translation(lang,
+                                                  en='Invalid chosen period',
+                                                  es='Periodo elegido inválido',
+                                                  slug='invalid-chosen-period'),
+                                      code=400)
+
+        last_invoice = subscription.invoices.filter().last()
+        if not last_invoice:
+            raise Exception(
+                translation(lang,
+                            en='Invalid subscription, this has no invoices',
+                            es='Suscripción invalida, esta no tiene facturas',
+                            slug='subscription-has-no-invoices'))
+
+        with transaction.atomic():
+            sid = transaction.savepoint()
+            try:
+                offer.suggested_plan
+                bag = get_bag_for_upgrade(request.user, offer.suggested_plan, academy=last_invoice.academy)
+                amount = get_amount_by_chosen_period(bag, chosen_period, lang)
+
+                if amount >= 0.50:
+                    s = Stripe()
+                    s.set_language(lang)
+                    invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
+
+                elif amount == 0:
+                    raise ValidationException(translation(
+                        lang,
+                        en='The plan is not ready to be sold, choose other offer',
+                        es='El plan no está listo para ser vendido, elige otra oferta',
+                        slug='plan-not-ready'),
+                                              code=400)
+
+                else:
+                    raise ValidationException(translation(lang,
+                                                          en='Amount is too low',
+                                                          es='El monto es muy bajo',
+                                                          slug='amount-is-too-low'),
+                                              code=500)
+
+            except Exception as e:
+                transaction.savepoint_rollback(sid)
+                raise e
+
+        subscription.valid_until = subscription.valid_until or subscription.next_payment_at
+        subscription.save()
+
+        tasks.build_subscription.delay(bag.id, invoice.id, subscription.next_payment_at)
 
         return Response({'status': 'loading'}, status=status.HTTP_202_ACCEPTED)
 

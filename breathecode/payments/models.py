@@ -547,10 +547,12 @@ CONSUMPTION_SESSION_STATUS = [
     (CANCELLED, 'Cancelled'),
 ]
 
+UPGRADE = 'UPGRADE'
 RENEWAL = 'RENEWAL'
 CHECKING = 'CHECKING'
 PAID = 'PAID'
 BAG_STATUS = [
+    (UPGRADE, 'Upgrade'),
     (RENEWAL, 'Renewal'),
     (CHECKING, 'Checking'),
     (PAID, 'Paid'),

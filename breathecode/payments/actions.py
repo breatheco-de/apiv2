@@ -9,6 +9,7 @@ from django.db.models.query_utils import Q
 from django.db.models import Sum, QuerySet
 from django.core.handlers.wsgi import WSGIRequest
 from pytz import UTC
+from django.contrib.auth.models import User
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_settings
@@ -556,16 +557,42 @@ def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> floa
     return amount
 
 
-def get_bag_from_subscription(subscription: Subscription, settings: Optional[UserSetting] = None) -> Bag:
+def get_bag_for_upgrade(user: User, plan: Plan, academy: Academy) -> Bag:
     bag = Bag()
 
-    if not settings:
+    bag.status = 'UPGRADE'
+    bag.type = 'CHARGE'
+    bag.academy = academy
+    bag.currency = academy.main_currency
+    bag.user = user
+    bag.is_recurrent = True
+    bag.save()
+
+    bag.plans.add(plan)
+
+    bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
+        bag, academy.main_currency)
+
+    bag.save()
+
+    return bag
+
+
+def get_bag_from_subscription(subscription: Subscription,
+                              settings: Optional[UserSetting] = None,
+                              lang: Optional[str] = None) -> Bag:
+    bag = Bag()
+
+    if not lang and not settings:
         settings = get_user_settings(subscription.user.id)
+        lang = settings.lang
+    elif settings:
+        lang = settings.lang
 
     last_invoice = subscription.invoices.filter().last()
     if not last_invoice:
         raise Exception(
-            translation(settings.lang,
+            translation(lang,
                         en='Invalid subscription, this has no invoices',
                         es='Suscripción invalida, esta no tiene facturas',
                         slug='subscription-has-no-invoices'))
