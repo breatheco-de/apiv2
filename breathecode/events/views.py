@@ -666,25 +666,38 @@ class EventTypeVisibilitySettingView(APIView):
     @capable_of('crud_event_type')
     def post(self, request, event_type_slug, academy_id=None):
         handler = self.extensions(request)
+        lang = get_user_language(request)
 
         academy = Academy.objects.filter(id=academy_id).first()
 
         event_type = EventType.objects.filter(slug=event_type_slug, academy=academy_id).first()
         if not event_type:
-            raise ValidationException('Event type not found', slug='event-type-not-found')
+            raise ValidationException(
+                translation(lang,
+                            en='Event type not found',
+                            es='Tipo de evento no encontrado',
+                            slug='event-type-not-found'), )
 
         syllabus = None
         if 'syllabus' in request.data:
             syllabus = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False),
                                                id=request.data['syllabus']).first()
             if syllabus is None:
-                raise ValidationException('Syllabus not found', slug='syllabus-not-found')
+                raise ValidationException(
+                    translation(lang,
+                                en='Syllabus not found',
+                                es='Syllabus no encontrado',
+                                slug='syllabus-not-found'), )
 
         cohort = None
         if 'cohort' in request.data:
             cohort = Cohort.objects.filter(id=request.data['cohort'], academy=academy_id).first()
             if cohort is None:
-                raise ValidationException('Cohort not found', slug='cohort-not-found')
+                raise ValidationException(
+                    translation(lang,
+                                en='Cohort not found',
+                                es='Cohorte no encontrada',
+                                slug='cohort-not-found'), )
 
         visibility_setting, created = EventTypeVisibilitySetting.objects.get_or_create(syllabus=syllabus,
                                                                                        academy=academy,
@@ -698,16 +711,24 @@ class EventTypeVisibilitySettingView(APIView):
 
     @capable_of('crud_event_type')
     def delete(self, request, event_type_slug, visibility_setting_id=None, academy_id=None):
+        lang = get_user_language(request)
+
         event_type = EventType.objects.filter(slug=event_type_slug, academy=academy_id).first()
         if not event_type:
-            raise ValidationException('Event type not found', slug='event-type-not-found')
+            raise ValidationException(
+                translation(lang,
+                            en='Event type not found',
+                            es='Tipo de evento no encontrado',
+                            slug='event-type-not-found'), )
 
         item = EventTypeVisibilitySetting.objects.filter(id=visibility_setting_id, academy=academy_id).first()
 
         if not item:
-            raise ValidationException('Event type visibility setting not found',
-                                      404,
-                                      slug='event-type-visibility-setting-not-found')
+            raise ValidationException(translation(lang,
+                                                  en='Event type visibility setting not found',
+                                                  es='Configuracion de visibilidad no encontrada',
+                                                  slug='event-type-visibility-setting-not-found'),
+                                      code=404)
 
         other_event_type = EventType.objects.filter(
             visibility_settings__id=visibility_setting_id,
