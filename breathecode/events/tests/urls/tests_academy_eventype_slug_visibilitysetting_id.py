@@ -57,7 +57,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
                                'event_type_slug': 'funny_event',
                                'visibility_setting_id': 2
                            })
-        self.generate_models(
+        model = self.generate_models(
             authenticate=True,
             profile_academy=1,
             role=1,
@@ -77,6 +77,12 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 404)
         self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [1])
+        self.assertEqual(self.bc.database.list_of('events.EventTypeVisibilitySetting'), [{
+            'id': 1,
+            'academy_id': 1,
+            'syllabus_id': None,
+            'cohort_id': 1
+        }])
 
     def test_delete_visibilitysetting_with_bad_slug(self):
         self.bc.request.set_headers(academy=1)
@@ -86,7 +92,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
                                'event_type_slug': 'funny_event',
                                'visibility_setting_id': 1
                            })
-        self.generate_models(
+        model = self.generate_models(
             authenticate=True,
             profile_academy=1,
             role=1,
@@ -106,6 +112,12 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
         self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [1])
+        self.assertEqual(self.bc.database.list_of('events.EventTypeVisibilitySetting'), [{
+            'id': 1,
+            'academy_id': 1,
+            'syllabus_id': None,
+            'cohort_id': 1
+        }])
 
     def test_delete_visibilitysetting_with_no_other_event_type(self):
         self.bc.request.set_headers(academy=1)
@@ -131,6 +143,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         self.assertEqual(response.status_code, 204)
         self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [])
+        self.assertEqual(self.bc.database.list_of('events.EventTypeVisibilitySetting'), [])
 
     def test_delete_visibilitysetting_with_other_event_type(self):
         self.bc.request.set_headers(academy=1)
@@ -164,3 +177,9 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
         self.assertEqual(response.status_code, 204)
         self.bc.check.queryset_with_pks(model.event_type[1].visibility_settings.all(), [1])
+        self.assertEqual(self.bc.database.list_of('events.EventTypeVisibilitySetting'), [{
+            'id': 1,
+            'academy_id': 1,
+            'syllabus_id': None,
+            'cohort_id': 1
+        }])

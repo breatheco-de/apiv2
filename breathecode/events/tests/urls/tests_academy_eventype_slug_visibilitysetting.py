@@ -203,3 +203,9 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
         self.bc.check.queryset_with_pks(model.event_type.visibility_settings.all(), [1])
+        self.assertEqual(self.bc.database.list_of('events.EventTypeVisibilitySetting'), [{
+            'id': 1,
+            'academy_id': 1,
+            'syllabus_id': 1,
+            'cohort_id': 1
+        }])
