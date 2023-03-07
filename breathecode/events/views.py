@@ -647,10 +647,15 @@ class EventTypeVisibilitySettingView(APIView):
     @capable_of('read_event_type')
     def get(self, request, event_type_slug, academy_id=None):
         handler = self.extensions(request)
+        lang = get_user_language(request)
 
         event_type = EventType.objects.filter(slug=event_type_slug).first()
         if not event_type:
-            raise ValidationException('Event type not found', slug='not-found')
+            raise ValidationException(
+                translation(lang,
+                            en='Event type not found',
+                            es='Tipo de evento no encontrado',
+                            slug='not-found'), )
 
         if event_type.allow_shared_creation or event_type.academy.id == academy_id:
             items = event_type.visibility_settings.filter(academy__id=academy_id)
@@ -726,7 +731,7 @@ class EventTypeVisibilitySettingView(APIView):
         if not item:
             raise ValidationException(translation(lang,
                                                   en='Event type visibility setting not found',
-                                                  es='Configuracion de visibilidad no encontrada',
+                                                  es='Configuración de visibilidad no encontrada',
                                                   slug='event-type-visibility-setting-not-found'),
                                       code=404)
 
