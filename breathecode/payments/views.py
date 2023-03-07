@@ -762,11 +762,8 @@ class BagView(APIView):
     def put(self, request):
         lang = get_user_language(request)
 
-        settings = get_user_settings(request.user.id)
-        language = language or settings.lang or 'en'
-
         s = Stripe()
-        s.set_language(language)
+        s.set_language(lang)
         s.add_contact(request.user)
 
         # do no show the bags of type preview they are build
