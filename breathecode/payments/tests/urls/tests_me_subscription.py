@@ -241,6 +241,10 @@ def get_subscription_serializer(self,
     return {
         'id':
         subscription.id,
+        'upgraded_plan_financing_to':
+        None,
+        'upgraded_subscription_to':
+        None,
         'academy':
         academy_serializer(academy),
         'invoices': [invoice_serializer(self, invoice, currency, user) for invoice in invoices],
@@ -318,7 +322,11 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items(self):
-        subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
+        subscriptions = [{
+            'valid_until': x,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
@@ -402,7 +410,11 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_subscription(self):
-        subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
+        subscriptions = [{
+            'valid_until': x,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
@@ -454,7 +466,11 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_plan_financing(self):
-        subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
+        subscriptions = [{
+            'valid_until': x,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
@@ -506,7 +522,11 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_subscription_and_plan_financing(self):
-        subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
+        subscriptions = [{
+            'valid_until': x,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
@@ -574,6 +594,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'status': random.choice(wrong_statuses),
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -621,6 +643,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'status': random.choice(chosen_statuses),
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -711,6 +735,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'status': random.choice(chosen_statuses),
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -755,6 +781,8 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_good_invoice(self):
         subscriptions = [{
             'valid_until': x,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -843,6 +871,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'status': random.choice(chosen_statuses),
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -888,6 +918,8 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_good_service(self):
         subscriptions = [{
             'valid_until': x,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -978,6 +1010,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'status': random.choice(chosen_statuses),
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -1023,6 +1057,8 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_good_plan(self):
         subscriptions = [{
             'valid_until': x,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -1111,6 +1147,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'selected_cohort_id': None,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -1156,6 +1194,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'selected_cohort_id': y,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -1252,6 +1292,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'selected_mentorship_service_set_id': None,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -1298,6 +1340,8 @@ class SignalTestSuite(PaymentsTestCase):
             'valid_until': x,
             'selected_mentorship_service_set_id': y,
             'selected_event_type_set_id': None,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -1396,6 +1440,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'selected_event_type_set_id': None,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
@@ -1442,6 +1488,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscriptions = [{
             'valid_until': x,
             'selected_event_type_set_id': y,
+            'upgraded_subscription_to_id': None,
+            'upgraded_plan_financing_to_id': None,
         } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),

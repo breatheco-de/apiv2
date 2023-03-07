@@ -329,9 +329,16 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
         return GetInvoiceSerializer(obj.invoices.filter(), many=True).data
 
 
-class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
+class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
+    plan_expires_at = serpy.Field()
+    monthly_price = serpy.Field()
+
+
+class GetBaseSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
     is_refundable = serpy.Field()
+
+    upgraded_plan_financing_to = GetPlanFinancingSerializer(required=False, many=False)
 
     pay_every = serpy.Field()
     pay_every_unit = serpy.Field()
@@ -342,10 +349,8 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
 
 
-#NOTE: this is before feature/add-plan-duration branch, this will be outdated
-class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
-    plan_expires_at = serpy.Field()
-    monthly_price = serpy.Field()
+class GetSubscriptionSerializer(GetBaseSubscriptionSerializer):
+    upgraded_subscription_to = GetBaseSubscriptionSerializer(required=False, many=False)
 
 
 class GetBagSerializer(serpy.Serializer):

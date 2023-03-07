@@ -879,6 +879,29 @@ class Subscription(AbstractIOweYou):
     def __str__(self) -> str:
         return f'{self.user.email} ({self.valid_until})'
 
+    def clean(self) -> None:
+        settings = get_user_settings(self.user.id)
+
+        if self.upgraded_subscription_to and self.__class__.objects.filter(
+                upgraded_subscription_to=self.upgraded_subscription_to).exclude(id=self.id).exists():
+            raise forms.ValidationError(
+                translation(settings.lang,
+                            en='This subscription selected is already upgraded',
+                            es='Esta suscripción seleccionada ya está actualizada'))
+
+        if self.upgraded_plan_financing_to and self.__class__.objects.filter(
+                upgraded_plan_financing_to=self.upgraded_plan_financing_to).exclude(id=self.id).exists():
+            raise forms.ValidationError(
+                translation(settings.lang,
+                            en='This plan financing selected is already upgraded',
+                            es='Este plan financiado seleccionado ya está actualizado'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
 
 class SubscriptionServiceItem(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text='Subscription')
