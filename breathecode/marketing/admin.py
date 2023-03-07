@@ -1,8 +1,9 @@
 import logging, secrets
 from django.contrib import admin, messages
 from django import forms
-from .models import (FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook,
-                     AcademyAlias, Downloadable, LeadGenerationApp, UTMField, AcademyProxy)
+from .models import (Course, CourseTranslation, FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy,
+                     ActiveCampaignWebhook, AcademyAlias, Downloadable, LeadGenerationApp, UTMField,
+                     AcademyProxy)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
                       sync_tags, sync_automations, acp_ids, delete_tag)
 from breathecode.services.activecampaign import ActiveCampaign
@@ -455,3 +456,16 @@ class UTMFieldAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'utm_type')
     list_filter = ['utm_type', 'academy__slug']
     actions = change_field(['SOURCE', 'MEDIUM', 'CAMPAIGN', 'CONTENT'], name='utm_type')
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'academy', 'status', 'visibility')
+    list_filter = ['academy__slug', 'status', 'visibility']
+    filter_horizontal = ('syllabus', )
+
+
+@admin.register(CourseTranslation)
+class CourseTranslationAdmin(admin.ModelAdmin):
+    list_display = ('course', 'lang', 'title', 'description')
+    list_filter = ['course__academy__slug', 'course__status', 'course__visibility']
