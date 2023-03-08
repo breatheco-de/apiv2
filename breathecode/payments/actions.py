@@ -557,27 +557,6 @@ def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> floa
     return amount
 
 
-def get_bag_for_upgrade(user: User, plan: Plan, academy: Academy) -> Bag:
-    bag = Bag()
-
-    bag.status = 'UPGRADE'
-    bag.type = 'CHARGE'
-    bag.academy = academy
-    bag.currency = academy.main_currency
-    bag.user = user
-    bag.is_recurrent = True
-    bag.save()
-
-    bag.plans.add(plan)
-
-    bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-        bag, academy.main_currency)
-
-    bag.save()
-
-    return bag
-
-
 def get_bag_from_subscription(subscription: Subscription,
                               settings: Optional[UserSetting] = None,
                               lang: Optional[str] = None) -> Bag:

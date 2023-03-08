@@ -343,9 +343,6 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'plan' in models:
                 kargs['plans'] = get_list(models['plan'])
 
-            if 'plan_financing' in models:
-                kargs['upgraded_plan_financing_to'] = just_one(models['plan_financing'])
-
             models['subscription'] = create_models(subscription, 'payments.Subscription', **kargs)
 
         if not 'subscription_service_item' in models and is_valid(subscription_service_item):

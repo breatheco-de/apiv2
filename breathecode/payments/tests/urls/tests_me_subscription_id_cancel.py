@@ -48,8 +48,6 @@ def get_serializer(self, subscription, academy, user, data={}):
         'service_items': [],
         'status': subscription.status,
         'status_message': subscription.status_message,
-        'upgraded_plan_financing_to': subscription.upgraded_plan_financing_to,
-        'upgraded_subscription_to': subscription.upgraded_subscription_to,
         'user': user_serializer(user),
         'valid_until':
         self.bc.datetime.to_iso_string(subscription.valid_until) if subscription.valid_until else None,

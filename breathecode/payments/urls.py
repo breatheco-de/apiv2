@@ -2,9 +2,8 @@ from django.urls import path
 
 from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, AcademyServiceView,
                     AcademySubscriptionView, BagView, CardView, CheckingView, MeConsumableView, MeInvoiceView,
-                    AcademyInvoiceView, MeSubscriptionCancelView, MeSubscriptionChargeView,
-                    MeSubscriptionUpgradeView, PayView, PlanOfferView, PlanView, ServiceItemView, ServiceView,
-                    MeSubscriptionView)
+                    AcademyInvoiceView, MeSubscriptionCancelView, MeSubscriptionChargeView, PayView,
+                    PlanOfferView, PlanView, ServiceItemView, ServiceView, MeSubscriptionView)
 
 # /v1/payment/offer
 
@@ -32,9 +31,6 @@ urlpatterns = [
     path('me/subscription/<int:subscription_id>/cancel',
          MeSubscriptionCancelView.as_view(),
          name='me_subscription_id_cancel'),
-    path('me/subscription/<int:subscription_id>/upgrade/<int:plan_offer_id>',
-         MeSubscriptionUpgradeView.as_view(),
-         name='me_subscription_id_upgrade_id'),
     path('academy/subscription', AcademySubscriptionView.as_view()),
     path('academy/subscription/<int:subscription_id>', AcademySubscriptionView.as_view()),
     path('me/invoice', MeInvoiceView.as_view()),

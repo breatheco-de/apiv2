@@ -334,11 +334,9 @@ class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     monthly_price = serpy.Field()
 
 
-class GetBaseSubscriptionSerializer(GetAbstractIOweYouSerializer):
+class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
     is_refundable = serpy.Field()
-
-    upgraded_plan_financing_to = GetPlanFinancingSerializer(required=False, many=False)
 
     pay_every = serpy.Field()
     pay_every_unit = serpy.Field()
@@ -347,10 +345,6 @@ class GetBaseSubscriptionSerializer(GetAbstractIOweYouSerializer):
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
-
-
-class GetSubscriptionSerializer(GetBaseSubscriptionSerializer):
-    upgraded_subscription_to = GetBaseSubscriptionSerializer(required=False, many=False)
 
 
 class GetBagSerializer(serpy.Serializer):

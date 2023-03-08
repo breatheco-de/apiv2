@@ -22,8 +22,6 @@ def subscription_item(data={}):
         'id': 1,
         'academy_id': 1,
         'is_refundable': True,
-        'upgraded_plan_financing_to_id': None,
-        'upgraded_subscription_to_id': None,
         'paid_at': UTC_NOW,
         'pay_every': 1,
         'pay_every_unit': 'MONTH',

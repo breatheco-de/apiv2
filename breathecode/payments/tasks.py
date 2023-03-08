@@ -626,7 +626,6 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
     if plan and not mentorship_service_set:
         mentorship_service_set = plan.mentorship_service_set
 
-    start_date
     subscription_start_at = start_date or invoice.paid_at
     subscription = Subscription.objects.create(user=bag.user,
                                                paid_at=invoice.paid_at,

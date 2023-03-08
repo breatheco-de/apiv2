@@ -520,6 +520,15 @@ class PlanOffer(models.Model):
     expires_at = models.DateTimeField(default=None, blank=True, null=True)
 
     def clean(self) -> None:
+        utc_now = timezone.now()
+        others = self.__class__.objects.filter(original_plan=self.original_plan, expires_at__gt=utc_now)
+
+        if self.pk:
+            others = others.exclude(pk=self.pk)
+
+        if others.exists():
+            raise forms.ValidationError('There is already an active plan offer for this plan')
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
@@ -547,12 +556,10 @@ CONSUMPTION_SESSION_STATUS = [
     (CANCELLED, 'Cancelled'),
 ]
 
-UPGRADE = 'UPGRADE'
 RENEWAL = 'RENEWAL'
 CHECKING = 'CHECKING'
 PAID = 'PAID'
 BAG_STATUS = [
-    (UPGRADE, 'Upgrade'),
     (RENEWAL, 'Renewal'),
     (CHECKING, 'Checking'),
     (PAID, 'Paid'),
@@ -836,18 +843,6 @@ class Subscription(AbstractIOweYou):
     Allows to create a subscription to a plan and services.
     """
 
-    upgraded_subscription_to = models.ForeignKey('self',
-                                                 on_delete=models.SET_NULL,
-                                                 default=None,
-                                                 blank=True,
-                                                 null=True)
-
-    upgraded_plan_financing_to = models.ForeignKey(PlanFinancing,
-                                                   on_delete=models.SET_NULL,
-                                                   default=None,
-                                                   blank=True,
-                                                   null=True)
-
     # last time the subscription was paid
     paid_at = models.DateTimeField(help_text='Last time the subscription was paid')
 
@@ -882,22 +877,6 @@ class Subscription(AbstractIOweYou):
         return f'{self.user.email} ({self.valid_until})'
 
     def clean(self) -> None:
-        settings = get_user_settings(self.user.id)
-
-        if self.upgraded_subscription_to and self.__class__.objects.filter(
-                upgraded_subscription_to=self.upgraded_subscription_to).exclude(id=self.id).exists():
-            raise forms.ValidationError(
-                translation(settings.lang,
-                            en='This subscription selected is already upgraded',
-                            es='Esta suscripción seleccionada ya está actualizada'))
-
-        if self.upgraded_plan_financing_to and self.__class__.objects.filter(
-                upgraded_plan_financing_to=self.upgraded_plan_financing_to).exclude(id=self.id).exists():
-            raise forms.ValidationError(
-                translation(settings.lang,
-                            en='This plan financing selected is already upgraded',
-                            es='Este plan financiado seleccionado ya está actualizado'))
-
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
