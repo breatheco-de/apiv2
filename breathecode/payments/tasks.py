@@ -593,7 +593,7 @@ def build_service_stock_scheduler_from_plan_financing(self,
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def build_subscription(self, bag_id: int, invoice_id: int):
+def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[datetime] = None):
     logger.info(f'Starting build_subscription for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
@@ -626,6 +626,7 @@ def build_subscription(self, bag_id: int, invoice_id: int):
     if plan and not mentorship_service_set:
         mentorship_service_set = plan.mentorship_service_set
 
+    subscription_start_at = start_date or invoice.paid_at
     subscription = Subscription.objects.create(user=bag.user,
                                                paid_at=invoice.paid_at,
                                                academy=bag.academy,
@@ -633,7 +634,8 @@ def build_subscription(self, bag_id: int, invoice_id: int):
                                                selected_event_type_set=event_type_set,
                                                selected_mentorship_service_set=mentorship_service_set,
                                                valid_until=None,
-                                               next_payment_at=invoice.paid_at + relativedelta(months=months),
+                                               next_payment_at=subscription_start_at +
+                                               relativedelta(months=months),
                                                status='ACTIVE')
 
     subscription.plans.set(bag.plans.all())

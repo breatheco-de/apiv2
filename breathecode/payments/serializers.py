@@ -1,7 +1,7 @@
 import logging
 import serpy
 from breathecode.admissions.models import Cohort
-from breathecode.payments.models import Plan, Service, ServiceItem, ServiceItemFeature, Subscription
+from breathecode.payments.models import Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature, Subscription
 from django.db.models.query_utils import Q
 
 from breathecode.utils import serializers, custom_serpy
@@ -209,7 +209,35 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     price_per_year = serpy.Field()
     currency = GetCurrencySmallSerializer()
     is_renewable = serpy.Field()
-    owner = GetAcademySmallSerializer()
+    owner = GetAcademySmallSerializer(required=False, many=False)
+
+
+class GetPlanOfferTranslationSerializer(custom_serpy.Serializer):
+    lang = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+    short_description = serpy.Field()
+
+
+class GetPlanOfferSerializer(custom_serpy.Serializer):
+    original_plan = GetPlanSerializer(required=False, many=False)
+    suggested_plan = GetPlanSerializer(required=False, many=False)
+    details = serpy.MethodField()
+    show_modal = serpy.Field()
+    expires_at = serpy.Field()
+
+    def get_details(self, obj):
+        query_args = []
+        query_kwargs = {'offer': obj}
+        obj.lang = obj.lang or 'en'
+
+        query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
+
+        item = PlanOfferTranslation.objects.filter(*query_args, **query_kwargs).first()
+        if item:
+            return GetPlanOfferTranslationSerializer(item, many=False).data
+
+        return None
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
@@ -301,6 +329,11 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
         return GetInvoiceSerializer(obj.invoices.filter(), many=True).data
 
 
+class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
+    plan_expires_at = serpy.Field()
+    monthly_price = serpy.Field()
+
+
 class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
     is_refundable = serpy.Field()
@@ -312,12 +345,6 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
-
-
-#NOTE: this is before feature/add-plan-duration branch, this will be outdated
-class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
-    plan_expires_at = serpy.Field()
-    monthly_price = serpy.Field()
 
 
 class GetBagSerializer(serpy.Serializer):

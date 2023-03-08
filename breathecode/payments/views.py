@@ -16,15 +16,16 @@ from breathecode.payments import tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
-                                          get_amount_by_chosen_period, get_balance_by_resource)
+                                          get_amount_by_chosen_period, get_bag_from_subscription,
+                                          get_balance_by_resource)
 from breathecode.payments.models import (Bag, Consumable, EventTypeSet, FinancialReputation, Invoice,
-                                         MentorshipServiceSet, Plan, PlanFinancing, PlanServiceItem, Service,
-                                         ServiceItem, Subscription)
+                                         MentorshipServiceSet, Plan, PlanFinancing, PlanOffer,
+                                         PlanServiceItem, Service, ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetInvoiceSerializer,
                                               GetInvoiceSmallSerializer, GetPlanFinancingSerializer,
-                                              GetPlanSerializer, GetServiceItemWithFeaturesSerializer,
-                                              GetServiceSerializer, GetSubscriptionSerializer,
-                                              ServiceSerializer)
+                                              GetPlanOfferSerializer, GetPlanSerializer,
+                                              GetServiceItemWithFeaturesSerializer, GetServiceSerializer,
+                                              GetSubscriptionSerializer, ServiceSerializer)
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators.capable_of import capable_of
@@ -563,6 +564,42 @@ class MeSubscriptionChargeView(APIView):
         return Response({'status': 'loading'}, status=status.HTTP_202_ACCEPTED)
 
 
+class MeSubscriptionCancelView(APIView):
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def put(self, request, subscription_id):
+        lang = get_user_language(request)
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id, user=request.user).first()):
+            raise ValidationException(translation(lang,
+                                                  en='Subscription not found',
+                                                  es='No existe la suscripción',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if subscription.status == 'CANCELLED':
+            raise ValidationException(translation(lang,
+                                                  en='Subscription already cancelled',
+                                                  es='La suscripción ya está cancelada',
+                                                  slug='already-cancelled'),
+                                      code=400)
+
+        if subscription.status == 'DEPRECATED':
+            raise ValidationException(translation(
+                lang,
+                en='This subscription is deprecated, so is already cancelled',
+                es='Esta suscripción está obsoleta, por lo que ya está cancelada',
+                slug='deprecated'),
+                                      code=400)
+
+        subscription.status = 'CANCELLED'
+        subscription.save()
+
+        serializer = GetSubscriptionSerializer(subscription)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class MePlanFinancingChargeView(APIView):
     extensions = APIViewExtensions(sort='-id', paginate=True)
 
@@ -738,6 +775,58 @@ class CardView(APIView):
         #TODO: this throw a exception
         s.add_payment_method(request.user, token)
         return Response({'status': 'ok'})
+
+
+class PlanOfferView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def get_lookup(self, key, value):
+        args = ()
+        kwargs = {}
+        slug_key = f'{key}__slug__in'
+        pk_key = f'{key}__id__in'
+
+        for v in value.split(','):
+            if slug_key not in kwargs and not v.isnumeric():
+                kwargs[slug_key] = []
+
+            if pk_key not in kwargs and v.isnumeric():
+                kwargs[pk_key] = []
+
+            if v.isnumeric():
+                kwargs[pk_key].append(int(v))
+
+            else:
+                kwargs[slug_key].append(v)
+
+        if len(kwargs) > 1:
+            args = (Q(**{slug_key: kwargs[slug_key]}) | Q(**{pk_key: kwargs[pk_key]}), )
+            kwargs = {}
+
+        return args, kwargs
+
+    def get(self, request):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        # do no show the bags of type preview they are build
+        items = PlanOffer.objects.filter()
+
+        if suggested_plan := request.GET.get('suggested-plan'):
+            args, kwargs = self.get_lookup('suggested_plan', suggested_plan)
+            items = items.filter(*args, **kwargs)
+
+        if original_plan := request.GET.get('original-plan'):
+            args, kwargs = self.get_lookup('original_plan', original_plan)
+            items = items.filter(*args, **kwargs)
+
+        items = items.distinct()
+        items = handler.queryset(items)
+        items = items.annotate(lang=Value(lang, output_field=CharField()))
+        serializer = GetPlanOfferSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
 
 class BagView(APIView):
@@ -1001,6 +1090,13 @@ class PayView(APIView):
                                               code=500)
 
                 actions.check_dependencies_in_bag(bag, lang)
+
+                if amount == 0 and not bag.plans.filter(plan_offer_from__id__gte=1).exists():
+                    raise ValidationException(
+                        translation(lang,
+                                    en='The plan was chosen is not ready too be sold',
+                                    es='El plan elegido no esta listo para ser vendido',
+                                    slug='the-plan-was-chosen-is-not-ready-too-be-sold'))
 
                 if amount >= 0.50:
                     s = Stripe()

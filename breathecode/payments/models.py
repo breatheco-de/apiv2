@@ -509,10 +509,32 @@ class PlanTranslation(models.Model):
 
 
 class PlanOffer(models.Model):
-    original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='original_plan')
-    from_syllabus = models.ManyToManyField('admissions.Syllabus',
-                                           help_text='Syllabus from which the plan is offered')
-    suggested_plans = models.ManyToManyField(Plan, related_name='+', help_text='Suggested plans')
+    original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='plan_offer_from')
+    suggested_plan = models.ForeignKey(Plan,
+                                       related_name='plan_offer_to',
+                                       help_text='Suggested plans',
+                                       null=True,
+                                       blank=False,
+                                       on_delete=models.CASCADE)
+    show_modal = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(default=None, blank=True, null=True)
+
+    def clean(self) -> None:
+        utc_now = timezone.now()
+        others = self.__class__.objects.filter(original_plan=self.original_plan, expires_at__gt=utc_now)
+
+        if self.pk:
+            others = others.exclude(pk=self.pk)
+
+        if others.exists():
+            raise forms.ValidationError('There is already an active plan offer for this plan')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+
+        super().save(*args, **kwargs)
 
 
 class PlanOfferTranslation(models.Model):
@@ -768,73 +790,6 @@ class AbstractIOweYou(models.Model):
         abstract = True
 
 
-class Subscription(AbstractIOweYou):
-    """
-    Allows to create a subscription to a plan and services.
-    """
-
-    # last time the subscription was paid
-    paid_at = models.DateTimeField(help_text='Last time the subscription was paid')
-
-    is_refundable = models.BooleanField(default=True, help_text='Is it refundable?')
-
-    # in this day the subscription needs being paid again
-    next_payment_at = models.DateTimeField(help_text='Next payment date')
-
-    # in this moment the subscription will be expired
-    valid_until = models.DateTimeField(
-        default=None,
-        null=True,
-        blank=True,
-        help_text='Valid until, after this date the subscription will be destroyed')
-
-    # this reminds the service items to change the stock scheduler on change
-    # only for consuming single items without having a plan, when you buy consumable quantities
-    service_items = models.ManyToManyField(ServiceItem,
-                                           blank=True,
-                                           through='SubscriptionServiceItem',
-                                           through_fields=('subscription', 'service_item'),
-                                           help_text='Service items to be suplied')
-
-    # remember the chosen period to pay again
-    pay_every = models.IntegerField(default=1, help_text='Pay every X units (e.g. 1, 2, 3, ...)')
-    pay_every_unit = models.CharField(max_length=10,
-                                      choices=PAY_EVERY_UNIT,
-                                      default=MONTH,
-                                      help_text='Pay every unit (e.g. DAY, WEEK, MONTH or YEAR)')
-
-    def __str__(self) -> str:
-        return f'{self.user.email} ({self.valid_until})'
-
-
-class SubscriptionServiceItem(models.Model):
-    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text='Subscription')
-    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text='Service item')
-
-    cohorts = models.ManyToManyField(Cohort, blank=True, help_text='Cohorts')
-    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
-                                               on_delete=models.CASCADE,
-                                               blank=True,
-                                               null=True,
-                                               help_text='Mentorship service set')
-
-    def clean(self):
-        if self.id and self.mentorship_service_set and self.cohorts.count():
-            raise forms.ValidationError(
-                translation(
-                    self._lang,
-                    en='You can not set cohorts and mentorship service set at the same time',
-                    es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-
-        super().save(*args, **kwargs)
-
-    def __str__(self) -> str:
-        return str(self.service_item)
-
-
 class PlanFinancing(AbstractIOweYou):
     """
     Allows to financing a plan
@@ -881,6 +836,80 @@ class PlanFinancing(AbstractIOweYou):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class Subscription(AbstractIOweYou):
+    """
+    Allows to create a subscription to a plan and services.
+    """
+
+    # last time the subscription was paid
+    paid_at = models.DateTimeField(help_text='Last time the subscription was paid')
+
+    is_refundable = models.BooleanField(default=True, help_text='Is it refundable?')
+
+    # in this day the subscription needs being paid again
+    next_payment_at = models.DateTimeField(help_text='Next payment date')
+
+    # in this moment the subscription will be expired
+    valid_until = models.DateTimeField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text='Valid until, after this date the subscription will be destroyed')
+
+    # this reminds the service items to change the stock scheduler on change
+    # only for consuming single items without having a plan, when you buy consumable quantities
+    service_items = models.ManyToManyField(ServiceItem,
+                                           blank=True,
+                                           through='SubscriptionServiceItem',
+                                           through_fields=('subscription', 'service_item'),
+                                           help_text='Service items to be suplied')
+
+    # remember the chosen period to pay again
+    pay_every = models.IntegerField(default=1, help_text='Pay every X units (e.g. 1, 2, 3, ...)')
+    pay_every_unit = models.CharField(max_length=10,
+                                      choices=PAY_EVERY_UNIT,
+                                      default=MONTH,
+                                      help_text='Pay every unit (e.g. DAY, WEEK, MONTH or YEAR)')
+
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.valid_until})'
+
+    def clean(self) -> None:
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class SubscriptionServiceItem(models.Model):
+    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text='Subscription')
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text='Service item')
+
+    cohorts = models.ManyToManyField(Cohort, blank=True, help_text='Cohorts')
+    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
+                                               on_delete=models.CASCADE,
+                                               blank=True,
+                                               null=True,
+                                               help_text='Mentorship service set')
+
+    def clean(self):
+        if self.id and self.mentorship_service_set and self.cohorts.count():
+            raise forms.ValidationError(
+                translation(
+                    self._lang,
+                    en='You can not set cohorts and mentorship service set at the same time',
+                    es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return str(self.service_item)
 
 
 class Consumable(AbstractServiceItem):

@@ -318,7 +318,9 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items(self):
-        subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
+        subscriptions = [{
+            'valid_until': x,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
@@ -402,7 +404,9 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_subscription(self):
-        subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
+        subscriptions = [{
+            'valid_until': x,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
@@ -454,7 +458,9 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_plan_financing(self):
-        subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
+        subscriptions = [{
+            'valid_until': x,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
@@ -506,7 +512,9 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_subscription_and_plan_financing(self):
-        subscriptions = [{'valid_until': x} for x in [None, UTC_NOW + timedelta(days=1)]]
+        subscriptions = [{
+            'valid_until': x,
+        } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financing = {
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),

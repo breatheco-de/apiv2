@@ -2,14 +2,14 @@ from django.urls import path
 
 from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, AcademyServiceView,
                     AcademySubscriptionView, BagView, CardView, CheckingView, MeConsumableView, MeInvoiceView,
-                    AcademyInvoiceView, MeSubscriptionChargeView, PayView, PlanView, ServiceItemView,
-                    ServiceView, MeSubscriptionView)
+                    AcademyInvoiceView, MeSubscriptionCancelView, MeSubscriptionChargeView, PayView,
+                    PlanOfferView, PlanView, ServiceItemView, ServiceView, MeSubscriptionView)
 
 # /v1/payment/offer
-# /v1/payment/planoffer?original_plan=<>&from_syllabus=<>
 
 app_name = 'payments'
 urlpatterns = [
+    path('planoffer', PlanOfferView.as_view(), name='planoffer'),
     path('plan', PlanView.as_view(), name='plan'),
     path('plan/<slug:plan_slug>', PlanView.as_view()),
     path('academy/plan', AcademyPlanView.as_view()),
@@ -28,6 +28,9 @@ urlpatterns = [
     path('me/service/consumable', MeConsumableView.as_view(), name='me_service_consumable'),
     path('me/subscription', MeSubscriptionView.as_view(), name='me_subscription'),
     path('me/subscription/charge', MeSubscriptionChargeView.as_view(), name='me_subscription_charge'),
+    path('me/subscription/<int:subscription_id>/cancel',
+         MeSubscriptionCancelView.as_view(),
+         name='me_subscription_id_cancel'),
     path('academy/subscription', AcademySubscriptionView.as_view()),
     path('academy/subscription/<int:subscription_id>', AcademySubscriptionView.as_view()),
     path('me/invoice', MeInvoiceView.as_view()),
