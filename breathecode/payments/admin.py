@@ -4,9 +4,10 @@ from breathecode.payments import tasks
 from breathecode.payments.models import (Bag, Consumable, Currency, EventTypeSet, EventTypeSetTranslation,
                                          FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
                                          MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing,
-                                         PlanOffer, PlanServiceItem, PlanServiceItemHandler, PlanTranslation,
-                                         Service, ServiceItem, ServiceItemFeature, ServiceStockScheduler,
-                                         ServiceTranslation, Subscription, SubscriptionServiceItem)
+                                         PlanOffer, PlanOfferTranslation, PlanServiceItem,
+                                         PlanServiceItemHandler, PlanTranslation, Service, ServiceItem,
+                                         ServiceItemFeature, ServiceStockScheduler, ServiceTranslation,
+                                         Subscription, SubscriptionServiceItem)
 
 # Register your models here.
 
@@ -228,3 +229,11 @@ class PlanOfferAdmin(admin.ModelAdmin):
     list_filter = ['show_modal']
     search_fields = ['original_plan__slug', 'suggested_plan__slug']
     raw_id_fields = ['original_plan', 'suggested_plan']
+
+
+@admin.register(PlanOfferTranslation)
+class PlanOfferTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'offer', 'lang', 'title', 'description', 'short_description')
+    list_filter = ['lang']
+    search_fields = ['title']
+    raw_id_fields = ['offer']
