@@ -104,6 +104,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_not_found(self):
         charge_subscription.delay(1)
 
@@ -125,6 +126,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_without_invoices(self):
         model = self.bc.database.create_v2(subscription=1)
 

@@ -104,6 +104,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_plan_financing_not_found(self):
         charge_plan_financing.delay(1)
 
@@ -125,6 +126,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_plan_financing_without_invoices(self):
         plan_financing = {
             'valid_until': UTC_NOW + relativedelta(minutes=3),

@@ -330,6 +330,9 @@ class Cohort(models.Model):
         blank=True,
         help_text='Determines if the cohort will be shown in the dashboard if it\'s status is \'PREWORK\'')
 
+    available_as_saas = models.BooleanField(
+        default=False, help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com')
+
     language = models.CharField(max_length=2, default='en')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -429,7 +432,7 @@ class CohortUser(models.Model):
         default=False, help_text='You can active students to the watch list and monitor them closely')
 
     history_log = models.JSONField(
-        default={},
+        default=dict(),
         blank=True,
         null=False,
         help_text='The cohort user log will save attendancy and information about progress on each class')
@@ -463,13 +466,19 @@ class CohortUser(models.Model):
     def save(self, *args, **kwargs):
         # check the fields before saving
         self.full_clean()
-
+        
+        edu_status_updated = False
         if self.__old_edu_status != self.educational_status:
+            edu_status_updated = True
+
+        result = super().save(*args, **kwargs)  # Call the "real" save() method.
+        
+        if edu_status_updated:
             student_edu_status_updated.send(instance=self, sender=self.__class__)
 
-        super().save(*args, **kwargs)  # Call the "real" save() method.
-
         signals.cohort_log_saved.send(instance=self, sender=self.__class__)
+        
+        return result
 
 
 DAILY = 'DAILY'

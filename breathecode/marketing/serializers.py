@@ -1,12 +1,13 @@
 import serpy, logging, hashlib, re
 from django.utils import timezone
 from datetime import timedelta
-from .models import FormEntry, AcademyAlias, ShortLink, Tag, ActiveCampaignAcademy, Automation
+from .models import CourseTranslation, FormEntry, AcademyAlias, ShortLink, Tag, ActiveCampaignAcademy, Automation
 from breathecode.monitoring.actions import test_link
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from breathecode.utils.integer_to_base import to_base
 from breathecode.utils.validation_exception import ValidationException
+from django.db.models.query_utils import Q
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +232,67 @@ class FormEntryBigSerializer(serpy.Serializer):
         automations = Automation.objects.filter(slug__in=automation_ids,
                                                 ac_academy__academy=obj.calculate_academy())
         return AutomationSmallSerializer(automations, many=True).data
+
+
+class GetAcademySmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    logo_url = serpy.Field()
+    icon_url = serpy.Field()
+
+
+class GetSyllabusSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    logo = serpy.Field()
+
+
+class GetCourseTranslationSerializer(serpy.Serializer):
+    title = serpy.Field()
+    description = serpy.Field()
+    lang = serpy.Field()
+
+
+class GetCourseSmallSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    icon_url = serpy.Field()
+    academy = serpy.MethodField()
+    syllabus = serpy.MethodField()
+    course_translation = serpy.MethodField()
+    technologies = serpy.Field()
+
+    def get_academy(self, obj):
+        return obj.academy.id
+
+    def get_syllabus(self, obj):
+        return [x for x in obj.syllabus.all().values_list('id', flat=True)]
+
+    def get_course_translation(self, obj):
+        query_args = []
+        query_kwargs = {'course': obj}
+        obj.lang = obj.lang or 'en'
+
+        query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
+
+        item = CourseTranslation.objects.filter(*query_args, **query_kwargs).first()
+        if item:
+            return GetCourseTranslationSerializer(item, many=False).data
+
+        return None
+
+
+class GetCourseSerializer(GetCourseSmallSerializer):
+    slug = serpy.Field()
+    syllabus = serpy.MethodField()
+    academy = GetAcademySmallSerializer()
+    status = serpy.Field()
+    visibility = serpy.Field()
+
+    def get_syllabus(self, obj):
+        return GetSyllabusSmallSerializer(obj.syllabus.all(), many=True).data
 
 
 class PostFormEntrySerializer(serializers.ModelSerializer):

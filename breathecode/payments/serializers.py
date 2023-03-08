@@ -156,11 +156,7 @@ class GetServiceItemWithFeaturesSerializer(GetServiceItemSerializer):
         query_kwargs = {'service_item': obj}
         obj.lang = obj.lang or 'en'
 
-        if '-' in obj.lang:
-            query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]))
-
-        else:
-            query_kwargs['lang'] = obj.lang
+        query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
 
         items = ServiceItemFeature.objects.filter(*query_args, **query_kwargs)
         return GetServiceItemFeatureShortSerializer(items, many=True).data
@@ -200,7 +196,7 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
 
     def get_financing_options(self, obj):
-        if not obj.is_renewable:
+        if obj.is_renewable:
             return []
 
         return GetFinancingOptionSerializer(obj.financing_options.all(), many=True).data
@@ -212,6 +208,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     price_per_half = serpy.Field()
     price_per_year = serpy.Field()
     currency = GetCurrencySmallSerializer()
+    is_renewable = serpy.Field()
     owner = GetAcademySmallSerializer()
 
 
@@ -230,6 +227,54 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     currency = GetCurrencySmallSerializer()
 
 
+class GetMentorshipServiceSerializer(serpy.Serializer):
+
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    description = serpy.Field()
+    logo_url = serpy.Field()
+    duration = serpy.Field()
+    max_duration = serpy.Field()
+    language = serpy.Field()
+    missed_meeting_duration = serpy.Field()
+    status = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+
+
+class GetMentorshipServiceSetSerializer(serpy.Serializer):
+
+    id = serpy.Field()
+    slug = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+    mentorship_services = serpy.MethodField()
+
+    def get_mentorship_services(self, obj):
+        return GetMentorshipServiceSerializer(obj.mentorship_services.filter(), many=True).data
+
+
+class GetEventTypeSerializer(serpy.Serializer):
+
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    description = serpy.Field()
+    icon_url = serpy.Field()
+    lang = serpy.Field()
+    allow_shared_creation = serpy.Field()
+
+
+class GetEventTypeSetSerializer(serpy.Serializer):
+
+    id = serpy.Field()
+    slug = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+    event_types = serpy.MethodField()
+
+    def get_event_types(self, obj):
+        return GetEventTypeSerializer(obj.event_types.filter(), many=True).data
+
+
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     id = serpy.Field()
@@ -238,6 +283,10 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     user = GetUserSmallSerializer(many=False)
     academy = GetAcademySmallSerializer(many=False)
+
+    selected_cohort = GetCohortSerializer(many=False, required=False)
+    selected_mentorship_service_set = GetMentorshipServiceSetSerializer(many=False, required=False)
+    selected_event_type_set = GetEventTypeSetSerializer(many=False, required=False)
 
     plans = serpy.MethodField()
     invoices = serpy.MethodField()

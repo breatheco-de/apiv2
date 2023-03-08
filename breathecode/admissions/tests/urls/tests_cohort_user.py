@@ -33,6 +33,8 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             cohort.slug,
             'stage':
             cohort.stage,
+            'available_as_saas':
+            cohort.available_as_saas
         },
         'created_at': self.bc.datetime.to_iso_string(cohort_user.created_at),
         'educational_status': cohort_user.educational_status,
@@ -108,6 +110,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'user': {
                 'id': model['cohort_user'].user.id,
@@ -166,6 +169,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'user': {
                 'id': model['cohort_user'].user.id,
@@ -211,6 +215,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
@@ -268,6 +273,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'user': {
                 'id': model['cohort_user'].user.id,
@@ -318,6 +324,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -378,6 +385,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -422,6 +430,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -482,6 +491,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -536,6 +546,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -579,6 +590,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]
@@ -639,6 +651,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
             },
             'watching': False,
         }]

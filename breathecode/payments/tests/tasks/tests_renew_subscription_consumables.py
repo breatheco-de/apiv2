@@ -35,6 +35,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_not_found(self):
         renew_subscription_consumables.delay(1)
 
@@ -54,6 +55,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_was_not_paid(self):
         model = self.bc.database.create(subscription=1, )
 
@@ -85,6 +87,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_was_paid__without_stock_scheduler(self):
         subscription = {'next_payment_at': UTC_NOW + relativedelta(minutes=3)}
         model = self.bc.database.create(subscription=subscription)
@@ -115,6 +118,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_subscription_is_over(self):
         subscription = {
             'next_payment_at': UTC_NOW + relativedelta(minutes=1),
@@ -150,7 +154,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
-    def test_subscription_was_not_paid__(self):
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription_is_right(self):
         subscription_service_items = [{'service_item_id': n} for n in range(1, 3)]
         plan_service_items = [{
             'plan_id': 1,
@@ -193,7 +198,14 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [call(1), call(2)])
+        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [
+            call(1),
+            call(2),
+            call(3),
+            call(4),
+            call(5),
+            call(6),
+        ])
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             self.bc.format.to_dict(model.subscription),

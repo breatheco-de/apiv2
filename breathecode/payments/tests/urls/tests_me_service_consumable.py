@@ -140,7 +140,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         json = response.json()
-        expected = {'mentorship_services': [], 'cohorts': [], 'event_types': []}
+        expected = {'mentorship_service_sets': [], 'cohorts': [], 'event_type_sets': []}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -160,7 +160,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         json = response.json()
-        expected = {'mentorship_services': [], 'cohorts': [], 'event_types': []}
+        expected = {'mentorship_service_sets': [], 'cohorts': [], 'event_type_sets': []}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -189,9 +189,9 @@ class SignalTestSuite(PaymentsTestCase):
 
         json = response.json()
         expected = {
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
             'cohorts': [],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -224,7 +224,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         json = response.json()
         expected = {
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
             'cohorts': [
                 {
                     'balance': {
@@ -251,7 +251,7 @@ class SignalTestSuite(PaymentsTestCase):
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -269,10 +269,10 @@ class SignalTestSuite(PaymentsTestCase):
     def test__nine_consumables__related_to_three_mentorship_services__without_cohorts_in_querystring(self):
         consumables = [{
             'how_many': random.randint(1, 30),
-            'mentorship_service_id': math.floor(n / 3) + 1
+            'mentorship_service_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service=3)
+        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -281,9 +281,9 @@ class SignalTestSuite(PaymentsTestCase):
 
         json = response.json()
         expected = {
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
             'cohorts': [],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -297,7 +297,7 @@ class SignalTestSuite(PaymentsTestCase):
     def test__nine_consumables__related_to_three_mentorship_services__with_cohorts_in_querystring(self):
         consumables = [{
             'how_many': random.randint(1, 30),
-            'mentorship_service_id': math.floor(n / 3) + 1
+            'mentorship_service_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
         belong_to_cohort1 = consumables[:3]
         belong_to_cohort2 = consumables[3:6]
@@ -307,43 +307,43 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to_cohort2 = sum([x['how_many'] for x in belong_to_cohort2])
         how_many_belong_to_cohort3 = sum([x['how_many'] for x in belong_to_cohort3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service=3)
+        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('payments:me_service_consumable') + '?mentorship_service=1,2,3'
+        url = reverse_lazy('payments:me_service_consumable') + '?mentorship_service_set=1,2,3'
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
 
         json = response.json()
         expected = {
             'cohorts': [],
-            'mentorship_services': [
+            'mentorship_service_sets': [
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort1,
                     },
-                    'id': model.mentorship_service[0].id,
-                    'slug': model.mentorship_service[0].slug,
+                    'id': model.mentorship_service_set[0].id,
+                    'slug': model.mentorship_service_set[0].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort2,
                     },
-                    'id': model.mentorship_service[1].id,
-                    'slug': model.mentorship_service[1].slug,
+                    'id': model.mentorship_service_set[1].id,
+                    'slug': model.mentorship_service_set[1].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort3,
                     },
-                    'id': model.mentorship_service[2].id,
-                    'slug': model.mentorship_service[2].slug,
+                    'id': model.mentorship_service_set[2].id,
+                    'slug': model.mentorship_service_set[2].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -361,11 +361,14 @@ class SignalTestSuite(PaymentsTestCase):
     def test__nine_consumables__related_to_three_event_types__without_cohorts_in_querystring(self):
         consumables = [{
             'how_many': random.randint(1, 30),
-            'event_type_id': math.floor(n / 3) + 1
+            'event_type_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
+
+        event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
 
         model = self.bc.database.create(user=1,
                                         consumable=consumables,
+                                        event_type_set=event_type_sets,
                                         event_type=[{
                                             'icon_url': 'https://www.google.com'
                                         }, {
@@ -381,9 +384,9 @@ class SignalTestSuite(PaymentsTestCase):
 
         json = response.json()
         expected = {
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
             'cohorts': [],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -397,7 +400,7 @@ class SignalTestSuite(PaymentsTestCase):
     def test__nine_consumables__related_to_three_event_types__with_cohorts_in_querystring(self):
         consumables = [{
             'how_many': random.randint(1, 30),
-            'event_type_id': math.floor(n / 3) + 1
+            'event_type_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
         belong_to_cohort1 = consumables[:3]
         belong_to_cohort2 = consumables[3:6]
@@ -407,8 +410,10 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to_cohort2 = sum([x['how_many'] for x in belong_to_cohort2])
         how_many_belong_to_cohort3 = sum([x['how_many'] for x in belong_to_cohort3])
 
+        event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
         model = self.bc.database.create(user=1,
                                         consumable=consumables,
+                                        event_type_set=event_type_sets,
                                         event_type=[{
                                             'icon_url': 'https://www.google.com'
                                         }, {
@@ -418,40 +423,40 @@ class SignalTestSuite(PaymentsTestCase):
                                         }])
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('payments:me_service_consumable') + '?event_type=1,2,3'
+        url = reverse_lazy('payments:me_service_consumable') + '?event_type_set=1,2,3'
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
 
         json = response.json()
         expected = {
             'cohorts': [],
-            'event_types': [
+            'event_type_sets': [
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort1,
                     },
-                    'id': model.event_type[0].id,
-                    'slug': model.event_type[0].slug,
+                    'id': model.event_type_set[0].id,
+                    'slug': model.event_type_set[0].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort2,
                     },
-                    'id': model.event_type[1].id,
-                    'slug': model.event_type[1].slug,
+                    'id': model.event_type_set[1].id,
+                    'slug': model.event_type_set[1].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort3,
                     },
-                    'id': model.event_type[2].id,
-                    'slug': model.event_type[2].slug,
+                    'id': model.event_type_set[2].id,
+                    'slug': model.event_type_set[2].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -482,9 +487,9 @@ class SignalTestSuite(PaymentsTestCase):
 
         json = response.json()
         expected = {
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
             'cohorts': [],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -519,7 +524,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         json = response.json()
         expected = {
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
             'cohorts': [
                 {
                     'balance': {
@@ -546,7 +551,7 @@ class SignalTestSuite(PaymentsTestCase):
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -565,10 +570,10 @@ class SignalTestSuite(PaymentsTestCase):
             self):
         consumables = [{
             'how_many': random.randint(1, 30),
-            'mentorship_service_id': math.floor(n / 3) + 1
+            'mentorship_service_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service=3)
+        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -577,9 +582,9 @@ class SignalTestSuite(PaymentsTestCase):
 
         json = response.json()
         expected = {
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
             'cohorts': [],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -593,7 +598,7 @@ class SignalTestSuite(PaymentsTestCase):
     def test__nine_consumables__related_to_three_mentorship_services__with_cohort_slugs_in_querystring(self):
         consumables = [{
             'how_many': random.randint(1, 30),
-            'mentorship_service_id': math.floor(n / 3) + 1
+            'mentorship_service_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
         belong_to_cohort1 = consumables[:3]
         belong_to_cohort2 = consumables[3:6]
@@ -603,45 +608,45 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to_cohort2 = sum([x['how_many'] for x in belong_to_cohort2])
         how_many_belong_to_cohort3 = sum([x['how_many'] for x in belong_to_cohort3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service=3)
+        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy(
             'payments:me_service_consumable'
-        ) + f'?mentorship_service_slug={",".join([x.slug for x in model.mentorship_service])}'
+        ) + f'?mentorship_service_set_slug={",".join([x.slug for x in model.mentorship_service_set])}'
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
 
         json = response.json()
         expected = {
             'cohorts': [],
-            'mentorship_services': [
+            'mentorship_service_sets': [
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort1,
                     },
-                    'id': model.mentorship_service[0].id,
-                    'slug': model.mentorship_service[0].slug,
+                    'id': model.mentorship_service_set[0].id,
+                    'slug': model.mentorship_service_set[0].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort2,
                     },
-                    'id': model.mentorship_service[1].id,
-                    'slug': model.mentorship_service[1].slug,
+                    'id': model.mentorship_service_set[1].id,
+                    'slug': model.mentorship_service_set[1].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort3,
                     },
-                    'id': model.mentorship_service[2].id,
-                    'slug': model.mentorship_service[2].slug,
+                    'id': model.mentorship_service_set[2].id,
+                    'slug': model.mentorship_service_set[2].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -659,11 +664,13 @@ class SignalTestSuite(PaymentsTestCase):
     def test__nine_consumables__related_to_three_event_types__without_cohort_slugs_in_querystring(self):
         consumables = [{
             'how_many': random.randint(1, 30),
-            'event_type_id': math.floor(n / 3) + 1
+            'event_type_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
 
+        event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
         model = self.bc.database.create(user=1,
                                         consumable=consumables,
+                                        event_type_set=event_type_sets,
                                         event_type=[{
                                             'icon_url': 'https://www.google.com'
                                         }, {
@@ -679,9 +686,9 @@ class SignalTestSuite(PaymentsTestCase):
 
         json = response.json()
         expected = {
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
             'cohorts': [],
-            'event_types': [],
+            'event_type_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -695,7 +702,7 @@ class SignalTestSuite(PaymentsTestCase):
     def test__nine_consumables__related_to_three_event_types__with_cohort_slugs_in_querystring(self):
         consumables = [{
             'how_many': random.randint(1, 30),
-            'event_type_id': math.floor(n / 3) + 1
+            'event_type_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
         belong_to_cohort1 = consumables[:3]
         belong_to_cohort2 = consumables[3:6]
@@ -705,8 +712,10 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to_cohort2 = sum([x['how_many'] for x in belong_to_cohort2])
         how_many_belong_to_cohort3 = sum([x['how_many'] for x in belong_to_cohort3])
 
+        event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
         model = self.bc.database.create(user=1,
                                         consumable=consumables,
+                                        event_type_set=event_type_sets,
                                         event_type=[{
                                             'icon_url': 'https://www.google.com'
                                         }, {
@@ -717,40 +726,40 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable'
-                           ) + f'?event_type_slug={",".join([x.slug for x in model.event_type])}'
+                           ) + f'?event_type_set_slug={",".join([x.slug for x in model.event_type_set])}'
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
 
         json = response.json()
         expected = {
             'cohorts': [],
-            'event_types': [
+            'event_type_sets': [
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort1,
                     },
-                    'id': model.event_type[0].id,
-                    'slug': model.event_type[0].slug,
+                    'id': model.event_type_set[0].id,
+                    'slug': model.event_type_set[0].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort2,
                     },
-                    'id': model.event_type[1].id,
-                    'slug': model.event_type[1].slug,
+                    'id': model.event_type_set[1].id,
+                    'slug': model.event_type_set[1].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
                 {
                     'balance': {
                         'unit': how_many_belong_to_cohort3,
                     },
-                    'id': model.event_type[2].id,
-                    'slug': model.event_type[2].slug,
+                    'id': model.event_type_set[2].id,
+                    'slug': model.event_type_set[2].slug,
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
-            'mentorship_services': [],
+            'mentorship_service_sets': [],
         }
 
         self.assertEqual(json, expected)
@@ -777,19 +786,19 @@ class SignalTestSuite(PaymentsTestCase):
 
         consumables = [{
             'how_many': n,
-            'event_type_id': 1,
+            'event_type_set_id': 1,
             'cohort_id': None,
-            'mentorship_service_id': None,
+            'mentorship_service_set_id': None,
         } for n in r1] + [{
             'how_many': n,
-            'event_type_id': None,
+            'event_type_set_id': None,
             'cohort_id': 1,
-            'mentorship_service_id': None,
+            'mentorship_service_set_id': None,
         } for n in r2] + [{
             'how_many': n,
-            'event_type_id': None,
+            'event_type_set_id': None,
             'cohort_id': None,
-            'mentorship_service_id': 1,
+            'mentorship_service_set_id': 1,
         } for n in r3]
         belong_to_cohort1 = consumables[:3]
         belong_to_cohort2 = consumables[3:6]
@@ -799,17 +808,19 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to_cohort2 = sum([x['how_many'] for x in belong_to_cohort2])
         how_many_belong_to_cohort3 = sum([x['how_many'] for x in belong_to_cohort3])
 
+        event_type_set = {'event_type_id': 1}
         model = self.bc.database.create(user=1,
                                         consumable=consumables,
+                                        event_type_set=event_type_set,
                                         event_type={'icon_url': 'https://www.google.com'},
                                         cohort=1,
-                                        mentorship_service=1)
+                                        mentorship_service_set=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable'
-                           ) + f'?event_type_slug={model.event_type.slug}' \
+                           ) + f'?event_type_set_slug={model.event_type_set.slug}' \
                            f'&cohort_slug={model.cohort.slug}' \
-                           f'&mentorship_service_slug={model.mentorship_service.slug}'
+                           f'&mentorship_service_set_slug={model.mentorship_service_set.slug}'
 
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
@@ -831,30 +842,30 @@ class SignalTestSuite(PaymentsTestCase):
                     ],
                 },
             ],
-            'event_types': [
+            'event_type_sets': [
                 {
                     'balance': {
                         'unit': -1,
                     },
                     'id':
-                    model.event_type.id,
+                    model.event_type_set.id,
                     'slug':
-                    model.event_type.slug,
+                    model.event_type_set.slug,
                     'items': [
                         serialize_consumable(model.consumable[0]),
                         serialize_consumable(model.consumable[1]),
                     ],
                 },
             ],
-            'mentorship_services': [
+            'mentorship_service_sets': [
                 {
                     'balance': {
                         'unit': -1,
                     },
                     'id':
-                    model.mentorship_service.id,
+                    model.mentorship_service_set.id,
                     'slug':
-                    model.mentorship_service.slug,
+                    model.mentorship_service_set.slug,
                     'items': [
                         serialize_consumable(model.consumable[4]),
                         serialize_consumable(model.consumable[5]),

@@ -10,6 +10,8 @@ from breathecode.authenticate.models import ProfileAcademy
 import breathecode.utils.decorators as decorators
 from rest_framework.permissions import AllowAny
 from rest_framework import status
+
+from breathecode.utils.exceptions import MalformedLanguageCode
 from ..mixins import UtilsTestCase
 from ...i18n import translation
 
@@ -46,22 +48,22 @@ class TranslationTestSuite(UtilsTestCase):
 
     def test_Given_RandomLang_When_EnglishTranstalionIsNotGiven_Expect_Exception(self):
         code = randomLang(self, randomBool())
-        with self.assertRaisesMessage(AssertionError, 'The english translation is mandatory'):
+        with self.assertRaisesMessage(MalformedLanguageCode, 'The english translation is mandatory'):
             translation(code)
 
     def test_Given_RandomLang_When_GeneralEnglishTranstalionAndUsaEnglishIsNotGiven_Expect_Exception(self):
         code = randomLang(self, randomBool())
-        with self.assertRaisesMessage(AssertionError, 'The english translation is mandatory'):
+        with self.assertRaisesMessage(MalformedLanguageCode, 'The english translation is mandatory'):
             translation(code, en_au='Hello')
 
     def test_Given_RandomLang_When_LangCodeUppercase_Expect_Exception(self):
         code = randomLang(self, randomBool())
-        with self.assertRaisesMessage(AssertionError, 'lang code is not lowercase'):
+        with self.assertRaisesMessage(MalformedLanguageCode, 'Lang code is not lowercase'):
             translation(code, EN_au='Hello')
 
     def test_Given_RandomLang_When_CountryCodeUppercase_Expect_Exception(self):
         code = randomLang(self, randomBool())
-        with self.assertRaisesMessage(AssertionError, 'country code is not lowercase'):
+        with self.assertRaisesMessage(MalformedLanguageCode, 'Country code is not lowercase'):
             translation(code, en_AU='Hello')
 
     def test_Given_RandomLang_When_SpanishTranslationIsNotGiven_Expect_GetEnglishTranslation(self):

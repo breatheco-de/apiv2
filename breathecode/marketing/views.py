@@ -3,6 +3,7 @@ from urllib import parse
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
+from breathecode.authenticate.actions import get_user_language
 from breathecode.monitoring.models import CSVUpload
 from breathecode.renderers import PlainTextRenderer
 from rest_framework.decorators import renderer_classes
@@ -20,7 +21,10 @@ from breathecode.utils import (APIException, localize_query, capable_of, Validat
                                GenerateLookupsMixin, HeaderLimitOffsetPagination, validate_captcha,
                                num_to_roman)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.i18n import translation
 from .serializers import (
+    GetCourseSerializer,
+    GetCourseSmallSerializer,
     PostFormEntrySerializer,
     FormEntrySerializer,
     FormEntrySmallSerializer,
@@ -40,7 +44,7 @@ from .serializers import (
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import convert_data_frame, sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField, AcademyAlias
+from .models import Course, ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField, AcademyAlias
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
@@ -1042,3 +1046,78 @@ def googleads_csv(request):
         writer.writerow(d)
 
     return response
+
+
+class CourseView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(sort='-updated_at', paginate=True)
+
+    def get_lookup(self, key, value):
+        args = ()
+        kwargs = {}
+        slug_key = f'{key}__slug__in'
+        pk_key = f'{key}__id__in'
+
+        for v in value.split(','):
+            if slug_key not in kwargs and not v.isnumeric():
+                kwargs[slug_key] = []
+
+            if pk_key not in kwargs and v.isnumeric():
+                kwargs[pk_key] = []
+
+            if v.isnumeric():
+                kwargs[pk_key].append(int(v))
+
+            else:
+                kwargs[slug_key].append(v)
+
+        if len(kwargs) > 1:
+            args = (Q(**{slug_key: kwargs[slug_key]}) | Q(**{pk_key: kwargs[pk_key]}), )
+            kwargs = {}
+
+        return args, kwargs
+
+    def get(self, request, course_slug=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if course_slug:
+            item = Course.objects.filter(slug=course_slug).annotate(
+                lang=Value(lang, output_field=CharField())).exclude(status='DELETED').exclude(
+                    visibility='PRIVATE').first()
+
+            if not item:
+                raise ValidationException(translation(lang,
+                                                      en='Course not found',
+                                                      es='Curso no encontrado',
+                                                      slug='course-not-found'),
+                                          code=404)
+
+            serializer = GetCourseSerializer(item, context={'lang': lang}, many=False)
+            return handler.response(serializer.data)
+
+        items = Course.objects.filter().exclude(status='DELETED').exclude(visibility='PRIVATE').exclude(
+            visibility='UNLISTED')
+
+        if academy := request.GET.get('academy'):
+            args, kwargs = self.get_lookup('academy', academy)
+            items = items.filter(*args, **kwargs)  #.distinct()
+
+        if syllabus := request.GET.get('syllabus'):
+            args, kwargs = self.get_lookup('syllabus', syllabus)
+            items = items.filter(*args, **kwargs)  #.distinct()
+
+        if status := request.GET.get('status'):
+            items = items.filter(status__in=status.split(','))
+
+        else:
+            items = items.exclude(status='ARCHIVED')
+
+        if icon_url := request.GET.get('icon_url'):
+            items = items.filter(icon_url__icontains=icon_url)
+
+        items = items.annotate(lang=Value(lang, output_field=CharField()))
+
+        items = handler.queryset(items)
+        serializer = GetCourseSmallSerializer(items, context={'lang': lang}, many=True)
+        return handler.response(serializer.data)

@@ -20,6 +20,8 @@ class MarketingModelsMixin(ModelsMixin):
                                   academy_alias=False,
                                   lead_generation_app=False,
                                   downloadable=False,
+                                  course=False,
+                                  course_translation=False,
                                   active_campaign_academy_kwargs={},
                                   automation_kwargs={},
                                   tag_kwargs={},
@@ -70,6 +72,26 @@ class MarketingModelsMixin(ModelsMixin):
                 **kargs,
                 **downloadable_kwargs
             })
+
+        if not 'course' in models and is_valid(course):
+            kargs = {}
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'syllabus' in models:
+                kargs['syllabus'] = just_one(models['syllabus'])
+
+            models['course'] = create_models(course, 'marketing.Course', **kargs)
+
+        if not 'course_translation' in models and is_valid(course_translation):
+            kargs = {}
+
+            if 'course' in models:
+                kargs['course'] = just_one(models['course'])
+
+            models['course_translation'] = create_models(course_translation, 'marketing.CourseTranslation',
+                                                         **kargs)
 
         if not 'academy_alias' in models and is_valid(academy_alias):
             kargs = {}
