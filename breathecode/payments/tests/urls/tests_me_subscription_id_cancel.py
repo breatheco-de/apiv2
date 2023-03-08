@@ -15,110 +15,45 @@ from ..mixins import PaymentsTestCase
 UTC_NOW = timezone.now()
 
 
-def permission_serializer(permission):
+def academy_serializer(academy):
     return {
-        'codename': permission.codename,
-        'name': permission.name,
+        'id': academy.id,
+        'name': academy.name,
+        'slug': academy.slug,
     }
 
 
-def group_serializer(group, permissions=[]):
+def user_serializer(user):
     return {
-        'name': group.name,
-        'permissions': [permission_serializer(permission) for permission in permissions],
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
     }
 
 
-def service_serializer(service, groups=[], permissions=[]):
+def get_serializer(self, subscription, academy, user, data={}):
     return {
-        'price_per_unit': service.price_per_unit,
-        'private': service.private,
-        'slug': service.slug,
-        'groups': [group_serializer(group, permissions) for group in groups],
-    }
-
-
-def service_item_serializer(self, service_item, service, groups=[], permissions=[]):
-    return {
-        'how_many': service_item.how_many,
-        'unit_type': service_item.unit_type,
-        'service': service_serializer(service, groups, permissions),
-    }
-
-
-def currency_serializer(currency):
-    return {
-        'code': currency.code,
-        'name': currency.name,
-    }
-
-
-def plan_serializer(self, plan, service, currency, groups=[], permissions=[], service_items=[]):
-    return {
-        'financing_options': [],
-        'service_items': [
-            service_item_serializer(self, service_item, service, groups, permissions)
-            for service_item in service_items
-        ],
-        'currency':
-        currency_serializer(currency),
-        'slug':
-        plan.slug,
-        'status':
-        plan.status,
-        'time_of_life':
-        plan.time_of_life,
-        'time_of_life_unit':
-        plan.time_of_life_unit,
-        'trial_duration':
-        plan.trial_duration,
-        'trial_duration_unit':
-        plan.trial_duration_unit,
-        'is_renewable':
-        plan.is_renewable,
-        'owner':
-        plan.owner,
-        'price_per_half':
-        plan.price_per_half,
-        'price_per_month':
-        plan.price_per_month,
-        'price_per_quarter':
-        plan.price_per_quarter,
-        'price_per_year':
-        plan.price_per_year,
-    }
-
-
-def plan_offer_transaction_serializer(plan_offer_transaction):
-    return {
-        'lang': plan_offer_transaction.lang,
-        'title': plan_offer_transaction.title,
-        'description': plan_offer_transaction.description,
-        'short_description': plan_offer_transaction.short_description,
-    }
-
-
-def get_serializer(self,
-                   plan_offer,
-                   plan1,
-                   plan2,
-                   service,
-                   currency,
-                   plan_offer_translation=None,
-                   groups=[],
-                   permissions=[],
-                   service_items=[]):
-
-    if plan_offer_translation:
-        plan_offer_translation = plan_offer_transaction_serializer(plan_offer_translation)
-
-    return {
-        'details': plan_offer_translation,
-        'original_plan': plan_serializer(self, plan1, service, currency, groups, permissions, service_items),
-        'suggested_plan': plan_serializer(self, plan2, service, currency, groups, permissions, service_items),
-        'show_modal': plan_offer.show_modal,
-        'expires_at':
-        self.bc.datetime.to_iso_string(plan_offer.expires_at) if plan_offer.expires_at else None,
+        'academy': academy_serializer(academy),
+        'id': subscription.id,
+        'invoices': [],
+        'is_refundable': subscription.is_refundable,
+        'next_payment_at': self.bc.datetime.to_iso_string(subscription.next_payment_at),
+        'paid_at': self.bc.datetime.to_iso_string(subscription.paid_at),
+        'pay_every': subscription.pay_every,
+        'pay_every_unit': subscription.pay_every_unit,
+        'plans': [],
+        'selected_cohort': subscription.selected_cohort,
+        'selected_event_type_set': subscription.selected_event_type_set,
+        'selected_mentorship_service_set': subscription.selected_mentorship_service_set,
+        'service_items': [],
+        'status': subscription.status,
+        'status_message': subscription.status_message,
+        'upgraded_plan_financing_to': subscription.upgraded_plan_financing_to,
+        'upgraded_subscription_to': subscription.upgraded_subscription_to,
+        'user': user_serializer(user),
+        'valid_until':
+        self.bc.datetime.to_iso_string(subscription.valid_until) if subscription.valid_until else None,
+        **data,
     }
 
 
@@ -127,7 +62,7 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 GET without auth
     """
 
-    def test__without_auth__without_service_items(self):
+    def test__without_auth(self):
         url = reverse_lazy('payments:me_subscription_id_cancel', kwargs={'subscription_id': 1})
         response = self.client.get(url)
 
@@ -138,7 +73,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [])
 
-    def test__put__without_auth__with_plan_offer(self):
+    def test__put__not_found(self):
         model = self.bc.database.create(user=1, )
 
         self.bc.request.authenticate(model.user)
@@ -147,10 +82,83 @@ class SignalTestSuite(PaymentsTestCase):
         response = self.client.put(url)
 
         json = response.json()
-        expected = {}
+        expected = {'detail': 'not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.bc.database.list_of('payments.Subscription'), [])
+
+    def test__put__cancelled_these_statuses(self):
+        statuses = ['FREE_TRIAL', 'ACTIVE', 'PAYMENT_ISSUE', 'ERROR', 'FULLY_PAID']
+        for s in statuses:
+            subscription = {'status': s}
+            model = self.bc.database.create(user=1, subscription=subscription)
+
+            self.bc.request.authenticate(model.user)
+
+            url = reverse_lazy('payments:me_subscription_id_cancel',
+                               kwargs={'subscription_id': model.subscription.id})
+            response = self.client.put(url)
+
+            json = response.json()
+            expected = get_serializer(self,
+                                      model.subscription,
+                                      model.academy,
+                                      model.user,
+                                      data={'status': 'CANCELLED'})
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
+                {
+                    **self.bc.format.to_dict(model.subscription),
+                    'status': 'CANCELLED',
+                },
+            ])
+
+            # teardown
+            self.bc.database.delete('payments.Subscription')
+
+    def test__put__cancelled_twice(self):
+        subscription = {'status': 'CANCELLED'}
+        model = self.bc.database.create(user=1, subscription=subscription)
+
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:me_subscription_id_cancel',
+                           kwargs={'subscription_id': model.subscription.id})
+        response = self.client.put(url)
+
+        json = response.json()
+        expected = {'detail': 'already-cancelled', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
-            self.bc.format.to_dict(model.plan_offer),
+            {
+                **self.bc.format.to_dict(model.subscription),
+                'status': 'CANCELLED',
+            },
+        ])
+
+    def test__put__cancelled_over_deprecated(self):
+        subscription = {'status': 'DEPRECATED'}
+        model = self.bc.database.create(user=1, subscription=subscription)
+
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:me_subscription_id_cancel',
+                           kwargs={'subscription_id': model.subscription.id})
+        response = self.client.put(url)
+
+        json = response.json()
+        expected = {'detail': 'deprecated', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
+            {
+                **self.bc.format.to_dict(model.subscription),
+                'status': 'DEPRECATED',
+            },
         ])
