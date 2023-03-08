@@ -647,10 +647,15 @@ class EventTypeVisibilitySettingView(APIView):
     @capable_of('read_event_type')
     def get(self, request, event_type_slug, academy_id=None):
         handler = self.extensions(request)
+        lang = get_user_language(request)
 
         event_type = EventType.objects.filter(slug=event_type_slug).first()
         if not event_type:
-            raise ValidationException('Event type not found', slug='not-found')
+            raise ValidationException(
+                translation(lang,
+                            en='Event type not found',
+                            es='Tipo de evento no encontrado',
+                            slug='not-found'), )
 
         if event_type.allow_shared_creation or event_type.academy.id == academy_id:
             items = event_type.visibility_settings.filter(academy__id=academy_id)
@@ -662,6 +667,85 @@ class EventTypeVisibilitySettingView(APIView):
         items = handler.queryset(items)
         serializer = EventTypeVisibilitySettingSerializer(items, many=True)
         return handler.response(serializer.data)
+
+    @capable_of('crud_event_type')
+    def post(self, request, event_type_slug, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        event_type = EventType.objects.filter(slug=event_type_slug, academy=academy_id).first()
+        if not event_type:
+            raise ValidationException(
+                translation(lang,
+                            en='Event type not found',
+                            es='Tipo de evento no encontrado',
+                            slug='event-type-not-found'), )
+
+        syllabus = None
+        if 'syllabus' in request.data:
+            syllabus = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False),
+                                               id=request.data['syllabus']).first()
+            if syllabus is None:
+                raise ValidationException(
+                    translation(lang,
+                                en='Syllabus not found',
+                                es='Syllabus no encontrado',
+                                slug='syllabus-not-found'), )
+
+        cohort = None
+        if 'cohort' in request.data:
+            cohort = Cohort.objects.filter(id=request.data['cohort'], academy=academy_id).first()
+            if cohort is None:
+                raise ValidationException(
+                    translation(lang,
+                                en='Cohort not found',
+                                es='Cohorte no encontrada',
+                                slug='cohort-not-found'), )
+
+        visibility_setting, created = EventTypeVisibilitySetting.objects.get_or_create(syllabus=syllabus,
+                                                                                       academy=academy,
+                                                                                       cohort=cohort)
+
+        if not event_type.visibility_settings.filter(id=visibility_setting.id).exists():
+            event_type.visibility_settings.add(visibility_setting)
+
+        serializer = EventTypeVisibilitySettingSerializer(visibility_setting, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    @capable_of('crud_event_type')
+    def delete(self, request, event_type_slug, visibility_setting_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        event_type = EventType.objects.filter(slug=event_type_slug, academy=academy_id).first()
+        if not event_type:
+            raise ValidationException(
+                translation(lang,
+                            en='Event type not found',
+                            es='Tipo de evento no encontrado',
+                            slug='event-type-not-found'), )
+
+        item = EventTypeVisibilitySetting.objects.filter(id=visibility_setting_id, academy=academy_id).first()
+
+        if not item:
+            raise ValidationException(translation(lang,
+                                                  en='Event type visibility setting not found',
+                                                  es='Configuración de visibilidad no encontrada',
+                                                  slug='event-type-visibility-setting-not-found'),
+                                      code=404)
+
+        other_event_type = EventType.objects.filter(
+            visibility_settings__id=visibility_setting_id,
+            academy=academy_id).exclude(slug=event_type_slug).exists()
+
+        if other_event_type:
+            event_type.visibility_settings.remove(item)
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        item.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 @private_view()

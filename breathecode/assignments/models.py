@@ -156,6 +156,7 @@ class FinalProject(models.Model):
     repo_url = models.URLField(blank=True, null=True, default=None)
     public_url = models.URLField(blank=True, null=True, default=None)
     logo_url = models.URLField(blank=True, null=True, default=None)
+    screenshot = models.URLField(blank=True, null=True, default=None)
     slides_url = models.URLField(blank=True, null=True, default=None)
     video_demo_url = models.URLField(blank=True, null=True, default=None)
 
