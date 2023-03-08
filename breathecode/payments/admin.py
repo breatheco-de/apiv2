@@ -4,8 +4,8 @@ from breathecode.payments import tasks
 from breathecode.payments.models import (Bag, Consumable, Currency, EventTypeSet, EventTypeSetTranslation,
                                          FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
                                          MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing,
-                                         PlanServiceItem, PlanServiceItemHandler, PlanTranslation, Service,
-                                         ServiceItem, ServiceItemFeature, ServiceStockScheduler,
+                                         PlanOffer, PlanServiceItem, PlanServiceItemHandler, PlanTranslation,
+                                         Service, ServiceItem, ServiceItemFeature, ServiceStockScheduler,
                                          ServiceTranslation, Subscription, SubscriptionServiceItem)
 
 # Register your models here.
@@ -220,3 +220,11 @@ class BagAdmin(admin.ModelAdmin):
     list_filter = ['status', 'type', 'chosen_period', 'academy', 'is_recurrent']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
     raw_id_fields = ['user', 'academy']
+
+
+@admin.register(PlanOffer)
+class PlanOfferAdmin(admin.ModelAdmin):
+    list_display = ('id', 'original_plan', 'suggested_plan', 'show_modal', 'expires_at')
+    list_filter = ['show_modal']
+    search_fields = ['original_plan__slug', 'suggested_plan__slug']
+    raw_id_fields = ['original_plan', 'suggested_plan']
