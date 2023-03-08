@@ -1,4 +1,5 @@
 from django.http import HttpResponseRedirect
+from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 import logging, hashlib, os
 from django.shortcuts import render
@@ -27,6 +28,7 @@ from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializ
 from .actions import sync_cohort_tasks
 import breathecode.assignments.tasks as tasks
 from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils.i18n import translation
 
 logger = logging.getLogger(__name__)
 
@@ -260,12 +262,21 @@ class FinalProjectMeView(APIView):
     def put(self, request, project_id=None):
 
         def update(_req, data, _id=None, only_validate=True):
+            lang = get_user_language(request)
+
             if _id is None:
                 raise ValidationException('Missing project id to update', slug='missing-project-id')
 
             item = FinalProject.objects.filter(id=_id).first()
             if item is None:
                 raise ValidationException('Final Project not found', slug='project-not-found')
+
+            if not item.members.filter(id=request.user.id).exists():
+                raise ValidationException(
+                    translation(lang,
+                                en='You are not a member of this project',
+                                es='No eres miembro de este proyecto',
+                                slug='not-a-member'))
 
             serializer = PUTFinalProjectSerializer(item, data=data, context={'request': _req})
             if serializer.is_valid():
