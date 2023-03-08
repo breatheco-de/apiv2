@@ -43,8 +43,8 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
-from .actions import (generate_academy_token, resend_invite, reset_password, set_gitpod_user_expiration,
-                      update_gitpod_users, sync_organization_members)
+from .actions import (generate_academy_token, get_user_language, resend_invite, reset_password,
+                      set_gitpod_user_expiration, update_gitpod_users, sync_organization_members)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
@@ -154,12 +154,10 @@ class LogoutView(APIView):
 
 class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions()
 
     def post(self, request):
-        handler = self.extensions(request)
         data = {**request.data}
-        lang = handler.language.get() or 'en'
+        lang = get_user_language(request)
 
         if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
             try:
@@ -171,15 +169,18 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
 
-        serializer = UserInviteWaitingListSerializer(data=data)
+        serializer = UserInviteWaitingListSerializer(data=data,
+                                                     context={
+                                                         'lang': lang,
+                                                         'plan': request.data.get('plan'),
+                                                     })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request):
-        handler = self.extensions(request)
-        lang = handler.language.get() or 'en'
+        lang = get_user_language(request)
 
         invite = UserInvite.objects.filter(email=request.data.get('email'),
                                            status='WAITING_LIST',
@@ -203,7 +204,12 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
 
-        serializer = UserInviteWaitingListSerializer(invite, data=request.data, context={'lang': lang})
+        serializer = UserInviteWaitingListSerializer(invite,
+                                                     data=request.data,
+                                                     context={
+                                                         'lang': lang,
+                                                         'plan': request.data.get('plan'),
+                                                     })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

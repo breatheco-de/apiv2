@@ -912,6 +912,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token')
 
     def validate(self, data: dict[str, str]):
+        from breathecode.payments.models import Plan
+
         lang = self.context.get('lang', 'en')
 
         if 'email' not in data:
@@ -935,7 +937,21 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                             es='El usuario ya existe, inicie sesión en su lugar.',
                             slug='user-exists'))
 
+        plan_id = self.context.get('plan')
+        plan = None
+        if plan_id and not (plan := Plan.objects.filter(id=plan_id).first()):
+            raise ValidationException(
+                translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
+
+        if plan and plan.has_waiting_list == True:
+            raise ValidationException(
+                translation(lang,
+                            en='This plan has a waiting list',
+                            es='Este plan tiene una lista de espera',
+                            slug='plan-has-waiting-list'))
+
         self.user = user
+        self.plan = plan
 
         now = str(timezone.now())
 
@@ -949,6 +965,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         elif syllabus and Cohort.objects.filter(academy__available_as_saas=True,
                                                 syllabus_version__syllabus=syllabus).exists():
             data['syllabus'] = syllabus
+            data['status'] = 'ACCEPTED'
+
+        elif plan:
             data['status'] = 'ACCEPTED'
 
         else:
@@ -969,7 +988,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         without_syllabus = not self.syllabus or not Cohort.objects.filter(
             academy__available_as_saas=True, syllabus_version__syllabus=self.syllabus).exists()
 
-        if without_cohort and without_syllabus:
+        if without_cohort and without_syllabus and not self.plan:
             return None
 
         if not self.user:

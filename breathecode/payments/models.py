@@ -445,6 +445,7 @@ class Plan(AbstractPriceByTime):
                               null=True,
                               help_text='Academy owner')
     is_onboarding = models.BooleanField(default=False, help_text='Is onboarding plan?')
+    has_waiting_list = models.BooleanField(default=False, help_text='Has waiting list?')
 
     # patterns
     cohort_pattern = models.CharField(max_length=80,
