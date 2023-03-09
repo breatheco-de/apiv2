@@ -474,6 +474,7 @@ class MentorSerializer(serializers.ModelSerializer):
         exclude = ('created_at', 'updated_at')
 
     def validate(self, data):
+        lang = data.get('lang', 'en')
         academy_id = data['academy'].id if 'academy' in data else 0
         user = data['user']
         profile_academy = ProfileAcademy.objects.filter(user__id=data['user'].id,
@@ -484,12 +485,15 @@ class MentorSerializer(serializers.ModelSerializer):
 
         if not data['name'] and profile_academy:
 
-            data['name'] = profile_academy.first_name + ' ' + profile_academy.last_name
+            data['name'] = f'{profile_academy.first_name} {profile_academy.last_name}'
 
         if not data['name']:
-
             data['name'] = user.first_name + ' ' + user.last_name
         data['name'] = data['name'].strip()
+
+        if 'None' in data['name']:
+            data['name'] = ''
+
         if not data['name']:
             raise ValidationException(translation(lang,
                                                   en='Unable to find name on this user',
@@ -531,6 +535,7 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
         exclude = ('created_at', 'updated_at', 'user', 'token')
 
     def validate(self, data):
+        lang = data.get('lang', 'en')
         if 'status' in data and data['status'] in ['ACTIVE', 'UNLISTED'
                                                    ] and self.instance.status != data['status']:
             try:

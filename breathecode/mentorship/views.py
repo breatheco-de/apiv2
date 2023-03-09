@@ -791,15 +791,6 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
                 code=400,
             )
 
-        if user.phone is None:
-            raise ValidationException(
-                translation(lang,
-                            en='This mentor does not have a phone',
-                            es='Este mentor no tiene numero de telefono',
-                            slug='without-phone'),
-                code=400,
-            )
-
         if 'user' in request.data:
             raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',
                                       slug='user-read-only')
