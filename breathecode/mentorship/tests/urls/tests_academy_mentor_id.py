@@ -871,7 +871,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': 1})
-        #data = {'user': 1, user}
         response = self.client.put(url)
 
         json = response.json()
@@ -897,7 +896,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': 1})
-        #data = {'user': 1, user}
         response = self.client.put(url)
 
         json = response.json()
