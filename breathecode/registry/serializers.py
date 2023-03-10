@@ -339,7 +339,7 @@ class PostAssetSerializer(serializers.ModelSerializer):
             if asset_translation is None or asset_translation.category is None:
                 raise ValidationException(f'No category was specified and we could not retrive it from any translation')
 
-            category_translation = category.all_translations.filter(lang=validated_data['lang']).first()
+            category_translation = asset_translation.category.all_translations.filter(lang=validated_data['lang']).first()
             if category_translation is None:
                 raise ValidationException(
                     f"No category was specified and translation's categories don't have language: {validated_data['lang']}")
