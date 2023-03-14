@@ -354,7 +354,7 @@ class SignalTestSuite(PaymentsTestCase):
         )
 
         url = reverse_lazy(
-            'payments:planoffer') + f'?original-plan={random.choice([model.plan[0].id, model.plan[0].slug])}'
+            'payments:planoffer') + f'?original_plan={random.choice([model.plan[0].id, model.plan[0].slug])}'
         response = self.client.get(url)
 
         json = response.json()
@@ -409,7 +409,7 @@ class SignalTestSuite(PaymentsTestCase):
         )
 
         url = reverse_lazy(
-            'payments:planoffer') + f'?suggested-plan={random.choice([model.plan[1].id, model.plan[1].slug])}'
+            'payments:planoffer') + f'?suggested_plan={random.choice([model.plan[1].id, model.plan[1].slug])}'
         response = self.client.get(url)
 
         json = response.json()

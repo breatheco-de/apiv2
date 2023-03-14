@@ -811,11 +811,11 @@ class PlanOfferView(APIView):
         # do no show the bags of type preview they are build
         items = PlanOffer.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now))
 
-        if suggested_plan := request.GET.get('suggested-plan'):
+        if suggested_plan := request.GET.get('suggested_plan'):
             args, kwargs = self.get_lookup('suggested_plan', suggested_plan)
             items = items.filter(*args, **kwargs)
 
-        if original_plan := request.GET.get('original-plan'):
+        if original_plan := request.GET.get('original_plan'):
             args, kwargs = self.get_lookup('original_plan', original_plan)
             items = items.filter(*args, **kwargs)
 
