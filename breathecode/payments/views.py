@@ -7,20 +7,17 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import get_user_language, get_user_settings
-from breathecode.events.models import EventType
-from breathecode.mentorship.models import MentorshipService
+from breathecode.authenticate.actions import get_user_language
 from django.db.models import CharField, Q, Value
 
 from breathecode.payments import tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
-                                          get_amount_by_chosen_period, get_bag_from_subscription,
-                                          get_balance_by_resource)
+                                          get_amount_by_chosen_period, get_balance_by_resource)
 from breathecode.payments.models import (Bag, Consumable, EventTypeSet, FinancialReputation, Invoice,
-                                         MentorshipServiceSet, Plan, PlanFinancing, PlanOffer,
-                                         PlanServiceItem, Service, ServiceItem, Subscription)
+                                         MentorshipServiceSet, Plan, PlanFinancing, PlanOffer, Service,
+                                         ServiceItem, Subscription)
 from breathecode.payments.serializers import (GetBagSerializer, GetInvoiceSerializer,
                                               GetInvoiceSmallSerializer, GetPlanFinancingSerializer,
                                               GetPlanOfferSerializer, GetPlanSerializer,
@@ -33,7 +30,7 @@ from breathecode.utils.generate_lookups_mixin import GenerateLookupsMixin
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -809,15 +806,16 @@ class PlanOfferView(APIView):
     def get(self, request):
         handler = self.extensions(request)
         lang = get_user_language(request)
+        utc_now = timezone.now()
 
         # do no show the bags of type preview they are build
-        items = PlanOffer.objects.filter()
+        items = PlanOffer.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now))
 
-        if suggested_plan := request.GET.get('suggested-plan'):
+        if suggested_plan := request.GET.get('suggested_plan'):
             args, kwargs = self.get_lookup('suggested_plan', suggested_plan)
             items = items.filter(*args, **kwargs)
 
-        if original_plan := request.GET.get('original-plan'):
+        if original_plan := request.GET.get('original_plan'):
             args, kwargs = self.get_lookup('original_plan', original_plan)
             items = items.filter(*args, **kwargs)
 
@@ -940,7 +938,10 @@ class CheckingView(APIView):
                 #FIXME: the service items should be bought without renewals
                 if not plan or plan.is_renewable:
                     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = \
-                        get_amount(bag, bag.academy.main_currency)
+                        get_amount(bag, bag.academy.main_currency, lang)
+
+                else:
+                    actions.avoid_rebuy_free_trial(bag, lang)
 
                 amount = bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
                 plans = bag.plans.all()
