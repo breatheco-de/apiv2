@@ -1,25 +1,21 @@
 from __future__ import annotations
 
-import ast
 from datetime import timedelta
 import os
-from typing import Optional
 from django.contrib.auth.models import Group, User
 from django.db import models
 from django.utils import timezone
-# from breathecode.payments.signals import consume_service
+from django.db.models import Q
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
 from breathecode.events.models import EventType
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
-from django.core.exceptions import ValidationError
 from django import forms
 from django.core.handlers.wsgi import WSGIRequest
 
 from breathecode.utils.validators.language import validate_language_code
-from . import signals
 from breathecode.utils.i18n import translation
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
@@ -521,7 +517,8 @@ class PlanOffer(models.Model):
 
     def clean(self) -> None:
         utc_now = timezone.now()
-        others = self.__class__.objects.filter(original_plan=self.original_plan, expires_at__gt=utc_now)
+        others = self.__class__.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now),
+                                               original_plan=self.original_plan)
 
         if self.pk:
             others = others.exclude(pk=self.pk)

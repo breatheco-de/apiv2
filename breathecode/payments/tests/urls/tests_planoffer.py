@@ -138,14 +138,15 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.PlanOffer'), [])
 
-    def test__without_auth__with_plan_offer(self):
+    def test__without_auth__with_plan_offer__expires_at_eq_none(self):
         plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
         plan_service_items += [{'service_item_id': n, 'plan_id': 2} for n in range(1, 3)]
 
         plan_offer = {
             'original_plan_id': 1,
             'suggested_plan_id': 2,
-            'show_modal': bool(random.getrandbits(1))
+            'show_modal': bool(random.getrandbits(1)),
+            'expires_at': None,
         }
 
         model = self.bc.database.create(
@@ -173,6 +174,84 @@ class SignalTestSuite(PaymentsTestCase):
                            permissions=[model.permission],
                            service_items=model.service_item)
         ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('payments.PlanOffer'), [
+            self.bc.format.to_dict(model.plan_offer),
+        ])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__without_auth__with_plan_offer__expires_at_in_the_future(self):
+        plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
+        plan_service_items += [{'service_item_id': n, 'plan_id': 2} for n in range(1, 3)]
+
+        plan_offer = {
+            'original_plan_id': 1,
+            'suggested_plan_id': 2,
+            'show_modal': bool(random.getrandbits(1)),
+            'expires_at': UTC_NOW + timedelta(seconds=random.randint(1, 60)),
+        }
+
+        model = self.bc.database.create(
+            plan=2,
+            service=1,
+            service_item=2,
+            plan_offer=plan_offer,
+            plan_service_item=plan_service_items,
+            group=2,
+            permission=1,
+        )
+
+        url = reverse_lazy('payments:planoffer')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [
+            get_serializer(self,
+                           model.plan_offer,
+                           model.plan[0],
+                           model.plan[1],
+                           model.service,
+                           model.currency,
+                           groups=model.group,
+                           permissions=[model.permission],
+                           service_items=model.service_item)
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('payments.PlanOffer'), [
+            self.bc.format.to_dict(model.plan_offer),
+        ])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__without_auth__with_plan_offer__expires_at_in_the_past(self):
+        plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
+        plan_service_items += [{'service_item_id': n, 'plan_id': 2} for n in range(1, 3)]
+
+        plan_offer = {
+            'original_plan_id': 1,
+            'suggested_plan_id': 2,
+            'show_modal': bool(random.getrandbits(1)),
+            'expires_at': UTC_NOW - timedelta(seconds=random.randint(1, 60)),
+        }
+
+        model = self.bc.database.create(
+            plan=2,
+            service=1,
+            service_item=2,
+            plan_offer=plan_offer,
+            plan_service_item=plan_service_items,
+            group=2,
+            permission=1,
+        )
+
+        url = reverse_lazy('payments:planoffer')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = []
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

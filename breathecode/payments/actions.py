@@ -19,7 +19,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from rest_framework.request import Request
 
-from .models import (SERVICE_UNITS, AcademyService, Bag, Consumable, Currency, EventTypeSet,
+from .models import (SERVICE_UNITS, AcademyService, Bag, Consumable, Currency, EventTypeSet, FinancingOption,
                      MentorshipServiceSet, Plan, PlanFinancing, Service, ServiceItem, Subscription)
 from breathecode.utils import getLogger
 
@@ -163,6 +163,67 @@ class PlanFinder:
             additional_args['auto'] = True
 
         return self.get_plans_belongs(**additional_args)
+
+
+def avoid_rebuy_free_trial(plan: Plan, user: User, lang: str):
+    utc_now = timezone.now()
+    have_free_trial = plan.trial_duration and plan.trial_duration_unit
+
+    if have_free_trial and not plan.is_renewable and Subscription.objects.filter(
+            user=user, plans=plan, valid_until__gte=utc_now):
+        raise ValidationException(
+            translation(lang,
+                        en='Free trial plans can\'t be bought again',
+                        es='Los planes de prueba no pueden ser comprados de nuevo',
+                        slug='free-trial-plan'),
+            code=400,
+        )
+
+    price = plan.price_per_month and plan.price_per_quarter and plan.price_per_half and plan.price_per_year
+
+    if not price and not have_free_trial:
+        raise ValidationException(
+            translation(lang,
+                        en='The plan doesn\'t have a price yet, can\'t be bought',
+                        es='El plan no tiene un precio aún, no puede ser comprado',
+                        slug='plan-without-price'),
+            code=400,
+        )
+
+    subscriptions = Subscription.objects.filter(user=user, plans=plan)
+
+    if not price and subscriptions:
+        raise ValidationException(
+            translation(lang,
+                        en='Free trial plans can\'t be bought more than once',
+                        es='Los planes de prueba no pueden ser comprados más de una vez',
+                        slug='free-trial-already-bought'),
+            code=400,
+        )
+
+    if price and not plan.is_renewable and PlanFinancing.objects.filter(user=user, plans=plan):
+        raise ValidationException(
+            translation(lang,
+                        en='You already have or had a financing on this plan',
+                        es='Ya tienes o tuviste un financiamiento en este plan',
+                        slug='plan-already-financed'),
+            code=400,
+        )
+
+    if price and plan.is_renewable and subscriptions.filter(
+            Q(Q(status='CANCELLED') | Q(status='DEPRECATED'), valid_until=None, next_payment_at__gte=utc_now)
+            | Q(valid_until__gte=utc_now)):
+        raise ValidationException(
+            translation(lang,
+                        en='You already have a subscription to this plan',
+                        es='Ya tienes una suscripción a este plan',
+                        slug='plan-already-bought'),
+            code=400,
+        )
+
+    can_have_price = not (price and have_free_trial and not subscriptions.exists())
+    return bool(can_have_price)
+    # return bool(have_free_trial), bool(can_have_price)
 
 
 class BagHandler:
@@ -352,6 +413,13 @@ class BagHandler:
             if self.bag.selected_cohorts not in self.bag.selected_cohorts.all():
                 self.bag.selected_cohorts.add(self.selected_cohort)
 
+    def _avoid_rebuy_free_trial(self):
+        if not self.plans:
+            return
+
+        for plan in Plan.objects.filter(id__in=self.plans):
+            avoid_rebuy_free_trial(plan, self.bag.user, self.lang)
+
     def execute(self):
         self._reset_bag()
 
@@ -368,6 +436,8 @@ class BagHandler:
         self._validate_just_one_plan()
 
         self._validate_buy_plans_or_service_items()
+
+        self._avoid_rebuy_free_trial()
 
         self.bag.save()
 
@@ -497,7 +567,9 @@ def check_dependencies_in_bag(bag: Bag, lang: str):
                                   code=400)
 
 
-def get_amount(bag: Bag, currency: Currency) -> tuple[float, float, float, float]:
+def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, float, float]:
+    utc_now = timezone.now()
+    user = bag.user
     price_per_month = 0
     price_per_quarter = 0
     price_per_half = 0
@@ -521,10 +593,65 @@ def get_amount(bag: Bag, currency: Currency) -> tuple[float, float, float, float
             bag.plans.remove(plan)
             continue
 
-        price_per_month += plan.price_per_month
-        price_per_quarter += plan.price_per_quarter
-        price_per_half += plan.price_per_half
-        price_per_year += plan.price_per_year
+        have_free_trial = plan.trial_duration and plan.trial_duration_unit
+
+        subscriptions = Subscription.objects.filter(user=user, plans=plan)
+        if have_free_trial and not plan.is_renewable and subscriptions.filter(valid_until__gte=utc_now):
+            raise ValidationException(
+                translation(lang,
+                            en='Free trial plans can\'t be bought again',
+                            es='Los planes de prueba no pueden ser comprados de nuevo',
+                            slug='free-trial-plan'),
+                code=400,
+            )
+
+        price = plan.price_per_month and plan.price_per_quarter and plan.price_per_half and plan.price_per_year
+        if not price and not have_free_trial:
+            raise ValidationException(
+                translation(lang,
+                            en='The plan doesn\'t have a price yet, can\'t be bought',
+                            es='El plan no tiene un precio aún, no puede ser comprado',
+                            slug='plan-without-price'),
+                code=400,
+            )
+
+        if not price and subscriptions:
+            raise ValidationException(
+                translation(lang,
+                            en='Free trial plans can\'t be bought more than once',
+                            es='Los planes de prueba no pueden ser comprados más de una vez',
+                            slug='free-trial-already-bought'),
+                code=400,
+            )
+
+        if not plan.is_renewable and PlanFinancing.objects.filter(user=user, plans=plan):
+            raise ValidationException(
+                translation(lang,
+                            en='You already have or had a financing on this plan',
+                            es='Ya tienes o tuviste un financiamiento en este plan',
+                            slug='plan-already-financed'),
+                code=400,
+            )
+
+        if price and plan.is_renewable and subscriptions.filter(
+                Q(Q(status='CANCELLED') | Q(status='DEPRECATED'),
+                  valid_until=None,
+                  next_payment_at__gte=utc_now) | Q(valid_until__gte=utc_now)):
+            raise ValidationException(
+                translation(lang,
+                            en='You already have a subscription to this plan',
+                            es='Ya tienes una suscripción a este plan',
+                            slug='plan-already-bought'),
+                code=400,
+            )
+
+        can_have_price = avoid_rebuy_free_trial(plan, user, lang)
+
+        if can_have_price:
+            price_per_month += plan.price_per_month
+            price_per_quarter += plan.price_per_quarter
+            price_per_half += plan.price_per_half
+            price_per_year += plan.price_per_year
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -591,7 +718,7 @@ def get_bag_from_subscription(subscription: Subscription,
         bag.plans.add(plan)
 
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-        bag, last_invoice.currency)
+        bag, last_invoice.currency, lang)
 
     bag.save()
 

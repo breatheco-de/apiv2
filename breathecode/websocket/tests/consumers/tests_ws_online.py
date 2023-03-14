@@ -92,7 +92,8 @@ class ConsumerTestSuite(WebsocketTestCase):
         await communicator.disconnect()
 
     async def test__auth_user__get_one_element_from_history(self):
-        model = await self.bc.database.async_create(user=1, token=1)
+        token = {'token_type': 'one_time'}
+        model = await self.bc.database.async_create(user=1, token=token)
 
         communicator = WebsocketCommunicator(ROUTER, '/testws/test/',
                                              [('authorization', f'Token {model.token.key}')])
@@ -111,11 +112,11 @@ class ConsumerTestSuite(WebsocketTestCase):
         await communicator.disconnect()
 
     async def test__auth_user__get_one_element_from_history__disconnect_user(self):
-        model = await self.bc.database.async_create(user=1, token=1)
+        token = {'token_type': 'one_time'}
+        model = await self.bc.database.async_create(user=1, token=token)
         cache.set('breathecode-online-status', [2, 3])
 
-        communicator = WebsocketCommunicator(ROUTER, '/testws/test/',
-                                             [('authorization', f'Token {model.token.key}')])
+        communicator = WebsocketCommunicator(ROUTER, f'/testws/test/?token={model.token.key}')
         connected, subprotocol = await communicator.connect()
 
         from channels.layers import get_channel_layer
