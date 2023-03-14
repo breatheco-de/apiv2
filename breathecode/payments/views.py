@@ -1040,13 +1040,13 @@ class PayView(APIView):
                                                           slug='missing-chosen-period'),
                                               code=400)
 
-                if not available_for_free_trial and not how_many_installments and chosen_period not in [
-                        'MONTH', 'QUARTER', 'HALF', 'YEAR'
-                ]:
-                    raise ValidationException(translation(lang,
-                                                          en='Invalid chosen period',
-                                                          es='Periodo elegido inválido',
-                                                          slug='invalid-chosen-period'),
+                available_chosen_periods = ['MONTH', 'QUARTER', 'HALF', 'YEAR']
+                if not available_for_free_trial and not how_many_installments and chosen_period not in available_chosen_periods:
+                    raise ValidationException(translation(
+                        lang,
+                        en=f"Invalid chosen period ({', '.join(available_chosen_periods)})",
+                        es=f"Periodo elegido inválido ({', '.join(available_chosen_periods)})",
+                        slug='invalid-chosen-period'),
                                               code=400)
 
                 if not available_for_free_trial and not chosen_period and (
