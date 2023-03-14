@@ -1208,7 +1208,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
-        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,

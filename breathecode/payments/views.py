@@ -940,6 +940,9 @@ class CheckingView(APIView):
                     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = \
                         get_amount(bag, bag.academy.main_currency, lang)
 
+                else:
+                    actions.avoid_rebuy_free_trial(bag, lang)
+
                 amount = bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
                 plans = bag.plans.all()
                 if not amount and plans.filter(financing_options__id__gte=1):
