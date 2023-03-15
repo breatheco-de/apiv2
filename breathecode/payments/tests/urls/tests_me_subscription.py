@@ -98,6 +98,8 @@ def plan_serializer(self, plan, service, groups=[], permissions=[], service_item
         plan.trial_duration,
         'trial_duration_unit':
         plan.trial_duration_unit,
+        'has_available_cohorts':
+        plan.available_cohorts.exists(),
     }
 
 
