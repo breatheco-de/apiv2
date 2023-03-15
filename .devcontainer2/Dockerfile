@@ -1,14 +1,10 @@
 # alpine has very much issues with python
-FROM python
+FROM mcr.microsoft.com/devcontainers/python:3
 
 ENV PYTHONUNBUFFERED=1
-# RUN mkdir -m 0755 -p /etc/apt/keyrings
-# RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-# RUN echo \
-#     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-#     $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 RUN apt-get update \
+    && export DEBIAN_FRONTEND=noninteractive \
     && apt-get install -y redis-server postgresql postgresql-contrib ca-certificates curl gnupg lsb-release \
     && apt-get clean \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
