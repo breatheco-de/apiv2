@@ -1,34 +1,7 @@
 {
-    "features": {
-        "ghcr.io/devcontainers/features/common-utils:2": {
-            "installZsh": true,
-            "configureZshAsDefaultShell": true,
-            "installOhMyZsh": true,
-            "username": "vscode",
-            "upgradePackages": false
-        },
-        "ghcr.io/devcontainers/features/python:1": {},
-        "ghcr.io/akhildevelops/devcontainer-features/pip:0": {},
-        "ghcr.io/devcontainers-contrib/features/pipenv:2": {},
-        "ghcr.io/devcontainers/features/node:1": "none",
-        "ghcr.io/devcontainers/features/aws-cli:1": {},
-        "ghcr.io/devcontainers/features/git:1": {
-            "version": "os-provided",
-            "ppa": true
-        },
-        "ghcr.io/devcontainers/features/docker-in-docker:1": {
-            "version": "latest",
-            "dockerDashComposeVersion": "v2",
-            "installDockerBuildx": true,
-            "moby": true
-        },
-        "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-            "packages": "diff",
-            "upgradePackages": false
-        },
-        "ghcr.io/dhoeric/features/google-cloud-cli:1": {
-            "version": "latest"
-        }
+    "build": {
+        "dockerfile": "../.codespaces.Dockerfile",
+        "context": ".."
     },
     "customizations": {
         "vscode": {
