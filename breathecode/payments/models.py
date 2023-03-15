@@ -1,25 +1,21 @@
 from __future__ import annotations
 
-import ast
 from datetime import timedelta
 import os
-from typing import Optional
 from django.contrib.auth.models import Group, User
 from django.db import models
 from django.utils import timezone
-# from breathecode.payments.signals import consume_service
+from django.db.models import Q
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
 from breathecode.events.models import EventType
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
-from django.core.exceptions import ValidationError
 from django import forms
 from django.core.handlers.wsgi import WSGIRequest
 
 from breathecode.utils.validators.language import validate_language_code
-from . import signals
 from breathecode.utils.i18n import translation
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
@@ -445,6 +441,7 @@ class Plan(AbstractPriceByTime):
                               null=True,
                               help_text='Academy owner')
     is_onboarding = models.BooleanField(default=False, help_text='Is onboarding plan?')
+    has_waiting_list = models.BooleanField(default=False, help_text='Has waiting list?')
 
     # patterns
     cohort_pattern = models.CharField(max_length=80,
@@ -521,7 +518,8 @@ class PlanOffer(models.Model):
 
     def clean(self) -> None:
         utc_now = timezone.now()
-        others = self.__class__.objects.filter(original_plan=self.original_plan, expires_at__gt=utc_now)
+        others = self.__class__.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now),
+                                               original_plan=self.original_plan)
 
         if self.pk:
             others = others.exclude(pk=self.pk)
@@ -843,6 +841,8 @@ class Subscription(AbstractIOweYou):
     Allows to create a subscription to a plan and services.
     """
 
+    _lang = 'en'
+
     # last time the subscription was paid
     paid_at = models.DateTimeField(help_text='Last time the subscription was paid')
 
@@ -877,6 +877,13 @@ class Subscription(AbstractIOweYou):
         return f'{self.user.email} ({self.valid_until})'
 
     def clean(self) -> None:
+        if self.status == 'FULLY_PAID':
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Subscription cannot have fully paid as status',
+                            es='La suscripción no puede tener pagado como estado',
+                            slug='subscription-as-fully-paid'))
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
