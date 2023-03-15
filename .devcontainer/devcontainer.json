@@ -13,6 +13,5 @@
     "forwardPorts": [
         8000
     ],
-    "postCreateCommand": "docker-compose -d redis postgres && python -m scripts.install",
-    "remoteUser": "vscode"
+    "postCreateCommand": "docker-compose -d redis postgres && python -m scripts.install"
 }
