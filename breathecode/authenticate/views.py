@@ -156,6 +156,8 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
     permission_classes = [AllowAny]
 
     def post(self, request):
+        from breathecode.payments.models import Plan
+
         data = {**request.data}
         lang = get_user_language(request)
 
@@ -169,6 +171,16 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
 
+        if (plan := data.get('plan')) and isinstance(plan, str):
+            try:
+                data['plan'] = Plan.objects.filter(slug=plan).values_list('id', flat=True).first()
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='The plan does not exist',
+                                es='El plan no existe',
+                                slug='plan-not-found'))
+
         serializer = UserInviteWaitingListSerializer(data=data,
                                                      context={
                                                          'lang': lang,
@@ -180,6 +192,8 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request):
+        from breathecode.payments.models import Plan
+
         lang = get_user_language(request)
 
         invite = UserInvite.objects.filter(email=request.data.get('email'),
@@ -203,6 +217,16 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                                 en='The syllabus does not exist',
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
+
+        if (plan := data.get('plan')) and isinstance(plan, str):
+            try:
+                data['plan'] = Plan.objects.filter(slug=plan).values_list('id', flat=True).first()
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='The plan does not exist',
+                                es='El plan no existe',
+                                slug='plan-not-found'))
 
         serializer = UserInviteWaitingListSerializer(invite,
                                                      data=request.data,
