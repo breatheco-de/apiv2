@@ -782,15 +782,6 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
                 code=400,
             )
 
-        if user.email is None:
-            raise ValidationException(
-                translation(lang,
-                            en='This mentor does not have an email address',
-                            es='Este mentor no tiene correo electrónico',
-                            slug='without-email'),
-                code=400,
-            )
-
         if 'user' in request.data:
             raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',
                                       slug='user-read-only')

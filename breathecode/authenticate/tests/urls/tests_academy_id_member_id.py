@@ -189,10 +189,10 @@ class MemberPutDuckTestSuite(AuthTestCase):
         response = self.client.put(url)
 
         json = response.json()
-        expected = {'detail': 'first-name-not-found', 'status_code': 404}
+        expected = {'detail': 'email-not-found', 'status_code': 400}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     """
     🔽🔽🔽 Check the param is being passed

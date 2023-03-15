@@ -573,14 +573,10 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
             data['email'] = profile_academy.email
 
         if not data['email']:
-
-            data['email'] = data['user'].email
-
-        if not data['email']:
             raise ValidationException(translation(lang,
                                                   en='Unable to find email on this user',
                                                   es='Imposible encontrar el email en este usuario',
-                                                  slug='email-not-found'),
+                                                  slug='email-imposible-to-find'),
                                       code=400)
 
         return data

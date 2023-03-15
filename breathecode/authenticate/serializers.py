@@ -847,7 +847,7 @@ class MemberPUTSerializer(serializers.ModelSerializer):
             raise ValidationException(translation(lang,
                                                   en='Unable to find first name on this user',
                                                   es='Imposible encontrar el nombre en este usuario',
-                                                  slug='first-name-not-found'),
+                                                  slug='first-name-not-founded'),
                                       code=400)
 
         if 'last_name' not in data:
@@ -865,7 +865,7 @@ class MemberPUTSerializer(serializers.ModelSerializer):
             raise ValidationException(translation(lang,
                                                   en='Unable to find last name on this user',
                                                   es='Imposible encontrar el apellido en este usuario',
-                                                  slug='last-name-not-found'),
+                                                  slug='last-name-not-founded'),
                                       code=400)
 
         return data

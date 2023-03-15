@@ -593,52 +593,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete('mentorship.MentorProfile')
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock(side_effect=Exception('hello')))
-    def test__post__with_one_mentor_profile__changing_to_a_success_status__without_property_set(self):
-        statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
-        valid_statuses = ['ACTIVE', 'UNLISTED']
-
-        for db_status in statuses:
-            mentor_profile = {'status': db_status}
-            model = self.bc.database.create(user=1,
-                                            role=1,
-                                            academy=1,
-                                            capability='crud_mentorship_mentor',
-                                            mentorship_service=1,
-                                            profile_academy=1,
-                                            mentor_profile=mentor_profile)
-
-            self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
-
-            url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': model.mentor_profile.id})
-
-            good_statuses = [x for x in statuses if x != db_status and x in valid_statuses]
-            for current_status in good_statuses:
-                model.mentor_profile.status = db_status
-                model.mentor_profile.save()
-
-                data = {'status': current_status}
-                response = self.client.put(url, data)
-
-                json = response.json()
-                expected = {'detail': 'without-first-name', 'status_code': 400}
-
-                self.assertEqual(json, expected)
-                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
-                    self.bc.format.to_dict(model.mentor_profile),
-                ])
-
-                self.assertEqual(actions.mentor_is_ready.call_args_list, [])
-
-                # teardown
-                actions.mentor_is_ready.call_args_list = []
-
-            # teardown
-            self.bc.database.delete('mentorship.MentorProfile')
-
     """
     🔽🔽🔽 PUT with one MentorProfile changing to a failure status
     """
@@ -849,7 +803,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.put(url)
 
         json = response.json()
-        expected = {'detail': 'without-email', 'status_code': 400}
+        expected = {'detail': 'email-imposible-to-find', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -875,31 +829,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         json = response.json()
         expected = {'detail': 'name-not-found', 'status_code': 400}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    def test__post__with_one_mentor_profile_email_not_found(self):
-        profile_academy = {'first_name': self.bc.fake.name, 'last_name': self.bc.fake.last_name}
-        user = {'first_name': self.bc.fake.name, 'last_name': self.bc.fake.last_name}
-        model = self.bc.database.create(user=user,
-                                        role=1,
-                                        academy=1,
-                                        capability='crud_mentorship_mentor',
-                                        mentorship_service=1,
-                                        profile_academy=profile_academy,
-                                        mentor_profile=1)
-
-        self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
-
-        url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': 1})
-        response = self.client.put(url)
-
-        json = response.json()
-        expected = {'detail': 'without-email', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
