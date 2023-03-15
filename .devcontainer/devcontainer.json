@@ -13,5 +13,5 @@
     "forwardPorts": [
         8000
     ],
-    "postCreateCommand": "docker-compose -d redis postgres && python -m scripts.install"
+    "postCreateCommand": "docker-compose up -d redis postgres && python -m scripts.install"
 }
