@@ -841,6 +841,8 @@ class Subscription(AbstractIOweYou):
     Allows to create a subscription to a plan and services.
     """
 
+    _lang = 'en'
+
     # last time the subscription was paid
     paid_at = models.DateTimeField(help_text='Last time the subscription was paid')
 
@@ -875,6 +877,13 @@ class Subscription(AbstractIOweYou):
         return f'{self.user.email} ({self.valid_until})'
 
     def clean(self) -> None:
+        if self.status == 'FULLY_PAID':
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Subscription cannot have fully paid as status',
+                            es='La suscripción no puede tener pagado como estado',
+                            slug='subscription-as-fully-paid'))
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
