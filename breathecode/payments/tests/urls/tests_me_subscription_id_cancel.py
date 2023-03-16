@@ -87,7 +87,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [])
 
     def test__put__cancelled_these_statuses(self):
-        statuses = ['FREE_TRIAL', 'ACTIVE', 'PAYMENT_ISSUE', 'ERROR', 'FULLY_PAID']
+        statuses = ['FREE_TRIAL', 'ACTIVE', 'PAYMENT_ISSUE', 'ERROR']
         for s in statuses:
             subscription = {'status': s}
             model = self.bc.database.create(user=1, subscription=subscription)
