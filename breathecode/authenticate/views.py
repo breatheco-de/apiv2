@@ -184,7 +184,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         serializer = UserInviteWaitingListSerializer(data=data,
                                                      context={
                                                          'lang': lang,
-                                                         'plan': request.data.get('plan'),
+                                                         'plan': data.get('plan'),
                                                      })
         if serializer.is_valid():
             serializer.save()
@@ -232,7 +232,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                                                      data=request.data,
                                                      context={
                                                          'lang': lang,
-                                                         'plan': request.data.get('plan'),
+                                                         'plan': data.get('plan'),
                                                      })
         if serializer.is_valid():
             serializer.save()

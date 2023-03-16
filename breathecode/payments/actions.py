@@ -252,15 +252,30 @@ class BagHandler:
         self.cohorts_not_found = set()
 
     def _lookups(self, value, offset=''):
+        args = ()
         kwargs = {}
+        slug_key = f'{offset}slug__in'
+        pk_key = f'{offset}id__in'
 
-        if isinstance(value, int) or value.isnumeric():
-            kwargs[offset + 'id'] = int(value)
+        values = value.split(',') if isinstance(value, str) and ',' in value else [value]
+        for v in values:
+            if slug_key not in kwargs and (not isinstance(v, str) or not v.isnumeric()):
+                kwargs[slug_key] = []
 
-        else:
-            kwargs[offset + 'slug'] = value
+            if pk_key not in kwargs and (isinstance(v, int) or v.isnumeric()):
+                kwargs[pk_key] = []
 
-        return kwargs
+            if isinstance(v, int) or v.isnumeric():
+                kwargs[pk_key].append(int(v))
+
+            else:
+                kwargs[slug_key].append(v)
+
+        if len(kwargs) > 1:
+            args = (Q(**{slug_key: kwargs[slug_key]}) | Q(**{pk_key: kwargs[pk_key]}), )
+            kwargs = {}
+
+        return args, kwargs
 
     def _more_than_one_generator(self, en, es):
         return translation(self.lang,
@@ -330,16 +345,25 @@ class BagHandler:
                     self.service_items_not_found.add(service_item['service'])
 
     def _validate_just_select_one_resource_per_type(self):
-        if self.selected_cohort and (x :=
-                                     Cohort.objects.filter(**self._lookups(self.selected_cohort)).first()):
+        args, kwargs = tuple(), {}
+
+        if self.selected_cohort:
+            args, kwargs = self._lookups(self.selected_cohort)
+
+        if self.selected_cohort and (x := Cohort.objects.filter(*args, **kwargs).first()):
             self.selected_cohort = x
 
-        if self.selected_event_type_set and (x := EventTypeSet.objects.filter(
-                **self._lookups(self.selected_event_type_set)).first()):
+        if self.selected_event_type_set:
+            args, kwargs = self._lookups(self.selected_event_type_set)
+
+        if self.selected_event_type_set and (x := EventTypeSet.objects.filter(*args, **kwargs).first()):
             self.selected_event_type_set = x
 
+        if self.selected_mentorship_service_set:
+            args, kwargs = self._lookups(self.selected_mentorship_service_set)
+
         if self.selected_mentorship_service_set and (x := MentorshipServiceSet.objects.filter(
-                **self._lookups(self.selected_mentorship_service_set)).first()):
+                *args, **kwargs).first()):
             self.selected_mentorship_service_set = x
 
     def _get_plans_that_not_found(self):
@@ -369,9 +393,9 @@ class BagHandler:
     def _add_service_items_to_bag(self):
         if isinstance(self.service_items, list):
             for service_item in self.service_items:
-                kwargs = self._lookups(service_item['service'])
+                args, kwargs = self._lookups(service_item['service'])
 
-                service = Service.objects.filter(**kwargs).first()
+                service = Service.objects.filter(*args, **kwargs).first()
                 service_item, _ = ServiceItem.objects.get_or_create(service=service,
                                                                     how_many=service_item['how_many'])
                 self.bag.service_items.add(service_item)
@@ -381,9 +405,9 @@ class BagHandler:
             for plan in self.plans:
                 kwargs = {}
 
-                kwargs = self._lookups(plan)
+                args, kwargs = self._lookups(plan)
 
-                p = Plan.objects.filter(**kwargs, available_cohorts=self.selected_cohort).first()
+                p = Plan.objects.filter(*args, **kwargs, available_cohorts=self.selected_cohort).first()
 
                 if p and p not in self.bag.plans.filter():
                     self.bag.plans.add(p)
@@ -410,10 +434,7 @@ class BagHandler:
                 self.bag.selected_cohorts.add(self.selected_cohort)
 
     def _avoid_rebuy_free_trial(self):
-        if not self.plans:
-            return
-
-        for plan in Plan.objects.filter(id__in=self.plans):
+        for plan in self.bag.plans.all():
             avoid_rebuy_free_trial(plan, self.bag.user, self.lang)
 
     def execute(self):
