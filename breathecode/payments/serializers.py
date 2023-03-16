@@ -191,6 +191,10 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
     trial_duration_unit = serpy.Field()
     service_items = serpy.MethodField()
     financing_options = serpy.MethodField()
+    has_available_cohorts = serpy.MethodField()
+
+    def get_has_available_cohorts(self, obj):
+        return obj.available_cohorts.exists()
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data

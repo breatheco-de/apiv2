@@ -51,6 +51,8 @@ def plan_serializer(plan, service_items, service, cohorts=[], financing_options=
         plan.trial_duration,
         'trial_duration_unit':
         plan.trial_duration_unit,
+        'has_available_cohorts':
+        plan.available_cohorts.exists(),
         **data,
     }
 

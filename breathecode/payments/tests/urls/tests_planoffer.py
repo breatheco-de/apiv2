@@ -86,6 +86,8 @@ def plan_serializer(self, plan, service, currency, groups=[], permissions=[], se
         plan.price_per_quarter,
         'price_per_year':
         plan.price_per_year,
+        'has_available_cohorts':
+        plan.available_cohorts.exists(),
     }
 
 
