@@ -274,11 +274,27 @@ class FinancingOption(models.Model):
     This model is used as referenced of units of a service can be used.
     """
 
+    _lang = 'en'
+
     monthly_price = models.FloatField(default=1, help_text='Monthly price (e.g. 1, 2, 3, ...)')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency')
 
     how_many_months = models.IntegerField(
         default=1, help_text='How many months and installments to collect (e.g. 1, 2, 3, ...)')
+
+    def clean(self) -> None:
+        if not self.monthly_price:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Monthly price is required',
+                            es='El precio mensual es requerido',
+                            slug='monthly-price-required'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f'{self.monthly_price} {self.currency.code} per {self.how_many_months} months'
