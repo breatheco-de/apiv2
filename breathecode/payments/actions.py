@@ -165,22 +165,33 @@ class PlanFinder:
         return self.get_plans_belongs(**additional_args)
 
 
-def avoid_rebuy_free_trial(plan: Plan, user: User, lang: str):
+def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
+    """
+    Ask to add plan to bag, and return if it must be charged or not.
+    """
     utc_now = timezone.now()
-    have_free_trial = plan.trial_duration and plan.trial_duration_unit
+    plan_have_free_trial = plan.trial_duration and plan.trial_duration_unit
+
+    if plan.is_renewable:
+        price = plan.price_per_month or plan.price_per_quarter or plan.price_per_half or plan.price_per_year
+    else:
+        price = not plan.is_renewable and plan.financing_options.exists()
 
     subscriptions = Subscription.objects.filter(user=user, plans=plan)
-    if have_free_trial and not plan.is_renewable and subscriptions.filter(valid_until__gte=utc_now):
+
+    # avoid bought a free trial for financing if this was bought before
+    if not price and plan_have_free_trial and not plan.is_renewable and subscriptions.filter(
+            valid_until__gte=utc_now):
         raise ValidationException(
             translation(lang,
                         en='Free trial plans can\'t be bought again',
                         es='Los planes de prueba no pueden ser comprados de nuevo',
-                        slug='free-trial-plan'),
+                        slug='free-trial-plan-for-financing'),
             code=400,
         )
 
-    price = plan.price_per_month and plan.price_per_quarter and plan.price_per_half and plan.price_per_year
-    if not price and not have_free_trial:
+    # avoid a plan with no price and no free trial to prevent this has been taken as free trial
+    if not price and not plan_have_free_trial:
         raise ValidationException(
             translation(lang,
                         en='The plan doesn\'t have a price yet, can\'t be bought',
@@ -189,6 +200,7 @@ def avoid_rebuy_free_trial(plan: Plan, user: User, lang: str):
             code=400,
         )
 
+    # avoid bought a plan if it doesn't have a price yet after free trial
     if not price and subscriptions:
         raise ValidationException(
             translation(lang,
@@ -198,6 +210,7 @@ def avoid_rebuy_free_trial(plan: Plan, user: User, lang: str):
             code=400,
         )
 
+    # avoid financing plans if it was financed before
     if not plan.is_renewable and PlanFinancing.objects.filter(user=user, plans=plan):
         raise ValidationException(
             translation(lang,
@@ -207,6 +220,7 @@ def avoid_rebuy_free_trial(plan: Plan, user: User, lang: str):
             code=400,
         )
 
+    # avoid to buy a plan if exists a subscription with same plan with remaining days
     if price and plan.is_renewable and subscriptions.filter(
             Q(Q(status='CANCELLED') | Q(status='DEPRECATED'), valid_until=None, next_payment_at__gte=utc_now)
             | Q(valid_until__gte=utc_now)):
@@ -218,8 +232,16 @@ def avoid_rebuy_free_trial(plan: Plan, user: User, lang: str):
             code=400,
         )
 
-    can_have_price = not (price and have_free_trial and not subscriptions.exists())
-    return bool(can_have_price)
+    # avoid to charge a plan if it has a free trial and was not bought before
+    if not price or (plan_have_free_trial and not subscriptions.exists()):
+        return False
+
+    # charge plan if it does not have free trial
+    if not plan_have_free_trial:
+        return True
+
+    # charge a plan if it has a price
+    return bool(price)
 
 
 class BagHandler:
@@ -433,9 +455,9 @@ class BagHandler:
             if self.bag.selected_cohorts not in self.bag.selected_cohorts.all():
                 self.bag.selected_cohorts.add(self.selected_cohort)
 
-    def _avoid_rebuy_free_trial(self):
+    def _ask_to_add_plan_and_charge_it_in_the_bag(self):
         for plan in self.bag.plans.all():
-            avoid_rebuy_free_trial(plan, self.bag.user, self.lang)
+            ask_to_add_plan_and_charge_it_in_the_bag(plan, self.bag.user, self.lang)
 
     def execute(self):
         self._reset_bag()
@@ -454,7 +476,7 @@ class BagHandler:
 
         self._validate_buy_plans_or_service_items()
 
-        self._avoid_rebuy_free_trial()
+        self._ask_to_add_plan_and_charge_it_in_the_bag()
 
         self.bag.save()
 
@@ -609,9 +631,10 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
             bag.plans.remove(plan)
             continue
 
-        can_have_price = avoid_rebuy_free_trial(plan, user, lang)
+        must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(plan, user, lang)
 
-        if can_have_price:
+        # this prices is just used if it are generating a subscription
+        if not bag.how_many_installments and (bag.chosen_period != 'NO_SET' or must_it_be_charged):
             price_per_month += plan.price_per_month
             price_per_quarter += plan.price_per_quarter
             price_per_half += plan.price_per_half
