@@ -827,6 +827,7 @@ class MemberPUTSerializer(serializers.ModelSerializer):
         fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'phone', 'address')
 
     def validate(self, data):
+        lang = data.get('lang', 'en')
 
         profile_academy = ProfileAcademy.objects.filter(user=data['user'], academy=data['academy']).first()
         if not profile_academy:
@@ -841,7 +842,7 @@ class MemberPUTSerializer(serializers.ModelSerializer):
 
         if not data['first_name']:
 
-            data['first_name'] = User.first_name
+            data['first_name'] = data['user'].first_name
 
         if not data['first_name']:
             raise ValidationException(translation(lang,
@@ -859,7 +860,7 @@ class MemberPUTSerializer(serializers.ModelSerializer):
 
         if not data['last_name']:
 
-            data['last_name'] = User.last_name
+            data['last_name'] = data['user'].last_name
 
         if not data['last_name']:
             raise ValidationException(translation(lang,
