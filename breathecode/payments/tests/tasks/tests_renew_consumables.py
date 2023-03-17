@@ -66,8 +66,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
             'valid_until': UTC_NOW - relativedelta(seconds=1),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1)
 
@@ -98,8 +100,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
             'valid_until': UTC_NOW + relativedelta(minutes=3),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1)
 
@@ -131,8 +135,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'valid_until': UTC_NOW + relativedelta(minutes=3),
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1)
 
@@ -165,8 +171,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'valid_until': UTC_NOW + relativedelta(minutes=5),
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
                                         cohort=2)
@@ -208,7 +216,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             'next_payment_at': UTC_NOW + relativedelta(days=2),
         }
 
-        plan = {'time_of_life': 1, 'time_of_life_unit': 'DAY'}
+        plan = {'time_of_life': 1, 'time_of_life_unit': 'DAY', 'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan_financing=plan_financing,
@@ -247,8 +255,10 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
 
         service = {'type': 'MENTORSHIP_SERVICE_SET'}
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
                                         mentorship_service=2,
@@ -295,8 +305,10 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_stock_scheduler = {
             'valid_until': UTC_NOW - relativedelta(seconds=1),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=service_stock_scheduler,
+                                        plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
                                         mentorship_service=2,
@@ -329,8 +341,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
             'valid_until': UTC_NOW - relativedelta(seconds=1),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1)
 
@@ -361,8 +375,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
             'valid_until': UTC_NOW + relativedelta(minutes=3),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1)
 
@@ -394,8 +410,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'valid_until': UTC_NOW + relativedelta(minutes=3),
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1)
 
@@ -428,8 +446,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'valid_until': UTC_NOW + relativedelta(minutes=5),
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1,
                                         cohort=2)
@@ -472,8 +492,10 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
 
         service = {'type': 'MENTORSHIP_SERVICE_SET'}
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1,
                                         mentorship_service=2,
@@ -520,8 +542,10 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_stock_scheduler = {
             'valid_until': UTC_NOW - relativedelta(seconds=1),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=service_stock_scheduler,
+                                        plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1,
                                         mentorship_service=2,
@@ -553,8 +577,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
             'valid_until': UTC_NOW - relativedelta(seconds=1),
         }
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        plan=plan,
                                         subscription=subscription,
                                         subscription_service_item=1)
 

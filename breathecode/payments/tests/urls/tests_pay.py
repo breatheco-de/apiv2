@@ -238,7 +238,10 @@ class SignalTestSuite(PaymentsTestCase):
             'type': 'BAG',
             random.choice(['amount_per_month', 'amount_per_quarter', 'amount_per_half', 'amount_per_year']): 1
         }
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
@@ -275,7 +278,10 @@ class SignalTestSuite(PaymentsTestCase):
             'status': 'CHECKING',
             'type': 'BAG',
         }
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
@@ -313,7 +319,10 @@ class SignalTestSuite(PaymentsTestCase):
             'status': 'CHECKING',
             'type': 'BAG',
         }
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
@@ -356,11 +365,14 @@ class SignalTestSuite(PaymentsTestCase):
             'status': 'CHECKING',
             'type': 'BAG',
         }
+
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(user=1,
                                         bag=bag,
                                         academy=1,
                                         currency=1,
-                                        plan=1,
+                                        plan=plan,
                                         service_item=1,
                                         plan_offer=1)
         self.bc.request.authenticate(model.user)
@@ -414,7 +426,10 @@ class SignalTestSuite(PaymentsTestCase):
         }
         chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
         amount = get_amount_per_period(chosen_period, bag)
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
@@ -473,7 +488,10 @@ class SignalTestSuite(PaymentsTestCase):
         }
         chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
         amount = get_amount_per_period(chosen_period, bag)
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
@@ -523,11 +541,13 @@ class SignalTestSuite(PaymentsTestCase):
             **generate_amounts_by_time()
         }
         financing_option = {'monthly_price': charge, 'how_many_months': how_many_installments}
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(user=1,
                                         bag=bag,
                                         academy=1,
                                         currency=1,
-                                        plan=1,
+                                        plan=plan,
                                         service_item=1,
                                         financing_option=financing_option)
         self.bc.request.authenticate(model.user)

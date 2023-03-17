@@ -133,7 +133,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'monthly_price': (random.random() * 99) + 1,
             'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
-        model = self.bc.database.create(plan_financing=plan_financing, plan=1, user=1)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(plan_financing=plan_financing, plan=plan, user=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -181,7 +182,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'monthly_price': (random.random() * 99) + 1,
             'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
-        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=1, plan=1)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=1, plan=plan)
 
         with patch('breathecode.payments.services.stripe.Stripe.pay',
                    MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy))):
@@ -252,7 +254,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'monthly_price': (random.random() * 99) + 1,
             'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
-        model = self.bc.database.create(plan_financing=plan_financing, invoice=1)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(plan_financing=plan_financing, invoice=1, plan=plan)
 
         with patch('breathecode.payments.services.stripe.Stripe.pay',
                    MagicMock(side_effect=Exception('fake error'))):
@@ -308,7 +311,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'monthly_price': (random.random() * 99) + 1,
             'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
-        model = self.bc.database.create(plan_financing=plan_financing, invoice=1)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(plan_financing=plan_financing, invoice=1, plan=plan)
 
         with patch('breathecode.payments.services.stripe.Stripe.pay',
                    MagicMock(side_effect=Exception('fake error'))):
@@ -358,7 +362,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
         invoice = {'paid_at': UTC_NOW - relativedelta(hours=24, seconds=1)}
-        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=1)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan)
 
         error = self.bc.fake.text()
 
@@ -413,7 +418,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
         invoice = {'paid_at': UTC_NOW - relativedelta(hours=random.randint(1, 23))}
-        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=1)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan)
 
         error = self.bc.fake.text()
 

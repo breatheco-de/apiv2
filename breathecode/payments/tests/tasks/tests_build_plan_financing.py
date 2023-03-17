@@ -154,8 +154,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             'chosen_period': random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR']),
         }
         invoice = {'status': 'FULFILLED', 'amount': amount}
+        plan = {'is_renewable': False}
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=1)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -220,8 +221,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             'chosen_period': random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR']),
         }
         invoice = {'status': 'FULFILLED', 'amount': amount}
+        plan = {'is_renewable': False}
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=1, cohort=1)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, cohort=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -291,8 +293,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             'chosen_period': random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR']),
         }
         invoice = {'status': 'FULFILLED', 'amount': amount}
+        plan = {'is_renewable': False}
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=1, event_type_set=1)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, event_type_set=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -360,8 +363,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             'chosen_period': random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR']),
         }
         invoice = {'status': 'FULFILLED', 'amount': amount}
+        plan = {'is_renewable': False}
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=1, mentorship_service_set=1)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, mentorship_service_set=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []

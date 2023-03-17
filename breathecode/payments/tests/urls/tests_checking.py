@@ -459,8 +459,9 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         academy = {'main_currency': None}
+        plan = {'is_renewable': False}
 
-        model = self.bc.database.create(user=1, bag=bag, service_item=1, plan=1, academy=academy)
+        model = self.bc.database.create(user=1, bag=bag, service_item=1, plan=plan, academy=academy)
         self.bc.request.authenticate(model.user)
 
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
@@ -523,6 +524,9 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_quarter': random.random() * 100,
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
+            'is_renewable': True,
+            'time_of_life': 0,
+            'time_of_life_unit': None,
         }
 
         service = {
@@ -714,8 +718,8 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
             'is_renewable': False,
-            'time_of_life': 0,
-            'time_of_life_unit': None,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
             'trial_duration': 0,
         }
 
@@ -827,8 +831,8 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
             'is_renewable': False,
-            'time_of_life': 0,
-            'time_of_life_unit': None,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
             'trial_duration': random.randint(1, 10),
         }
 
@@ -940,8 +944,8 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
             'is_renewable': False,
-            'time_of_life': 0,
-            'time_of_life_unit': None,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
             'trial_duration': random.randint(1, 10),
         }
 
@@ -1056,8 +1060,8 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_half': 0,
             'price_per_year': 0,
             'is_renewable': False,
-            'time_of_life': 0,
-            'time_of_life_unit': None,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
             'trial_duration': random.randint(1, 10),
         }
 
@@ -1145,8 +1149,8 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_half': 0,
             'price_per_year': 0,
             'is_renewable': False,
-            'time_of_life': 0,
-            'time_of_life_unit': None,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
             'trial_duration': random.randint(1, 10),
         }
 
@@ -1260,8 +1264,8 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_half': 0,
             'price_per_year': 0,
             'is_renewable': False,
-            'time_of_life': 0,
-            'time_of_life_unit': None,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
             'trial_duration': random.randint(1, 10),
         }
 
@@ -1352,8 +1356,8 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
             'is_renewable': True,
-            'time_of_life': 1,
-            'time_of_life_unit': 'MONTH',
+            'time_of_life': 0,
+            'time_of_life_unit': None,
             'trial_duration': random.randint(1, 10),
         }
 
@@ -1445,8 +1449,8 @@ class SignalTestSuite(PaymentsTestCase):
             'price_per_half': random.random() * 100,
             'price_per_year': random.random() * 100,
             'is_renewable': True,
-            'time_of_life': 1,
-            'time_of_life_unit': 'MONTH',
+            'time_of_life': 0,
+            'time_of_life_unit': None,
             'trial_duration': random.randint(1, 10),
         }
 

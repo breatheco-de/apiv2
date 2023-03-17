@@ -143,6 +143,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {'status': 'FULFILLED'}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
@@ -215,6 +216,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {'status': 'FULFILLED', 'amount': (random.random() * 99.99) + 0.01}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
@@ -267,6 +269,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {'status': 'FULFILLED'}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
@@ -343,6 +346,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {'status': 'FULFILLED'}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
@@ -417,6 +421,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {'status': 'FULFILLED'}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
