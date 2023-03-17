@@ -15,8 +15,17 @@ class Command(BaseCommand):
         utc_now = timezone.now()
         statuses = ['CANCELLED', 'DEPRECATED', 'FREE_TRIAL']
 
+        avoid_expire_these_statuses = Q(status='EXPIRED') | Q(status='ERROR') | Q(status='PAYMENT_ISSUE') | Q(
+            status='FULLY_PAID') | Q(status='FREE_TRIAL') | Q(status='CANCELLED') | Q(status='DEPRECATED')
+
         subscriptions = Subscription.objects.filter(valid_until__lte=utc_now + timedelta(days=1))
         plan_financings = PlanFinancing.objects.filter(valid_until__lte=utc_now + timedelta(days=1))
+
+        Subscription.objects.filter(valid_until__lte=utc_now).exclude(avoid_expire_these_statuses).update(
+            status='EXPIRED')
+
+        PlanFinancing.objects.filter(valid_until__lte=utc_now).exclude(avoid_expire_these_statuses).update(
+            status='EXPIRED')
 
         for status in statuses:
             subscriptions = subscriptions.exclude(status=status)

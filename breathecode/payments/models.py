@@ -745,6 +745,7 @@ DEPRECATED = 'DEPRECATED'
 PAYMENT_ISSUE = 'PAYMENT_ISSUE'
 ERROR = 'ERROR'
 FULLY_PAID = 'FULLY_PAID'
+EXPIRED = 'EXPIRED'
 SUBSCRIPTION_STATUS = [
     (FREE_TRIAL, 'Free trial'),
     (ACTIVE, 'Active'),
@@ -753,6 +754,7 @@ SUBSCRIPTION_STATUS = [
     (PAYMENT_ISSUE, 'Payment issue'),
     (ERROR, 'Error'),
     (FULLY_PAID, 'Fully Paid'),
+    (EXPIRED, 'Expired'),
 ]
 
 
