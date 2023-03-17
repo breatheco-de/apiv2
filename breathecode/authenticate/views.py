@@ -1896,19 +1896,37 @@ class GithubUserView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
     @capable_of('update_github_user')
-    def put(self, request, academy_id, githubuser_id):
+    def put(self, request, academy_id, githubuser_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id'])
+        if githubuser_id is not None:
+            lookups = {'id': githubuser_id}
 
-        item = GithubAcademyUser.objects.filter(id=githubuser_id, academy_id=academy_id).first()
-        if item is None:
+        if lookups is None or len(lookups.keys()) == 0:
+            raise ValidationException('No github users lookups to find', code=404, slug='no-lookup')
+
+        items = GithubAcademyUser.objects.filter(**lookups, academy_id=academy_id)
+        if items.count() == 0:
             raise ValidationException('Github User not found for this academy',
                                       code=404,
                                       slug='githubuser-not-found')
 
-        serializer = PUTGithubUserSerializer(item, data=request.data)
-        if serializer.is_valid():
+        valid = []
+        for gu in items:
+            serializer = PUTGithubUserSerializer(gu, data=request.data)
+            if serializer.is_valid():
+                valid.append(serializer)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data_list = []
+        for serializer in valid:
             _item = serializer.save()
-            return Response(GithubUserSerializer(_item, many=False).data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            data_list.append(_item)
+
+        if githubuser_id is None:
+            return Response(GithubUserSerializer(data_list, many=True).data, status=status.HTTP_200_OK)
+        else:
+            return Response(GithubUserSerializer(data_list[0], many=False).data, status=status.HTTP_200_OK)
 
 
 class AcademyGithubSyncView(APIView, GenerateLookupsMixin):

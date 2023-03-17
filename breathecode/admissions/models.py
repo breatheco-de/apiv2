@@ -295,7 +295,13 @@ class Cohort(models.Model):
         'The syllabus is separated by modules, from 1 to N and the teacher decides when to start a new mobule (after a couple of days)'
     )
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
-    private = models.BooleanField(default=False)
+    private = models.BooleanField(
+        default=False,
+        help_text=
+        'It will not show on the public API endpoints but you will still be able to add people manually')
+    accepts_enrollment_suggestions = models.BooleanField(
+        default=True, help_text='The system will suggest won leads to be added to this cohort')
+
     never_ends = models.BooleanField(default=False)
 
     remote_available = models.BooleanField(
@@ -466,18 +472,18 @@ class CohortUser(models.Model):
     def save(self, *args, **kwargs):
         # check the fields before saving
         self.full_clean()
-        
+
         edu_status_updated = False
         if self.__old_edu_status != self.educational_status:
             edu_status_updated = True
 
         result = super().save(*args, **kwargs)  # Call the "real" save() method.
-        
+
         if edu_status_updated:
             student_edu_status_updated.send(instance=self, sender=self.__class__)
 
         signals.cohort_log_saved.send(instance=self, sender=self.__class__)
-        
+
         return result
 
 
