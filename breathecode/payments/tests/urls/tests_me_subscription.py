@@ -333,13 +333,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -418,13 +419,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -472,13 +474,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -526,13 +529,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -595,13 +599,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -642,13 +647,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -732,13 +738,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -775,13 +782,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -864,13 +872,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -908,13 +917,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -999,13 +1009,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -1043,13 +1054,14 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(
             subscription=subscriptions,
             plan_financing=(2, plan_financing),
             plan_service_item=plan_service_items,
             subscription_service_item=subscription_service_items,
             invoice=2,
-            plan=2,
+            plan=(2, plan),
             service_item=2,
         )
         self.bc.request.authenticate(model.user)
@@ -1132,12 +1144,13 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(subscription=subscriptions,
                                         plan_financing=plan_financings,
                                         plan_service_item=plan_service_items,
                                         subscription_service_item=subscription_service_items,
                                         invoice=2,
-                                        plan=2,
+                                        plan=(2, plan),
                                         service_item=2,
                                         cohort=2)
         self.bc.request.authenticate(model.user)
@@ -1177,12 +1190,13 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(subscription=subscriptions,
                                         plan_financing=plan_financings,
                                         plan_service_item=plan_service_items,
                                         subscription_service_item=subscription_service_items,
                                         invoice=2,
-                                        plan=2,
+                                        plan=(2, plan),
                                         service_item=2,
                                         cohort=2)
         self.bc.request.authenticate(model.user)
@@ -1273,12 +1287,13 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(subscription=subscriptions,
                                         plan_financing=plan_financings,
                                         plan_service_item=plan_service_items,
                                         subscription_service_item=subscription_service_items,
                                         invoice=2,
-                                        plan=2,
+                                        plan=(2, plan),
                                         service_item=2,
                                         cohort=2)
         self.bc.request.authenticate(model.user)
@@ -1320,12 +1335,13 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(subscription=subscriptions,
                                         plan_financing=plan_financings,
                                         plan_service_item=plan_service_items,
                                         subscription_service_item=subscription_service_items,
                                         invoice=2,
-                                        plan=2,
+                                        plan=(2, plan),
                                         service_item=2,
                                         mentorship_service_set=2)
         self.bc.request.authenticate(model.user)
@@ -1417,12 +1433,13 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(subscription=subscriptions,
                                         plan_financing=plan_financings,
                                         plan_service_item=plan_service_items,
                                         subscription_service_item=subscription_service_items,
                                         invoice=2,
-                                        plan=2,
+                                        plan=(2, plan),
                                         service_item=2,
                                         cohort=2)
         self.bc.request.authenticate(model.user)
@@ -1463,12 +1480,13 @@ class SignalTestSuite(PaymentsTestCase):
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(subscription=subscriptions,
                                         plan_financing=plan_financings,
                                         plan_service_item=plan_service_items,
                                         subscription_service_item=subscription_service_items,
                                         invoice=2,
-                                        plan=2,
+                                        plan=(2, plan),
                                         service_item=2,
                                         event_type_set=2)
         self.bc.request.authenticate(model.user)

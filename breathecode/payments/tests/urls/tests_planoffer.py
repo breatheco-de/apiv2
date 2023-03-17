@@ -151,8 +151,10 @@ class SignalTestSuite(PaymentsTestCase):
             'expires_at': None,
         }
 
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(
-            plan=2,
+            plan=(2, plan),
             service=1,
             service_item=2,
             plan_offer=plan_offer,
@@ -195,8 +197,10 @@ class SignalTestSuite(PaymentsTestCase):
             'expires_at': UTC_NOW + timedelta(seconds=random.randint(1, 60)),
         }
 
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(
-            plan=2,
+            plan=(2, plan),
             service=1,
             service_item=2,
             plan_offer=plan_offer,
@@ -239,8 +243,10 @@ class SignalTestSuite(PaymentsTestCase):
             'expires_at': UTC_NOW - timedelta(seconds=random.randint(1, 60)),
         }
 
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(
-            plan=2,
+            plan=(2, plan),
             service=1,
             service_item=2,
             plan_offer=plan_offer,
@@ -280,8 +286,10 @@ class SignalTestSuite(PaymentsTestCase):
             'offer_id': n,
         } for n in range(1, 3)]
 
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(
-            plan=4,
+            plan=(4, plan),
             service=1,
             service_item=2,
             plan_offer=plan_offers,
@@ -344,8 +352,10 @@ class SignalTestSuite(PaymentsTestCase):
             'offer_id': n,
         } for n in range(1, 3)]
 
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(
-            plan=4,
+            plan=(4, plan),
             service=1,
             service_item=2,
             plan_offer=plan_offers,
@@ -399,8 +409,10 @@ class SignalTestSuite(PaymentsTestCase):
             'offer_id': n,
         } for n in range(1, 3)]
 
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(
-            plan=4,
+            plan=(4, plan),
             service=1,
             service_item=2,
             plan_offer=plan_offers,

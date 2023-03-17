@@ -83,8 +83,9 @@ class SignalTestSuite(PaymentsTestCase):
         service_item_features = [{'lang': 'en', 'service_item_id': 1} for _ in range(2)]
         service_item_features += [{'lang': 'en', 'service_item_id': 2} for _ in range(2)]
         plan_service_items = [{'service_item_id': n} for n in range(1, 3)]
+        plan = {'is_renewable': False}
 
-        model = self.bc.database.create(plan=1,
+        model = self.bc.database.create(plan=plan,
                                         service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
@@ -118,8 +119,9 @@ class SignalTestSuite(PaymentsTestCase):
     def test__without_auth__filtering_by_lang(self):
         service_item_features = [{'lang': 'en', 'service_item_id': 1} for _ in range(2)]
         service_item_features += [{'lang': 'es', 'service_item_id': 1} for _ in range(2)]
+        plan = {'is_renewable': False}
 
-        model = self.bc.database.create(plan=1,
+        model = self.bc.database.create(plan=plan,
                                         service=1,
                                         service_item=1,
                                         plan_service_item=1,
@@ -145,8 +147,9 @@ class SignalTestSuite(PaymentsTestCase):
     def test__without_auth__filtering_by_lang_from_headers(self):
         service_item_features = [{'lang': 'en', 'service_item_id': 1} for _ in range(2)]
         service_item_features += [{'lang': 'es', 'service_item_id': 1} for _ in range(2)]
+        plan = {'is_renewable': False}
 
-        model = self.bc.database.create(plan=1,
+        model = self.bc.database.create(plan=plan,
                                         service=1,
                                         service_item=1,
                                         plan_service_item=1,
@@ -178,8 +181,9 @@ class SignalTestSuite(PaymentsTestCase):
     def test__without_auth__filtering_by_plan(self):
         service_item_features = [{'lang': 'en', 'service_item_id': n} for n in range(1, 5)]
         plan_service_items = [{'service_item_id': n} for n in range(1, 3)]
+        plan = {'is_renewable': False}
 
-        model = self.bc.database.create(plan=1,
+        model = self.bc.database.create(plan=plan,
                                         service=1,
                                         service_item=4,
                                         plan_service_item=plan_service_items,
@@ -224,9 +228,10 @@ class SignalTestSuite(PaymentsTestCase):
         service_item_features = [{'lang': 'en', 'service_item_id': 1} for _ in range(2)]
         service_item_features += [{'lang': 'en', 'service_item_id': 2} for _ in range(2)]
         plan_service_items = [{'service_item_id': n} for n in range(1, 3)]
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(user=1,
-                                        plan=1,
+                                        plan=plan,
                                         service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
@@ -262,9 +267,10 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_auth__filtering_by_lang(self):
         service_item_features = [{'lang': 'en', 'service_item_id': 1} for _ in range(2)]
         service_item_features += [{'lang': 'es', 'service_item_id': 1} for _ in range(2)]
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(user=1,
-                                        plan=1,
+                                        plan=plan,
                                         service=1,
                                         service_item=1,
                                         plan_service_item=1,
@@ -292,9 +298,10 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_auth__filtering_by_lang_from_headers(self):
         service_item_features = [{'lang': 'en', 'service_item_id': 1} for _ in range(2)]
         service_item_features += [{'lang': 'es', 'service_item_id': 1} for _ in range(2)]
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(user=1,
-                                        plan=1,
+                                        plan=plan,
                                         service=1,
                                         service_item=1,
                                         plan_service_item=1,
@@ -327,9 +334,10 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_auth__filtering_by_plan(self):
         service_item_features = [{'lang': 'en', 'service_item_id': n} for n in range(1, 5)]
         plan_service_items = [{'service_item_id': n} for n in range(1, 3)]
+        plan = {'is_renewable': False}
 
         model = self.bc.database.create(user=1,
-                                        plan=1,
+                                        plan=plan,
                                         service=1,
                                         service_item=4,
                                         plan_service_item=plan_service_items,

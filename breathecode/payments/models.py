@@ -488,13 +488,13 @@ class Plan(AbstractPriceByTime):
         return self.slug
 
     def clean(self) -> None:
-        if self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
+        if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
             raise forms.ValidationError(
-                'If the plan is renewable, you must set time_of_life and time_of_life_unit')
+                'If the plan is not renewable, you must set time_of_life and time_of_life_unit')
 
-        if not self.is_renewable and (self.time_of_life or self.time_of_life_unit):
+        if self.is_renewable and (self.time_of_life or self.time_of_life_unit):
             raise forms.ValidationError(
-                'If the plan is not renewable, you must not set time_of_life and time_of_life_unit')
+                'If the plan is renewable, you must not set time_of_life and time_of_life_unit')
 
         return super().clean()
 

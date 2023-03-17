@@ -178,9 +178,11 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_handler_id': n,
         } for n in range(1, 5)]
 
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(subscription=subscription,
                                         service_stock_scheduler=service_stock_schedulers,
-                                        plan=2,
+                                        plan=(2, plan),
                                         service_item=6,
                                         plan_service_item=plan_service_items,
                                         plan_service_item_handler=plan_service_item_handlers,
