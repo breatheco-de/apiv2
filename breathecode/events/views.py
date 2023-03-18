@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
 from breathecode.events.caches import EventCache
-from breathecode.payments.consumers import cohort_schedule_by_url_param
+from breathecode.payments.consumers import cohort_schedule_by_url_param, live_class_by_url_param
 from breathecode.utils import APIException
 from datetime import datetime, timedelta
 from breathecode.utils.views import private_view, render_message, set_query_parameter
@@ -234,6 +234,7 @@ class MeLiveClassView(APIView):
 
 class MeLiveClassJoinView(APIView):
 
+    @has_permission('live_class_join', consumer=live_class_by_url_param)
     def get(self, request, hash):
         lang = get_user_language(request)
 
