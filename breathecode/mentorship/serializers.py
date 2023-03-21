@@ -484,8 +484,7 @@ class MentorSerializer(serializers.ModelSerializer):
             data['name'] = ''
 
         if not data['name'] and profile_academy:
-
-            data['name'] = f'{profile_academy.first_name} {profile_academy.last_name}'
+            data['name'] = profile_academy.first_name + ' ' + profile_academy.last_name
 
         if not data['name']:
             data['name'] = user.first_name + ' ' + user.last_name
@@ -554,9 +553,9 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
 
             data['name'] = profile_academy.first_name + ' ' + profile_academy.last_name
 
-        if not data['name']:
+        if 'None' in data['name']:
+            data['name'] = ''
 
-            data['name'] = user.first_name + ' ' + user.last_name
         data['name'] = data['name'].strip()
         if not data['name']:
             raise ValidationException(translation(lang,

@@ -764,7 +764,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
                                       slug='not-found')
         user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id).first()
 
-        if user.first_name is None:
+        if user.first_name is None or user.first_name.strip() == '':
             raise ValidationException(
                 translation(lang,
                             en='This mentor does not have a first name',
@@ -773,7 +773,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
                 code=400,
             )
 
-        if user.last_name is None:
+        if user.last_name is None or user.last_name.strip() == '':
             raise ValidationException(
                 translation(lang,
                             en='This mentor does not have a last name',

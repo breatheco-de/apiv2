@@ -679,6 +679,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy = {
             'first_name': self.bc.fake.first_name(),
             'email': self.bc.fake.email(),
+            'phone': self.bc.fake.phone_number(),
         }
         user = {'first_name': self.bc.fake.first_name(), 'last_name': '', 'email': self.bc.fake.email()}
         self.bc.request.set_headers(academy=1)

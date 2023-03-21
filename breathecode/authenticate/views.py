@@ -275,7 +275,7 @@ class MemberView(APIView, GenerateLookupsMixin):
 
         user = ProfileAcademy.objects.filter(user__id=request.user.id, academy__id=academy_id).first()
 
-        if user.email is None:
+        if user.email is None or user.email.strip() == '':
             raise ValidationException(
                 translation(lang,
                             en='This mentor does not have an email address',
@@ -284,7 +284,7 @@ class MemberView(APIView, GenerateLookupsMixin):
                 code=400,
             )
 
-        if user.phone is None:
+        if user.phone is None or user.phone.strip() == '':
             raise ValidationException('This mentor does not have a phone', code=404, slug='phone-not-found')
 
         already = None

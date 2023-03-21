@@ -828,7 +828,36 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.put(url)
 
         json = response.json()
-        expected = {'detail': 'name-not-found', 'status_code': 400}
+        expected = {'detail': 'without-first-name', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
+    def test__post__with_one_mentor_profile_with_only_first_name(self):
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': '',
+            'email': self.bc.fake.email()
+        }
+        user = {'first_name': self.bc.fake.first_name(), 'last_name': '', 'email': self.bc.fake.email()}
+        model = self.bc.database.create(user=user,
+                                        role=1,
+                                        academy=1,
+                                        capability='crud_mentorship_mentor',
+                                        mentorship_service=1,
+                                        profile_academy=profile_academy,
+                                        mentor_profile=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': 1})
+        response = self.client.put(url)
+
+        json = response.json()
+        expected = {'detail': 'without-last-name', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
