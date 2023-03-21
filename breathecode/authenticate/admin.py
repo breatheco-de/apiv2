@@ -367,7 +367,7 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         return super(AcademyAuthSettingsAdmin, self).get_queryset(request)
 
     def github_errors(self, obj):
-        if len(obj.github_error_log) > 0:
+        if obj.github_error_log is None or len(obj.github_error_log) > 0:
             return format_html(f"<span class='badge bg-error'>{len(obj.github_error_log)} errors</span>")
         else:
             return format_html(f"<span class='badge bg-success'>No errors</span>")
