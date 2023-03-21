@@ -1,11 +1,11 @@
 import random
 from unittest.mock import MagicMock, call, patch
-from ....permissions.flags import api
+from .....permissions.flags import api
 from breathecode.authenticate.permissions import contexts as authenticate_contexts
 from breathecode.admissions.permissions import contexts as admissions_contexts
 from breathecode.mentorship.permissions import contexts
 from breathecode.services import LaunchDarkly
-from ...mixins import MentorshipTestCase
+from ....mixins import MentorshipTestCase
 
 value = bool(random.randbytes(1))
 join_contexts_value = random.randint(1, 100)

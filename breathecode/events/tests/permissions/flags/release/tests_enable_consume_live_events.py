@@ -1,7 +1,7 @@
 import random
 from unittest.mock import MagicMock, call, patch
-from ....permissions.flags import api
-from ...mixins.new_events_tests_case import EventTestCase
+from .....permissions.flags import api
+from ....mixins.new_events_tests_case import EventTestCase
 from breathecode.authenticate.permissions import contexts as authenticate_contexts
 from breathecode.admissions.permissions import contexts as admissions_contexts
 from breathecode.events.permissions import contexts
