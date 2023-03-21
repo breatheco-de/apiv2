@@ -18,6 +18,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from django.db.models import Q
 from django.contrib.auth.models import Permission
+from breathecode.mentorship.models import MentorProfile
 
 logger = logging.getLogger(__name__)
 
@@ -445,6 +446,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                   'status')
 
     def validate(self, data):
+        lang = data.get('lang', 'en')
+
         if 'email' in data and data['email']:
             data['email'] = data['email'].lower()
             user = User.objects.filter(email=data['email']).first()
@@ -479,6 +482,52 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 raise ValidationException(
                     f'This user is already a member of this academy as {str(already.role)}',
                     slug='already-exists')
+
+        academy_id = data['academy'] if 'academy' in data else self.context['academy_id']
+        if 'user' in data:
+            user = User.objects.filter(id=data['user']).first()
+        else:
+            user = User.objects.filter(email=data['email']).first()
+        if 'user' in data:
+            profile_academy = ProfileAcademy.objects.filter(user__id=data['user'],
+                                            academy__id=academy_id, first_name__isnull=False, \
+                                                            last_name__isnull=False).exclude(first_name='', last_name='').first()
+        else:
+            profile_academy = ProfileAcademy.objects.filter(email=data['email'],
+                                            academy__id=academy_id, first_name__isnull=False, \
+                                                            last_name__isnull=False).exclude(first_name='', last_name='').first()
+        if 'first_name' not in data:
+            data['first_name'] = ''
+        if not data['first_name'] and profile_academy:
+
+            data['first_name'] = profile_academy.first_name
+        if not data['first_name'] and user:
+
+            data['first_name'] = user.first_name
+        if not data['first_name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find first name on this user',
+                                                  es='Imposible encontrar el nombre en este usuario',
+                                                  slug='first-name-not-found'),
+                                      code=400)
+
+        if 'last_name' not in data:
+            data['last_name'] = ''
+
+        if not data['last_name'] and profile_academy:
+
+            data['last_name'] = profile_academy.last_name
+
+        if not data['last_name'] and user:
+
+            data['last_name'] = user.last_name
+
+        if not data['last_name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find last name on this user',
+                                                  es='Imposible encontrar el apellido en este usuario',
+                                                  slug='last-name-not-found'),
+                                      code=400)
 
         return data
 
@@ -795,10 +844,47 @@ class MemberPUTSerializer(serializers.ModelSerializer):
         fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'phone', 'address')
 
     def validate(self, data):
+        lang = data.get('lang', 'en')
 
-        already = ProfileAcademy.objects.filter(user=data['user'], academy=data['academy']).first()
-        if not already:
+        profile_academy = ProfileAcademy.objects.filter(user=data['user'], academy=data['academy']).first()
+        if not profile_academy:
             raise ValidationError('User not found on this particular academy')
+
+        if 'first_name' not in data:
+            data['first_name'] = ''
+
+        if not data['first_name'] and profile_academy:
+
+            data['first_name'] = profile_academy.first_name
+
+        if not data['first_name']:
+
+            data['first_name'] = data['user'].first_name
+
+        if not data['first_name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find first name on this user',
+                                                  es='Imposible encontrar el nombre en este usuario',
+                                                  slug='first-name-not-founded'),
+                                      code=400)
+
+        if 'last_name' not in data:
+            data['last_name'] = ''
+
+        if not data['last_name'] and profile_academy:
+
+            data['last_name'] = profile_academy.last_name
+
+        if not data['last_name']:
+
+            data['last_name'] = data['user'].last_name
+
+        if not data['last_name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find last name on this user',
+                                                  es='Imposible encontrar el apellido en este usuario',
+                                                  slug='last-name-not-founded'),
+                                      code=400)
 
         return data
 
