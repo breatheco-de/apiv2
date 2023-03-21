@@ -24,7 +24,7 @@ class Github:
         return self._call('DELETE', action_name, params=request_data)
 
     def _call(self, method_name, action_name, params=None, json=None):
-        print('Token ' + self.token)
+        
         self.headers = {
             'Authorization': 'Bearer ' + self.token,
             'Content-type': 'application/json',
