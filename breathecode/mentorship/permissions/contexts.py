@@ -5,7 +5,7 @@ from breathecode.services import LaunchDarkly
 def mentorship_service(client: LaunchDarkly, mentorship_service: MentorshipService):
     key = f'mentorship-service-{mentorship_service.id}'
     name = f'{mentorship_service.name} ({mentorship_service.slug})'
-    kind = 'mentoring-services'
+    kind = 'mentoring-service-information'
     context = {
         'id': mentorship_service.id,
         'name': mentorship_service.name,

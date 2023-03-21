@@ -15,17 +15,25 @@ class Release:
     def enable_consume_live_classes(user: User) -> bool:
         ld = LaunchDarkly()
         user_context = authenticate_contexts.user(ld, user)
+        print('authenticate_contexts.user', authenticate_contexts.user)
         return ld.get('api.release.enable_consume_live_classes', user_context, False)
 
     @staticmethod
     def enable_consume_live_events(user: User, event: Event) -> bool:
         ld = LaunchDarkly()
-        user_context = authenticate_contexts.user(ld, user)
-        event_context = contexts.event(ld, event)
-        event_type_context = contexts.event_type(ld, event.event_type)
-        academy_context = admissions_contexts.academy(ld, event.academy)
 
-        context = ld.join_contexts(user_context, event_context, event_type_context, academy_context)
+        collected_contexts = []
+
+        collected_contexts.append(authenticate_contexts.user(ld, user))
+        collected_contexts.append(contexts.event(ld, event))
+
+        if event.event_type:
+            collected_contexts.append(contexts.event_type(ld, event.event_type))
+
+        if event.academy:
+            collected_contexts.append(admissions_contexts.academy(ld, event.academy))
+
+        context = ld.join_contexts(*collected_contexts)
 
         return ld.get('api.release.enable_consume_live_events', context, False)
 

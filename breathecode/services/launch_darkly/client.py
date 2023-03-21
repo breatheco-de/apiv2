@@ -30,7 +30,7 @@ class LaunchDarkly:
         return self.client.variation(key, context, default)
 
     def _validate_key(self, key):
-        if not re.findall(r'[^a-zA-Z0-9_\-\.]', key):
+        if not re.findall(r'^[a-zA-Z0-9_\-\.]+$', key):
             raise ValueError('The chosen key is invalid, it just must incluse letters, numbers, '
                              'underscore, dash and dot')
 

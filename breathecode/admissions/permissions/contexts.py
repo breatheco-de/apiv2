@@ -5,7 +5,7 @@ from breathecode.services import LaunchDarkly
 def academy(client: LaunchDarkly, academy: Academy):
     key = f'academy-{academy.id}'
     name = f'{academy.name} ({academy.slug})'
-    kind = 'mentoring-services'
+    kind = 'academy-information'
     context = {
         'id': academy.id,
         'slug': academy.slug,
