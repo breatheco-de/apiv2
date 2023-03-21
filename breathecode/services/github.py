@@ -43,7 +43,7 @@ class Github:
                                 json=json,
                                 timeout=2)
 
-        if resp.status_code == 200:
+        if resp.status_code >= 200 and resp.status_code < 300:
             data = None
             if method_name != 'DELETE':
                 data = resp.json()

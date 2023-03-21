@@ -57,7 +57,7 @@ from .serializers import (AuthSerializer, GetGitpodUserSerializer, GetProfileAca
                           TokenSmallSerializer, UserInviteSerializer, UserInviteSmallSerializer,
                           UserInviteWaitingListSerializer, UserMeSerializer, UserSerializer,
                           UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
-                          PUTGithubUserSerializer)
+                          PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -1955,6 +1955,37 @@ class AcademyGithubSyncView(APIView, GenerateLookupsMixin):
 
         _status = status.HTTP_200_OK if result else status.HTTP_400_BAD_REQUEST
         return Response(None, status=_status)
+
+
+class AcademyAuthSettingsView(APIView, GenerateLookupsMixin):
+
+    @capable_of('get_academy_auth_settings')
+    def get(self, request, academy_id):
+
+        settings = AcademyAuthSettings.objects.filter(academy_id=academy_id).first()
+        if settings is None:
+            raise ValidationException(
+                translation(lang,
+                            en='Academy has not github authentication settings',
+                            es='La academia no tiene configurada la integracion con github',
+                            slug='no-github-auth-settings'))
+
+        serializer = AuthSettingsBigSerializer(settings, many=False)
+        return Response(serializer.data)
+
+    @capable_of('crud_academy_auth_settings')
+    def put(self, request, academy_id):
+        settings = AcademyAuthSettings.objects.filter(academy_id=academy_id).first()
+        context = {'academy_id': academy_id, 'request': request}
+        if settings is None:
+            serializer = AcademyAuthSettingsSerializer(data=request.data, context=context)
+        else:
+            serializer = AcademyAuthSettingsSerializer(settings, data=request.data, context=context)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GitpodUserView(APIView, GenerateLookupsMixin):

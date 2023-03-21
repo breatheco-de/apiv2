@@ -229,7 +229,7 @@ class AcademyAuthSettings(models.Model):
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
     github_username = models.SlugField(max_length=40, blank=True)
     github_owner = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, default=None, null=True)
-    github_default_team_ids = models.SlugField(
+    github_default_team_ids = models.CharField(
         max_length=40,
         blank=True,
         default='',

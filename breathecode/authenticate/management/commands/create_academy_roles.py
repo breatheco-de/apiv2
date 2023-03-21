@@ -367,6 +367,14 @@ CAPABILITIES = [
         'slug': 'start_or_end_class',
         'description': 'start or end a class'
     },
+    {
+        'slug': 'get_academy_auth_settings',
+        'description': 'Settings related to authentication, for example the github auth integration'
+    },
+    {
+        'slug': 'crud_academy_auth_settings',
+        'description': 'Settings related to authentication, for example the github auth integration'
+    },
 ]
 
 ROLES = [
