@@ -237,6 +237,30 @@ class AcademyAuthSettings(models.Model):
     github_is_sync = models.BooleanField(default=False,
                                          blank=False,
                                          help_text='If true, will try synching every few hours')
+    github_error_log = models.JSONField(default=None,
+                                        blank=True,
+                                        null=True,
+                                        help_text='Error trace log for github API communication')
+
+    def add_error(self, msg):
+        if self.github_error_log is None:
+            self.github_error_log = []
+
+        thirty_days_old = timezone.now() - timezone.timedelta(days=30)
+
+        def to_datetime(date_str):
+            return datetime.fromisoformat(date_str)
+
+        self.github_error_log = [e for e in self.github_error_log if thirty_days_old < to_datetime(e['at'])]
+
+        self.github_error_log.append({'msg': msg, 'at': str(timezone.now())})
+        self.save()
+        return self.github_error_log
+
+    def clean_errors(self, msg):
+        self.github_error_log = []
+        self.save()
+        return self.github_error_log
 
 
 PENDING = 'PENDING'

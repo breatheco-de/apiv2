@@ -332,7 +332,12 @@ class GithubAcademyUserAdmin(admin.ModelAdmin):
 def sync_github_members(modeladmin, request, queryset):
     settings = queryset.all()
     for s in settings:
-        sync_organization_members(s.academy.id)
+        try:
+            sync_organization_members(s.academy.id)
+        except Exception as e:
+            logger.error(f'Error while syncing organization members for {s.academy.name}: ' + str(e))
+            messages.error(request,
+                           f'Error while syncing organization members for {s.academy.name}: ' + str(e))
 
 
 def activate_github_sync(modeladmin, request, queryset):
@@ -343,11 +348,16 @@ def deactivate_github_sync(modeladmin, request, queryset):
     queryset.update(github_is_sync=False)
 
 
+def clean_errors(modeladmin, request, queryset):
+    queryset.update(github_error_log=[])
+
+
 @admin.register(AcademyAuthSettings)
 class AcademyAuthSettingsAdmin(admin.ModelAdmin):
-    list_display = ('academy', 'github_is_sync', 'github_username', 'github_owner', 'authenticate')
+    list_display = ('academy', 'github_is_sync', 'github_errors', 'github_username', 'github_owner',
+                    'authenticate')
     search_fields = ['academy__slug', 'academy__name', 'github__username', 'academy__id']
-    actions = (sync_github_members, activate_github_sync, deactivate_github_sync)
+    actions = (clean_errors, activate_github_sync, deactivate_github_sync, sync_github_members)
     raw_id_fields = ['github_owner']
 
     def get_queryset(self, request):
@@ -355,6 +365,12 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         self.github_callback = f'https://4geeks.com'
         self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode('utf-8')), 'utf-8')
         return super(AcademyAuthSettingsAdmin, self).get_queryset(request)
+
+    def github_errors(self, obj):
+        if len(obj.github_error_log) > 0:
+            return format_html(f"<span class='badge bg-error'>{len(obj.github_error_log)} errors</span>")
+        else:
+            return format_html(f"<span class='badge bg-success'>No errors</span>")
 
     def authenticate(self, obj):
         now = timezone.now()
