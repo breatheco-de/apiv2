@@ -484,7 +484,7 @@ class MentorSerializer(serializers.ModelSerializer):
             data['name'] = ''
 
         if not data['name'] and profile_academy:
-            data['name'] = profile_academy.first_name + ' ' + profile_academy.last_name
+            data['name'] = f'{profile_academy.first_name}  {profile_academy.last_name}'
 
         if not data['name']:
             data['name'] = user.first_name + ' ' + user.last_name

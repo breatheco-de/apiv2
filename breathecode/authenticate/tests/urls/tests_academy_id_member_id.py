@@ -152,6 +152,7 @@ class MemberPutDuckTestSuite(AuthTestCase):
             'first_name': self.bc.fake.first_name(),
             'last_name': self.bc.fake.last_name(),
             'email': self.bc.fake.email(),
+            'phone': self.bc.fake.phone_number()
         }
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)

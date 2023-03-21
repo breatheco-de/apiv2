@@ -653,6 +653,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy = {
             'last_name': self.bc.fake.last_name(),
             'email': self.bc.fake.email(),
+            'phone': self.bc.fake.phone_number(),
         }
         user = {'first_name': '', 'last_name': self.bc.fake.last_name(), 'email': self.bc.fake.email()}
         self.bc.request.set_headers(academy=1)
@@ -706,6 +707,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy = {
             'last_name': self.bc.fake.last_name(),
             'first_name': self.bc.fake.first_name(),
+            'phone': self.bc.fake.phone_number(),
         }
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)
@@ -729,6 +731,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy = {
             'first_name': self.bc.fake.first_name(),
             'last_name': self.bc.fake.last_name(),
+            'phone': self.bc.fake.phone_number(),
             'email': self.bc.fake.email()
         }
         role = 'konan'
@@ -760,6 +763,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy = {
             'first_name': self.bc.fake.first_name(),
             'last_name': self.bc.fake.last_name(),
+            'phone': self.bc.fake.phone_number(),
             'email': self.bc.fake.email()
         }
         role = 'konan'
@@ -792,6 +796,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy = {
             'first_name': self.bc.fake.first_name(),
             'last_name': self.bc.fake.last_name(),
+            'phone': self.bc.fake.phone_number(),
             'email': self.bc.fake.email()
         }
         role = 'konan'
@@ -821,9 +826,11 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_member_id__put__user_exists_but_without_profile_academy(self):
         """Test /academy/:id/member/:id"""
+        phone = self.bc.fake.phone_number()
         profile_academy = {
             'first_name': self.bc.fake.first_name(),
             'last_name': self.bc.fake.last_name(),
+            'phone': phone,
             'email': self.bc.fake.email()
         }
         role = 'konan'
@@ -860,6 +867,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'email': model.user[1].email,
                 'first_name': model.user[1].first_name,
                 'last_name': model.user[1].last_name,
+                'phone': '',
                 'role_id': role,
                 'status': 'ACTIVE',
                 'user_id': 2,
@@ -876,6 +884,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy = {
             'first_name': self.bc.fake.first_name(),
             'last_name': self.bc.fake.last_name(),
+            'phone': self.bc.fake.phone_number(),
             'email': self.bc.fake.email()
         }
         role = 'konan'
@@ -912,6 +921,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy = {
             'first_name': self.bc.fake.first_name(),
             'last_name': self.bc.fake.last_name(),
+            'phone': self.bc.fake.phone_number(),
             'email': self.bc.fake.email()
         }
         role = 'konan'
@@ -956,6 +966,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy = {
             'first_name': self.bc.fake.first_name(),
             'last_name': self.bc.fake.last_name(),
+            'phone': self.bc.fake.phone_number(),
             'email': self.bc.fake.email()
         }
         role = 'konan'
