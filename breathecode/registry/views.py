@@ -140,6 +140,11 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
                 param = 'us'
             items = items.filter(Q(lang__iexact=param) | Q(lang='') | Q(lang__isnull=True))
 
+        if 'sort_priority' in self.request.GET:
+            param = self.request.GET.get('sort_priority')
+            print(param)
+            items = items.filter(Q(sort_priority=param) | Q(sort_priority='') | Q(sort_priority__isnull=True))
+
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')
             lookup['visibility__in'] = [p.upper() for p in param.split(',')]
