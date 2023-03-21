@@ -9,6 +9,10 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.authenticate.models import Token
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
+from breathecode.utils.i18n import translation
+
 from breathecode.mentorship.exceptions import ExtendSessionException
 from .permissions.consumers import mentorship_service_by_url_param
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -747,14 +751,36 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('crud_mentorship_mentor')
     def put(self, request, mentor_id=None, academy_id=None):
+        lang = get_user_language(request)
+
         if mentor_id is None:
             raise ValidationException('Missing mentor ID on the URL', 404)
 
         mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
+
         if mentor is None:
             raise ValidationException('This mentor does not exist for this academy',
                                       code=404,
                                       slug='not-found')
+        user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id).first()
+
+        if user.first_name is None or user.first_name.strip() == '':
+            raise ValidationException(
+                translation(lang,
+                            en='This mentor does not have a first name',
+                            es='Este mentor no tiene nombre',
+                            slug='without-first-name'),
+                code=400,
+            )
+
+        if user.last_name is None or user.last_name.strip() == '':
+            raise ValidationException(
+                translation(lang,
+                            en='This mentor does not have a last name',
+                            es='Este mentor no tiene apellido',
+                            slug='without-last-name'),
+                code=400,
+            )
 
         if 'user' in request.data:
             raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',

@@ -26,6 +26,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
+from breathecode.authenticate.actions import get_user_language
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser, Syllabus
@@ -301,13 +302,28 @@ class MemberView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_member')
     def put(self, request, academy_id=None, user_id_or_email=None):
+        lang = get_user_language(request)
+
+        user = ProfileAcademy.objects.filter(user__id=request.user.id, academy__id=academy_id).first()
+
+        if user.email is None or user.email.strip() == '':
+            raise ValidationException(
+                translation(lang,
+                            en='This mentor does not have an email address',
+                            es='Este mentor no tiene una dirección de correo electrónico',
+                            slug='email-not-found'),
+                code=400,
+            )
+
+        if user.phone is None or user.phone.strip() == '':
+            raise ValidationException('This mentor does not have a phone', code=404, slug='phone-not-found')
 
         already = None
         if user_id_or_email.isnumeric():
             already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
         else:
             raise ValidationException('User id must be a numeric value',
-                                      code=404,
+                                      code=400,
                                       slug='user-id-is-not-numeric')
 
         request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}

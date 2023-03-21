@@ -148,12 +148,18 @@ class MemberPutDuckTestSuite(AuthTestCase):
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     def test_academy_id_member_id__with_auth(self):
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email(),
+            'phone': self.bc.fake.phone_number()
+        }
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)
             model = self.bc.database.create(authenticate=True,
                                             capability='crud_member',
                                             role='role',
-                                            profile_academy=1)
+                                            profile_academy=profile_academy)
 
             url = reverse_lazy('authenticate:academy_id_member_id',
                                kwargs={
@@ -167,6 +173,27 @@ class MemberPutDuckTestSuite(AuthTestCase):
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_academy_id_member_id__with_wrong_required_fields(self):
+        model = self.bc.database.create(authenticate=True,
+                                        capability='crud_member',
+                                        role='role',
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy('authenticate:academy_id_member_id',
+                           kwargs={
+                               'academy_id': 1,
+                               'user_id_or_email': '1'
+                           })
+        response = self.client.put(url)
+
+        json = response.json()
+        expected = {'detail': 'email-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     """
     🔽🔽🔽 Check the param is being passed
