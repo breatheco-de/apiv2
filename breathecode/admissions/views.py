@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.caches import (CohortCache, CohortUserCache, TeacherCache)
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.payments.consumers import cohort_by_url_param
+from .permissions.consumers import cohort_by_url_param
 from breathecode.utils import (APIViewExtensions, DatetimeInteger, GenerateLookupsMixin,
                                HeaderLimitOffsetPagination, ValidationException, capable_of, localize_query)
 from breathecode.utils.decorators import has_permission

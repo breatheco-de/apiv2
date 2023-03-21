@@ -10,7 +10,7 @@ from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.authenticate.models import Token
 from breathecode.mentorship.exceptions import ExtendSessionException
-from breathecode.payments.consumers import mentorship_service_by_url_param
+from .permissions.consumers import mentorship_service_by_url_param
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
