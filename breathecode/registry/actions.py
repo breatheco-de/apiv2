@@ -827,3 +827,26 @@ def upload_image_to_bucket(img, asset):
     img.assets.add(asset)
 
     return img
+
+
+def add_syllabus_translations(_json):
+    day_count = -1
+    for day in _json['days']:
+        day_count += 1
+        for asset_type in ['assignments', 'lessons', 'quizzes', 'replits']:
+            index = -1
+            for ass in day[asset_type]:
+                index += 1
+                _asset = Asset.objects.filter(slug=ass['slug']).first()
+                if _asset is not None:
+                    _json['days'][day_count][asset_type][index]['translations'] = {
+                        'slug': _asset.slug,
+                        'title': _asset.title,
+                    }
+                    for a in _asset.all_translations.all():
+                        _json['days'][day_count][asset_type][index]['translations'][a.lang] = {
+                            'slug': a.slug,
+                            'title': a.title
+                        }
+
+    return _json

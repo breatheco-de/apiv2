@@ -1,9 +1,11 @@
+import hashlib, base64
+import json
 import os, logging
 from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
-from .signals import student_edu_status_updated, academy_saved
+from .signals import student_edu_status_updated, academy_saved, syllabus_version_json_updated
 from . import signals
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
@@ -228,8 +230,30 @@ class SyllabusVersion(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def __init__(self, *args, **kwargs):
+        super(SyllabusVersion, self).__init__(*args, **kwargs)
+        self.__json_hash = self.hashed_json()
+
     def __str__(self):
         return f'{self.syllabus.slug}.v{self.version}'
+
+    def hashed_json(self):
+        if self.json is None:
+            return ''
+
+        encoded = base64.b64encode(json.dumps(self.json, sort_keys=True).encode('utf-8'))
+        return hashlib.sha256(encoded).hexdigest()
+
+    def save(self, *args, **kwargs):
+
+        json_modified = False
+
+        if self.__json_hash != self.hashed_json():
+            json_modified = True
+
+        super().save(*args, **kwargs)
+
+        if json_modified: syllabus_version_json_updated.send(instance=self, sender=SyllabusVersion)
 
 
 class SyllabusSchedule(models.Model):
