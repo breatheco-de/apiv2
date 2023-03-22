@@ -836,6 +836,8 @@ def add_syllabus_translations(_json):
         day_count += 1
         for asset_type in ['assignments', 'lessons', 'quizzes', 'replits']:
             index = -1
+            if asset_type not in day:
+                continue
             for ass in day[asset_type]:
                 index += 1
                 slug = ass['slug'] if 'slug' in ass else ass
