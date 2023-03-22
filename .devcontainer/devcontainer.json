@@ -1,7 +1,12 @@
 {
     "build": {
-        "dockerfile": "../.codespaces.Dockerfile",
+        "dockerfile": "./Dockerfile",
         "context": ".."
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+            "dockerDashComposeVersion": "v2"
+        }
     },
     "customizations": {
         "vscode": {
@@ -26,5 +31,5 @@
     "forwardPorts": [
         8000
     ],
-    "postCreateCommand": "docker-compose up -d redis postgres && python -m scripts.install"
+    "postCreateCommand": "python -m scripts.install && docker-compose up -d redis postgres && pipenv run makemigrations"
 }
