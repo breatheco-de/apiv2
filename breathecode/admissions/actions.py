@@ -290,7 +290,7 @@ def test_syllabus(syl, validate_assets=False, ignore=[]):
 
     count = 0
 
-    types_to_validate = ['lessons', 'quizzes', 'replits', 'projects', 'assignments']
+    types_to_validate = ['lessons', 'quizzes', 'replits', 'assignments']
 
     #ignore: an array with types to ignore, for example: ['lessons']
     types_to_validate = [a for a in types_to_validate if a not in ignore]
