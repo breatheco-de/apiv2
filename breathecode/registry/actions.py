@@ -297,8 +297,9 @@ def push_github_asset(github, asset):
     result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
-
-    decoded_readme = base64.b64decode(asset.readme.encode('utf-8')).decode('utf-8')
+    
+    # we commit the raw readme, we don't want images to be replaced in the original github
+    decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
     result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
 
     if 'commit' in result:
