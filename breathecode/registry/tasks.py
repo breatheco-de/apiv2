@@ -10,6 +10,7 @@ from celery import shared_task, Task
 from breathecode.services.seo import SEOAnalyzer
 from django.utils import timezone
 from bs4 import BeautifulSoup
+from django.db.models.query_utils import Q
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
 from breathecode.services.google_cloud import FunctionV1
@@ -368,7 +369,7 @@ def async_download_single_readme_image(asset_slug, link):
     if asset is None:
         raise Exception(f'Asset with slug {asset_slug} not found')
 
-    img = AssetImage.objects.filter(original_url=link).first()
+    img = AssetImage.objects.filter(Q(original_url=link) | Q(bucket_url=link)).first()
     if img is None:
         temp_filename = link.split('/')[-1].split('?')[0]
         img = AssetImage(name=temp_filename, original_url=link, last_download_at=timezone.now())
