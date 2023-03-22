@@ -31,5 +31,5 @@
     "forwardPorts": [
         8000
     ],
-    "postCreateCommand": "python -m scripts.install && docker-compose up -d redis postgres && pipenv run makemigrations"
+    "postCreateCommand": "bash -c .devcontainer/postCreateCommand.sh"
 }
