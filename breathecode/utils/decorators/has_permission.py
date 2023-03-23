@@ -109,7 +109,7 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     #TODO: send a url to recharge this service
                     raise PaymentException(
                         f'You do not have enough credits to access this service: {permission}',
-                        slug='not-enough-consumables')
+                        slug='with-consumer-not-enough-consumables')
 
                 if consumer and context['will_consume'] and context['time_of_life'] and (
                         consumable := context['consumables'].first()):

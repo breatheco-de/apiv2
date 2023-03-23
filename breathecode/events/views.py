@@ -235,17 +235,7 @@ class MeLiveClassView(APIView):
 class MeLiveClassJoinView(APIView):
 
     @has_permission('live_class_join', consumer=live_class_by_url_param)
-    def get(self, request, hash):
-        lang = get_user_language(request)
-
-        live_class = LiveClass.objects.filter(cohort_time_slot__cohort__cohortuser__user=request.user,
-                                              hash=hash).first()
-        if not live_class:
-            raise ValidationException(lang,
-                                      en='Live class not found',
-                                      es='Clase en vivo no encontrada',
-                                      slug='not-found')
-
+    def get(self, request, live_class):
         serializer = GetLiveClassJoinSerializer(live_class, many=False)
 
         return Response(serializer.data)
