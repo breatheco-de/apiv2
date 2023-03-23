@@ -223,6 +223,10 @@ class GetLiveClassSerializer(serpy.Serializer):
     ended_at = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
+    cohort_name = serpy.MethodField()
+
+    def get_cohort_name(self, obj):
+        return CohortSmallSerializer(obj.cohort_time_slot.cohort).data['name']
 
 
 class GetLiveClassJoinSerializer(GetLiveClassSerializer):
