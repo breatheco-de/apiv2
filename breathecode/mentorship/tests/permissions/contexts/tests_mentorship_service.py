@@ -9,13 +9,9 @@ from breathecode.services import LaunchDarkly
 def serializer(mentorship_service):
     return {
         'id': mentorship_service.id,
-        'name': mentorship_service.name,
         'slug': mentorship_service.slug,
-        'duration': mentorship_service.duration,
         'max_duration': mentorship_service.max_duration,
         'language': mentorship_service.language,
-        'allow_mentee_to_extend': mentorship_service.allow_mentee_to_extend,
-        'allow_mentors_to_extend': mentorship_service.allow_mentors_to_extend,
         'academy': mentorship_service.academy.slug,
     }
 
@@ -40,8 +36,8 @@ class AcademyEventTestSuite(MentorshipTestCase):
         contexts = serializer(model.mentorship_service)
 
         self.assertEqual(LaunchDarkly.context.call_args_list, [
-            call('mentorship-service-1', f'{model.mentorship_service.name} ({model.mentorship_service.slug})',
-                 'mentoring-service-information', contexts),
+            call('1', f'{model.mentorship_service.name} ({model.mentorship_service.slug})',
+                 'mentoring-service', contexts),
         ])
 
         self.assertEqual(result, value)

@@ -10,11 +10,7 @@ def serializer(user):
     return {
         'id': user.id,
         'email': user.email,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
         'username': user.username,
-        'is_staff': user.is_staff,
-        'is_active': user.is_active,
         'date_joined': user.date_joined,
         'groups': [x.name for x in user.groups.all()],
     }
@@ -42,8 +38,8 @@ class AcademyEventTestSuite(AuthTestCase):
         print(LaunchDarkly.context.call_args_list)
 
         self.assertEqual(LaunchDarkly.context.call_args_list, [
-            call('user-1', f'{model.user.first_name} {model.user.last_name} ({model.user.email})',
-                 'user-data', contexts),
+            call('1', f'{model.user.first_name} {model.user.last_name} ({model.user.email})', 'user',
+                 contexts),
         ])
 
         self.assertEqual(result, value)

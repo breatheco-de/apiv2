@@ -10,10 +10,8 @@ def serializer(event_type):
     return {
         'id': event_type.id,
         'slug': event_type.slug,
-        'name': event_type.name,
         'academy': event_type.academy.slug,
         'lang': event_type.lang,
-        'allow_shared_creation': event_type.allow_shared_creation,
     }
 
 
@@ -38,7 +36,7 @@ class AcademyEventTestSuite(EventTestCase):
         contexts = serializer(model.event_type)
 
         self.assertEqual(LaunchDarkly.context.call_args_list, [
-            call('event-type-1', model.event_type.name, 'event-type-information', contexts),
+            call('1', model.event_type.name, 'event-type', contexts),
         ])
 
         self.assertEqual(result, value)
