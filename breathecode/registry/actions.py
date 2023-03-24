@@ -800,6 +800,9 @@ def upload_image_to_bucket(img, asset):
             link = link + '?raw=true'
 
     r = requests.get(link, stream=True, timeout=2)
+    print('r')
+    print(r.__dict__)
+    print(r.headers)
     if r.status_code != 200:
         raise Exception(f'Error downloading image from asset {asset.slug}: {link}')
 

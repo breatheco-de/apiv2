@@ -385,6 +385,8 @@ def async_download_single_readme_image(asset_slug, link):
         except Exception as e:
             img.download_details = str(e)
             img.download_status = 'ERROR'
+            print('img.download_details')
+            print(img.download_details)
             logger.error(str(e))
             return False
 
