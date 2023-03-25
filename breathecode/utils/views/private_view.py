@@ -23,15 +23,14 @@ def set_query_parameter(url, param_name, param_value=''):
 
     query_params[param_name] = [param_value]
     new_query_string = urlencode(query_params, doseq=True)
-    print(new_query_string, 'new_query_string')
 
     return urlunsplit((scheme, netloc, path, new_query_string, fragment))
 
 
-def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data={}):
+def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data={}, status=None):
     _data = {'MESSAGE': msg, 'BUTTON': btn_label, 'BUTTON_TARGET': btn_target, 'LINK': btn_url}
 
-    return render(r, 'message.html', {**_data, **data})
+    return render(r, 'message.html', {**_data, **data}, status=status)
 
 
 def private_view(permission=None):
@@ -64,6 +63,9 @@ def private_view(permission=None):
                 messages.add_message(req, messages.ERROR, str(e))
                 return HttpResponseRedirect(redirect_to=f'/v1/auth/view/login?attempt=1&url=' +
                                             str(base64.b64encode(url.encode('utf-8')), 'utf-8'))
+
+            # inject user in request
+            args[0].user = valid_token.user
 
             kwargs['token'] = valid_token
             return func(*args, **kwargs)

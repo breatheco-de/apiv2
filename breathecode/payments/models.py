@@ -1065,9 +1065,16 @@ class ConsumptionSession(models.Model):
 
         path = resource.__class__._meta.app_label + '.' + resource.__class__.__name__ if resource else ''
 
+        if hasattr(request, 'parser_context'):
+            args = request.parser_context['args']
+            kwargs = request.parser_context['kwargs']
+        else:
+            args = request.resolver_match.args
+            kwargs = request.resolver_match.kwargs
+
         data = {
-            'args': request.parser_context['args'],
-            'kwargs': request.parser_context['kwargs'],
+            'args': args,
+            'kwargs': kwargs,
             'headers': {
                 'academy': request.META.get('HTTP_ACADEMY')
             },
@@ -1094,9 +1101,16 @@ class ConsumptionSession(models.Model):
             return None
 
         utc_now = timezone.now()
+        if hasattr(request, 'parser_context'):
+            args = request.parser_context['args']
+            kwargs = request.parser_context['kwargs']
+        else:
+            args = request.resolver_match.args
+            kwargs = request.resolver_match.kwargs
+
         data = {
-            'args': request.parser_context['args'],
-            'kwargs': request.parser_context['kwargs'],
+            'args': args,
+            'kwargs': kwargs,
             'headers': {
                 'academy': request.META.get('HTTP_ACADEMY')
             },

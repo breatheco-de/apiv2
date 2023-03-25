@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
 from breathecode.events.caches import EventCache
-from .permissions.consumers import live_class_by_url_param
+from .permissions.consumers import event_by_url_param, live_class_by_url_param
 from breathecode.utils import APIException
 from datetime import datetime, timedelta
 from breathecode.utils.views import private_view, render_message, set_query_parameter
@@ -30,7 +30,7 @@ from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibil
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (GetLiveClassJoinSerializer, EventBigSerializer, GetLiveClassSerializer,
+from .serializers import (EventBigSerializer, GetLiveClassSerializer, LiveClassJoinSerializer,
                           LiveClassSerializer, EventSerializer, EventSmallSerializer, EventTypeSerializer,
                           EventTypeBigSerializer, EventCheckinSerializer, EventSmallSerializerNoAcademy,
                           EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
@@ -232,13 +232,18 @@ class MeLiveClassView(APIView):
         return handler.response(serializer.data)
 
 
-class MeLiveClassJoinView(APIView):
+@private_view()
+@has_permission('live_class_join', consumer=live_class_by_url_param, html=True)
+def join_live_class(request, token, live_class, lang):
+    now = timezone.now()
 
-    @has_permission('live_class_join', consumer=live_class_by_url_param)
-    def get(self, request, live_class):
-        serializer = GetLiveClassJoinSerializer(live_class, many=False)
+    if live_class.starting_at > now:
+        return render(request, 'countdown.html', {
+            'token': token.key,
+            'event': LiveClassJoinSerializer(live_class).data,
+        })
 
-        return Response(serializer.data)
+    return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
 
 
 class AcademyLiveClassView(APIView):
@@ -355,9 +360,7 @@ class AcademyLiveClassJoinView(APIView):
                                       es='Clase en vivo no encontrada',
                                       slug='not-found')
 
-        serializer = GetLiveClassJoinSerializer(live_class, many=False)
-
-        return Response(serializer.data)
+        return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
 
 
 class AcademyEventView(APIView, GenerateLookupsMixin):
@@ -740,19 +743,9 @@ class EventTypeVisibilitySettingView(APIView):
 
 
 @private_view()
-def join_event(request, token, event_id):
-
-    items = get_my_events(token.user)
-
-    event = Event.objects.filter(event_type__in=items, id=event_id).first()
-    if event is None:
-        return render_message(request, 'Event not found or you dont have access')
-    if event.live_stream_url is None or event.live_stream_url == '':
-        return render_message(request, 'Event live stream URL was not found')
-
+@has_permission('event_join', consumer=event_by_url_param, html=True)
+def join_event(request, token, event):
     now = timezone.now()
-    if event.ending_at < now:
-        return render_message(request, 'This event has already finished')
 
     if event.starting_at > now:
         return render(request, 'countdown.html', {
