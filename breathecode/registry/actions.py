@@ -225,23 +225,6 @@ def push_to_github(asset_slug, author=None):
     return 'ERROR'
 
 
-def get_url_info(url: str):
-
-    result = re.search(r'blob\/([\w\-]+)', url)
-    branch_name = None
-    if result is not None:
-        branch_name = result.group(1)
-
-    result = re.search(r'https?:\/\/github\.com\/([\w\-]+)\/([\w\-]+)\/?', url)
-    if result is None:
-        raise Exception('Invalid URL when looking organization: ' + url)
-
-    org_name = result.group(1)
-    repo_name = result.group(2)
-
-    return org_name, repo_name, branch_name
-
-
 def get_blob_content(repo, path_name, branch='main'):
 
     if '?' in path_name:
@@ -286,7 +269,7 @@ def push_github_asset(github, asset):
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for asset ' + asset.slug + '.')
 
-    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     file_name = os.path.basename(asset.readme_url)
@@ -315,7 +298,7 @@ def pull_github_lesson(github, asset, override_meta=False):
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for lesson ' + asset.slug + '.')
 
-    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     file_name = os.path.basename(asset.readme_url)
@@ -584,7 +567,7 @@ def pull_learnpack_asset(github, asset, override_meta):
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for asset ' + asset.slug + '.')
 
-    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     lang = asset.lang
@@ -691,7 +674,7 @@ def pull_quiz_asset(github, asset):
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for quiz ' + asset.slug + '.')
 
-    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     file_name = os.path.basename(asset.readme_url)
