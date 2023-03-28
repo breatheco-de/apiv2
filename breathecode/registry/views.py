@@ -278,9 +278,14 @@ def render_readme(request, asset_slug, extension='raw'):
 def get_alias_redirects(request):
     aliases = AssetAlias.objects.all()
     redirects = {}
+
+    if 'academy' in request.GET:
+        param = request.GET.get('academy', '')
+        aliases = aliases.filter(asset__academy__id__in=param.split(','))
+
     for a in aliases:
         if a.slug != a.asset.slug:
-            redirects[a.slug] = a.asset.slug
+            redirects[a.slug] = {'slug': a.asset.slug, 'type': a.asset.asset_type, 'lang': a.asset.lang}
 
     return Response(redirects)
 
@@ -358,7 +363,8 @@ class AssetThumbnailView(APIView):
 
         generator = AssetThumbnailGenerator(asset, width, height)
 
-        asset = generator.create()
+        # wait one second
+        asset = generator.create(delay=1500)
 
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -777,7 +783,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         published_before = request.GET.get('published_before', '')
         if published_before != '':
             items = items.filter(published_at__lte=published_before)
-            
+
         published_after = request.GET.get('published_after', '')
         if published_after != '':
             items = items.filter(published_at__gte=published_after)

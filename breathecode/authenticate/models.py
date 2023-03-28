@@ -225,6 +225,100 @@ class CredentialsGithub(models.Model):
         return super().save(*args, **kwargs)
 
 
+class AcademyAuthSettings(models.Model):
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+    github_username = models.SlugField(max_length=40, blank=True)
+    github_owner = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, default=None, null=True)
+    github_default_team_ids = models.CharField(
+        max_length=40,
+        blank=True,
+        default='',
+        help_text='User will be invited to this github team ID when joining the github organization')
+    github_is_sync = models.BooleanField(default=False,
+                                         blank=False,
+                                         help_text='If true, will try synching every few hours')
+    github_error_log = models.JSONField(default=None,
+                                        blank=True,
+                                        null=True,
+                                        help_text='Error trace log for github API communication')
+
+    def add_error(self, msg):
+        if self.github_error_log is None:
+            self.github_error_log = []
+
+        thirty_days_old = timezone.now() - timezone.timedelta(days=30)
+
+        def to_datetime(date_str):
+            return datetime.fromisoformat(date_str)
+
+        self.github_error_log = [e for e in self.github_error_log if thirty_days_old < to_datetime(e['at'])]
+
+        self.github_error_log.append({'msg': msg, 'at': str(timezone.now())})
+        self.save()
+        return self.github_error_log
+
+    def clean_errors(self, msg):
+        self.github_error_log = []
+        self.save()
+        return self.github_error_log
+
+
+PENDING = 'PENDING'
+SYNCHED = 'SYNCHED'
+UNKNOWN = 'UNKNOWN'
+STORAGE_STATUS = (
+    (PENDING, 'Pending'),
+    (SYNCHED, 'Synched'),
+    (ERROR, 'Error'),
+    (UNKNOWN, 'Unknown'),
+)
+
+ADD = 'ADD'
+INVITE = 'INVITE'
+DELETE = 'DELETE'
+IGNORE = 'IGNORE'
+STORAGE_ACTION = (
+    (ADD, 'Add'),
+    (DELETE, 'Delete'),
+    (INVITE, 'Invite'),
+    (IGNORE, 'Ignore'),
+)
+
+
+class GithubAcademyUser(models.Model):
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
+    username = models.SlugField(max_length=40,
+                                default=None,
+                                null=True,
+                                blank=True,
+                                help_text='Only used when the username has not been found on 4Geeks')
+    storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
+    storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
+    storage_log = models.JSONField(default=None, null=True, blank=True)
+    storage_synch_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        if self.user is None:
+            return str(self.id) + ' ' + str(self.username)
+        else:
+            return str(self.user) + ' ' + str(self.username)
+
+    @staticmethod
+    def create_log(msg):
+        return {'msg': msg, 'at': str(timezone.now())}
+
+    def log(self, msg, reset=True):
+
+        if self.storage_log is None or reset:
+            self.storage_log = []
+
+        self.storage_log.append(GithubAcademyUser.create_log(msg))
+
+
 class CredentialsSlack(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)

@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
 from django.template.loader import get_template
-from breathecode.admissions.models import Academy, Cohort
+from breathecode.admissions.models import Academy, Cohort, SyllabusVersion
 from breathecode.events.models import Event
 from django.utils import timezone
 from django.db.models import Q
@@ -28,6 +28,12 @@ SORT_PRIORITY = (
     (2, 2),
     (3, 3),
 )
+
+
+class SyllabusVersionProxy(SyllabusVersion):
+
+    class Meta:
+        proxy = True
 
 
 class AssetTechnology(models.Model):

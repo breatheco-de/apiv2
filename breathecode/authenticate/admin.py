@@ -4,11 +4,12 @@ from django.utils import timezone
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
-from .actions import delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password
+from .actions import (delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password,
+                      sync_organization_members)
 from django.utils.html import format_html
 from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy,
                      Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy,
-                     GitpodUser)
+                     GitpodUser, GithubAcademyUser, AcademyAuthSettings)
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
 from breathecode.utils.datetime_interger import from_now
@@ -305,3 +306,79 @@ class GitpodUserAdmin(admin.ModelAdmin):
         else:
             return format_html(
                 f"<span class='badge bg-success'>In {from_now(obj.expires_at, include_days=True)}</span>")
+
+
+def mark_as_deleted(modeladmin, request, queryset):
+    queryset.all().update(storage_status='PENDING', storage_action='DELETE')
+
+
+def mark_as_add(modeladmin, request, queryset):
+    queryset.all().update(storage_status='PENDING', storage_action='ADD')
+
+
+def mark_as_ignore(modeladmin, request, queryset):
+    queryset.all().update(storage_status='SYNCHED', storage_action='IGNORE')
+
+
+@admin.register(GithubAcademyUser)
+class GithubAcademyUserAdmin(admin.ModelAdmin):
+    list_display = ('academy', 'user', 'username', 'storage_status', 'storage_action')
+    search_fields = ['username', 'user__email', 'user__first_name', 'user__last_name']
+    actions = [mark_as_deleted, mark_as_add, mark_as_ignore]
+    list_filter = ('academy', 'storage_status', 'storage_action')
+    raw_id_fields = ['user']
+
+
+def sync_github_members(modeladmin, request, queryset):
+    settings = queryset.all()
+    for s in settings:
+        try:
+            sync_organization_members(s.academy.id)
+        except Exception as e:
+            logger.error(f'Error while syncing organization members for {s.academy.name}: ' + str(e))
+            messages.error(request,
+                           f'Error while syncing organization members for {s.academy.name}: ' + str(e))
+
+
+def activate_github_sync(modeladmin, request, queryset):
+    queryset.update(github_is_sync=True)
+
+
+def deactivate_github_sync(modeladmin, request, queryset):
+    queryset.update(github_is_sync=False)
+
+
+def clean_errors(modeladmin, request, queryset):
+    queryset.update(github_error_log=[])
+
+
+@admin.register(AcademyAuthSettings)
+class AcademyAuthSettingsAdmin(admin.ModelAdmin):
+    list_display = ('academy', 'github_is_sync', 'github_errors', 'github_username', 'github_owner',
+                    'authenticate')
+    search_fields = ['academy__slug', 'academy__name', 'github__username', 'academy__id']
+    actions = (clean_errors, activate_github_sync, deactivate_github_sync, sync_github_members)
+    raw_id_fields = ['github_owner']
+
+    def get_queryset(self, request):
+
+        self.github_callback = f'https://4geeks.com'
+        self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode('utf-8')), 'utf-8')
+        return super(AcademyAuthSettingsAdmin, self).get_queryset(request)
+
+    def github_errors(self, obj):
+        if obj.github_error_log is not None and len(obj.github_error_log) > 0:
+            return format_html(f"<span class='badge bg-error'>{len(obj.github_error_log)} errors</span>")
+        else:
+            return format_html(f"<span class='badge bg-success'>No errors</span>")
+
+    def authenticate(self, obj):
+        now = timezone.now()
+        settings = AcademyAuthSettings.objects.get(id=obj.id)
+        if settings.github_owner is None:
+            return format_html(f'no owner')
+
+        scopes = str(base64.urlsafe_b64encode(b'user repo admin:org'), 'utf-8')
+        return format_html(
+            f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.github_callback}&scope={scopes}'>connect owner</a>"
+        )

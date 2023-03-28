@@ -280,8 +280,9 @@ def push_github_asset(github, asset):
     result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
-
-    decoded_readme = base64.b64decode(asset.readme.encode('utf-8')).decode('utf-8')
+    
+    # we commit the raw readme, we don't want images to be replaced in the original github
+    decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
     result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
 
     if 'commit' in result:
@@ -521,7 +522,7 @@ class AssetThumbnailGenerator:
 
         return bool((self.width and not self.height) or (not self.width and self.height))
 
-    def create(self):
+    def create(self, delay=600):
 
         preview_url = self.asset.get_preview_generation_url()
         if preview_url is None:
@@ -532,10 +533,12 @@ class AssetThumbnailGenerator:
 
         response = None
         try:
+            logger.debug(f'Generating screenshot with URL {url}')
             query_string = urlencode({
                 'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
                 'url': url,
                 'device': 'desktop',
+                'delay': delay,
                 'cacheLimit': '0',
                 'dimension': '1024x707',
             })
@@ -808,3 +811,31 @@ def upload_image_to_bucket(img, asset):
     img.assets.add(asset)
 
     return img
+
+
+def add_syllabus_translations(_json):
+    day_count = -1
+    for day in _json['days']:
+        day_count += 1
+        for asset_type in ['assignments', 'lessons', 'quizzes', 'replits']:
+            index = -1
+            if asset_type not in day:
+                continue
+            for ass in day[asset_type]:
+                index += 1
+                slug = ass['slug'] if 'slug' in ass else ass
+                _asset = Asset.objects.filter(slug=slug).first()
+                if _asset is not None:
+                    if 'slug' not in ass:
+                        _json['days'][day_count][asset_type][index] = { 
+                          "slug": _asset.slug,
+                          "title": _asset.title,
+                        }
+                    _json['days'][day_count][asset_type][index]['translations'] = {}
+                    for a in _asset.all_translations.all():
+                        _json['days'][day_count][asset_type][index]['translations'][a.lang] = {
+                            'slug': a.slug,
+                            'title': a.title
+                        }
+
+    return _json

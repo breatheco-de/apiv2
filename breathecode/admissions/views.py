@@ -152,7 +152,11 @@ def get_cohorts(request, id=None):
     upcoming = request.GET.get('upcoming', None)
     if upcoming == 'true':
         now = timezone.now()
-        items = items.filter(kickoff_date__gte=now)
+        items = items.filter(Q(kickoff_date__gte=now)| Q(never_ends=True))
+        
+    never_ends = request.GET.get('never_ends', None)
+    if never_ends == 'false':
+        items = items.filter(never_ends=False)
 
     academy = request.GET.get('academy', None)
     if academy is not None:
@@ -207,19 +211,18 @@ def get_cohorts(request, id=None):
 
     plan = request.GET.get('plan', '')
     if plan == 'true':
-        items = items.filter(academy__main_currency__isnull=False,
-                             planserviceitem__plan__id__gte=1).distinct()
+        items = items.filter(academy__main_currency__isnull=False, plan__id__gte=1).distinct()
 
     elif plan == 'false':
-        items = items.filter().exclude(planserviceitem__plan__id__gte=1).distinct()
+        items = items.filter().exclude(plan__id__gte=1).distinct()
 
     elif plan:
         kwargs = {}
 
         if isinstance(plan, int) or plan.isnumeric():
-            kwargs['planserviceitem__plan__id'] = plan
+            kwargs['plan__id'] = plan
         else:
-            kwargs['planserviceitem__plan__slug'] = plan
+            kwargs['plan__slug'] = plan
 
         items = items.filter(**kwargs).distinct()
 

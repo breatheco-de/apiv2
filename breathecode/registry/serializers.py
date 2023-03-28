@@ -331,6 +331,25 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
         validated_data = super().validate(data)
 
+        if 'category' not in data or data['category'] is None:
+            if len(validated_data['all_translations']) == 0:
+                raise ValidationException(
+                    f'No category was specified and we could not retrive it from any translation')
+
+            asset_translation = Asset.objects.filter(slug=validated_data['all_translations'][0]).first()
+            if asset_translation is None or asset_translation.category is None:
+                raise ValidationException(
+                    f'No category was specified and we could not retrive it from any translation')
+
+            category_translation = asset_translation.category.all_translations.filter(
+                lang=validated_data['lang']).first()
+            if category_translation is None:
+                raise ValidationException(
+                    f"No category was specified and translation's categories don't have language: {validated_data['lang']}"
+                )
+
+            validated_data['category'] = category_translation
+
         academy_id = self.context['academy']
         validated_data['academy'] = Academy.objects.filter(id=academy_id).first()
 

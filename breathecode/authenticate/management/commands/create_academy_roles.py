@@ -292,6 +292,18 @@ CAPABILITIES = [
         'description': 'Update gitpod user expiration based on available information'
     },
     {
+        'slug': 'get_github_user',
+        'description': 'List github user the academy is consuming'
+    },
+    {
+        'slug': 'update_github_user',
+        'description': 'Update github user expiration based on available information'
+    },
+    {
+        'slug': 'sync_organization_users',
+        'description': 'Calls for the github API and brings all org users, then tries to synch them'
+    },
+    {
         'slug': 'read_technology',
         'description': 'Read asset technologies'
     },
@@ -354,6 +366,14 @@ CAPABILITIES = [
     {
         'slug': 'start_or_end_class',
         'description': 'start or end a class'
+    },
+    {
+        'slug': 'get_academy_auth_settings',
+        'description': 'Settings related to authentication, for example the github auth integration'
+    },
+    {
+        'slug': 'crud_academy_auth_settings',
+        'description': 'Settings related to authentication, for example the github auth integration'
     },
 ]
 
@@ -665,6 +685,8 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_freelancer_bill',
             'get_gitpod_user',
             'update_gitpod_user',
+            'get_github_user',
+            'update_github_user',
             'read_project_invoice',
             'read_freelance_projects',
         ]

@@ -35,6 +35,8 @@ MIME_ALLOW = [
     'application/pdf', 'image/jpg'
 ]
 
+IMAGES_MIME_ALLOW = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/jpg']
+
 USER_ASSIGNMENTS_BUCKET = os.getenv('USER_ASSIGNMENTS_BUCKET', None)
 
 
@@ -128,6 +130,57 @@ def sync_cohort_tasks_view(request, cohort_id=None):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class FinalProjectScreenshotView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    def upload(self, request, update=False):
+        from ..services.google_cloud import Storage
+
+        files = request.data.getlist('file')
+        names = request.data.getlist('name')
+        result = {
+            'data': [],
+            'instance': [],
+        }
+
+        file = request.data.get('file')
+        slugs = []
+
+        for index in range(0, len(files)):
+            file = files[index]
+            if file.content_type not in IMAGES_MIME_ALLOW:
+                raise ValidationException(
+                    f'You can upload only files on the following formats: {",".join(IMAGES_MIME_ALLOW)}')
+
+        for index in range(0, len(files)):
+            file = files[index]
+            name = names[index] if len(names) else file.name
+            file_bytes = file.read()
+            hash = hashlib.sha256(file_bytes).hexdigest()
+            slug = slugify(name)
+
+            slugs.append(slug)
+            data = {
+                'hash': hash,
+                'mime': file.content_type,
+            }
+
+            # upload file section
+            storage = Storage()
+            cloud_file = storage.file(USER_ASSIGNMENTS_BUCKET, hash)
+            cloud_file.upload(file, content_type=file.content_type)
+            data['url'] = cloud_file.url()
+
+        return data
+
+    def post(self, request, user_id=None):
+        files = self.upload(request)
+
+        return Response(files)
+
+
 class FinalProjectMeView(APIView):
     """
     List all snippets, or create a new snippet.
@@ -181,13 +234,16 @@ class FinalProjectMeView(APIView):
     def post(self, request, user_id=None):
 
         # only create tasks for yourself
-        if user_id is None:
-            user_id = request.user.id
+        user_id = request.user.id
 
         payload = request.data
 
         if isinstance(request.data, list) == False:
             payload = [request.data]
+
+        members_set = set(payload[0]['members'])
+        members_set.add(user_id)
+        payload[0]['members'] = list(members_set)
 
         serializer = PostFinalProjectSerializer(data=payload,
                                                 context={

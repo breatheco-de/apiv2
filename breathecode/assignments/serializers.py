@@ -211,6 +211,7 @@ class FinalProjectGETSerializer(serpy.Serializer):
     repo_url = serpy.Field()
     public_url = serpy.Field()
     logo_url = serpy.Field()
+    screenshot = serpy.Field()
     slides_url = serpy.Field()
     video_demo_url = serpy.Field()
 
@@ -253,7 +254,7 @@ class PostFinalProjectSerializer(serializers.ModelSerializer):
                                                        role='STUDENT').count()
             if 'members' in data and len(data['members']) != total_students:
                 raise ValidationException(
-                    f'All members of this project must belong to the cohort {data["cohort"].name}')
+                    f'Project members must be students on this cohort {data["cohort"].name}')
 
         if 'repo_url' not in data:
             raise ValidationException('Missing repository URL')

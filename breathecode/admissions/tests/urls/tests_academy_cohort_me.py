@@ -135,6 +135,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -254,6 +255,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -336,6 +338,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -418,6 +421,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -595,6 +599,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -708,6 +713,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
@@ -790,6 +796,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'timezone': model['cohort'].timezone,
             'timeslots': [],
             'is_hidden_on_prework': model['cohort'].is_hidden_on_prework,
+            'available_as_saas': model['cohort'].available_as_saas,
             'schedule': {
                 'id': model['cohort'].schedule.id,
                 'name': model['cohort'].schedule.name,
