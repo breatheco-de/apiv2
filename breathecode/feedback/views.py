@@ -326,23 +326,22 @@ def get_review_platform(request, platform_slug=None):
         return Response(serializer.data)
 
 
-class ReviewView(APIView):
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_reviews(request):
     """
     List all snippets, or create a new snippet.
     """
+    items = Review.objects.filter(is_public=True)
+    lookup = {}
 
-    def get(self, request, format=None):
+    items = items.filter(**lookup).order_by('-created_at')
 
-        items = Review.objects.filter(is_public=True)
-        lookup = {}
-
-        items = items.filter(**lookup).order_by('-created_at')
-
-        serializer = ReviewSmallSerializer(items, many=True)
-        return Response(serializer.data)
+    serializer = ReviewSmallSerializer(items, many=True)
+    return Response(serializer.data)
 
 
-class AcademyReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
