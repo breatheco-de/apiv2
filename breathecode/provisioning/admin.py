@@ -1,8 +1,9 @@
 import logging, secrets
 from django.contrib import admin, messages
 from django import forms
+from django.utils.html import format_html
 from .models import (ProvisioningVendor, ProvisioningMachineTypes, ProvisioningAcademy, ProvisioningBill,
-                     ProvisioningActivity, ProvisioningContainer)
+                     ProvisioningActivity, ProvisioningContainer, ProvisioningProfile)
 # from .actions import ()
 from django.utils import timezone
 from breathecode.utils.validation_exception import ValidationException
@@ -89,3 +90,20 @@ class ProvisioningContainerAdmin(admin.ModelAdmin):
     ]
     list_filter = ['status']
     actions = []
+
+
+@admin.register(ProvisioningProfile)
+class ProvisioningProfileAdmin(admin.ModelAdmin):
+    list_display = ('id', 'academy', 'vendor', 'cohorts_list', 'member_list')
+    search_fields = [
+        'academy__name',
+        'academy__slug',
+    ]
+    list_filter = ['vendor']
+    actions = []
+
+    def cohorts_list(self, obj):
+        return format_html(', '.join([str(c) for c in obj.cohorts.all()]))
+
+    def member_list(self, obj):
+        return format_html(', '.join([str(pa) for pa in obj.members.all()]))

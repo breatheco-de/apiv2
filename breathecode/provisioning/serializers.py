@@ -35,25 +35,25 @@ class ContainerMeBigSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
-# class ProvisioningContainerSerializer(serializers.ModelSerializer):
-#     # slug = serializers.CharField(required=False, default=None)
+class ProvisioningContainerSerializer(serializers.ModelSerializer):
+    # slug = serializers.CharField(required=False, default=None)
 
-#     class Meta:
-#         model = ProvisioningContainer
-#         exclude = ('has_unpushed_changes', 'has_uncommitted_changes',
-#             'branch_name', 'destination_status', 'destination_status_text')
+    class Meta:
+        model = ProvisioningContainer
+        include = ('task_associated_slug', 'has_uncommitted_changes', 'branch_name', 'destination_status',
+                   'destination_status_text')
 
-#     def validate(self, data):
+    def validate(self, data):
 
-#         if 'slug' in data and data['slug'] is not None:
+        if 'slug' in data and data['slug'] is not None:
 
-#             if not re.match('^[-\w]+$', data['slug']):
-#                 raise ValidationException(
-#                     f'Invalid link slug {data["slug"]}, should only contain letters, numbers and slash "-"',
-#                     slug='invalid-slug-format')
+            if not re.match('^[-\w]+$', data['slug']):
+                raise ValidationException(
+                    f'Invalid link slug {data["slug"]}, should only contain letters, numbers and slash "-"',
+                    slug='invalid-slug-format')
 
-#         return {**data, 'academy': academy}
+        return {**data, 'academy': academy}
 
-#     def create(self, validated_data):
+    def create(self, validated_data):
 
-#         return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
+        return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)

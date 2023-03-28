@@ -2,10 +2,11 @@ import os, re, requests
 from django.utils import timezone
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
-from breathecode.services import Github
+from breathecode.services.github import Github
 from breathecode.utils.i18n import translation
 from breathecode.authenticate.actions import get_user_language, get_user_settings
 from breathecode.admissions.models import CohortUser
+from .models import ProvisioningProfile
 
 logger = getLogger(__name__)
 
@@ -19,6 +20,51 @@ def sync_machine_types(provisioning_academy, assignment):
 
     machines = gb.get_machines_types(repo_name)
     print(machines)
+
+
+def get_provisioning_vendor(user_id, profile_academy, cohort):
+
+    academy = profile_academy.academy
+    all_profiles = ProvisioningProfile.objects.filter(academy=academy)
+    if all_profiles.count() == 0:
+        raise Exception(
+            f'No provisioning vendors have been found for this academy {academy.name}, please speak with your program manager'
+        )
+
+    for_me = all_profiles.filter(members__id=profile_academy.id, cohorts=None)
+    if for_me.count() > 1:
+        vendors = [f'{p.vendor.name} in profile {p.id}' for p in for_me]
+        raise Exception(
+            'More than one provisioning vendor found for your profile in this academy, please speak with your program manager: '
+            + ','.join(vendors))
+    if for_me.count() == 1:
+        p_profile = for_me.first()
+        return p_profile.vendor
+
+    for_my_cohort = all_profiles.filter(cohorts__id=cohort.id, members=None)
+    if for_my_cohort.count() > 1:
+        vendors = [f'{p.vendor.name} in profile {p.id}' for p in for_my_cohort]
+        raise Exception(
+            'More than one provisioning vendor found for your cohort, please speak with your program manager: '
+            + ','.join(vendors))
+    if for_my_cohort.count() == 1:
+        p_profile = for_my_cohort.first()
+        return p_profile.vendor
+
+    entire_academy = all_profiles.filter(cohorts=None, members=None)
+    if entire_academy.count() > 1:
+        vendors = [f'{p.vendor.name} in profile {p.id}' for p in entire_academy]
+        raise Exception(
+            'More than one provisioning vendor found for the entire academy, please speak with your program manager: '
+            + ','.join(vendors))
+    if entire_academy.count() == 1:
+        p_profile = entire_academy.first()
+        return p_profile.vendor
+
+    raise Exception(
+        request,
+        "We couldn't find any provisioning vendors for you, your cohort or your academy. Please speak with your program manager."
+    )
 
 
 def get_active_cohorts(user):

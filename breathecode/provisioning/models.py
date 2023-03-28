@@ -1,7 +1,8 @@
 import logging
 from django.db import models
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort
+from breathecode.authenticate.models import ProfileAcademy
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -11,11 +12,29 @@ class ProvisioningVendor(models.Model):
     name = models.CharField(max_length=200)
     api_url = models.URLField(blank=True)
 
+    workspaces_url = models.URLField(help_text='Points to the place were you can see all your containers')
+    invite_url = models.URLField(
+        help_text='Some vendors (like Gitpod) allow to share invite link to automatically join')
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
         return self.name
+
+
+class ProvisioningProfile(models.Model):
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
+
+    cohorts = models.ManyToManyField(
+        Cohort,
+        blank=True,
+        help_text='If set, only these cohorts will be provisioned with this vendor in this academy')
+    members = models.ManyToManyField(
+        ProfileAcademy,
+        blank=True,
+        help_text='If set, only these members will be provisioned with this vendor in this academy')
 
 
 class ProvisioningMachineTypes(models.Model):
