@@ -46,6 +46,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 send_survey_group(model.survey, model.cohort)
             self.assertEqual(tasks.send_cohort_survey.delay.call_args_list, [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_when_educational_status_is_active_or_graduated(self):
@@ -81,6 +82,7 @@ class AnswerTestSuite(FeedbackTestCase):
                              [call(model.user.id, model.survey.id)])
             tasks.send_cohort_survey.delay.call_args_list = []
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_when_educational_status_is_all_of_the_others_error(self):

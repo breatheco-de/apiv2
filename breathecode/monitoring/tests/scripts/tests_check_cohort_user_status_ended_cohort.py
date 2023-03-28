@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from unittest.mock import MagicMock, call
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -14,6 +15,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     🔽🔽🔽 Bad educational status
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -45,6 +47,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **self.model_to_dict(model, 'monitor_script'),
         }])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -76,6 +79,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **self.model_to_dict(model, 'monitor_script'),
         }])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -107,6 +111,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **self.model_to_dict(model, 'monitor_script'),
         }])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

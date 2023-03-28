@@ -410,6 +410,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_task__query_stu_cohort__id__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=1)
         self.bc.request.authenticate(model.user)
@@ -424,6 +425,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_task__query_stu_cohort__slug__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=1)
         self.bc.request.authenticate(model.user)
@@ -438,6 +440,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_task__query_stu_cohort__id__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=1)
         self.bc.request.authenticate(model.user)
@@ -452,6 +455,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_task__query_stu_cohort__slug__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=1)
         self.bc.request.authenticate(model.user)
@@ -466,6 +470,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_task__query_stu_cohort__id__found_two__related_to_two_users(self):
         tasks = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
         cohort_users = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
@@ -486,6 +491,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_task__query_stu_cohort__slug__found_two__related_to_two_users(self):
         tasks = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
         cohort_users = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
@@ -524,6 +530,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_task__query_edu_status__found_one(self):
         cohort_user = {'user_id': 1, 'educational_status': 'ACTIVE'}
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=cohort_user)
@@ -539,6 +546,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_task__query_edu_status__found_two(self):
         cohort_user = {'user_id': 1, 'educational_status': 'ACTIVE'}
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=cohort_user)
@@ -554,6 +562,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_task__query_edu_status__found_two__related_to_two_edu_status(self):
         tasks = [{'user_id': 1, 'cohort_id': 1}, {'user_id': 2, 'cohort_id': 2}]
         cohort_users = [

@@ -23,6 +23,7 @@ from .monitoring_models_mixin import MonitoringModelsMixin
 from .notify_models_mixin import NotifyModelsMixin
 from .payments_models_mixin import PaymentsModelsMixin
 from .registry_models_mixin import RegistryModelsMixin
+from .provisioning_models_mixin import ProvisioningMixin
 
 __all__ = ['GenerateModelsMixin']
 
@@ -31,7 +32,7 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
                           CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
                           AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin,
                           MonitoringModelsMixin, MediaModelsMixin, MentorshipModelsMixin, CareerModelsMixin,
-                          ContentTypesMixin, RegistryModelsMixin, PaymentsModelsMixin):
+                          ContentTypesMixin, RegistryModelsMixin, PaymentsModelsMixin, ProvisioningMixin):
 
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
@@ -96,6 +97,7 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
             self.generate_credentials,
             self.generate_admissions_models,
             self.generate_registry_models,
+            self.generate_provisioning_models,
             self.generate_assignments_models,
             self.generate_media_models,
             self.generate_marketing_models,

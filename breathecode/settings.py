@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     'breathecode.commons',
     'breathecode.websocket',
     'breathecode.payments',
+    'breathecode.provisioning',
     'explorer',
     'channels',
 ]

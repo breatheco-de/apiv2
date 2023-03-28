@@ -10,6 +10,7 @@ from celery import shared_task, Task
 from breathecode.services.seo import SEOAnalyzer
 from django.utils import timezone
 from bs4 import BeautifulSoup
+from breathecode.admissions.models import SyllabusVersion
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
 from breathecode.services.google_cloud import FunctionV1
@@ -18,7 +19,7 @@ from breathecode.utils.views import set_query_parameter
 from breathecode.monitoring.decorators import WebhookTask
 from .models import Asset, AssetImage
 from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
-                      upload_image_to_bucket, asset_images_bucket)
+                      upload_image_to_bucket, asset_images_bucket, add_syllabus_translations)
 
 logger = logging.getLogger(__name__)
 
@@ -465,3 +466,17 @@ def async_synchonize_repository_content(self, webhook):
                     async_pull_from_github.delay(a.slug)
 
     return webhook
+
+
+@shared_task
+def async_add_syllabus_translations(syllabus_slug, version):
+
+    syllabus_version = SyllabusVersion.objects.filter(syllabus__slug=syllabus_slug, version=version).first()
+    if syllabus_version is None:
+        raise Exception(f'Syllabus {syllabus_slug} with version "{version}" not found')
+
+    if syllabus_version.json is None:
+        syllabus_version.json = {'days': []}
+
+    syllabus_version.json = add_syllabus_translations(syllabus_version.json)
+    syllabus_version.save()

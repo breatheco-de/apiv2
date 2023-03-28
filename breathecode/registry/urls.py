@@ -1,11 +1,28 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import (AssetThumbnailView, AssetView, get_keywords, get_categories, render_readme,
-                    get_technologies, get_config, get_translations, render_preview_html, handle_test_asset,
-                    forward_asset_url, get_alias_redirects, AcademyAssetView, AcademyAssetActionView,
-                    AcademyAssetCommentView, AcademyTechnologyView, AcademyKeywordView,
-                    AcademyKeywordClusterView, AcademyCategoryView, AcademyAssetSEOReportView,
-                    AcademyAssetOriginalityView)
+from .views import (
+    AssetThumbnailView,
+    AssetView,
+    get_keywords,
+    get_categories,
+    render_readme,
+    get_technologies,
+    get_config,
+    get_translations,
+    render_preview_html,
+    handle_test_asset,
+    forward_asset_url,
+    get_alias_redirects,
+    AcademyAssetView,
+    AcademyAssetActionView,
+    AcademyAssetCommentView,
+    AcademyTechnologyView,
+    AcademyKeywordView,
+    AcademyKeywordClusterView,
+    AcademyCategoryView,
+    AcademyAssetSEOReportView,
+    AcademyAssetOriginalityView,
+)
 
 app_name = 'registry'
 urlpatterns = [
