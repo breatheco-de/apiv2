@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django.db.models import Q
 from breathecode.authenticate.actions import get_user_language
-from breathecode.events.actions import get_my_events
+from breathecode.events.actions import get_my_event_types
 from breathecode.events.models import Event, EventType, LiveClass
 from breathecode.mentorship.models import MentorshipService
 from breathecode.payments.models import Consumable
@@ -16,10 +16,10 @@ from .flags import api
 def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
     request = context['request']
     lang = get_user_language(request)
-    items = get_my_events(request.user)
+    items = get_my_event_types(request.user)
 
-    event = Event.objects.filter(Q(event__id=kwargs.get('event_id'))
-                                 | Q(event__slug=kwargs.get('event_slug')),
+    event = Event.objects.filter(Q(id=kwargs.get('event_id'))
+                                 | Q(slug=kwargs.get('event_slug')),
                                  event_type__in=items).first()
 
     if not event:
@@ -39,10 +39,9 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     event_type = event.event_type
 
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
-    context['will_consume'] = api.release.enable_consume_live_events(context['request'].user)
+    context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
 
     kwargs['event'] = event
-    kwargs['lang'] = lang
 
     if 'event_id' in kwargs:
         del kwargs['event_id']

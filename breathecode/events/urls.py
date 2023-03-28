@@ -1,10 +1,10 @@
 from django.urls import path
 from .views import (AcademyEventTypeView, AcademyLiveClassView, EventMeView, EventTypeVisibilitySettingView,
-                    EventView, EventTypeView, AcademyEventCheckinView, MeLiveClassJoinView, MeLiveClassView,
-                    get_events, eventbrite_webhook, AcademyEventView, AcademyVenueView, ICalCohortsView,
-                    ICalEventView, ICalStudentView, AcademyOrganizationView, OrganizationWebhookView,
-                    AcademyOrganizerView, AcademyOrganizationOrganizerView, AcademyLiveClassJoinView,
-                    join_event, EventMeCheckinView, join_live_class)
+                    EventView, EventTypeView, AcademyEventCheckinView, MeLiveClassView, get_events,
+                    eventbrite_webhook, AcademyEventView, AcademyVenueView, ICalCohortsView, ICalEventView,
+                    ICalStudentView, AcademyOrganizationView, OrganizationWebhookView, AcademyOrganizerView,
+                    AcademyOrganizationOrganizerView, AcademyLiveClassJoinView, join_event,
+                    EventMeCheckinView, join_live_class)
 
 app_name = 'events'
 urlpatterns = [

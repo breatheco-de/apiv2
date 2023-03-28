@@ -373,7 +373,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
 
-    # Given: wuth Consumable, LiveClass, User have Group and Permission
+    # Given: with Consumable, LiveClass, User have Group and Permission
     # When: Feature flag set to True, class end in the past and cohort.live_class_join set
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -423,7 +423,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
 
-    # Given: wuth Consumable, LiveClass, User have Group and Permission
+    # Given: with Consumable, LiveClass, User have Group and Permission
     # When: Feature flag set to True and class end in the future
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -484,7 +484,7 @@ class AcademyEventTestSuite(EventTestCase):
                                 }),
         ])
 
-    # Given: wuth Consumable, LiveClass, User have Group and Permission
+    # Given: with Consumable, LiveClass, User have Group and Permission
     # When: Feature flag set to True and class start and end in the future
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))

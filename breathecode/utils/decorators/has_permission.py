@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import traceback
 from typing import Callable, Optional, TypedDict
 
 from django.contrib.auth.models import AnonymousUser
@@ -158,12 +159,31 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                         slug='not-enough-consumables')
 
             # handle html views errors
-            except Exception as e:
+            except PaymentException as e:
+                if html:
+                    return render_message(request, str(e), status=402)
+
+                raise e
+
+            # handle html views errors
+            except ValidationException as e:
                 if html:
                     status = e.status_code if hasattr(e, 'status_code') else 400
                     return render_message(request, str(e), status=status)
 
                 raise e
+
+            # handle html views errors
+            except:
+                # show stacktrace for unexpected exceptions
+                traceback.print_exc()
+
+                if html:
+                    return render_message(request,
+                                          'unexpected error, contact admin if you are affected',
+                                          status=500)
+
+                raise ValidationException(str(e), code=500)
 
         return wrapper
 

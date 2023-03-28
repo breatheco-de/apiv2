@@ -7,7 +7,9 @@ from datetime import datetime, timedelta
 from django.db.models.query_utils import Q
 from django.utils import timezone
 from breathecode.admissions.models import Cohort, CohortTimeSlot, TimeSlot, CohortUser
+from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
 from breathecode.utils.datetime_interger import DatetimeInteger
+from django.db.models import QuerySet
 
 from .models import Organization, Venue, Event, Organizer, EventType
 from .utils import Eventbrite
@@ -25,7 +27,7 @@ status_map = {
 }
 
 
-def get_my_events(_user):
+def get_my_event_types(_user):
 
     def build_query_params(cohort=None, syllabus=None, academy=None):
         """
@@ -43,11 +45,57 @@ def get_my_events(_user):
         Get the resources related to this user.
         """
 
+        def process_i_owe_you(i_owe_them: QuerySet[AbstractIOweYou]):
+            for i_owe_you in i_owe_them:
+                if (i_owe_you.selected_cohort and i_owe_you.selected_cohort.academy
+                        and i_owe_you.selected_cohort.academy not in academies):
+                    academies.append(i_owe_you.selected_cohort.academy)
+
+                if i_owe_you.selected_cohort and i_owe_you.selected_cohort not in cohorts:
+                    cohorts.append(i_owe_you.selected_cohort)
+
+                if (i_owe_you.selected_cohort and i_owe_you.selected_cohort.syllabus_version
+                        and i_owe_you.selected_cohort.syllabus_version.syllabus not in syllabus):
+                    syllabus.append({
+                        'syllabus': i_owe_you.selected_cohort.syllabus_version.syllabus,
+                        'academy': i_owe_you.selected_cohort.academy,
+                    })
+
+                if (i_owe_you.selected_event_type_set
+                        and i_owe_you.selected_event_type_set.academy not in academies):
+                    academies.append(i_owe_you.selected_event_type_set.academy)
+
+                if (i_owe_you.selected_mentorship_service_set
+                        and i_owe_you.selected_mentorship_service_set.academy not in academies):
+                    academies.append(i_owe_you.selected_mentorship_service_set.academy)
+
+                if i_owe_you.selected_event_type_set:
+                    for event_type in i_owe_you.selected_event_type_set.event_types.all():
+                        if event_type.id not in ids:
+                            ids.append(event_type.id)
+
         syllabus = []
         academies = []
         cohorts = []
+        ids = []
+
+        utc_now = timezone.now()
+        statuses = ['CANCELLED', 'DEPRECATED', 'FREE_TRIAL']
+        a_least_one_resource_linked = (Q(selected_cohort__isnull=False)
+                                       | Q(selected_mentorship_service_set__isnull=False)
+                                       | Q(selected_event_type_set__isnull=False))
+
         cohort_users = CohortUser.objects.filter(user=_user)
         cohort_users_with_syllabus = cohort_users.filter(cohort__syllabus_version__isnull=False)
+
+        subscriptions = Subscription.objects.filter(a_least_one_resource_linked,
+                                                    Q(valid_until=None)
+                                                    | Q(valid_until__gte=utc_now),
+                                                    user=_user).exclude(status__in=statuses)
+
+        plan_financings = PlanFinancing.objects.filter(a_least_one_resource_linked,
+                                                       valid_until__gte=utc_now,
+                                                       user=_user).exclude(status__in=statuses)
 
         for cohort_user in cohort_users_with_syllabus:
             if cohort_user.cohort.syllabus_version.syllabus not in cohorts:
@@ -64,12 +112,15 @@ def get_my_events(_user):
             if cohort_user.cohort not in cohorts:
                 cohorts.append(cohort_user.cohort)
 
-        return academies, cohorts, syllabus
+        process_i_owe_you(subscriptions)
+        process_i_owe_you(plan_financings)
+
+        return academies, cohorts, syllabus, ids
 
     def my_events():
 
         query = None
-        academies, cohorts, syllabus = get_related_resources()
+        academies, cohorts, syllabus, ids = get_related_resources()
 
         # shared with the whole academy
         for academy in academies:
@@ -95,6 +146,12 @@ def get_my_events(_user):
                 query |= Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
             else:
                 query = Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
+
+        if ids:
+            if query:
+                query |= Q(id__in=ids)
+            else:
+                query = Q(id__in=ids)
 
         if query:
             return EventType.objects.filter(query)

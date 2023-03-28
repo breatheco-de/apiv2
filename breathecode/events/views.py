@@ -25,7 +25,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from .actions import fix_datetime_weekday, update_timeslots_out_of_range, get_my_events
+from .actions import fix_datetime_weekday, update_timeslots_out_of_range, get_my_event_types
 from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibilitySetting, Organization,
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
@@ -153,7 +153,7 @@ class EventMeView(APIView):
 
     def get(self, request, event_id=None):
 
-        items = get_my_events(request.user)
+        items = get_my_event_types(request.user)
 
         if event_id is not None:
             single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
@@ -774,7 +774,7 @@ class EventMeCheckinView(APIView):
 
     def put(self, request, event_id):
 
-        items = get_my_events(request.user)
+        items = get_my_event_types(request.user)
 
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
         if event is None:
