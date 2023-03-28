@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 
 from breathecode.utils.i18n import translation
 from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser,
-                     GithubAcademyUser)
+                     GithubAcademyUser, AcademyAuthSettings)
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort, Syllabus
 from rest_framework.exceptions import ValidationError
@@ -382,9 +382,35 @@ class GroupSerializer(serpy.Serializer):
     name = serpy.Field()
 
 
+class AuthSettingsBigSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    academy = AcademyTinySerializer()
+    github_username = serpy.Field()
+    github_owner = UserSmallSerializer(required=False)
+    github_default_team_ids = serpy.Field()
+    github_is_sync = serpy.Field()
+    github_error_log = serpy.Field()
+
+
 #
 # CRUD SERIALIZERS BELOW
 #
+
+
+class AcademyAuthSettingsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AcademyAuthSettings
+        exclude = ('academy', 'github_error_log')
+
+    def create(self, validated_data):
+
+        return super().create({
+            **validated_data, 'academy':
+            Academy.filter(id=self.context['academy_id']).first()
+        })
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -917,7 +943,7 @@ class PUTGithubUserSerializer(serializers.ModelSerializer):
 
         if instance.storage_action != validated_data['storage_action']:
             # manually ignoring a contact is synched immediately
-            if validated_data['storage_action'] == 'IGNORED':
+            if validated_data['storage_action'] == 'IGNORE':
                 validated_data['storage_status'] = 'SYNCHED'
             # anything else has to be processed later
             else:
