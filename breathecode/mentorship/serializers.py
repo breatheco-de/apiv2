@@ -6,6 +6,8 @@ from .actions import generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from breathecode.utils.datetime_interger import duration_to_str
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.utils.i18n import translation
 
 
 class GetAcademySmallSerializer(serpy.Serializer):
@@ -471,6 +473,53 @@ class MentorSerializer(serializers.ModelSerializer):
         model = MentorProfile
         exclude = ('created_at', 'updated_at')
 
+    def validate(self, data):
+        lang = data.get('lang', 'en')
+        academy_id = data['academy'].id if 'academy' in data else 0
+        user = data['user']
+        profile_academy = ProfileAcademy.objects.filter(user__id=data['user'].id,
+                                                        academy__id=data['academy'].id).first()
+
+        if 'name' not in data:
+            data['name'] = ''
+
+        if not data['name'] and profile_academy:
+            data['name'] = f'{profile_academy.first_name}  {profile_academy.last_name}'
+
+        if not data['name']:
+            data['name'] = user.first_name + ' ' + user.last_name
+        data['name'] = data['name'].strip()
+
+        if 'None' in data['name']:
+            data['name'] = ''
+
+        if not data['name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find name on this user',
+                                                  es='imposible encontrar el nombre en este usuario',
+                                                  slug='name-not-found'),
+                                      code=400)
+
+        if 'email' not in data:
+            data['email'] = ''
+
+        if not data['email'] and profile_academy:
+
+            data['email'] = profile_academy.email
+
+        if not data['email']:
+
+            data['email'] = data['user'].email
+
+        if not data['email']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find email on this user',
+                                                  es='Imposible encontrar el email en este usuario',
+                                                  slug='email-not-found'),
+                                      code=400)
+
+        return data
+
 
 class MentorUpdateSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False)
@@ -485,12 +534,49 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
         exclude = ('created_at', 'updated_at', 'user', 'token')
 
     def validate(self, data):
+        lang = data.get('lang', 'en')
         if 'status' in data and data['status'] in ['ACTIVE', 'UNLISTED'
                                                    ] and self.instance.status != data['status']:
             try:
                 actions.mentor_is_ready(self.instance)
             except Exception as e:
                 raise ValidationException(str(e))
+
+        user = data['user'] if 'user' in data else self.instance.user
+        academy = data['academy'] if 'academy' in data else self.instance.academy
+        profile_academy = ProfileAcademy.objects.filter(user__id=user.id, academy=academy).first()
+
+        if 'name' not in data:
+            data['name'] = ''
+
+        if not data['name'] and profile_academy:
+
+            data['name'] = profile_academy.first_name + ' ' + profile_academy.last_name
+
+        if 'None' in data['name']:
+            data['name'] = ''
+
+        data['name'] = data['name'].strip()
+        if not data['name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find name on this user',
+                                                  es='Imposible encotrar el nombre en este usuario',
+                                                  slug='name-not-found'),
+                                      code=400)
+
+        if 'email' not in data:
+            data['email'] = self.instance.email
+
+        if not data['email'] and profile_academy:
+
+            data['email'] = profile_academy.email
+
+        if not data['email']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find email on this user',
+                                                  es='Imposible encontrar el email en este usuario',
+                                                  slug='email-imposible-to-find'),
+                                      code=400)
 
         return data
 
