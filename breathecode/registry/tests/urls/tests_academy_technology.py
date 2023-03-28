@@ -251,19 +251,19 @@ class RegistryTestSuite(RegistryTestCase):
 
     def test_with_two_asset_technologies__passing_sort_priority__not_found(self):
         cases = (
-            (1),
-            (2),
-            (3),
+            1,
+            2,
+            3,
         )
         query = random.choices(cases)
-        print(query)
 
         sort_priority = random.choice(cases)
-        sort_priority = sort_priority
-        print(sort_priority)
-        random.shuffle(sort_priority)
 
-        asset_technologies = {'sort_priority': sort_priority}
+        asset_technologies = {
+            'sort_priority': sort_priority,
+            'slug': 'eye-travel-claim',
+            'title': 'Establish Myself Admit Would Than Pass'
+        }
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      role=1,
@@ -275,7 +275,16 @@ class RegistryTestSuite(RegistryTestCase):
         url = reverse_lazy('registry:academy_technology') + f'?sort_priority={query}'
         response = self.client.get(url)
         json = response.json()
-        expected = []
+        expected = [{
+            'alias': [],
+            'assets': [],
+            'description': None,
+            'icon_url': None,
+            'parent': None,
+            'slug': 'eye-travel-claim',
+            'sort_priority': asset_technologies['sort_priority'],
+            'title': 'Establish Myself Admit Would Than Pass'
+        }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

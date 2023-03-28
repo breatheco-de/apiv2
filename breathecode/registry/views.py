@@ -142,13 +142,20 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
         if 'sort_priority' in self.request.GET:
             param = self.request.GET.get('sort_priority')
-            # try:
-            #     param = int(param)
+            try:
+                param = int(param)
 
-            # if param !=
+                if param != param.is_integer():
+                    raise ValidationException('not a type integer on the parameter', code=400)
 
-            items = items.filter(
-                Q(sort_priority=int(param)) | Q(sort_priority='') | Q(sort_priority__isnull=True))
+                items = items.filter(
+                    Q(sort_priority=param) | Q(sort_priority='') | Q(sort_priority__isnull=True))
+
+            except Exception as e:
+                data = {
+                    'MESSAGE': f'Not an integer type in parameter: {param}',
+                    'TITLE': f'Not an integer type: {param}',
+                }
 
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')
