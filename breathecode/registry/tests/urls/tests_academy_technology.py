@@ -246,6 +246,48 @@ class RegistryTestSuite(RegistryTestCase):
             self.bc.database.delete('registry.AssetTechnology')
 
     """
+    🔽🔽🔽 GET with two AssetTechnology, passing sort_priority
+    """
+
+    def test_with_two_asset_technologies__passing_sort_priority__not_found(self):
+        cases = (
+            (1),
+            (2),
+            (3),
+        )
+        query = random.choices(cases)
+        print(query)
+
+        sort_priority = random.choice(cases)
+        sort_priority = sort_priority
+        print(sort_priority)
+        random.shuffle(sort_priority)
+
+        asset_technologies = {'sort_priority': sort_priority}
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     role=1,
+                                     asset_technology=asset_technologies,
+                                     capability='read_technology')
+
+        self.headers(academy=model.academy.id)
+
+        url = reverse_lazy('registry:academy_technology') + f'?sort_priority={query}'
+        response = self.client.get(url)
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of('registry.AssetTechnology'),
+            self.bc.format.to_dict(model.asset_technology),
+        )
+
+        # teardown
+        self.bc.database.delete('registry.AssetTechnology')
+
+    """
     🔽🔽🔽 GET with two AssetTechnology, passing like
     """
 

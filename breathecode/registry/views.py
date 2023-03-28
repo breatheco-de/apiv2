@@ -142,8 +142,13 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
         if 'sort_priority' in self.request.GET:
             param = self.request.GET.get('sort_priority')
-            print(param)
-            items = items.filter(Q(sort_priority=param) | Q(sort_priority='') | Q(sort_priority__isnull=True))
+            # try:
+            #     param = int(param)
+
+            # if param !=
+
+            items = items.filter(
+                Q(sort_priority=int(param)) | Q(sort_priority='') | Q(sort_priority__isnull=True))
 
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')
