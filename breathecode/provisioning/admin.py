@@ -99,6 +99,7 @@ class ProvisioningProfileAdmin(admin.ModelAdmin):
         'academy__name',
         'academy__slug',
     ]
+    raw_id_fields = ['members', 'cohorts']
     list_filter = ['vendor']
     actions = []
 
