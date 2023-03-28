@@ -332,7 +332,12 @@ def get_reviews(request):
     """
     List all snippets, or create a new snippet.
     """
-    items = Review.objects.filter(is_public=True, status='DONE')
+    items = Review.objects.filter(is_public=True,
+                                  status='DONE',
+                                  comments__isnull=False,
+                                  total_rating__isnull=False,
+                                  total_rating__gt=0,
+                                  total_rating__lte=10).exclude(comments__exact='')
     lookup = {}
 
     items = items.filter(**lookup).order_by('-created_at')
