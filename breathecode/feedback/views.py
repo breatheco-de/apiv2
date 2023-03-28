@@ -332,7 +332,7 @@ def get_reviews(request):
     """
     List all snippets, or create a new snippet.
     """
-    items = Review.objects.filter(is_public=True)
+    items = Review.objects.filter(is_public=True, status='DONE')
     lookup = {}
 
     items = items.filter(**lookup).order_by('-created_at')
