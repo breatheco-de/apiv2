@@ -61,6 +61,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     🔽🔽🔽 Cohort not ended
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -693,6 +694,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     🔽🔽🔽 Student dropped
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -757,6 +759,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     🔽🔽🔽 Cohort not finished
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -823,6 +826,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     🔽🔽🔽 Generate certificate
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -899,6 +903,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     🔽🔽🔽 Translations
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -973,6 +978,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -1049,6 +1055,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     🔽🔽🔽 Retry generate certificate
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

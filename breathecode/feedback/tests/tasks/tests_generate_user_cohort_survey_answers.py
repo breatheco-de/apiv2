@@ -50,6 +50,7 @@ class SendCohortSurvey(FeedbackTestCase):
 
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_when_teacher_is_not_assigned(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
@@ -63,6 +64,7 @@ class SendCohortSurvey(FeedbackTestCase):
 
             self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_when_teacher_is_assigned(self):
         statuses = ['ACTIVE', 'GRADUATED']
@@ -120,6 +122,7 @@ class SendCohortSurvey(FeedbackTestCase):
             # teardown
             self.bc.database.delete('feedback.Answer')
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_when_cohort_has_syllabus(self):
         statuses = ['ACTIVE', 'GRADUATED']
@@ -181,6 +184,7 @@ class SendCohortSurvey(FeedbackTestCase):
             # teardown
             self.bc.database.delete('feedback.Answer')
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_role_assistant(self):
         statuses = ['ACTIVE', 'GRADUATED']
