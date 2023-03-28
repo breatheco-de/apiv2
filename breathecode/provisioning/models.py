@@ -14,6 +14,9 @@ class ProvisioningVendor(models.Model):
 
     workspaces_url = models.URLField(help_text='Points to the place were you can see all your containers')
     invite_url = models.URLField(
+        blank=True,
+        null=True,
+        default=None,
         help_text='Some vendors (like Gitpod) allow to share invite link to automatically join')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
