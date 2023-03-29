@@ -81,19 +81,19 @@ def get_my_event_types(_user):
 
         utc_now = timezone.now()
         statuses = ['CANCELLED', 'DEPRECATED', 'FREE_TRIAL']
-        a_least_one_resource_linked = (Q(selected_cohort__isnull=False)
-                                       | Q(selected_mentorship_service_set__isnull=False)
-                                       | Q(selected_event_type_set__isnull=False))
+        at_least_one_resource_linked = (Q(selected_cohort__isnull=False)
+                                        | Q(selected_mentorship_service_set__isnull=False)
+                                        | Q(selected_event_type_set__isnull=False))
 
         cohort_users = CohortUser.objects.filter(user=_user)
         cohort_users_with_syllabus = cohort_users.filter(cohort__syllabus_version__isnull=False)
 
-        subscriptions = Subscription.objects.filter(a_least_one_resource_linked,
+        subscriptions = Subscription.objects.filter(at_least_one_resource_linked,
                                                     Q(valid_until=None)
                                                     | Q(valid_until__gte=utc_now),
                                                     user=_user).exclude(status__in=statuses)
 
-        plan_financings = PlanFinancing.objects.filter(a_least_one_resource_linked,
+        plan_financings = PlanFinancing.objects.filter(at_least_one_resource_linked,
                                                        valid_until__gte=utc_now,
                                                        user=_user).exclude(status__in=statuses)
 
