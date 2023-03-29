@@ -24,26 +24,26 @@ from django.db.models import QuerySet
 
 
 @private_view()
-def redirect_new_container(request, token=None):
+def redirect_new_container(request):
 
-    user = request.user
+    user = token.user
     cohort_id = request.GET.get('cohort', None)
     if cohort_id is None: return render_message(request, f'Please specificy a cohort in the URL')
 
     url = request.GET.get('repo', None)
     if url is None: return render_message(request, f'Please specificy a repository in the URL')
 
-    cu = CohortUser.objects.filter(user=request.user, cohort_id=cohort_id).first()
+    cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
     if cu is None: return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.")
 
     academy_id = cu.cohort.academy.id
-    pa = ProfileAcademy.objects.filter(user=request.user, academy__id=academy_id).first()
+    pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
     if pa is None: return render_message(request, f"You don't seem to belong to academy {academy.name}")
 
     all_profiles = ProvisioningProfile.objects.filter(academy__id=academy_id)
     vendor = None
     try:
-        vendor = get_provisioning_vendor(request.user, pa, cu.cohort)
+        vendor = get_provisioning_vendor(user, pa, cu.cohort)
     except Exception as e:
         return render_message(request, str(e))
 
@@ -58,7 +58,7 @@ def redirect_new_container(request, token=None):
 
 
 @private_view()
-def redirect_workspaces(request, token=None):
+def redirect_workspaces(request):
 
     user = token.user
     cohort_id = request.GET.get('cohort', None)
@@ -67,17 +67,17 @@ def redirect_workspaces(request, token=None):
     url = request.GET.get('repo', None)
     if url is None: return render_message(request, f"Please specificy a repository \"repo\" in the URL")
 
-    cu = CohortUser.objects.filter(user=request.user, cohort_id=cohort_id).first()
+    cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
     if cu is None: return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.")
 
     academy_id = cu.cohort.academy.id
-    pa = ProfileAcademy.objects.filter(user=request.user, academy__id=academy_id).first()
+    pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
     if pa is None: return render_message(request, f"You don't seem to belong to academy {academy.name}")
 
     all_profiles = ProvisioningProfile.objects.filter(academy__id=academy_id)
     vendor = None
     try:
-        vendor = get_provisioning_vendor(request.user, pa, cu.cohort)
+        vendor = get_provisioning_vendor(user, pa, cu.cohort)
     except Exception as e:
         return render_message(request, str(e))
 
