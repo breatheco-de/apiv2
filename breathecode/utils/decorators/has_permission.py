@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from django.db.models import Sum
 from django.shortcuts import render
+from django.http import JsonResponse
 
 from breathecode.authenticate.models import Permission, User
 from breathecode.payments.signals import consume_service
@@ -51,6 +52,7 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
+#TODO: change html param for string with selected encode
 def has_permission(permission: str, consumer: bool | HasPermissionCallback = False, html=False) -> callable:
     """This decorator check if the current user can access to the resource through of permissions"""
 
@@ -163,7 +165,9 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                 if html:
                     return render_message(request, str(e), status=402)
 
-                raise e
+                response = JsonResponse({'detail': str(e), 'status_code': 500})
+                response.status_code = 500
+                return response
 
             # handle html views errors
             except ValidationException as e:
@@ -171,7 +175,9 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                     status = e.status_code if hasattr(e, 'status_code') else 400
                     return render_message(request, str(e), status=status)
 
-                raise e
+                response = JsonResponse({'detail': str(e), 'status_code': 500})
+                response.status_code = 500
+                return response
 
             # handle html views errors
             except:
@@ -183,7 +189,9 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
                                           'unexpected error, contact admin if you are affected',
                                           status=500)
 
-                raise ValidationException(str(e), code=500)
+                response = JsonResponse({'detail': str(e), 'status_code': 500})
+                response.status_code = 500
+                return response
 
         return wrapper
 

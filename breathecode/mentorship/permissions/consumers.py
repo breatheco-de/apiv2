@@ -11,10 +11,9 @@ from .flags import api
 def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
                                     kwargs: dict) -> tuple[dict, tuple, dict]:
     mentorship_service = MentorshipService.objects.filter(
-        Q(id=kwargs.get('service_id')) | Q(slug=kwargs.get('service_slug'))).first()
+        Q(id=kwargs.get('service_id')) | Q(slug=kwargs.get('service_slug')),
+        Q(id=kwargs.get('mentor_id')) | Q(slug=kwargs.get('mentor_slug'))).first()
     context['consumables'] = context['consumables'].filter(mentorship_services=mentorship_service)
-
-    context['time_of_life'] = timedelta(hours=2)
 
     # avoid call LaunchDarkly if mentorship_service is empty
     if mentorship_service:
@@ -23,5 +22,8 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
 
     else:
         context['will_consume'] = False
+
+    if context['will_consume']:
+        context['time_of_life'] = mentorship_service.max_duration
 
     return (context, args, kwargs)
