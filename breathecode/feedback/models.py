@@ -199,6 +199,7 @@ class Review(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     platform = models.ForeignKey(ReviewPlatform, on_delete=models.CASCADE)
     is_public = models.BooleanField(default=False)
+    lang = models.CharField(max_length=3, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
