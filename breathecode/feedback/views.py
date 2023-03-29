@@ -341,6 +341,10 @@ def get_reviews(request):
 
     lookup = {}
 
+    if 'academy' in request.GET:
+        param = request.GET.get('academy')
+        lookup['cohort__academy__id'] = param
+
     if 'lang' in request.GET:
         param = request.GET.get('lang')
         lookup['lang'] = param
