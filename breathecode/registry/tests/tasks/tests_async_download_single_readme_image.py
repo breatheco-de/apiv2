@@ -7,7 +7,10 @@ from unittest.mock import MagicMock, call, patch, PropertyMock
 from breathecode.registry.tasks import async_download_single_readme_image
 from logging import Logger
 from breathecode.tests.mocks import apply_requests_get_mock
+from django.utils import timezone
 from ..mixins import RegistryTestCase
+
+UTC_NOW = timezone.now()
 
 
 def apply_get_env(configuration={}):
@@ -73,6 +76,7 @@ class RegistryTestSuite(RegistryTestCase):
                'GOOGLE_PROJECT_ID': 'labor-day-story',
                'MEDIA_GALLERY_BUCKET': 'bucket-name',
            })))
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_download_status_no_asset_image(self):
         model = self.bc.database.create(asset={'slug': 'fake_slug'})
 
@@ -89,7 +93,7 @@ class RegistryTestSuite(RegistryTestCase):
             'download_details': f'Downloading {original_url}',
             'download_status': 'OK',
             'hash': asset_image.hash,
-            'last_download_at': asset_image.last_download_at,
+            'last_download_at': UTC_NOW,
             'mime': 'image/png',
             'name': 'www.google.com',
         }])
