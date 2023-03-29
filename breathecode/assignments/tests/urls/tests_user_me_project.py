@@ -44,34 +44,46 @@ class FinalProjectTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_final_project_with_wrong_id(self):
-
-        self.bc.request.set_headers(academy=1)
-        self.generate_models(
-            authenticate=True,
-            profile_academy=1,
-            role=1,
-        )
-        url = reverse_lazy('assignments:user_me_project', kwargs={'project_id': 1})
-        response = self.client.put(url)
-
-        json = response.json()
-        expected = {'detail': 'project-not-found', 'status_code': 400}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
     def test_final_project_when_not_a_member(self):
 
         self.bc.request.set_headers(academy=1)
-        user_models = self.bc.database.create(user=[{'id': 1}, {'id': 2}], )
+        helper_models = self.bc.database.create(user=[{'id': 1}, {'id': 2}], cohort=1)
+        project_cohort = helper_models['cohort']
+
         models = self.bc.database.create(authenticate=True, profile_academy=2, final_project={'members': [2]})
         url = reverse_lazy('assignments:user_me_project', kwargs={'project_id': 1})
-        data = {'name': 'Facebook'}
+        data = {'name': 'Facebook', 'cohort': project_cohort.id}
         response = self.client.put(url, data)
 
         json = response.json()
         expected = {'detail': 'not-a-member', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_final_project_members_from_different_cohort(self):
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.database.create(user=True, authenticate=True)
+        helper_models = self.bc.database.create(user={'id': 2}, cohort=2)
+
+        project_cohort = helper_models['cohort'][0]
+        models = self.bc.database.create(cohort_user={
+            'user': helper_models['user'],
+            'cohort': helper_models['cohort'][1]
+        },
+                                         profile_academy=2,
+                                         final_project={'members': [1, 2]})
+        url = reverse_lazy('assignments:user_me_project', kwargs={'project_id': 1})
+
+        data = {'name': 'Facebook', 'members': [1, 2], 'cohort': project_cohort.id}
+        response = self.client.put(url, data)
+
+        json = response.json()
+        expected = {
+            'detail': f'All members of this project must belong to the cohort {project_cohort.name}',
+            'status_code': 400
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

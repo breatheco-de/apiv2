@@ -271,7 +271,12 @@ class FinalProjectMeView(APIView):
             if item is None:
                 raise ValidationException('Final Project not found', slug='project-not-found')
 
-            if not item.members.filter(id=request.user.id).exists():
+            project_cohort = Cohort.objects.filter(id=data['cohort']).first()
+            staff = ProfileAcademy.objects.filter(~Q(role='STUDENT'),
+                                                  academy__id=project_cohort.academy.id,
+                                                  user__id=request.user.id).first()
+
+            if not item.members.filter(id=request.user.id).exists() and staff is None:
                 raise ValidationException(
                     translation(lang,
                                 en='You are not a member of this project',
