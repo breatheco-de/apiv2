@@ -488,13 +488,32 @@ class Plan(AbstractPriceByTime):
         return self.slug
 
     def clean(self) -> None:
+
         if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
             raise forms.ValidationError(
                 'If the plan is not renewable, you must set time_of_life and time_of_life_unit')
 
-        if self.is_renewable and (self.time_of_life or self.time_of_life_unit):
+        have_price = (self.price_per_month or self.price_per_year or self.price_per_quarter
+                      or self.price_per_half)
+
+        if self.is_renewable and have_price and (self.time_of_life or self.time_of_life_unit):
             raise forms.ValidationError(
-                'If the plan is renewable, you must not set time_of_life and time_of_life_unit')
+                'If the plan is renewable and have price, you must not set time_of_life and '
+                'time_of_life_unit')
+
+        free_trial_available = self.trial_duration
+
+        if self.is_renewable and not have_price and free_trial_available and (self.time_of_life
+                                                                              or self.time_of_life_unit):
+            raise forms.ValidationError(
+                'If the plan is renewable and a have free trial available, you must not set time_of_life '
+                'and time_of_life_unit')
+
+        if self.is_renewable and not have_price and not free_trial_available and (not self.time_of_life or
+                                                                                  not self.time_of_life_unit):
+            raise forms.ValidationError(
+                'If the plan is renewable and a not have free trial available, you must set time_of_life '
+                'and time_of_life_unit')
 
         return super().clean()
 

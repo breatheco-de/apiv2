@@ -174,6 +174,7 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
 
     if plan.is_renewable:
         price = plan.price_per_month or plan.price_per_quarter or plan.price_per_half or plan.price_per_year
+
     else:
         price = not plan.is_renewable and plan.financing_options.exists()
 
@@ -187,16 +188,6 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
                         en='Free trial plans can\'t be bought again',
                         es='Los planes de prueba no pueden ser comprados de nuevo',
                         slug='free-trial-plan-for-financing'),
-            code=400,
-        )
-
-    # avoid a plan with no price and no free trial to prevent this has been taken as free trial
-    if not price and not plan_have_free_trial:
-        raise ValidationException(
-            translation(lang,
-                        en='The plan doesn\'t have a price yet, can\'t be bought',
-                        es='El plan no tiene un precio aún, no puede ser comprado',
-                        slug='plan-without-price'),
             code=400,
         )
 
@@ -235,10 +226,6 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
     # avoid to charge a plan if it has a free trial and was not bought before
     if not price or (plan_have_free_trial and not subscriptions.exists()):
         return False
-
-    # charge plan if it does not have free trial
-    if not plan_have_free_trial:
-        return True
 
     # charge a plan if it has a price
     return bool(price)
@@ -635,10 +622,10 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
 
         # this prices is just used if it are generating a subscription
         if not bag.how_many_installments and (bag.chosen_period != 'NO_SET' or must_it_be_charged):
-            price_per_month += plan.price_per_month
-            price_per_quarter += plan.price_per_quarter
-            price_per_half += plan.price_per_half
-            price_per_year += plan.price_per_year
+            price_per_month += (plan.price_per_month or 0)
+            price_per_quarter += (plan.price_per_quarter or 0)
+            price_per_half += (plan.price_per_half or 0)
+            price_per_year += (plan.price_per_year or 0)
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -801,4 +788,4 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
 
 
 def async_consume(bag_id: int, eta: datetime):
-    logger.info(f'Starting build_free_trial for bag {bag_id}')
+    logger.info(f'Starting build_free_subscription for bag {bag_id}')
