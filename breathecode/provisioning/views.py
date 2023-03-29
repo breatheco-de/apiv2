@@ -24,7 +24,7 @@ from django.db.models import QuerySet
 
 
 @private_view()
-def redirect_new_container(request, token=None):
+def redirect_new_container(request):
 
     user = token.user
     cohort_id = request.GET.get('cohort', None)
@@ -58,7 +58,7 @@ def redirect_new_container(request, token=None):
 
 
 @private_view()
-def redirect_workspaces(request, token=None):
+def redirect_workspaces(request):
 
     user = token.user
     cohort_id = request.GET.get('cohort', None)
