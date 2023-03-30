@@ -727,6 +727,11 @@ class Course(models.Model):
     syllabus = models.ManyToManyField(Syllabus, blank=True)
 
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
+    status_message = models.CharField(max_length=250,
+                                      null=True,
+                                      blank=True,
+                                      default=None,
+                                      help_text='Error message if status is ERROR')
     visibility = models.CharField(max_length=15, choices=VISIBILITY_STATUS, default=PRIVATE)
 
     icon_url = models.URLField(help_text='Image icon to show on website')
@@ -748,6 +753,25 @@ class CourseTranslation(models.Model):
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
+    course_modules = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text='The course modules should be a list of objects of each of the modules taught')
 
     def __str__(self) -> str:
         return f'{self.lang}: {self.title}'
+
+    def save(self, *args, **kwargs):
+        for course_module in self.course_modules:
+            if course_module['name'] is None or course_module['name'] == '':
+                raise Exception(f'The module does not have a name.')
+            if course_module['slug'] is None or course_module['slug'] == '':
+                raise Exception(f'The module {course_module["name"]} does not have a slug.')
+            if course_module['icon_url'] is None or course_module['icon_url'] == '':
+                raise Exception(f'The module {course_module["name"]} does not have an icon_url.')
+            if course_module['description'] is None or course_module['description'] == '':
+                raise Exception(f'The module {course_module["name"]} does not have a description.')
+
+        result = super().save(*args, **kwargs)
+        return result
