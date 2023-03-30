@@ -14,7 +14,7 @@ from breathecode.authenticate.actions import get_user_language, get_user_setting
 from breathecode.utils.i18n import translation
 
 from breathecode.mentorship.exceptions import ExtendSessionException
-from breathecode.payments.consumers import mentorship_service_by_url_param
+from .permissions.consumers import mentorship_service_by_url_param
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.views import private_view, render_message, set_query_parameter
@@ -423,6 +423,7 @@ class ForwardMeetUrl:
 
 
 @private_view()
+# @has_permission('join_mentorship', consumer=mentorship_service_by_url_param, html=True)
 def forward_meet_url(request, mentor_slug, service_slug, token):
     handler = ForwardMeetUrl(request, mentor_slug, service_slug, token)
     return handler()
@@ -430,7 +431,6 @@ def forward_meet_url(request, mentor_slug, service_slug, token):
 
 #FIXME: create a endpoint to consume the service, split the function in two
 @private_view()
-# @has_permission('get_mentorship_session', consumer=mentorship_service_by_url_param)
 def end_mentoring_session(request, session_id, token):
     now = timezone.now()
     if request.method == 'POST':
