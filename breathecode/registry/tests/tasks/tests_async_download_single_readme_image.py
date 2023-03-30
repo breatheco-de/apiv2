@@ -81,9 +81,11 @@ class RegistryTestSuite(RegistryTestCase):
         model = self.bc.database.create(asset={'slug': 'fake_slug'})
 
         result = async_download_single_readme_image('fake_slug', original_url)
+        #The content is static in the decorator, so the hash is always the same
+        hash = '5186bd77843e507d2c6f568d282c56b06622b2fc7d6ae6a109c97ee1fc3cdebc'
 
         readme = self.bc.database.get_model('registry.asset').objects.first().get_readme()['decoded']
-        asset_image = self.bc.database.get_model('registry.AssetImage').objects.first()
+
         self.assertEqual(result, 'OK')
         self.assertEqual('https://xyz/hardcoded_url' in readme, False)
         self.assertEqual(self.bc.database.list_of('registry.AssetImage'), [{
@@ -92,7 +94,7 @@ class RegistryTestSuite(RegistryTestCase):
             'original_url': original_url,
             'download_details': f'Downloading {original_url}',
             'download_status': 'OK',
-            'hash': asset_image.hash,
+            'hash': hash,
             'last_download_at': UTC_NOW,
             'mime': 'image/png',
             'name': 'www.google.com',
@@ -132,6 +134,8 @@ class RegistryTestSuite(RegistryTestCase):
         model['asset'].save()
 
         result = async_download_single_readme_image('fake_slug', 'https://www.f.com')
+        #The content is static in the decorator, so the hash is always the same
+        hash = '5186bd77843e507d2c6f568d282c56b06622b2fc7d6ae6a109c97ee1fc3cdebc'
 
         readme = self.bc.database.get_model('registry.asset').objects.first().get_readme()['decoded']
         asset_image = self.bc.database.get_model('registry.AssetImage').objects.first()
@@ -143,7 +147,7 @@ class RegistryTestSuite(RegistryTestCase):
             'original_url': original_url,
             'download_details': 'Downloading https://www.f.com',
             'download_status': 'OK',
-            'hash': asset_image.hash,
+            'hash': hash,
             'last_download_at': None,
             'mime': 'image/png',
             'name': 'john',
