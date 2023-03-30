@@ -1,4 +1,4 @@
-import logging, secrets, json
+import logging, secrets
 from django.contrib import admin, messages
 from django import forms
 from .models import (Course, CourseTranslation, FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy,
