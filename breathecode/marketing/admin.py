@@ -451,6 +451,48 @@ class LeadGenerationAppAdmin(admin.ModelAdmin):
             f"<span class='badge {colors[obj.last_call_status]}'>{obj.last_call_status}</span>")
 
 
+def course_module_keys_validation(course_module):
+    if course_module['name'] is None or course_module['name'] == '':
+        return f'The module does not have a name.'
+    if course_module['slug'] is None or course_module['slug'] == '':
+        return f'The module {course_module["name"]} does not have a slug.'
+    if course_module['icon_url'] is None or course_module['icon_url'] == '':
+        return f'The module {course_module["name"]} does not have an icon_url.'
+    if course_module['description'] is None or course_module['description'] == '':
+        return f'The module {course_module["name"]} does not have a description.'
+
+
+def validate_course_modules(modeladmin, request, queryset):
+    courses = queryset.all()
+    try:
+        for course in courses:
+            modules = []
+            course_translations = CourseTranslation.objects.filter(course=course.id)
+            for course_translation in course_translations:
+                course_modules = course_translation.course_modules
+                course_modules_list = []
+                for course_module in course_modules:
+                    keys_validation_error = course_module_keys_validation(course_module)
+                    if keys_validation_error is not None and keys_validation_error != '':
+                        course.status_message = keys_validation_error
+                        course.save()
+                        return
+                    course_modules_list.append(course_module['slug'])
+                modules.append(course_modules_list)
+            for module in modules:
+                if modules[0] != module:
+                    course.status_message = 'The course translations have different modules.'
+                    course.save()
+                    return
+
+            course.status_message = 'All course translation have the same modules'
+            course.save()
+    except Exception as e:
+        logger.fatal(str(e))
+        course.status_message = str(e)
+        course.save()
+
+
 @admin.register(UTMField)
 class UTMFieldAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'utm_type')
@@ -460,9 +502,10 @@ class UTMFieldAdmin(admin.ModelAdmin):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'academy', 'status', 'visibility')
+    list_display = ('slug', 'academy', 'status', 'status_message', 'visibility')
     list_filter = ['academy__slug', 'status', 'visibility']
     filter_horizontal = ('syllabus', )
+    actions = [validate_course_modules]
 
 
 @admin.register(CourseTranslation)

@@ -2,7 +2,7 @@ import logging, os
 from celery import shared_task, Task
 from .models import UserInvite, Token
 from django.contrib.auth.models import User
-from .actions import set_gitpod_user_expiration
+from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions
 
 API_URL = os.getenv('API_URL', '')
@@ -21,6 +21,16 @@ class BaseTaskWithRetry(Task):
 def async_set_gitpod_user_expiration(gitpoduser_id):
     logger.debug(f'Recalculate gitpoduser expiration for {gitpoduser_id}')
     return set_gitpod_user_expiration(gitpoduser_id) is not None
+
+
+@shared_task
+def async_add_to_organization(cohort_id, user_id):
+    return add_to_organization(cohort_id, user_id)
+
+
+@shared_task
+def async_remove_from_organization(cohort_id, user_id):
+    return remove_from_organization(cohort_id, user_id)
 
 
 @shared_task

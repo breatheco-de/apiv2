@@ -3,13 +3,17 @@ from django.dispatch import receiver
 from django.db.models.signals import post_delete, post_save
 from .models import Asset, AssetAlias, AssetImage
 from .tasks import (async_regenerate_asset_readme, async_delete_asset_images, async_remove_img_from_cloud,
-                    async_synchonize_repository_content, async_create_asset_thumbnail_legacy)
+                    async_synchonize_repository_content, async_create_asset_thumbnail_legacy,
+                    async_add_syllabus_translations)
 from .signals import asset_slug_modified, asset_readme_modified, asset_title_modified
 from breathecode.assignments.signals import assignment_created
 from breathecode.assignments.models import Task
 
 from breathecode.monitoring.signals import github_webhook
 from breathecode.monitoring.models import RepositoryWebhook
+
+from breathecode.admissions.models import SyllabusVersion
+from breathecode.admissions.signals import syllabus_version_json_updated
 
 logger = logging.getLogger(__name__)
 
@@ -94,3 +98,9 @@ def post_webhook_received(sender, instance, **kwargs):
     if instance.scope in ['push']:
         logger.debug('Received github webhook signal for push')
         async_synchonize_repository_content.delay(instance.id)
+
+
+@receiver(syllabus_version_json_updated, sender=SyllabusVersion)
+def syllabus_json_updated(sender, instance, **kwargs):
+    logger.debug(f'Syllabus Version json for {instance.syllabus.slug} was updated')
+    async_add_syllabus_translations.delay(instance.syllabus.slug, instance.version)

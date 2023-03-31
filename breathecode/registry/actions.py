@@ -225,23 +225,6 @@ def push_to_github(asset_slug, author=None):
     return 'ERROR'
 
 
-def get_url_info(url: str):
-
-    result = re.search(r'blob\/([\w\-]+)', url)
-    branch_name = None
-    if result is not None:
-        branch_name = result.group(1)
-
-    result = re.search(r'https?:\/\/github\.com\/([\w\-]+)\/([\w\-]+)\/?', url)
-    if result is None:
-        raise Exception('Invalid URL when looking organization: ' + url)
-
-    org_name = result.group(1)
-    repo_name = result.group(2)
-
-    return org_name, repo_name, branch_name
-
-
 def get_blob_content(repo, path_name, branch='main'):
 
     if '?' in path_name:
@@ -286,7 +269,7 @@ def push_github_asset(github, asset):
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for asset ' + asset.slug + '.')
 
-    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     file_name = os.path.basename(asset.readme_url)
@@ -297,8 +280,9 @@ def push_github_asset(github, asset):
     result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
-
-    decoded_readme = base64.b64decode(asset.readme.encode('utf-8')).decode('utf-8')
+    
+    # we commit the raw readme, we don't want images to be replaced in the original github
+    decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
     result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
 
     if 'commit' in result:
@@ -314,7 +298,7 @@ def pull_github_lesson(github, asset, override_meta=False):
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for lesson ' + asset.slug + '.')
 
-    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     file_name = os.path.basename(asset.readme_url)
@@ -582,7 +566,7 @@ def pull_learnpack_asset(github, asset, override_meta):
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for asset ' + asset.slug + '.')
 
-    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     lang = asset.lang
@@ -689,7 +673,7 @@ def pull_quiz_asset(github, asset):
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for quiz ' + asset.slug + '.')
 
-    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     file_name = os.path.basename(asset.readme_url)
@@ -826,3 +810,31 @@ def upload_image_to_bucket(img, asset):
     img.assets.add(asset)
 
     return img
+
+
+def add_syllabus_translations(_json):
+    day_count = -1
+    for day in _json['days']:
+        day_count += 1
+        for asset_type in ['assignments', 'lessons', 'quizzes', 'replits']:
+            index = -1
+            if asset_type not in day:
+                continue
+            for ass in day[asset_type]:
+                index += 1
+                slug = ass['slug'] if 'slug' in ass else ass
+                _asset = Asset.objects.filter(slug=slug).first()
+                if _asset is not None:
+                    if 'slug' not in ass:
+                        _json['days'][day_count][asset_type][index] = { 
+                          "slug": _asset.slug,
+                          "title": _asset.title,
+                        }
+                    _json['days'][day_count][asset_type][index]['translations'] = {}
+                    for a in _asset.all_translations.all():
+                        _json['days'][day_count][asset_type][index]['translations'][a.lang] = {
+                            'slug': a.slug,
+                            'title': a.title
+                        }
+
+    return _json

@@ -278,9 +278,14 @@ def render_readme(request, asset_slug, extension='raw'):
 def get_alias_redirects(request):
     aliases = AssetAlias.objects.all()
     redirects = {}
+
+    if 'academy' in request.GET:
+        param = request.GET.get('academy', '')
+        aliases = aliases.filter(asset__academy__id__in=param.split(','))
+
     for a in aliases:
         if a.slug != a.asset.slug:
-            redirects[a.slug] = a.asset.slug
+            redirects[a.slug] = {'slug': a.asset.slug, 'type': a.asset.asset_type, 'lang': a.asset.lang}
 
     return Response(redirects)
 

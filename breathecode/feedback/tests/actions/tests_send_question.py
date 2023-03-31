@@ -1,7 +1,7 @@
 """
 Test /answer
 """
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -82,6 +82,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 Cohort without SyllabusVersion
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question__cohort_without_syllabus_version(self):
@@ -139,6 +140,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 Cohort without SyllabusSchedule
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question__cohort_without_syllabus_schedule(self):
@@ -196,6 +198,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 Answer are generate and send in a email
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question__just_send_by_email(self):
@@ -256,6 +259,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 Answer are generate and send in a email, passing cohort
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question__just_send_by_email__passing_cohort(self):
@@ -316,6 +320,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 Answer are generate and send in a email and slack
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question__send_by_email_and_slack(self):
@@ -382,6 +387,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 Send question in english
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question__with_cohort_lang_en(self):
@@ -449,6 +455,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 Send question in spanish
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question__with_cohort_lang_es(self):

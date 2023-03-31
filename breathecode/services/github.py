@@ -19,12 +19,12 @@ class Github:
 
     def post(self, action_name, request_data={}):
         return self._call('POST', action_name, json=request_data)
-    
+
     def delete(self, action_name, request_data={}):
         return self._call('DELETE', action_name, params=request_data)
 
     def _call(self, method_name, action_name, params=None, json=None):
-
+        
         self.headers = {
             'Authorization': 'Bearer ' + self.token,
             'Content-type': 'application/json',
@@ -43,19 +43,27 @@ class Github:
                                 json=json,
                                 timeout=2)
 
-        if resp.status_code == 200:
+        if resp.status_code >= 200 and resp.status_code < 300:
             data = None
             if method_name != 'DELETE':
                 data = resp.json()
-                
+
             # if data['ok'] == False:
             #     raise Exception('Github API Error ' + data['error'])
             # else:
-            logger.debug(f'Successfull call {method_name}: /{action_name}')
             return data
         else:
+            logger.debug(f'Error call {method_name}: /{action_name}')
+            error_message = str(resp.status_code)
+            try:
+                error = resp.json()
+                error_message = error['message']
+                logger.debug(error)
+            except:
+                pass
+
             raise Exception(
-                f'Unable to communicate with Github API for {action_name}, error: {resp.status_code}')
+                f'Unable to communicate with Github API for {action_name}, error: {error_message}')
 
     def get_machines_types(self, repo_name):
         return self.get(f'/repos/{self.org}/{repo_name}/codespaces/machines')

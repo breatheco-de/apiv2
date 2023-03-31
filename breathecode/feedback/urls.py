@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (AnswerMeView, GetAnswerView, track_survey_open, get_survey_questions, SurveyView,
-                    AcademyAnswerView, ReviewView, get_review_platform)
+                    AcademyAnswerView, get_reviews, ReviewView, get_review_platform)
 
 app_name = 'feedback'
 urlpatterns = [
@@ -10,6 +10,7 @@ urlpatterns = [
     path('academy/survey', SurveyView.as_view(), name='academy_survey'),
     path('academy/survey/<int:survey_id>', SurveyView.as_view(), name='academy_survey_id'),
     path('user/me/survey/<int:survey_id>/questions', get_survey_questions),
+    path('review', get_reviews, name='review'),
     path('academy/review', ReviewView.as_view(), name='review'),
     path('academy/review/<int:review_id>', ReviewView.as_view(), name='review_id'),
     path('review_platform', get_review_platform, name='review_platform'),

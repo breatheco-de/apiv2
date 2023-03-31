@@ -10,4 +10,7 @@ academy_saved = Signal()
 
 # happens when any asset gets update inside the syllabus json for any version
 syllabus_asset_slug_updated = Signal()
+
+syllabus_version_json_updated = Signal()
+
 timeslot_saved = Signal()

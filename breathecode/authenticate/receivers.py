@@ -6,7 +6,7 @@ from django.db.models.signals import post_delete, post_save
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.admissions.models import CohortUser
 from django.dispatch import receiver
-from .actions import remove_from_organization, add_to_organization
+from .tasks import async_remove_from_organization, async_add_to_organization
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.mentorship.models import MentorProfile
 
@@ -81,6 +81,6 @@ def unset_user_group(sender, instance, **kwargs):
 @receiver(student_edu_status_updated, sender=CohortUser)
 def post_save_cohort_user(sender, instance, **kwargs):
     if instance.educational_status == 'ACTIVE':
-        add_to_organization(instance.cohort.id, instance.user.id)
+        async_add_to_organization(instance.cohort.id, instance.user.id)
     else:
-        remove_from_organization(instance.cohort.id, instance.user.id)
+        async_remove_from_organization(instance.cohort.id, instance.user.id)

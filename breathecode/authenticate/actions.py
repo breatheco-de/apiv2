@@ -454,7 +454,12 @@ def sync_organization_members(academy_id, only_status=[]):
         storage_log=[GithubAcademyUser.create_log('This user needs connect to github')])
 
     gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
-    members = gb.get_org_members()
+
+    try:
+        members = gb.get_org_members()
+    except Exception as e:
+        settings.add_error('Error fetching members from org: ' + str(e))
+        raise e
 
     remaining_usernames = set([m['login'] for m in members])
 
@@ -481,7 +486,11 @@ def sync_organization_members(academy_id, only_status=[]):
                 if settings.github_default_team_ids != '':
                     teams = [int(id) for id in settings.github_default_team_ids.split(',')]
 
-                gb.invite_org_member(github.email, team_ids=teams)
+                try:
+                    gb.invite_org_member(github.email, team_ids=teams)
+                except Exception as e:
+                    settings.add_error('Error inviting member to org: ' + str(e))
+                    raise e
                 _member.storage_status = 'SYNCHED'
                 _member.log(f'Sent invitation to {github.email}')
                 _member.storage_action == 'INVITE'
@@ -501,7 +510,11 @@ def sync_organization_members(academy_id, only_status=[]):
                     | Q(username=github.username)).filter(academy__slug__in=academy_slugs).exclude(
                         storage_status__in=['DELETE']).exclude(id=_member.id).first()
                 if added_elsewere is None:
-                    gb.delete_org_member(github.username)
+                    try:
+                        gb.delete_org_member(github.username)
+                    except Exception as e:
+                        settings.add_error('Error deleting member from org: ' + str(e))
+                        raise e
                     _member.log('Successfully deleted in github organization')
                 else:
                     _member.log(
