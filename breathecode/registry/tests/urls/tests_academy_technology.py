@@ -257,12 +257,55 @@ class RegistryTestSuite(RegistryTestCase):
         )
         query = random.choices(cases)
 
+        #sort_priority = random.choice(cases)
+
+        asset_technologies = [
+            {
+                #'sort_priority': sort_priority,
+                'slug': self.bc.fake.slug(),
+                'title': self.bc.fake.slug()
+            } for _ in range(0, 2)
+        ]
+
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     role=1,
+                                     asset_technology=asset_technologies,
+                                     capability='read_technology')
+
+        self.headers(academy=model.academy.id)
+
+        url = reverse_lazy('registry:academy_technology') + f'?sort_priority={query}'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [
+            get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of('registry.AssetTechnology'),
+            self.bc.format.to_dict(model.asset_technology),
+        )
+
+        # teardown
+        self.bc.database.delete('registry.AssetTechnology')
+
+    def test_with_two_asset_technologies__passing_sort_priority__found(self):
+        cases = (
+            1,
+            2,
+            3,
+        )
+        query = random.choices(cases)
+
         sort_priority = random.choice(cases)
 
         asset_technologies = [{
             'sort_priority': sort_priority,
-            'slug': self.bc.fake.slug,
-            'title': self.bc.fake.slug
+            'slug': self.bc.fake.slug(),
+            'title': self.bc.fake.slug()
         } for _ in range(0, 2)]
 
         model = self.generate_models(authenticate=True,
