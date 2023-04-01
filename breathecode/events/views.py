@@ -193,38 +193,45 @@ class MeLiveClassView(APIView):
         else:
             return {f'{prefix}slug': pk}
 
-    def get(self, request, format=None):
+    def get(self, request):
         handler = self.extensions(request)
 
-        items = LiveClass.objects.filter(cohort_time_slot__cohort__cohortuser__user=request.user)
-        lookup = {}
+        # mode = handler.lookup.mode
+        lang = get_user_language(request)
 
-        if cohort := self.request.GET.get('cohort', ''):
-            lookup.update(self._get_lookup(cohort, 'cohort_time_slot__cohort__'))
+        def upcoming(value):
+            return Q(ended_at__isnull=value == 'true')
 
-        if academy := self.request.GET.get('academy', ''):
-            lookup.update(self._get_lookup(academy, 'cohort_time_slot__cohort__academy__'))
+        query = handler.lookup.build(
+            LiveClass,
+            lang,
+            fields={
+                'exact': [
+                    'remote_meeting_url',
+                ],
+                'gte': ['starting_at'],
+                'lte': ['ending_at'],
+                'id': [
+                    'cohort_time_slot__cohort',
+                    'cohort_time_slot__cohort__academy',
+                    'cohort_time_slot__cohort__syllabus_version__syllabus',
+                ],
+                # 'is_null': ['ended_at'],
+            },
+            overwrite={
+                'cohort': 'cohort_time_slot__cohort',
+                'academy': 'cohort_time_slot__cohort__academy',
+                'syllabus': 'cohort_time_slot__cohort__syllabus_version__syllabus',
+                'start': 'starting_at',
+                'end': 'ending_at',
+                # 'upcoming': 'ended_at',
+            },
+            custom_fields={
+                'upcoming': upcoming,
+            },
+        )
 
-        if syllabus := self.request.GET.get('syllabus', ''):
-            lookup.update(self._get_lookup(syllabus,
-                                           'cohort_time_slot__cohort__syllabus_version__syllabus__'))
-
-        upcoming = self.request.GET.get('upcoming', '')
-        if upcoming == 'true':
-            lookup['ended_at__isnull'] = True
-
-        elif upcoming == 'false':
-            lookup['ended_at__isnull'] = False
-
-        start = self.request.GET.get('start', '')
-        if start:
-            lookup['starting_at__gte'] = start
-
-        end = self.request.GET.get('end', '')
-        if end:
-            lookup['ending_at__lte'] = end
-
-        items = items.filter(**lookup)
+        items = LiveClass.objects.filter(query, cohort_time_slot__cohort__cohortuser__user=request.user)
 
         items = handler.queryset(items)
         serializer = GetLiveClassSerializer(items, many=True)
