@@ -19,33 +19,32 @@ class LookupExtension(ExtensionBase):
               overwrite: dict = dict()) -> tuple[tuple, dict]:
         result = Q()
 
-        extra = {}
+        kwargs = {}
         for key in fields:
-            extra[key] = tuple(fields[key])
+            kwargs[key] = tuple(fields[key])
 
-        alias2 = [(y, x) for x, y in overwrite.items()]
+        alias = [(y, x) for x, y in overwrite.items()]
 
         # get cache of lookups
-        lookups = build_lookups(model, frozenset(custom_fields.items()), frozenset(alias2), **extra)
-
-        alias = dict(overwrite)
+        lookups = build_lookups(model, frozenset(custom_fields.items()), frozenset(alias), **kwargs)
 
         for key in self._request.GET:
-            name = alias.get(key, key)
+            name = overwrite.get(key, key)
 
             if key in custom_fields:
                 value = self._request.GET.get(key)
                 result &= custom_fields[key](value)
+                continue
 
             if name in lookups:
 
-                field, validator = lookups[name].handlers()
+                get_value, validator = lookups[name].handlers()
                 value = self._request.GET.get(key)
 
                 if validator is not None:
                     value = validator(lang, value)
 
-                result &= field(value)
+                result &= get_value(value)
 
         return result
 
