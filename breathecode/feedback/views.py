@@ -338,7 +338,16 @@ def get_reviews(request):
                                   total_rating__isnull=False,
                                   total_rating__gt=0,
                                   total_rating__lte=10).exclude(comments__exact='')
+
     lookup = {}
+
+    if 'academy' in request.GET:
+        param = request.GET.get('academy')
+        lookup['cohort__academy__id'] = param
+
+    if 'lang' in request.GET:
+        param = request.GET.get('lang')
+        lookup['lang'] = param
 
     items = items.filter(**lookup).order_by('-created_at')
 

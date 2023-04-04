@@ -7,6 +7,8 @@ from django.http import HttpResponse
 from django.core.validators import URLValidator
 from .tasks import async_pull_from_github, async_create_asset_thumbnail_legacy
 from breathecode.services.seo import SEOAnalyzer
+from breathecode.utils.i18n import translation
+from breathecode.authenticate.actions import get_user_language
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment, SEOReport, OriginalityScan)
 
@@ -122,6 +124,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
     @capable_of('read_technology')
     def get(self, request, academy_id=None):
+        lang = get_user_language(request)
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
@@ -139,6 +142,20 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
             if param == 'en':
                 param = 'us'
             items = items.filter(Q(lang__iexact=param) | Q(lang='') | Q(lang__isnull=True))
+
+        if 'sort_priority' in self.request.GET:
+            param = self.request.GET.get('sort_priority')
+            try:
+                param = int(param)
+
+                lookup['sort_priority__iexact'] = param
+
+            except Exception as e:
+                raise ValidationException(
+                    translation(lang,
+                                en='The parameter must be an integer',
+                                es='El parametró debe ser un entero',
+                                slug='not-an-integer'))
 
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')
