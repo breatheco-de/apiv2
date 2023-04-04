@@ -44,7 +44,7 @@ from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
 from .actions import (generate_academy_token, resend_invite, reset_password, set_gitpod_user_expiration,
-                      update_gitpod_users, sync_organization_members)
+                      update_gitpod_users, sync_organization_members, get_github_scopes)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
@@ -806,7 +806,7 @@ def get_github_token(request, token=None):
         else:
             url = url + f'&user={token}'
 
-    scope = request.query_params.get('scope', 'user repo read:org')
+    scope = request.query_params.get('scope', 'user repo read:org admin:org')
     try:
         scope = base64.b64decode(scope.encode('utf-8')).decode('utf-8')
     except Exception as e:

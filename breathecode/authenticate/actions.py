@@ -23,6 +23,21 @@ from .models import (CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Ro
 logger = logging.getLogger(__name__)
 
 
+def get_github_scopes(user):
+
+    scopes = ['user']
+
+    belongs_to_academy = ProfileAcademy.objects.filter(user=user).exists()
+    if belongs_to_academy:
+        scopes.append('repo')
+
+    owns_github_organization = AcademyAuthSettings.objects.filter(github_owner=user).exists()
+    if owns_github_organization:
+        scopes.append('admin:org')
+
+    return ' '.join(scopes)
+
+
 def get_user(github_id=None, email=None):
     user = None
     if email is not None:
