@@ -153,8 +153,8 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
             except Exception as e:
                 raise ValidationException(
                     translation(lang,
-                                en='not a type integer on the parameter',
-                                es='no se encontro un un entero en este parametro',
+                                en='the parameter must be an integer',
+                                es='el parametro debe ser un entero',
                                 slug='not-an-integer'))
 
         if 'visibility' in self.request.GET:
