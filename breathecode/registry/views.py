@@ -7,6 +7,8 @@ from django.http import HttpResponse
 from django.core.validators import URLValidator
 from .tasks import async_pull_from_github, async_create_asset_thumbnail_legacy
 from breathecode.services.seo import SEOAnalyzer
+from breathecode.utils.i18n import translation
+from breathecode.authenticate.actions import get_user_language
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment, SEOReport, OriginalityScan)
 
@@ -122,6 +124,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
     @capable_of('read_technology')
     def get(self, request, academy_id=None):
+        lang = get_user_language(request)
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
@@ -145,17 +148,14 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
             try:
                 param = int(param)
 
-                if param != param.is_integer():
-                    raise ValidationException('not a type integer on the parameter', code=400)
-
-                items = items.filter(
-                    Q(sort_priority=param) | Q(sort_priority='') | Q(sort_priority__isnull=True))
+                lookup['sort_priority__iexact'] = param
 
             except Exception as e:
-                data = {
-                    'MESSAGE': f'Not an integer type in parameter: {param}',
-                    'TITLE': f'Not an integer type: {param}',
-                }
+                raise ValidationException(
+                    translation(lang,
+                                en='not a type integer on the parameter',
+                                es='no se encontro un un entero en este parametro',
+                                slug='not-an-integer'))
 
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')

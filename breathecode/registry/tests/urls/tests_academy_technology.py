@@ -251,21 +251,22 @@ class RegistryTestSuite(RegistryTestCase):
 
     def test_with_two_asset_technologies__passing_sort_priority__not_found(self):
         cases = (
-            1,
-            2,
-            3,
+            40,
+            50,
+            60,
         )
-        query = random.choices(cases)
+        query = random.choice(cases)
 
-        #sort_priority = random.choice(cases)
+        sort_priority = random.choice(cases)
 
-        asset_technologies = [
-            {
-                #'sort_priority': sort_priority,
-                'slug': self.bc.fake.slug(),
-                'title': self.bc.fake.slug()
-            } for _ in range(0, 2)
-        ]
+        while query == sort_priority:
+            sort_priority = random.choice(cases)
+
+        asset_technologies = [{
+            'sort_priority': sort_priority,
+            'slug': self.bc.fake.slug(),
+            'title': self.bc.fake.slug()
+        } for _ in range(0, 2)]
 
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
@@ -278,9 +279,7 @@ class RegistryTestSuite(RegistryTestCase):
         url = reverse_lazy('registry:academy_technology') + f'?sort_priority={query}'
         response = self.client.get(url)
         json = response.json()
-        expected = [
-            get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)
-        ]
+        expected = []
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -298,9 +297,9 @@ class RegistryTestSuite(RegistryTestCase):
             2,
             3,
         )
-        query = random.choices(cases)
+        query = random.choice(cases)
 
-        sort_priority = random.choice(cases)
+        sort_priority = query
 
         asset_technologies = [{
             'sort_priority': sort_priority,
