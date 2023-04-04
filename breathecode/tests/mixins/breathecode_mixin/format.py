@@ -6,9 +6,12 @@ from typing import Any
 from rest_framework.test import APITestCase
 from django.db.models import Model
 from django.db.models.query import QuerySet
+
 from . import interfaces
 
 from ..models_mixin import ModelsMixin
+import urllib.parse
+from django.db.models import Q
 
 __all__ = ['Format']
 
@@ -25,6 +28,86 @@ class Format:
     def __init__(self, parent, bc: interfaces.BreathecodeInterface) -> None:
         self._parent = parent
         self._bc = bc
+
+    def call(self, *args: Any, **kwargs: Any) -> str:
+        """
+        Wraps a call into it and return its args and kwargs.
+
+        example:
+
+        ```py
+        args, kwargs = self.bc.format.call(2, 3, 4, a=1, b=2, c=3)
+
+        assert args == (2, 3, 4)
+        assert kwargs == {'a': 1, 'b': 2, 'c': 3}
+        ```
+        """
+
+        return args, kwargs
+
+    def querystring(self, query: dict) -> str:
+        """
+        Build a querystring from a given dict.
+        """
+
+        return urllib.parse.urlencode(query)
+
+    def queryset(self, query: dict) -> str:
+        """
+        Build a QuerySet from a given dict.
+        """
+
+        return Q(**query)
+
+    # remove lang from args
+    def lookup(self, model: Any, lang: str, **kwargs) -> dict[str, Any]:
+        """
+        Generate from lookups the values in test side to be used in querystring.
+
+        example:
+
+        ```py
+        def upcoming():
+            return 'true' if bool(random.randbytes(1)) else 'false'
+
+        query = self.bc.format.lookup(
+            'events.LiveClass',
+            fields={
+                'exact': [
+                    'remote_meeting_url',
+                ],
+                'gte': ['starting_at'],
+                'lte': ['ending_at'],
+                'id': [
+                    'cohort_time_slot__cohort',
+                    'cohort_time_slot__cohort__academy',
+                    'cohort_time_slot__cohort__syllabus_version__syllabus',
+                ],
+                # 'is_null': ['ended_at'],
+            },
+            overwrite={
+                'cohort': 'cohort_time_slot__cohort',
+                'academy': 'cohort_time_slot__cohort__academy',
+                'syllabus': 'cohort_time_slot__cohort__syllabus_version__syllabus',
+                'start': 'starting_at',
+                'end': 'ending_at',
+                # 'upcoming': 'ended_at',
+            },
+            custom_fields={
+                'upcoming': upcoming,
+            },
+        )
+
+        url = reverse_lazy('events:me_event_liveclass') + '?' + self.bc.format.querystring(query)
+
+        # this test avoid to pass a invalid param to ORM
+        response = self.client.get(url)
+        ```
+        """
+        # avoid circular dependency
+        from breathecode.utils.api_view_extensions.extensions.lookup.tests.lookup_generator import lookup_generator
+
+        return lookup_generator(model, **kwargs)
 
     def table(self, arg: QuerySet) -> dict[str, Any] | list[dict[str, Any]]:
         """

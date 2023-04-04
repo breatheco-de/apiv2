@@ -1,24 +1,30 @@
-from datetime import datetime
-from enum import Enum, auto
-from typing import Any, Optional
-
-from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
-from django.core.handlers.wsgi import WSGIRequest
-from django.db.models.fields.related_descriptors import (ReverseManyToOneDescriptor, ManyToManyDescriptor,
-                                                         ForwardManyToOneDescriptor)
-from functools import cache
-
+from datetime import timedelta
+import random
+from breathecode.utils.api_view_extensions.extensions.lookup.fields.generic.lookup_field import LookupField
 from breathecode.utils.i18n import translation
-from django.db import models
 from django.db.models import Q
 
 from breathecode.utils.validation_exception import ValidationException
+from django.utils import timezone
 from ..mode import Mode
 
 __all__ = ['LookupExtension']
 
 
-class datetimeField:
+class DatetimeField(LookupField):
+
+    def generator(self) -> str:
+        delta = random.randint(0, 10000000)
+        sign = bool(random.randbytes(1))
+        date = timezone.now()
+
+        if sign:
+            date += timedelta(seconds=delta)
+
+        else:
+            date -= timedelta(seconds=delta)
+
+        return date.isoformat()
 
     def validator(self, lang, value):
         from django.utils import dateparse
@@ -56,9 +62,10 @@ class datetimeField:
         return Q(**{f'{self.prefix}{self.field}{self.suffix}': value})
 
     def append_prefix(self, prefix):
-        self.prefix = prefix
+        self.prefix = prefix + self.prefix
 
     def __init__(self, model, field, mode: Mode):
+        super().__init__(model, field, mode)
         self.model = model
         self.prefix = ''
         self.suffix = ''
@@ -66,6 +73,13 @@ class datetimeField:
         self.mode = mode
 
     def set_lookup(self):
+        if self.mode not in [
+                Mode.EXACT, Mode.YEAR, Mode.MONTH, Mode.DAY, Mode.HOUR, Mode.MINUTE, Mode.GREATER_THAN,
+                Mode.GREATER_THAN_EQUAL, Mode.LOWER_THAN, Mode.LOWER_THAN_EQUAL, Mode.IS_NULL
+        ]:
+
+            raise ValidationException(f'Mode {self.mode} is not supported for datetime field {self.field}')
+
         self.lookup = f'{self.prefix}{self.field}'
 
         if self.mode == Mode.EXACT:
@@ -101,13 +115,6 @@ class datetimeField:
         if self.mode == Mode.IS_NULL:
             self.suffix = '__isnull'
 
-        if self.mode not in [
-                Mode.EXACT, Mode.YEAR, Mode.MONTH, Mode.DAY, Mode.HOUR, Mode.MINUTE, Mode.GREATER_THAN,
-                Mode.GREATER_THAN_EQUAL, Mode.LOWER_THAN, Mode.LOWER_THAN_EQUAL, Mode.IS_NULL
-        ]:
-
-            raise ValidationException(f'Mode {self.mode} is not supported for datetime field {self.field}')
-
     def handlers(self):
         self.set_lookup()
-        return self.value, self.validator
+        return self.value, self.validator, self.generator

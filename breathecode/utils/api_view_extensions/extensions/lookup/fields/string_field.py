@@ -1,16 +1,5 @@
-from datetime import datetime
-from enum import Enum, auto
-from typing import Any, Optional
-
-from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
-from django.core.handlers.wsgi import WSGIRequest
-from django.db.models.fields.related_descriptors import (ReverseManyToOneDescriptor, ManyToManyDescriptor,
-                                                         ForwardManyToOneDescriptor)
-from functools import cache
-
-from breathecode.utils.i18n import translation
-from django.db import models
 from django.db.models import Q
+from breathecode.utils.api_view_extensions.extensions.lookup.fields.generic.lookup_field import LookupField
 
 from breathecode.utils.validation_exception import ValidationException
 from ..mode import Mode
@@ -18,15 +7,19 @@ from ..mode import Mode
 __all__ = ['LookupExtension']
 
 
-class StringField:
+class StringField(LookupField):
+
+    def generator(self) -> str:
+        return self.fake.slug()
 
     def value(self, value):
         return Q(**{self.prefix + self.lookup + self.suffix: value})
 
     def append_prefix(self, prefix):
-        self.prefix = prefix
+        self.prefix = prefix + self.prefix
 
     def __init__(self, model, field, mode: Mode):
+        super().__init__(model, field, mode)
         self.model = model
         self.prefix = ''
         self.suffix = ''
@@ -34,6 +27,13 @@ class StringField:
         self.mode = mode
 
     def set_lookup(self):
+        if self.mode not in [
+                Mode.EXACT, Mode.IN, Mode.CONTAINS, Mode.INSENSITIVE_CONTAINS, Mode.INSENSITIVE_EXACT,
+                Mode.STARTS_WITH, Mode.ENDS_WITH
+        ]:
+
+            raise ValidationException(f'Mode {self.mode} is not supported for string field {self.field}')
+
         self.lookup = f'{self.prefix}{self.field}'
 
         if self.mode == Mode.EXACT:
@@ -58,12 +58,5 @@ class StringField:
             self.suffix = '__endswith'
 
     def handlers(self):
-        if self.mode not in [
-                Mode.EXACT, Mode.IN, Mode.CONTAINS, Mode.INSENSITIVE_CONTAINS, Mode.INSENSITIVE_EXACT,
-                Mode.STARTS_WITH, Mode.ENDS_WITH
-        ]:
-
-            raise ValidationException(f'Mode {self.mode} is not supported for string field {self.field}')
-
         self.set_lookup()
-        return self.value, None
+        return self.value, None, self.generator

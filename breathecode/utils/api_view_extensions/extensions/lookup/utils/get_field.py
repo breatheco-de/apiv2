@@ -1,5 +1,5 @@
 from typing import Any
-from breathecode.utils.api_view_extensions.extensions.lookup.fields.datetime_field import datetimeField
+from breathecode.utils.api_view_extensions.extensions.lookup.fields.datetime_field import DatetimeField
 from breathecode.utils.api_view_extensions.extensions.lookup.fields.id_field import IDField
 from breathecode.utils.api_view_extensions.extensions.lookup.fields.integer_field import IntegerField
 from breathecode.utils.api_view_extensions.extensions.lookup.fields.string_field import StringField
@@ -31,10 +31,10 @@ def get_field(field: Any, mode: Mode, handler: Any):
         return date_field(field, mode)
 
     if field_class == models.DateTimeField:
-        return datetimeField(handler.field.related_model, field, mode)
+        return DatetimeField(handler.field.related_model, field, mode)
 
     if field_class == models.BigIntegerField:
-        return datetimeField(handler.field.related_model, field, mode)
+        return DatetimeField(handler.field.related_model, field, mode)
 
     if field_class == models.ForeignKey:
         return IDField(handler.field.related_model, field, mode)
@@ -43,7 +43,7 @@ def get_field(field: Any, mode: Mode, handler: Any):
         return many_to_many_field(field, mode)
 
     if field_class == models.OneToOneField:
-        return one_to_one_field(field, mode)
+        return IDField(field, mode)
 
     if field_class == models.JSONField:
         return json_field(field, mode)
