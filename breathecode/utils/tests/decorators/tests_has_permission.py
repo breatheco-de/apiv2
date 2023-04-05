@@ -1006,7 +1006,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = get_consumer
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -1062,7 +1062,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = get_consumer
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -1216,7 +1216,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = get_id_consumer
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -1273,7 +1273,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = get_id_consumer
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -1428,7 +1428,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = post_consumer
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -1484,7 +1484,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = post_consumer
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -1638,7 +1638,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = put_id_consumer
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -1695,7 +1695,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = put_id_consumer
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -1850,7 +1850,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = delete_id_consumer
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -1907,7 +1907,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         view = delete_id_consumer
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -2070,7 +2070,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = get_consumer_callback
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -2164,7 +2164,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = get_consumer_callback
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -2258,7 +2258,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = get_consumer_callback
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -2583,7 +2583,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = get_id_consumer_callback
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -2678,7 +2678,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = get_id_consumer_callback
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -2773,7 +2773,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = get_id_consumer_callback
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -3102,7 +3102,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = post_consumer_callback
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -3196,7 +3196,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = post_consumer_callback
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -3290,7 +3290,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = post_consumer_callback
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -3615,7 +3615,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = put_id_consumer_callback
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -3710,7 +3710,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = put_id_consumer_callback
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -3805,7 +3805,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = put_id_consumer_callback
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -4134,7 +4134,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = delete_id_consumer_callback
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -4229,7 +4229,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = delete_id_consumer_callback
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -4325,7 +4325,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         view = delete_id_consumer_callback
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -5268,7 +5268,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -5324,7 +5324,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -5449,7 +5449,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -5505,7 +5505,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -5630,7 +5630,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -5686,7 +5686,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -5811,7 +5811,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -5867,7 +5867,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -5992,7 +5992,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -6048,7 +6048,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         view = TestViewConsumer.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -6187,7 +6187,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -6285,7 +6285,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -6670,7 +6670,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -6768,7 +6768,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -7157,7 +7157,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -7255,7 +7255,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -7640,7 +7640,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -7738,7 +7738,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -8129,7 +8129,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
@@ -8227,7 +8227,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         view = TestViewConsumerCallback.as_view()
 
         response = view(request, id=1).render()
-        expected = {'detail': 'not-enough-consumables', 'status_code': 402}
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)

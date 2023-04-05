@@ -64,8 +64,8 @@ class TokenTestSuite(AuthTestCase):
         # the behavior of permissions is not exact, this changes every time you add a model
         self.latest_content_type_id = content_type.id
         self.latest_permission_id = permission.id
-        self.job_content_type_id = self.latest_content_type_id - 29
-        self.can_delete_job_permission_id = self.latest_permission_id - 117
+        self.job_content_type_id = self.latest_content_type_id - 37
+        self.can_delete_job_permission_id = self.latest_permission_id - 149
 
     """
     🔽🔽🔽 format of PERMISSIONS
