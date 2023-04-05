@@ -855,7 +855,7 @@ class PUTGithubUserSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
 
-        if instance.storage_action != validated_data['storage_action']:
+        if instance.storage_action != validated_data['storage_action'] or instance.storage_action == "ADD":
             # manually ignoring a contact is synched immediately
             if validated_data['storage_action'] == 'IGNORE':
                 validated_data['storage_status'] = 'SYNCHED'
