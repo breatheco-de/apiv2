@@ -663,6 +663,10 @@ def pull_learnpack_asset(github, asset, override_meta):
             if 'url' in asset.delivery_formats:
                 if 'regex' in config['delivery'] and isinstance(config['delivery']['regex'], str):
                     asset.delivery_regex_url = config['delivery']['regex'].replace('\\\\', '\\')
+        else:
+          asset.delivery_instructions = ""
+          asset.delivery_formats = "url"
+          asset.delivery_regex_url = ""
 
     return asset
 
