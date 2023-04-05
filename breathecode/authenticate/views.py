@@ -1508,7 +1508,7 @@ def render_user_invite(request, token):
 
                 cu = CohortUser.objects.filter(user=token.user, cohort=invite.cohort).first()
                 if cu is None:
-                    cu = CohortUser(user=token.user, cohort=invite.cohort, role=role)
+                    cu = CohortUser(user=token.user, cohort=invite.cohort, role=role, educational_status='ACTIVE')
                     cu.save()
 
             invite.status = 'ACCEPTED'
