@@ -221,7 +221,6 @@
         "UPDATE",
         "EXECUTE",
         "BOOLEAN",
-        "LOCATION",
         "SEARCH",
         "OWNER",
         "GOTO",
