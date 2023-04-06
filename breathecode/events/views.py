@@ -226,7 +226,7 @@ class MeLiveClassView(APIView):
 
 
 @private_view()
-@has_permission('live_class_join', consumer=live_class_by_url_param, html=True)
+@has_permission('live_class_join', consumer=live_class_by_url_param, format='html')
 def join_live_class(request, token, live_class, lang):
     now = timezone.now()
 
@@ -723,7 +723,7 @@ class EventTypeVisibilitySettingView(APIView):
 
 
 @private_view()
-@has_permission('event_join', consumer=event_by_url_param, html=True)
+@has_permission('event_join', consumer=event_by_url_param, format='html')
 def join_event(request, token, event):
     now = timezone.now()
 

@@ -112,98 +112,98 @@ class ConsumerTestSuite(WebsocketTestCase):
         # Close
         await communicator.disconnect()
 
-    # async def test__async__with_capability(self):
-    #     token = {'token_type': 'one_time'}
-    #     permission = {'codename': permission1}
-    #     model = await self.bc.database.async_create(token=token, user=1, permission=permission)
+    async def test__async__with_capability(self):
+        token = {'token_type': 'one_time'}
+        permission = {'codename': permission1}
+        model = await self.bc.database.async_create(token=token, user=1, permission=permission)
 
-    #     communicator = WebsocketCommunicator(ROUTER, f'testws/async/?token={model.token.key}&academy=1')
-    #     connected, subprotocol = await communicator.connect()
+        communicator = WebsocketCommunicator(ROUTER, f'testws/async/?token={model.token.key}&academy=1')
+        connected, subprotocol = await communicator.connect()
 
-    #     self.assertTrue(connected)
+        self.assertTrue(connected)
 
-    #     message = await communicator.receive_json_from(MAX_TIMEOUT)
+        message = await communicator.receive_json_from(MAX_TIMEOUT)
 
-    #     self.assertEqual(message, {**ASYNC_RESPONSE, 'hash': hash(model.user)})
+        self.assertEqual(message, {**ASYNC_RESPONSE, 'hash': hash(model.user)})
 
-    #     # Close
-    #     await communicator.disconnect()
+        # Close
+        await communicator.disconnect()
 
-    # async def test__sync__without_token(self):
+    async def test__sync__without_token(self):
 
-    #     communicator = WebsocketCommunicator(ROUTER, 'testws/sync/')
-    #     connected, subprotocol = await communicator.connect()
+        communicator = WebsocketCommunicator(ROUTER, 'testws/sync/')
+        connected, subprotocol = await communicator.connect()
 
-    #     self.assertTrue(connected)
+        self.assertTrue(connected)
 
-    #     message = await communicator.receive_json_from(MAX_TIMEOUT)
+        message = await communicator.receive_json_from(MAX_TIMEOUT)
 
-    #     self.assertEqual(message, {'details': 'No credentials provided.', 'status_code': 401})
+        self.assertEqual(message, {'details': 'No credentials provided.', 'status_code': 401})
 
-    #     # Close
-    #     await communicator.disconnect()
+        # Close
+        await communicator.disconnect()
 
-    # async def test__sync__bad_token(self):
+    async def test__sync__bad_token(self):
 
-    #     communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={self.bc.fake.slug()}')
-    #     connected, subprotocol = await communicator.connect()
+        communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={self.bc.fake.slug()}')
+        connected, subprotocol = await communicator.connect()
 
-    #     self.assertTrue(connected)
+        self.assertTrue(connected)
 
-    #     message = await communicator.receive_json_from(MAX_TIMEOUT)
+        message = await communicator.receive_json_from(MAX_TIMEOUT)
 
-    #     self.assertEqual(message, {'details': 'Token not found', 'status_code': 401})
+        self.assertEqual(message, {'details': 'Token not found', 'status_code': 401})
 
-    #     # Close
-    #     await communicator.disconnect()
+        # Close
+        await communicator.disconnect()
 
-    # async def test__sync__with_token__bad_token_type(self):
-    #     types = ['permanent', 'temporal', 'login']
-    #     for t in types:
-    #         token = {'token_type': t}
-    #         model = await self.bc.database.async_create(token=token, user=1)
+    async def test__sync__with_token__bad_token_type(self):
+        types = ['permanent', 'temporal', 'login']
+        for t in types:
+            token = {'token_type': t}
+            model = await self.bc.database.async_create(token=token, user=1)
 
-    #         communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={model.token.key}')
-    #         connected, subprotocol = await communicator.connect()
+            communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={model.token.key}')
+            connected, subprotocol = await communicator.connect()
 
-    #         self.assertTrue(connected)
+            self.assertTrue(connected)
 
-    #         message = await communicator.receive_json_from(MAX_TIMEOUT)
+            message = await communicator.receive_json_from(MAX_TIMEOUT)
 
-    #         self.assertEqual(message, {'details': 'Token not found', 'status_code': 401})
+            self.assertEqual(message, {'details': 'Token not found', 'status_code': 401})
 
-    #         # Close
-    #         await communicator.disconnect()
+            # Close
+            await communicator.disconnect()
 
-    # async def test__sync__with_token(self):
-    #     token = {'token_type': 'one_time'}
-    #     model = await self.bc.database.async_create(token=token, user=1)
+    async def test__sync__with_token(self):
+        token = {'token_type': 'one_time'}
+        model = await self.bc.database.async_create(token=token, user=1)
 
-    #     communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={model.token.key}')
-    #     connected, subprotocol = await communicator.connect()
+        communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={model.token.key}')
+        connected, subprotocol = await communicator.connect()
 
-    #     self.assertTrue(connected)
+        self.assertTrue(connected)
 
-    #     message = await communicator.receive_json_from(MAX_TIMEOUT)
+        message = await communicator.receive_json_from(MAX_TIMEOUT)
 
-    #     self.assertEqual(message, {'details': 'without-permission', 'status_code': 403})
+        self.assertEqual(message, {'details': 'without-permission', 'status_code': 403})
 
-    #     # Close
-    #     await communicator.disconnect()
+        # Close
+        await communicator.disconnect()
 
-    # async def test__sync__with_capability(self):
-    #     token = {'token_type': 'one_time'}
-    #     permission = {'codename': permission2}
-    #     model = await self.bc.database.async_create(token=token, user=1, permission=permission)
+    async def test__sync__with_capability(self):
+        token = {'token_type': 'one_time'}
+        permission = {'codename': permission2}
+        model = await self.bc.database.async_create(token=token, user=1, permission=permission)
 
-    #     communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={model.token.key}&academy=1')
-    #     connected, subprotocol = await communicator.connect()
+        communicator = WebsocketCommunicator(ROUTER, f'testws/sync/?token={model.token.key}&academy=1')
+        connected, subprotocol = await communicator.connect()
 
-    #     self.assertTrue(connected)
+        self.assertTrue(connected)
 
-    #     message = await communicator.receive_json_from(MAX_TIMEOUT)
+        message = await communicator.receive_json_from(MAX_TIMEOUT)
 
-    #     self.assertEqual(message, {**SYNC_RESPONSE, 'hash': hash(model.user)})
+        self.assertEqual(message, {**SYNC_RESPONSE, 'hash': hash(model.user)})
 
-    #     # Close
-    #     await communicator.disconnect()
+        # Close
+        await communicator.disconnect()
