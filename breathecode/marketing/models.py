@@ -763,7 +763,8 @@ class CourseTranslation(models.Model):
         return f'{self.lang}: {self.title}'
 
     def save(self, *args, **kwargs):
-        for course_module in self.course_modules:
+        course_modules = self.course_modules or []
+        for course_module in course_modules:
             if course_module['name'] is None or course_module['name'] == '':
                 raise Exception(f'The module does not have a name.')
             if course_module['slug'] is None or course_module['slug'] == '':

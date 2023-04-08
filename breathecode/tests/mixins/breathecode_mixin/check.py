@@ -1,6 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Any
+from unittest.mock import call
 from rest_framework.test import APITestCase
 from django.db.models import Model
 from django.db.models.query import QuerySet
@@ -94,6 +95,24 @@ class Check:
             original = self._fill_partial_equality(first, second)
 
         self._parent.assertEqual(original, second)
+
+    def calls(self, first: list[call], second: list[call]) -> None:
+        """
+        Fail if the two objects are partially unequal as determined by the '==' operator.
+
+        Usage:
+
+        ```py
+        self.bc.check.calls(mock.call_args_list, [call(1, 2, a=3, b=4)])
+        ```
+        """
+
+        assert len(first) == len(second)
+        for i in range(0, len(first)):
+            self._parent.assertEqual(first[i].args, second[i].args, msg=f'args in index {i} does not match')
+            self._parent.assertEqual(first[i].kwargs,
+                                     second[i].kwargs,
+                                     msg=f'kwargs in index {i} does not match')
 
     def _fill_partial_equality(self, first: dict, second: dict) -> dict:
         original = {}

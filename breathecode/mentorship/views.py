@@ -423,7 +423,7 @@ class ForwardMeetUrl:
 
 
 @private_view()
-# @has_permission('join_mentorship', consumer=mentorship_service_by_url_param, html=True)
+# @has_permission('join_mentorship', consumer=mentorship_service_by_url_param, format='html')
 def forward_meet_url(request, mentor_slug, service_slug, token):
     handler = ForwardMeetUrl(request, mentor_slug, service_slug, token)
     return handler()

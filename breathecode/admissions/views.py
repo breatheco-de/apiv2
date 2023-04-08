@@ -152,8 +152,8 @@ def get_cohorts(request, id=None):
     upcoming = request.GET.get('upcoming', None)
     if upcoming == 'true':
         now = timezone.now()
-        items = items.filter(Q(kickoff_date__gte=now)| Q(never_ends=True))
-        
+        items = items.filter(Q(kickoff_date__gte=now) | Q(never_ends=True))
+
     never_ends = request.GET.get('never_ends', None)
     if never_ends == 'false':
         items = items.filter(never_ends=False)

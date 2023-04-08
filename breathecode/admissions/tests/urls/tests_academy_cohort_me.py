@@ -865,7 +865,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(
             str(APIViewExtensionHandlers._spy_extensions.call_args_list),
             str([
-                call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
+                call([
+                    'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
+                    'SortExtension'
+                ]),
             ]))
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

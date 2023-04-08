@@ -30,23 +30,3 @@ def cohort_by_header(context: PermissionContextType, args: tuple, kwargs: dict) 
     context['consumables'] = context['consumables'].filter(**kwargs)
 
     return (context, args, kwargs)
-
-
-#FIXME: ???
-def cohort_schedule_by_url_param(context: PermissionContextType, args: tuple,
-                                 kwargs: dict) -> tuple[dict, tuple, dict]:
-
-    # lang = get_user_language(request)
-
-    # schedule = LiveClass.objects.filter(id=cohort_schedule_id).first()
-    # if not schedule:
-    #     raise ValidationException(lang,
-    #                                 en='Schedule not found',
-    #                                 es='Horario no encontrado',
-    #                                 slug='schedule_not_found')
-
-    context['consumables'] = context['consumables'].filter(id=kwargs.get('service_id'))
-
-    context['time_of_life'] = timedelta(hours=2)
-
-    return (context, args, kwargs)
