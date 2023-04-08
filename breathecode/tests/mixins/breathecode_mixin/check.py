@@ -103,27 +103,7 @@ class Check:
         Usage:
 
         ```py
-        obj1 = {'key1': 1, 'key2': 2}
-        obj2 = {'key2': 2, 'key3': 1}
-        obj3 = {'key2': 2}
-
-        # it's fail because the key3 is not in the obj1
-        self.bc.check.partial_equality(obj1, obj2)  # 🔴
-
-        # it's fail because the key1 is not in the obj2
-        self.bc.check.partial_equality(obj2, obj1)  # 🔴
-
-        # it's pass because the key2 exists in the obj1
-        self.bc.check.partial_equality(obj1, obj3)  # 🟢
-
-        # it's pass because the key2 exists in the obj2
-        self.bc.check.partial_equality(obj2, obj3)  # 🟢
-
-        # it's fail because the key1 is not in the obj3
-        self.bc.check.partial_equality(obj3, obj1)  # 🔴
-
-        # it's fail because the key3 is not in the obj3
-        self.bc.check.partial_equality(obj3, obj2)  # 🔴
+        self.bc.check.calls(mock.call_args_list, [call(1, 2, a=3, b=4)])
         ```
         """
 

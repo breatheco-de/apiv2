@@ -150,34 +150,32 @@ class Format:
         example:
 
         ```py
-        def upcoming():
-            return 'true' if bool(random.randbytes(1)) else 'false'
-
         query = self.bc.format.lookup(
-            'events.LiveClass',
-            fields={
+            'en',
+            strings={
                 'exact': [
                     'remote_meeting_url',
                 ],
+            },
+            bools={
+                'is_null': ['ended_at'],
+            },
+            datetimes={
                 'gte': ['starting_at'],
                 'lte': ['ending_at'],
-                'id': [
-                    'cohort_time_slot__cohort',
-                    'cohort_time_slot__cohort__academy',
-                    'cohort_time_slot__cohort__syllabus_version__syllabus',
-                ],
-                # 'is_null': ['ended_at'],
             },
+            slugs=[
+                'cohort_time_slot__cohort',
+                'cohort_time_slot__cohort__academy',
+                'cohort_time_slot__cohort__syllabus_version__syllabus',
+            ],
             overwrite={
                 'cohort': 'cohort_time_slot__cohort',
                 'academy': 'cohort_time_slot__cohort__academy',
                 'syllabus': 'cohort_time_slot__cohort__syllabus_version__syllabus',
                 'start': 'starting_at',
                 'end': 'ending_at',
-                # 'upcoming': 'ended_at',
-            },
-            custom_fields={
-                'upcoming': upcoming,
+                'upcoming': 'ended_at',
             },
         )
 
