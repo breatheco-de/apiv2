@@ -1,6 +1,7 @@
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
+import itertools
 
 CONTENT_TYPE_PROPS = {
     'app_label': 'breathecode',
@@ -45,6 +46,16 @@ PERMISSIONS = [
         'codename': 'join_mentorship',
     },
     {
+        'name': 'Join live class',
+        'description': 'Join live class',
+        'codename': 'live_class_join',
+    },
+    {
+        'name': 'Join event',
+        'description': 'Join event',
+        'codename': 'event_join',
+    },
+    {
         'name': 'Get my containers',
         'description': 'Get provisioning containers',
         'codename': 'get_containers',
@@ -55,26 +66,47 @@ GROUPS = [
     {
         'name': 'Admin',
         'permissions': [x['codename'] for x in PERMISSIONS],
+        'inherit': []
     },
     {
         'name': 'Default',
         'permissions': ['get_my_profile', 'create_my_profile', 'update_my_profile'],
+        'inherit': []
     },
     {
         'name': 'Student',
         'permissions': ['get_my_certificate', 'get_containers'],
+        'inherit': []
     },
     {
         'name': 'Teacher',
         'permissions': [],
+        'inherit': []
     },
     {
         'name': 'Mentor',
         'permissions': ['get_my_mentoring_sessions'],
+        'inherit': []
     },
     {
         'name': 'Mentorships',
-        'permissions': ['join_mentorship'],
+        'permissions': ['join_mentorship', 'get_my_mentoring_sessions'],
+        'inherit': []
+    },
+    {
+        'name': 'Events',
+        'permissions': ['event_join'],
+        'inherit': []
+    },
+    {
+        'name': 'Classes',
+        'permissions': ['live_class_join'],
+        'inherit': []
+    },
+    {
+        'name': 'Legacy',
+        'permissions': [],
+        'inherit': ['Classes', 'Events', 'Mentorships']
     },
 ]
 
@@ -135,5 +167,10 @@ class Command(BaseCommand):
             if group['name'] == 'Admin':
                 instance.permissions.set(Permission.objects.filter().exclude(content_type=content_type))
 
-            for permission in group['permissions']:
+            permissions = list(
+                itertools.chain.from_iterable(
+                    [group['permissions']] +
+                    [x['permissions'] for x in groups if x['name'] in group['inherit']]))
+
+            for permission in permissions:
                 instance.permissions.add(permission_instances[permission])

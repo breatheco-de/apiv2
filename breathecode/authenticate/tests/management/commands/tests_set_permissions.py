@@ -34,14 +34,22 @@ GROUPS = [
     {
         'name': 'Admin',
         'permissions': [x['codename'] for x in PERMISSIONS],
+        'inherit': []
     },
     {
         'name': 'Default',
         'permissions': ['delete_job', 'get_my_profile', 'create_my_profile', 'update_my_profile'],
+        'inherit': []
     },
     {
         'name': 'Student',
         'permissions': ['delete_job', 'get_my_profile', 'create_my_profile', 'update_my_profile'],
+        'inherit': []
+    },
+    {
+        'name': 'Legacy',
+        'permissions': [],
+        'inherit': ['Default', 'Student', 'Legacy']
     },
 ]
 
@@ -95,7 +103,10 @@ class TokenTestSuite(AuthTestCase):
             for permission in group['permissions']:
                 self.assertRegex(permission, r'^[a-z_]+$')
 
-            self.assertEqual(len(group), 2)
+            for g in group['inherit']:
+                self.assertTrue(g in [x['name'] for x in GROUPS])
+
+            self.assertEqual(len(group), 3)
 
     """
     🔽🔽🔽 execute successfully
@@ -157,6 +168,10 @@ class TokenTestSuite(AuthTestCase):
             {
                 'id': 3,
                 'name': 'Student'
+            },
+            {
+                'id': 4,
+                'name': 'Legacy'
             },
         ])
 
@@ -346,6 +361,10 @@ class TokenTestSuite(AuthTestCase):
                 'id': 3,
                 'name': 'Student'
             },
+            {
+                'id': 4,
+                'name': 'Legacy'
+            },
         ])
 
         self.assertEqual(
@@ -429,6 +448,35 @@ class TokenTestSuite(AuthTestCase):
                         'name': 'Update my profile'
                     },
                 ])
+
+        self.assertEqual(
+            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Legacy').first().permissions.all())),
+            [
+                {
+                    'codename': 'delete_job',
+                    'content_type_id': self.job_content_type_id,
+                    'id': self.can_delete_job_permission_id,
+                    'name': 'Can delete job'
+                },
+                {
+                    'codename': 'get_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 1,
+                    'name': 'Get my profile'
+                },
+                {
+                    'codename': 'create_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 2,
+                    'name': 'Create my profile'
+                },
+                {
+                    'codename': 'update_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 3,
+                    'name': 'Update my profile'
+                },
+            ])
 
     """
     🔽🔽🔽 execute, if it emit a exception, this test fail

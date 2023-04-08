@@ -192,21 +192,24 @@ class MeLiveClassView(APIView):
         lang = get_user_language(request)
 
         query = handler.lookup.build(
-            LiveClass,
             lang,
-            fields={
+            strings={
                 'exact': [
                     'remote_meeting_url',
                 ],
-                'gte': ['starting_at'],
-                'lte': ['ending_at'],
-                'id': [
-                    'cohort_time_slot__cohort',
-                    'cohort_time_slot__cohort__academy',
-                    'cohort_time_slot__cohort__syllabus_version__syllabus',
-                ],
+            },
+            bools={
                 'is_null': ['ended_at'],
             },
+            datetimes={
+                'gte': ['starting_at'],
+                'lte': ['ending_at'],
+            },
+            slugs=[
+                'cohort_time_slot__cohort',
+                'cohort_time_slot__cohort__academy',
+                'cohort_time_slot__cohort__syllabus_version__syllabus',
+            ],
             overwrite={
                 'cohort': 'cohort_time_slot__cohort',
                 'academy': 'cohort_time_slot__cohort__academy',
@@ -251,23 +254,26 @@ class AcademyLiveClassView(APIView):
         lang = get_user_language(request)
 
         query = handler.lookup.build(
-            LiveClass,
             lang,
-            fields={
+            strings={
                 'exact': [
                     'remote_meeting_url',
-                    'cohort_time_slot__cohort__cohortuser__user',
                     'cohort_time_slot__cohort__cohortuser__user__email',
                 ],
-                'gte': ['starting_at'],
-                'lte': ['ending_at'],
-                'id': [
-                    'cohort_time_slot__cohort',
-                    'cohort_time_slot__cohort__academy',
-                    'cohort_time_slot__cohort__syllabus_version__syllabus',
-                ],
+            },
+            bools={
                 'is_null': ['ended_at'],
             },
+            datetimes={
+                'gte': ['starting_at'],
+                'lte': ['ending_at'],
+            },
+            slugs=[
+                'cohort_time_slot__cohort__cohortuser__user',
+                'cohort_time_slot__cohort',
+                'cohort_time_slot__cohort__academy',
+                'cohort_time_slot__cohort__syllabus_version__syllabus',
+            ],
             overwrite={
                 'cohort': 'cohort_time_slot__cohort',
                 'academy': 'cohort_time_slot__cohort__academy',

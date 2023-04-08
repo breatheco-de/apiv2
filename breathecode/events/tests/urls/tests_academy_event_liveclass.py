@@ -31,6 +31,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: I call the API without authentication
     # Then: I should get a 401 error
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     def test_no_auth(self):
         url = reverse_lazy('events:academy_event_liveclass')
 
@@ -44,6 +46,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Given: User
     # When: User is authenticated and has no LiveClass
     # Then: I should get a 200 status code with no data
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     def test_zero_live_classes(self):
         model = self.bc.database.create(user=1, profile_academy=1, role=1, capability='start_or_end_class')
 
@@ -63,6 +67,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Given: a User, LiveClass, Cohort and CohortTimeSlot
     # When: User is authenticated, has LiveClass and CohortUser belongs to this LiveClass
     # Then: I should get a 200 status code with the LiveClass data
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     def test_one_live_class(self):
         model = self.bc.database.create(user=1,
                                         live_class=1,
@@ -92,7 +98,10 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: the mock should be called with the correct arguments and does not raise an exception
     @patch('breathecode.utils.api_view_extensions.extensions.lookup_extension.compile_lookup',
            MagicMock(wraps=lookup_extension.compile_lookup))
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     def test_lookup_extension(self):
+
         model = self.bc.database.create(user=1,
                                         live_class=1,
                                         cohort=1,
@@ -106,23 +115,26 @@ class AcademyEventTestSuite(EventTestCase):
         self.bc.request.set_headers(academy=1)
 
         args, kwargs = self.bc.format.call(
-            self.bc.database.get_model('events.LiveClass'),
             'en',
-            fields={
+            strings={
                 'exact': [
                     'remote_meeting_url',
-                    'cohort_time_slot__cohort__cohortuser__user',
                     'cohort_time_slot__cohort__cohortuser__user__email',
                 ],
-                'gte': ['starting_at'],
-                'lte': ['ending_at'],
-                'id': [
-                    'cohort_time_slot__cohort',
-                    'cohort_time_slot__cohort__academy',
-                    'cohort_time_slot__cohort__syllabus_version__syllabus',
-                ],
+            },
+            bools={
                 'is_null': ['ended_at'],
             },
+            datetimes={
+                'gte': ['starting_at'],
+                'lte': ['ending_at'],
+            },
+            slugs=[
+                'cohort_time_slot__cohort__cohortuser__user',
+                'cohort_time_slot__cohort',
+                'cohort_time_slot__cohort__academy',
+                'cohort_time_slot__cohort__syllabus_version__syllabus',
+            ],
             overwrite={
                 'cohort': 'cohort_time_slot__cohort',
                 'academy': 'cohort_time_slot__cohort__academy',
@@ -135,19 +147,19 @@ class AcademyEventTestSuite(EventTestCase):
             },
         )
 
-        query, _ = self.bc.format.lookup(*args, **kwargs)
+        query = self.bc.format.lookup(*args, **kwargs)
         url = reverse_lazy('events:academy_event_liveclass') + '?' + self.bc.format.querystring(query)
 
         self.assertEqual([x for x in query], [
-            'remote_meeting_url',
-            'upcoming',
-            'start',
-            'end',
+            'user',
+            'cohort',
             'academy',
             'syllabus',
-            'cohort',
-            'user',
+            'remote_meeting_url',
             'user_email',
+            'start',
+            'end',
+            'upcoming',
         ])
 
         response = self.client.get(url)
@@ -155,13 +167,29 @@ class AcademyEventTestSuite(EventTestCase):
         json = response.json()
         expected = []
 
-        self.assertEqual(lookup_extension.compile_lookup.call_args_list, [
-            call(query, *args, **kwargs, custom_fields={}),
-        ])
-
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
+
+        for x in ['overwrite', 'custom_fields']:
+            if x in kwargs:
+                del kwargs[x]
+
+        for field in ['ids', 'slugs']:
+            values = kwargs.get(field, tuple())
+            kwargs[field] = tuple(values)
+
+        for field in ['ints', 'strings', 'bools', 'datetimes']:
+            modes = kwargs.get(field, {})
+            for mode in modes:
+                if not isinstance(kwargs[field][mode], tuple):
+                    kwargs[field][mode] = tuple(kwargs[field][mode])
+
+            kwargs[field] = frozenset(modes.items())
+
+        self.bc.check.calls(lookup_extension.compile_lookup.call_args_list, [
+            call(**kwargs),
+        ])
+
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [
             self.bc.format.to_dict(model.live_class),
         ])
-        assert 0

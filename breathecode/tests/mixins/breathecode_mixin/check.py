@@ -1,6 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Any
+from unittest.mock import call
 from rest_framework.test import APITestCase
 from django.db.models import Model
 from django.db.models.query import QuerySet
@@ -94,6 +95,44 @@ class Check:
             original = self._fill_partial_equality(first, second)
 
         self._parent.assertEqual(original, second)
+
+    def calls(self, first: list[call], second: list[call]) -> None:
+        """
+        Fail if the two objects are partially unequal as determined by the '==' operator.
+
+        Usage:
+
+        ```py
+        obj1 = {'key1': 1, 'key2': 2}
+        obj2 = {'key2': 2, 'key3': 1}
+        obj3 = {'key2': 2}
+
+        # it's fail because the key3 is not in the obj1
+        self.bc.check.partial_equality(obj1, obj2)  # 🔴
+
+        # it's fail because the key1 is not in the obj2
+        self.bc.check.partial_equality(obj2, obj1)  # 🔴
+
+        # it's pass because the key2 exists in the obj1
+        self.bc.check.partial_equality(obj1, obj3)  # 🟢
+
+        # it's pass because the key2 exists in the obj2
+        self.bc.check.partial_equality(obj2, obj3)  # 🟢
+
+        # it's fail because the key1 is not in the obj3
+        self.bc.check.partial_equality(obj3, obj1)  # 🔴
+
+        # it's fail because the key3 is not in the obj3
+        self.bc.check.partial_equality(obj3, obj2)  # 🔴
+        ```
+        """
+
+        assert len(first) == len(second)
+        for i in range(0, len(first)):
+            self._parent.assertEqual(first[i].args, second[i].args, msg=f'args in index {i} does not match')
+            self._parent.assertEqual(first[i].kwargs,
+                                     second[i].kwargs,
+                                     msg=f'kwargs in index {i} does not match')
 
     def _fill_partial_equality(self, first: dict, second: dict) -> dict:
         original = {}

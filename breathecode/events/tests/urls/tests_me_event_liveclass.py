@@ -94,21 +94,24 @@ class AcademyEventTestSuite(EventTestCase):
         self.bc.request.authenticate(model.user)
 
         args, kwargs = self.bc.format.call(
-            self.bc.database.get_model('events.LiveClass'),
             'en',
-            fields={
+            strings={
                 'exact': [
                     'remote_meeting_url',
                 ],
-                'gte': ['starting_at'],
-                'lte': ['ending_at'],
-                'id': [
-                    'cohort_time_slot__cohort',
-                    'cohort_time_slot__cohort__academy',
-                    'cohort_time_slot__cohort__syllabus_version__syllabus',
-                ],
+            },
+            bools={
                 'is_null': ['ended_at'],
             },
+            datetimes={
+                'gte': ['starting_at'],
+                'lte': ['ending_at'],
+            },
+            slugs=[
+                'cohort_time_slot__cohort',
+                'cohort_time_slot__cohort__academy',
+                'cohort_time_slot__cohort__syllabus_version__syllabus',
+            ],
             overwrite={
                 'cohort': 'cohort_time_slot__cohort',
                 'academy': 'cohort_time_slot__cohort__academy',
@@ -119,17 +122,17 @@ class AcademyEventTestSuite(EventTestCase):
             },
         )
 
-        query, _ = self.bc.format.lookup(*args, **kwargs)
+        query = self.bc.format.lookup(*args, **kwargs)
         url = reverse_lazy('events:me_event_liveclass') + '?' + self.bc.format.querystring(query)
 
         self.assertEqual([x for x in query], [
-            'remote_meeting_url',
-            'upcoming',
-            'start',
-            'end',
+            'cohort',
             'academy',
             'syllabus',
-            'cohort',
+            'remote_meeting_url',
+            'start',
+            'end',
+            'upcoming',
         ])
 
         response = self.client.get(url)
@@ -137,8 +140,24 @@ class AcademyEventTestSuite(EventTestCase):
         json = response.json()
         expected = []
 
-        self.assertEqual(lookup_extension.compile_lookup.call_args_list, [
-            call(query, *args, **kwargs, custom_fields={}),
+        for x in ['overwrite', 'custom_fields']:
+            if x in kwargs:
+                del kwargs[x]
+
+        for field in ['ids', 'slugs']:
+            values = kwargs.get(field, tuple())
+            kwargs[field] = tuple(values)
+
+        for field in ['ints', 'strings', 'bools', 'datetimes']:
+            modes = kwargs.get(field, {})
+            for mode in modes:
+                if not isinstance(kwargs[field][mode], tuple):
+                    kwargs[field][mode] = tuple(kwargs[field][mode])
+
+            kwargs[field] = frozenset(modes.items())
+
+        self.bc.check.calls(lookup_extension.compile_lookup.call_args_list, [
+            call(**kwargs),
         ])
 
         self.assertEqual(json, expected)
