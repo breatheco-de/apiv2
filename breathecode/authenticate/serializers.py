@@ -855,7 +855,7 @@ class PUTGithubUserSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
 
-        if instance.storage_action != validated_data['storage_action'] or instance.storage_action == "ADD":
+        if instance.storage_action != validated_data['storage_action'] or instance.storage_action == 'ADD':
             # manually ignoring a contact is synched immediately
             if validated_data['storage_action'] == 'IGNORE':
                 validated_data['storage_status'] = 'SYNCHED'
@@ -868,6 +868,38 @@ class PUTGithubUserSerializer(serializers.ModelSerializer):
             ]
 
         return super().update(instance, validated_data)
+
+
+class POSTGithubUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = GithubAcademyUser
+        exclude = ('storage_status', 'academy', 'storage_log', 'storage_synch_at', 'username')
+
+    def validate(self, data):
+
+        academy_id = self.context.get('academy_id')
+        already = GithubAcademyUser.objects.filter(user=data['user'], academy=academy_id).first()
+        if already:
+            raise ValidationError('User already belongs to the organization')
+
+        github = CredentialsGithub.objects.filter(user=data['user']).first()
+        if github is None:
+            raise ValidationError('No github credentials found for user')
+
+        return data
+
+    def create(self, validated_data):
+
+        # anything else has to be processed later
+        validated_data['storage_action'] = 'ADD'
+        validated_data['storage_status'] = 'PENDING'
+        validated_data['storage_log'] = [GithubAcademyUser.create_log('User was manually added')]
+
+        return super().create({
+            **validated_data, 'academy':
+            Academy.objects.filter(id=self.context['academy_id']).first()
+        })
 
 
 class AuthSerializer(serializers.Serializer):
