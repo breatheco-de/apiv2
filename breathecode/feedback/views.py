@@ -326,6 +326,35 @@ def get_review_platform(request, platform_slug=None):
         return Response(serializer.data)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_reviews(request):
+    """
+    List all snippets, or create a new snippet.
+    """
+    items = Review.objects.filter(is_public=True,
+                                  status='DONE',
+                                  comments__isnull=False,
+                                  total_rating__isnull=False,
+                                  total_rating__gt=0,
+                                  total_rating__lte=10).exclude(comments__exact='')
+
+    lookup = {}
+
+    if 'academy' in request.GET:
+        param = request.GET.get('academy')
+        lookup['cohort__academy__id'] = param
+
+    if 'lang' in request.GET:
+        param = request.GET.get('lang')
+        lookup['lang'] = param
+
+    items = items.filter(**lookup).order_by('-created_at')
+
+    serializer = ReviewSmallSerializer(items, many=True)
+    return Response(serializer.data)
+
+
 class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.

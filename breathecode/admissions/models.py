@@ -1,9 +1,11 @@
+import hashlib, base64
+import json
 import os, logging
 from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
-from .signals import student_edu_status_updated, academy_saved
+from .signals import student_edu_status_updated, academy_saved, syllabus_version_json_updated
 from . import signals
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
@@ -228,8 +230,30 @@ class SyllabusVersion(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def __init__(self, *args, **kwargs):
+        super(SyllabusVersion, self).__init__(*args, **kwargs)
+        self.__json_hash = self.hashed_json()
+
     def __str__(self):
         return f'{self.syllabus.slug}.v{self.version}'
+
+    def hashed_json(self):
+        if self.json is None:
+            return ''
+
+        encoded = base64.b64encode(json.dumps(self.json, sort_keys=True).encode('utf-8'))
+        return hashlib.sha256(encoded).hexdigest()
+
+    def save(self, *args, **kwargs):
+
+        json_modified = False
+
+        if self.__json_hash != self.hashed_json():
+            json_modified = True
+
+        super().save(*args, **kwargs)
+
+        if json_modified: syllabus_version_json_updated.send(instance=self, sender=SyllabusVersion)
 
 
 class SyllabusSchedule(models.Model):
@@ -295,7 +319,13 @@ class Cohort(models.Model):
         'The syllabus is separated by modules, from 1 to N and the teacher decides when to start a new mobule (after a couple of days)'
     )
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
-    private = models.BooleanField(default=False)
+    private = models.BooleanField(
+        default=False,
+        help_text=
+        'It will not show on the public API endpoints but you will still be able to add people manually')
+    accepts_enrollment_suggestions = models.BooleanField(
+        default=True, help_text='The system will suggest won leads to be added to this cohort')
+
     never_ends = models.BooleanField(default=False)
 
     remote_available = models.BooleanField(
@@ -466,18 +496,18 @@ class CohortUser(models.Model):
     def save(self, *args, **kwargs):
         # check the fields before saving
         self.full_clean()
-        
+
         edu_status_updated = False
         if self.__old_edu_status != self.educational_status:
             edu_status_updated = True
 
         result = super().save(*args, **kwargs)  # Call the "real" save() method.
-        
+
         if edu_status_updated:
-            student_edu_status_updated.send(instance=self, sender=self.__class__)
+            signals.student_edu_status_updated.send(instance=self, sender=self.__class__)
 
         signals.cohort_log_saved.send(instance=self, sender=self.__class__)
-        
+
         return result
 
 

@@ -1,6 +1,7 @@
 """
 Test /cohort/all
 """
+from unittest.mock import MagicMock, call, patch
 from datetime import timedelta
 import random
 import re
@@ -49,6 +50,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With data
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data(self):
         """Test /cohort/all without auth"""
         model = self.generate_models(authenticate=True,
@@ -71,6 +73,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
     🔽🔽🔽 roles in querystring
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data_with_bad_roles(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True, cohort_user=True)
@@ -85,6 +88,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data_with_roles(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True, cohort_user=True)
@@ -104,6 +108,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data_with_roles_with_comma(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True, cohort_user=True)
@@ -124,6 +129,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
     🔽🔽🔽 finantial_status in querystring
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data_with_bad_finantial_status(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True, cohort_user=True)
@@ -138,6 +144,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data_with_finantial_status(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True,
@@ -159,6 +166,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data_with_finantial_status_with_comma(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True,
@@ -180,6 +188,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
     🔽🔽🔽 educational_status in querystring
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data_with_bad_educational_status(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True, cohort_user=True)
@@ -194,6 +203,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data_with_educational_status(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True,
@@ -216,6 +226,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data_with_educational_status_with_comma(self):
         """Test /cohort/user without auth"""
         model = self.generate_models(authenticate=True,

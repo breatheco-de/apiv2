@@ -22,7 +22,8 @@ from .views import (AcademyInviteView, AcademyTokenView, GithubMeView, GitpodUse
                     get_slack_token, get_token_info, get_user_by_id_or_email, get_users, login_html_view,
                     pick_password, render_academy_invite, render_invite, render_user_invite,
                     reset_password_view, save_facebook_token, save_github_token, save_google_token,
-                    save_slack_token, sync_gitpod_users_view, GithubUserView, AcademyGithubSyncView)
+                    save_slack_token, sync_gitpod_users_view, GithubUserView, AcademyGithubSyncView,
+                    AcademyAuthSettingsView)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -86,6 +87,7 @@ urlpatterns = [
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user/me/invite', MeInviteView.as_view(), name='user_me_invite'),
     path('user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
+    path('academy/settings', AcademyAuthSettingsView.as_view(), name='academy_me_settings'),
 
     # google authentication oath2.0
     path('google/<str:token>', get_google_token, name='google_token'),

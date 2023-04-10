@@ -941,7 +941,7 @@ class CheckingView(APIView):
                         get_amount(bag, bag.academy.main_currency, lang)
 
                 else:
-                    actions.avoid_rebuy_free_trial(bag, lang)
+                    actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
 
                 amount = bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
                 plans = bag.plans.all()
@@ -1026,6 +1026,7 @@ class PayView(APIView):
                 chosen_period = request.data.get('chosen_period', '').upper()
 
                 available_for_free_trial = False
+                available_free = False
                 if not how_many_installments and not chosen_period:
                     available_for_free_trial = (bag.amount_per_month == 0 and bag.amount_per_quarter == 0
                                                 and bag.amount_per_half == 0 and bag.amount_per_year == 0)
@@ -1034,7 +1035,11 @@ class PayView(APIView):
                     available_for_free_trial = available_for_free_trial and (
                         not plan.financing_options.filter().exists() if plan else False)
 
-                if not available_for_free_trial and not how_many_installments and not chosen_period:
+                    available_free = available_for_free_trial and not plan.trial_duration
+                    available_for_free_trial = available_for_free_trial and plan.trial_duration
+
+                if (not available_for_free_trial and not available_free and not how_many_installments
+                        and not chosen_period):
                     raise ValidationException(translation(lang,
                                                           en='Missing chosen period',
                                                           es='Falta el periodo elegido',
@@ -1042,7 +1047,8 @@ class PayView(APIView):
                                               code=400)
 
                 available_chosen_periods = ['MONTH', 'QUARTER', 'HALF', 'YEAR']
-                if not available_for_free_trial and not how_many_installments and chosen_period not in available_chosen_periods:
+                if (not available_for_free_trial and not available_free and not how_many_installments
+                        and chosen_period not in available_chosen_periods):
                     raise ValidationException(translation(
                         lang,
                         en=f"Invalid chosen period ({', '.join(available_chosen_periods)})",
@@ -1050,7 +1056,7 @@ class PayView(APIView):
                         slug='invalid-chosen-period'),
                                               code=400)
 
-                if not available_for_free_trial and not chosen_period and (
+                if not available_for_free_trial and not available_free and not chosen_period and (
                         not isinstance(how_many_installments, int) or how_many_installments <= 0):
                     raise ValidationException(translation(
                         lang,
@@ -1059,10 +1065,11 @@ class PayView(APIView):
                         slug='invalid-how-many-installments'),
                                               code=400)
 
-                if not available_for_free_trial and not chosen_period and how_many_installments:
+                if (not available_for_free_trial and not available_free and not chosen_period
+                        and how_many_installments):
                     bag.how_many_installments = how_many_installments
 
-                if not available_for_free_trial and bag.how_many_installments > 0:
+                if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
                     try:
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(
@@ -1076,7 +1083,8 @@ class PayView(APIView):
                             es='La bolsa esta mal configurada, relacionado a la opción de financiamiento',
                             slug='invalid-bag-configured-by-installments'),
                                                   code=500)
-                elif not available_for_free_trial:
+
+                elif not available_for_free_trial and not available_free:
                     amount = get_amount_by_chosen_period(bag, chosen_period, lang)
 
                 else:
@@ -1092,7 +1100,8 @@ class PayView(APIView):
 
                 actions.check_dependencies_in_bag(bag, lang)
 
-                if amount == 0 and not bag.plans.filter(plan_offer_from__id__gte=1).exists():
+                if amount == 0 and not available_free and available_for_free_trial and not bag.plans.filter(
+                        plan_offer_from__id__gte=1).exists():
                     raise ValidationException(
                         translation(lang,
                                     en='The plan was chosen is not ready too be sold',
@@ -1132,7 +1141,7 @@ class PayView(APIView):
                 transaction.savepoint_commit(sid)
 
                 if amount == 0:
-                    tasks.build_free_trial.delay(bag.id, invoice.id)
+                    tasks.build_free_subscription.delay(bag.id, invoice.id)
 
                 elif bag.how_many_installments > 0:
                     tasks.build_plan_financing.delay(bag.id, invoice.id)

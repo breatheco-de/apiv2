@@ -137,6 +137,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Without data
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__without_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -156,6 +157,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With data
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -209,6 +211,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Roles in querystring
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_bad_roles(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -282,6 +285,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_roles__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -337,6 +341,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Finantial status in querystring
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_bad_finantial_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -356,6 +361,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_finantial_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -411,6 +417,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_finantial_status__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -466,6 +473,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Educational status in querystring
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_bad_educational_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -485,6 +493,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_educational_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -540,6 +549,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_educational_status__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -596,6 +606,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Academy in querystring
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_academy(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -647,6 +658,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_academy__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -702,6 +714,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Cohorts in querystring
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_bad_cohorts(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -721,6 +734,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__with_data__with_cohorts(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -776,6 +790,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put without id
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__put__without_id(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -798,6 +813,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put bulk mode
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__put__in_bulk__without_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -815,6 +831,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__put__in_bulk__without_data__without_id(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -832,6 +849,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__put__in_bulk__without_data__with_bad_id(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -849,6 +867,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__put__in_bulk__with_one_item(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -878,6 +897,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.bc.format.to_dict(model.cohort_user),
         ])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__put__in_bulk__with_two_items(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -938,6 +958,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Post bulk mode
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__post__in_bulk__0_items(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -957,6 +978,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__post__in_bulk__1_item(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -996,6 +1018,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__post_in_bulk__2_items(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1045,6 +1068,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__post__in_bulk__1_item__statuses_in_lowercase(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1103,6 +1127,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Delete in bulk
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__delete__without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1119,6 +1144,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__delete__in_bulk__with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1146,6 +1172,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__delete__in_bulk__with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1185,6 +1212,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_academy_cohort_user__post__1_item(self):
 
         prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
@@ -1213,6 +1241,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_academy_cohort_user__post__2_item(self):
         #incomplete test
         prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']

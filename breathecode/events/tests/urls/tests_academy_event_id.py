@@ -780,7 +780,10 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
+            call([
+                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
+                'SortExtension'
+            ]),
         ])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())

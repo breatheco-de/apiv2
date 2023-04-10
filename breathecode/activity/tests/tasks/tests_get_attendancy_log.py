@@ -180,6 +180,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_the_student_attended_the_first_day(self):
         cases = [
             ([get_datastore_seed(self.bc.fake.slug(), 1, {'slug': 'classroom_attendance'})], [], [1], []),
@@ -1455,6 +1456,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_the_students_attended_all_days__duration_in_days__two_cohort_users__they_was_deleted(self):
         cases = [
             ([

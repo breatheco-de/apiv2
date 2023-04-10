@@ -14,4 +14,7 @@ class Command(BaseCommand):
         aca_settings = AcademyAuthSettings.objects.filter(github_is_sync=True)
         for settings in aca_settings:
             print(f'Synching academy {settings.academy.name} organization users')
-            sync_organization_members(settings.academy.id)
+            try:
+                sync_organization_members(settings.academy.id)
+            except Exception as e:
+                print(f'Error synching members for academy {settings.academy.id}: ' + str(e))

@@ -14,6 +14,7 @@ fake = Faker()
 
 def course_translation_serializer(course_translation):
     return {
+        'course_modules': course_translation.course_modules,
         'description': course_translation.description,
         'lang': course_translation.lang,
         'title': course_translation.title,
@@ -40,6 +41,7 @@ def syllabus_serializer(syllabus):
 
 
 def get_serializer(course, academy, syllabus=[], course_translation=None, data={}):
+
     if course_translation:
         course_translation = course_translation_serializer(course_translation)
 
