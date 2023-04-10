@@ -19,7 +19,7 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     items = get_my_event_types(request.user)
 
     event = Event.objects.filter(Q(id=kwargs.get('event_id'))
-                                 | Q(slug=kwargs.get('event_slug')),
+                                 | Q(slug=kwargs.get('event_slug'), slug__isnull=False),
                                  event_type__in=items).first()
 
     if not event:
