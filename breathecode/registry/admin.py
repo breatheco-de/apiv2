@@ -13,11 +13,12 @@ from breathecode.services.seo import SEOAnalyzer
 
 from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment, SEOReport, AssetImage, OriginalityScan,
-                     CredentialsOriginality)
+                     CredentialsOriginality, SyllabusVersionProxy)
 from .tasks import (async_pull_from_github, async_test_asset, async_execute_seo_report,
                     async_regenerate_asset_readme, async_download_readme_images, async_remove_img_from_cloud,
                     async_upload_image_to_bucket)
-from .actions import pull_from_github, get_user_from_github_username, test_asset, AssetThumbnailGenerator, scan_asset_originality
+from .actions import (pull_from_github, get_user_from_github_username, test_asset, AssetThumbnailGenerator,
+                      scan_asset_originality, add_syllabus_translations)
 
 logger = logging.getLogger(__name__)
 lang_flags = {
@@ -342,7 +343,7 @@ class AssetAdmin(admin.ModelAdmin):
     def main(self, obj):
 
         return format_html(f'''
-                <p style="border: 1px solid #BDBDBD; border-radius: 3px; font-size: 10px; padding: 3px;margin: 0;">{lang_flags[obj.lang]} {obj.asset_type}</p>
+                <p style="border: 1px solid #BDBDBD; border-radius: 3px; font-size: 10px; padding: 3px;margin: 0;">{lang_flags.get(obj.lang.lower(), None)} {obj.asset_type}</p>
                 <p style="margin: 0; padding: 0;">{obj.slug}</p>
                 <p style="color: white; font-size: 10px;margin: 0; padding: 0;">{obj.title}</p>
             ''')
@@ -670,3 +671,19 @@ class AssetImageAdmin(admin.ModelAdmin):
             'NEEDS_RESYNC': 'bg-error',
         }
         return format_html(f"<span class='badge {colors[obj.download_status]}'>{obj.download_status}</span>")
+
+
+def add_translations_into_json(modeladmin, request, queryset):
+    versions = queryset.all()
+    for s_version in versions:
+        s_version.json = add_syllabus_translations(s_version.json)
+        s_version.save()
+
+
+@admin.register(SyllabusVersionProxy)
+class SyllabusVersionAdmin(admin.ModelAdmin):
+    list_display = ['syllabus', 'version', 'status']
+    search_fields = ('syllabus__slug', 'syllabus__name')
+    # raw_id_fields = ['assets']
+    list_filter = ['syllabus']
+    actions = [add_translations_into_json]

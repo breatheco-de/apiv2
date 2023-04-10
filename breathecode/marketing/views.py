@@ -6,6 +6,7 @@ from rest_framework_csv.renderers import CSVRenderer
 from breathecode.authenticate.actions import get_user_language
 from breathecode.monitoring.models import CSVUpload
 from breathecode.renderers import PlainTextRenderer
+from breathecode.marketing.caches import CourseCache
 from rest_framework.decorators import renderer_classes
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import AnonymousUser
@@ -1050,7 +1051,7 @@ def googleads_csv(request):
 
 class CourseView(APIView):
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(sort='-updated_at', paginate=True)
+    extensions = APIViewExtensions(cache=CourseCache, sort='-updated_at', paginate=True)
 
     def get_lookup(self, key, value):
         args = ()
@@ -1115,6 +1116,14 @@ class CourseView(APIView):
 
         if icon_url := request.GET.get('icon_url'):
             items = items.filter(icon_url__icontains=icon_url)
+
+        if technologies := request.GET.get('technologies'):
+            technologies = technologies.split(',')
+            query = Q(technologies__icontains=technologies[0])
+            for technology in technologies[1:]:
+                query |= Q(technologies__icontains=technology)
+
+            items = items.filter(query)
 
         items = items.annotate(lang=Value(lang, output_field=CharField()))
 

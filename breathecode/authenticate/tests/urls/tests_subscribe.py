@@ -918,7 +918,7 @@ class SubscribeTestSuite(AuthTestCase):
             'token': token,
         }
         academy = {'available_as_saas': True}
-        plan = {'has_waiting_list': True}
+        plan = {'time_of_life': None, 'time_of_life_unit': None, 'has_waiting_list': True}
         self.bc.database.create(user_invite=user_invite, cohort=1, academy=academy, plan=plan)
         url = reverse_lazy('authenticate:subscribe')
         data = {
@@ -990,7 +990,7 @@ class SubscribeTestSuite(AuthTestCase):
             'cohort_id': None,
         }
         academy = {'available_as_saas': True}
-        plan = {'has_waiting_list': False}
+        plan = {'time_of_life': None, 'time_of_life_unit': None, 'has_waiting_list': False}
         self.bc.database.create(user_invite=user_invite, cohort=1, academy=academy, plan=plan)
         url = reverse_lazy('authenticate:subscribe')
         data = {

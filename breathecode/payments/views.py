@@ -1100,7 +1100,8 @@ class PayView(APIView):
 
                 actions.check_dependencies_in_bag(bag, lang)
 
-                if amount == 0 and not bag.plans.filter(plan_offer_from__id__gte=1).exists():
+                if amount == 0 and not available_free and available_for_free_trial and not bag.plans.filter(
+                        plan_offer_from__id__gte=1).exists():
                     raise ValidationException(
                         translation(lang,
                                     en='The plan was chosen is not ready too be sold',

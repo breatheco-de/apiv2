@@ -17,6 +17,7 @@ from breathecode.payments.signals import consume_service
 from ..exceptions import ProgramingError
 from ..payment_exception import PaymentException
 from ..validation_exception import ValidationException
+from rest_framework.response import Response
 
 __all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'PermissionContextType']
 
@@ -53,7 +54,9 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
 
 
 #TODO: change html param for string with selected encode
-def has_permission(permission: str, consumer: bool | HasPermissionCallback = False, html=False) -> callable:
+def has_permission(permission: str,
+                   consumer: bool | HasPermissionCallback = False,
+                   format='json') -> callable:
     """This decorator check if the current user can access to the resource through of permissions"""
 
     from breathecode.payments.models import Consumable, ConsumptionSession
@@ -162,29 +165,32 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
 
             # handle html views errors
             except PaymentException as e:
-                if html:
+                if format == 'websocket':
+                    raise e
+
+                if format == 'html':
                     return render_message(request, str(e), status=402)
 
-                response = JsonResponse({'detail': str(e), 'status_code': 500})
-                response.status_code = 500
-                return response
+                return Response({'detail': str(e), 'status_code': 402}, 402)
 
             # handle html views errors
             except ValidationException as e:
-                if html:
-                    status = e.status_code if hasattr(e, 'status_code') else 400
+                if format == 'websocket':
+                    raise e
+
+                status = e.status_code if hasattr(e, 'status_code') else 400
+
+                if format == 'html':
                     return render_message(request, str(e), status=status)
 
-                response = JsonResponse({'detail': str(e), 'status_code': 500})
-                response.status_code = 500
-                return response
+                return Response({'detail': str(e), 'status_code': status}, status)
 
             # handle html views errors
             except:
                 # show stacktrace for unexpected exceptions
                 traceback.print_exc()
 
-                if html:
+                if format == 'html':
                     return render_message(request,
                                           'unexpected error, contact admin if you are affected',
                                           status=500)

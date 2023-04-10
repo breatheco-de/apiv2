@@ -238,10 +238,10 @@ class SyllabusLog(object):
         self.warnings = []
 
     def error(self, msg):
+        if len(self.errors) == 10:
+            self.errors.append('Can only log first 10 errors on syllabus')
         if len(self.errors) > 10:
-            logger.debug('Too many errors on syllabus')
-            logger.debug(self.errors)
-            raise Exception('Too many errors on syllabus')
+            return None
 
         self.errors.append(msg)
 
@@ -290,7 +290,7 @@ def test_syllabus(syl, validate_assets=False, ignore=[]):
 
     count = 0
 
-    types_to_validate = ['lessons', 'quizzes', 'replits', 'projects', 'assignments']
+    types_to_validate = ['lessons', 'quizzes', 'replits', 'assignments']
 
     #ignore: an array with types to ignore, for example: ['lessons']
     types_to_validate = [a for a in types_to_validate if a not in ignore]
@@ -300,5 +300,7 @@ def test_syllabus(syl, validate_assets=False, ignore=[]):
             validate(_name, syllabus_log, day, count)
         if 'teacher_instructions' not in day or day['teacher_instructions'] == '':
             syllabus_log.warn(f'Empty teacher instructions on module {count}')
+        if len(syllabus_log.errors) > 11:
+            return syllabus_log
 
     return syllabus_log

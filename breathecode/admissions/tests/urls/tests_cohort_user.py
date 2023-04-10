@@ -127,6 +127,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -351,6 +352,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -395,6 +397,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -457,6 +460,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -505,6 +509,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With profile academy
     """
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -556,6 +561,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -617,6 +623,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -676,6 +683,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -775,6 +783,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'history_log': {},
         }])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -820,6 +829,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_put_in_bulk_with_two_items(self):
         """Test /cohort/user without auth"""
         url = reverse_lazy('admissions:cohort_user')
@@ -925,6 +935,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -955,6 +966,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -1006,7 +1018,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:cohort_user')
         response = self.client.get(url)
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension']),
         ])
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(cache=CohortUserCache, paginate=True),

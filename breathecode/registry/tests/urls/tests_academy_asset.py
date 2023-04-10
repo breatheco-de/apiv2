@@ -218,7 +218,7 @@ class RegistryTestAsset(RegistryTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
-            'category': ['This field cannot be blank.'],
+            'detail': 'No category was specified and we could not retrieve it from any translation',
             'status_code': 400,
         }
 

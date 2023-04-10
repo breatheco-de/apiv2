@@ -39,6 +39,7 @@ apps = [
     ('v1/marketing/', 'breathecode.marketing.urls', 'marketing'),
     ('v1/mentorship/', 'breathecode.mentorship.urls', 'mentorship'),
     ('v1/monitoring/', 'breathecode.monitoring.urls', 'monitoring'),
+    ('v1/provisioning/', 'breathecode.provisioning.urls', 'provisioning'),
     ('v1/payments/', 'breathecode.payments.urls', 'payments'),
     ('s/', 'breathecode.marketing.urls_shortner', 'marketing_shortner'),
     ('mentor/', 'breathecode.mentorship.urls_shortner', 'mentorship_shortner'),

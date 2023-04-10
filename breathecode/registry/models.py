@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
 from django.template.loader import get_template
-from breathecode.admissions.models import Academy, Cohort
+from breathecode.admissions.models import Academy, Cohort, SyllabusVersion
 from breathecode.events.models import Event
 from django.utils import timezone
 from django.db.models import Q
@@ -28,6 +28,12 @@ SORT_PRIORITY = (
     (2, 2),
     (3, 3),
 )
+
+
+class SyllabusVersionProxy(SyllabusVersion):
+
+    class Meta:
+        proxy = True
 
 
 class AssetTechnology(models.Model):
@@ -463,6 +469,23 @@ class Asset(models.Model):
             return self.category.preview_generation_url
 
         return None
+
+    def get_repo_meta(self):
+        # def get_url_info(url: str):
+        url = self.readme_url
+        result = re.search(r'blob\/([\w\-]+)', url)
+        branch_name = None
+        if result is not None:
+            branch_name = result.group(1)
+
+        result = re.search(r'https?:\/\/github\.com\/([\w\-]+)\/([\w\-]+)\/?', url)
+        if result is None:
+            raise Exception('Invalid URL when looking organization: ' + url)
+
+        org_name = result.group(1)
+        repo_name = result.group(2)
+
+        return org_name, repo_name, branch_name
 
     def get_readme(self, parse=None, remove_frontmatter=False):
 
