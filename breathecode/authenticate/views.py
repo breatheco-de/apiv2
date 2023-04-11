@@ -1892,7 +1892,7 @@ class GithubUserView(APIView, GenerateLookupsMixin):
                 Q(username__icontains=like) | Q(user__email__icontains=like)
                 | Q(user__first_name__icontains=like) | Q(user__last_name__icontains=like))
 
-        items = items.order_by(request.GET.get('sort', 'created_at'))
+        items = items.order_by(request.GET.get('sort', '-created_at'))
 
         items = handler.queryset(items)
         serializer = GithubUserSerializer(items, many=True)
