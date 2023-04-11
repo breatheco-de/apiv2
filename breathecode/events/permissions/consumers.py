@@ -47,6 +47,8 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     event_type = event.event_type
 
+    import os
+    show("os.getenv('LAUNCH_DARKLY_API_KEY')", os.getenv('LAUNCH_DARKLY_API_KEY'))
     show('event', event)
     show('event_type', event_type)
     show('before', context['consumables'])
