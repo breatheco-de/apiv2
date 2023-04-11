@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 from django.db.models import Q
 from breathecode.authenticate.actions import get_user_language
 from breathecode.events.actions import get_my_event_types
@@ -11,6 +12,14 @@ from breathecode.utils.validation_exception import ValidationException
 from django.utils import timezone
 
 from .flags import api
+
+logger = logging.getLogger(__name__)
+
+
+def show(name, data):
+    print(name, data)
+    logger.info(name)
+    logger.info(data)
 
 
 def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
@@ -38,8 +47,14 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     event_type = event.event_type
 
+    show('event', event)
+    show('event_type', event_type)
+    show('before', context['consumables'])
+    logger.info('before', context['consumables'])
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
+    show('after', context['consumables'])
     context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
+    show('will_consume', context['will_consume'])
 
     kwargs['event'] = event
 

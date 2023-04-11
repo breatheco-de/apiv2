@@ -821,3 +821,40 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
 
     session.was_discounted = True
     session.status = 'DONE'
+
+
+@shared_task(bind=False, base=BaseTaskWithRetry)
+def build_consumables_from_bag(bag_id: int):
+    logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
+
+    if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
+        logger.error(f'Bag with id {bag_id} not found')
+        return
+
+    mentorship_service_set = bag.selected_mentorship_service_sets.first()
+    event_type_set = bag.selected_event_type_sets.first()
+
+    if [mentorship_service_set, event_type_set].count(None) != 1:
+        logger.error(f'Bag with id {bag_id} not have a resource associated')
+        return
+
+    consumables = []
+    for service_item in bag.service_items.all():
+        kwargs = {}
+        if service_item.service_item_type == 'MENTORSHIP_SERVICE_SET':
+            kwargs['mentorship_service_set'] = mentorship_service_set
+
+        if service_item.service_item_type == 'EVENT_TYPE_SET':
+            kwargs['event_type_set'] = event_type_set
+
+        if not kwargs:
+            logger.error(f'Bag with id {bag_id} have a resource associated opposite to the service item type')
+            return
+
+        consumables.append(Consumable(service_item=service_item, user=bag.user, **kwargs))
+
+    for consumable in consumables:
+        consumable.save()
+
+    bag.was_delivered = True
+    bag.save()

@@ -1,7 +1,7 @@
 import logging
 import serpy
 from breathecode.admissions.models import Cohort
-from breathecode.payments.models import Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature, Subscription
+from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature, Subscription
 from django.db.models.query_utils import Q
 
 from breathecode.utils import serializers, custom_serpy
@@ -274,8 +274,15 @@ class GetMentorshipServiceSerializer(serpy.Serializer):
     academy = GetAcademySmallSerializer(many=False)
 
 
-class GetMentorshipServiceSetSerializer(serpy.Serializer):
+class GetAcademyServiceSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+    service = GetServiceSmallSerializer()
+    currency = GetCurrencySmallSerializer()
+    price_per_unit = serpy.Field()
 
+
+class GetMentorshipServiceSetSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     academy = GetAcademySmallSerializer(many=False)
@@ -283,6 +290,14 @@ class GetMentorshipServiceSetSerializer(serpy.Serializer):
 
     def get_mentorship_services(self, obj):
         return GetMentorshipServiceSerializer(obj.mentorship_services.filter(), many=True).data
+
+
+class GetMentorshipServiceSetSerializer(GetMentorshipServiceSetSmallSerializer):
+    academy_services = serpy.MethodField()
+
+    def get_academy_services(self, obj):
+        items = AcademyService.objects.filter(available_mentorship_service_sets=obj)
+        return GetAcademyServiceSmallSerializer(items, many=True).data
 
 
 class GetEventTypeSerializer(serpy.Serializer):
@@ -296,7 +311,7 @@ class GetEventTypeSerializer(serpy.Serializer):
     allow_shared_creation = serpy.Field()
 
 
-class GetEventTypeSetSerializer(serpy.Serializer):
+class GetEventTypeSetSmallSerializer(serpy.Serializer):
 
     id = serpy.Field()
     slug = serpy.Field()
@@ -305,6 +320,14 @@ class GetEventTypeSetSerializer(serpy.Serializer):
 
     def get_event_types(self, obj):
         return GetEventTypeSerializer(obj.event_types.filter(), many=True).data
+
+
+class GetEventTypeSetSerializer(GetEventTypeSetSmallSerializer):
+    academy_services = serpy.MethodField()
+
+    def get_academy_services(self, obj):
+        items = AcademyService.objects.filter(available_event_type_sets=obj)
+        return GetAcademyServiceSmallSerializer(items, many=True).data
 
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
