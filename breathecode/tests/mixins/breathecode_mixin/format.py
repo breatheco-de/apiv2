@@ -210,10 +210,19 @@ class Format:
         # foreign
 
         for field in ids:
+            if field == '':
+                result['id'] = field.integer('exact')
+                continue
+
             name = overwrite.get(field, field)
             result[name] = Field.id('')
 
         for field in slugs:
+            if field == '':
+                result['id'] = Field.integer('exact')
+                result['slug'] = Field.string('exact')
+                continue
+
             name = overwrite.get(field, field)
             result[name] = Field.slug('')
 

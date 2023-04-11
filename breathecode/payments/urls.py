@@ -1,12 +1,13 @@
 from django.urls import path
 
 from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, AcademyServiceView,
-                    AcademySubscriptionView, BagView, CardView, CheckingView, MeConsumableView, MeInvoiceView,
-                    AcademyInvoiceView, MeSubscriptionCancelView, MeSubscriptionChargeView, PayView,
+                    AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableCheckoutView,
+                    EventTypeSetView, MeConsumableView, MeInvoiceView, AcademyInvoiceView,
+                    MeSubscriptionCancelView, MeSubscriptionChargeView, MentorshipServiceSetView, PayView,
                     PlanOfferView, PlanView, ServiceItemView, ServiceView, MeSubscriptionView)
 
 # /v1/payment/offer
-
+ConsumableCheckoutView
 app_name = 'payments'
 urlpatterns = [
     path('planoffer', PlanOfferView.as_view(), name='planoffer'),
@@ -25,7 +26,14 @@ urlpatterns = [
     path('academy/service', AcademyServiceView.as_view()),
     path('academy/service/<slug:service_slug>', AcademyServiceView.as_view()),
     path('serviceitem', ServiceItemView.as_view(), name='serviceitem'),
+    path('mentorshipserviceset', MentorshipServiceSetView.as_view(), name='mentorshipserviceset'),
+    path('mentorshipserviceset/<int:mentorship_service_set_id>',
+         MentorshipServiceSetView.as_view(),
+         name='mentorshipserviceset_id'),
+    path('eventtypeset', EventTypeSetView.as_view(), name='eventtypeset'),
+    path('eventtypeset/<int:event_type_set_id>', EventTypeSetView.as_view(), name='eventtypeset_id'),
     path('me/service/consumable', MeConsumableView.as_view(), name='me_service_consumable'),
+    path('consumable/checkout', ConsumableCheckoutView.as_view(), name='consumable_checkout'),
     path('me/subscription', MeSubscriptionView.as_view(), name='me_subscription'),
     path('me/subscription/charge', MeSubscriptionChargeView.as_view(), name='me_subscription_charge'),
     path('me/subscription/<int:subscription_id>/cancel',
