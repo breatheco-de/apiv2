@@ -50,7 +50,6 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     show('event', event)
     show('event_type', event_type)
     show('before', context['consumables'])
-    logger.info('before', context['consumables'])
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
     show('after', context['consumables'])
     context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
