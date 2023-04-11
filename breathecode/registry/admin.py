@@ -387,7 +387,7 @@ class AssetAdmin(admin.ModelAdmin):
     def alias(self, obj):
         aliases = AssetAlias.objects.filter(asset__all_translations__slug=obj.slug)
         return format_html(''.join([
-            f'<span style="display: inline-block; background: #2d302d; padding: 2px; border-radius: 3px; margin: 2px;">{lang_flags[a.asset.lang.lower()]}{a.slug}</span>'
+            f'<span style="display: inline-block; background: #2d302d; padding: 2px; border-radius: 3px; margin: 2px;">{lang_flags.get(a.asset.lang.lower(), None)}{a.slug}</span>'
             for a in aliases
         ]))
 
