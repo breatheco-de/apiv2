@@ -17,8 +17,9 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
 
     # avoid call LaunchDarkly if mentorship_service is empty
     if mentorship_service:
-        context['will_consume'] = api.release.enable_consume_mentorships(context['request'].user,
-                                                                         mentorship_service)
+        # context['will_consume'] = api.release.enable_consume_mentorships(context['request'].user,
+        #                                                                  mentorship_service)
+        context['will_consume'] = False
 
     else:
         context['will_consume'] = False

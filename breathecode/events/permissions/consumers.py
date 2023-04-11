@@ -54,7 +54,8 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     show('before', context['consumables'])
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
     show('after', context['consumables'])
-    context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
+    # context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
+    context['will_consume'] = False
     show('will_consume', context['will_consume'])
 
     kwargs['event'] = event
@@ -108,7 +109,8 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple,
     kwargs['lang'] = lang
     del kwargs['hash']
 
-    context['will_consume'] = api.release.enable_consume_live_classes(context['request'].user)
+    # context['will_consume'] = api.release.enable_consume_live_classes(context['request'].user)
+    context['will_consume'] = False
 
     utc_now = timezone.now()
     if live_class.ending_at < utc_now:
