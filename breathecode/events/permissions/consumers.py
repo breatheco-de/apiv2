@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 def show(name, data):
     print(name, data)
-    logger.info(name)
-    logger.info(data)
+    logger.info(str(name))
+    logger.info(str(data))
 
 
 def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
