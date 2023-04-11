@@ -15,7 +15,6 @@ class Release:
     def enable_consume_live_classes(user: User) -> bool:
         ld = LaunchDarkly()
         user_context = authenticate_contexts.user(ld, user)
-        print('authenticate_contexts.user', authenticate_contexts.user)
         return ld.get('api.release.enable_consume_live_classes', user_context, False)
 
     @staticmethod
