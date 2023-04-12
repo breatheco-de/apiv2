@@ -1,10 +1,10 @@
 from django.urls import path
 from .views import (AcademyEventTypeView, AcademyLiveClassView, EventMeView, EventTypeVisibilitySettingView,
-                    EventView, EventTypeView, AcademyEventCheckinView, MeLiveClassJoinView, MeLiveClassView,
-                    get_events, eventbrite_webhook, AcademyEventView, AcademyVenueView, ICalCohortsView,
-                    ICalEventView, ICalStudentView, AcademyOrganizationView, OrganizationWebhookView,
-                    AcademyOrganizerView, AcademyOrganizationOrganizerView, AcademyLiveClassJoinView,
-                    join_event, EventMeCheckinView)
+                    EventView, EventTypeView, AcademyEventCheckinView, MeLiveClassView, get_events,
+                    eventbrite_webhook, AcademyEventView, AcademyVenueView, ICalCohortsView, ICalEventView,
+                    ICalStudentView, AcademyOrganizationView, OrganizationWebhookView, AcademyOrganizerView,
+                    AcademyOrganizationOrganizerView, AcademyLiveClassJoinView, join_event,
+                    EventMeCheckinView, join_live_class)
 
 app_name = 'events'
 urlpatterns = [
@@ -15,9 +15,7 @@ urlpatterns = [
     path('me/event/<int:event_id>', EventMeView.as_view(), name='me_event_id'),
     # move this
     path('me/event/liveclass', MeLiveClassView.as_view(), name='me_event_liveclass'),
-    path('me/event/liveclass/join/<str:hash>',
-         MeLiveClassJoinView.as_view(),
-         name='me_event_liveclass_join_hash'),
+    path('me/event/liveclass/join/<str:hash>', join_live_class, name='me_event_liveclass_join_hash'),
     path('academy/event/liveclass', AcademyLiveClassView.as_view(), name='academy_event_liveclass'),
     path('academy/event/liveclass/join/<str:hash>',
          AcademyLiveClassJoinView.as_view(),

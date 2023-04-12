@@ -1,0 +1,35 @@
+{
+    "build": {
+        "dockerfile": "./Dockerfile",
+        "context": ".."
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+            "dockerDashComposeVersion": "v2"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python"
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "streetsidesoftware.code-spell-checker",
+                "mikestead.dotenv",
+                "ms-azuretools.vscode-docker",
+                "github.vscode-pull-request-github",
+                "eamodio.gitlens",
+                "gruntfuggly.todo-tree",
+                "redhat.vscode-yaml",
+                "bungcip.better-toml",
+                "TabNine.tabnine-vscode"
+            ]
+        }
+    },
+    "forwardPorts": [
+        8000
+    ],
+    "postStartCommand": "bash -c .devcontainer/postStartCommand.sh"
+}

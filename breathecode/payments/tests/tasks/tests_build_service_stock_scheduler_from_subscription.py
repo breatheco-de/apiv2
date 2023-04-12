@@ -137,7 +137,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             'valid_until': UTC_NOW + relativedelta(months=2),
         }
 
-        model = self.bc.database.create(subscription=subscription, plan=1, plan_service_item=1)
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(subscription=subscription, plan=plan, plan_service_item=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -187,9 +189,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_id': 2,
             'service_item_id': n
         } for n in range(5, 7)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(subscription=subscription,
                                         subscription_service_item=subscription_service_items,
-                                        plan=2,
+                                        plan=(2, plan),
                                         plan_service_item=plan_service_items,
                                         service_item=6)
 

@@ -829,6 +829,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_put_in_bulk_with_two_items(self):
         """Test /cohort/user without auth"""
         url = reverse_lazy('admissions:cohort_user')
@@ -1017,7 +1018,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:cohort_user')
         response = self.client.get(url)
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension']),
+            call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension']),
         ])
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(cache=CohortUserCache, paginate=True),

@@ -18,6 +18,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from django.db.models import Q
 from django.contrib.auth.models import Permission
+from breathecode.mentorship.models import MentorProfile
 
 logger = logging.getLogger(__name__)
 
@@ -471,6 +472,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                   'status')
 
     def validate(self, data):
+        lang = data.get('lang', 'en')
+
         if 'email' in data and data['email']:
             data['email'] = data['email'].lower()
             user = User.objects.filter(email=data['email']).first()
@@ -505,6 +508,52 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 raise ValidationException(
                     f'This user is already a member of this academy as {str(already.role)}',
                     slug='already-exists')
+
+        academy_id = data['academy'] if 'academy' in data else self.context['academy_id']
+        if 'user' in data:
+            user = User.objects.filter(id=data['user']).first()
+        else:
+            user = User.objects.filter(email=data['email']).first()
+        if 'user' in data:
+            profile_academy = ProfileAcademy.objects.filter(user__id=data['user'],
+                                            academy__id=academy_id, first_name__isnull=False, \
+                                                            last_name__isnull=False).exclude(first_name='', last_name='').first()
+        else:
+            profile_academy = ProfileAcademy.objects.filter(email=data['email'],
+                                            academy__id=academy_id, first_name__isnull=False, \
+                                                            last_name__isnull=False).exclude(first_name='', last_name='').first()
+        if 'first_name' not in data:
+            data['first_name'] = ''
+        if not data['first_name'] and profile_academy:
+
+            data['first_name'] = profile_academy.first_name
+        if not data['first_name'] and user:
+
+            data['first_name'] = user.first_name
+        if not data['first_name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find first name on this user',
+                                                  es='Imposible encontrar el nombre en este usuario',
+                                                  slug='first-name-not-found'),
+                                      code=400)
+
+        if 'last_name' not in data:
+            data['last_name'] = ''
+
+        if not data['last_name'] and profile_academy:
+
+            data['last_name'] = profile_academy.last_name
+
+        if not data['last_name'] and user:
+
+            data['last_name'] = user.last_name
+
+        if not data['last_name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find last name on this user',
+                                                  es='Imposible encontrar el apellido en este usuario',
+                                                  slug='last-name-not-found'),
+                                      code=400)
 
         return data
 
@@ -821,10 +870,47 @@ class MemberPUTSerializer(serializers.ModelSerializer):
         fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'phone', 'address')
 
     def validate(self, data):
+        lang = data.get('lang', 'en')
 
-        already = ProfileAcademy.objects.filter(user=data['user'], academy=data['academy']).first()
-        if not already:
+        profile_academy = ProfileAcademy.objects.filter(user=data['user'], academy=data['academy']).first()
+        if not profile_academy:
             raise ValidationError('User not found on this particular academy')
+
+        if 'first_name' not in data:
+            data['first_name'] = ''
+
+        if not data['first_name'] and profile_academy:
+
+            data['first_name'] = profile_academy.first_name
+
+        if not data['first_name']:
+
+            data['first_name'] = data['user'].first_name
+
+        if not data['first_name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find first name on this user',
+                                                  es='Imposible encontrar el nombre en este usuario',
+                                                  slug='first-name-not-founded'),
+                                      code=400)
+
+        if 'last_name' not in data:
+            data['last_name'] = ''
+
+        if not data['last_name'] and profile_academy:
+
+            data['last_name'] = profile_academy.last_name
+
+        if not data['last_name']:
+
+            data['last_name'] = data['user'].last_name
+
+        if not data['last_name']:
+            raise ValidationException(translation(lang,
+                                                  en='Unable to find last name on this user',
+                                                  es='Imposible encontrar el apellido en este usuario',
+                                                  slug='last-name-not-founded'),
+                                      code=400)
 
         return data
 
@@ -970,6 +1056,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token')
 
     def validate(self, data: dict[str, str]):
+        from breathecode.payments.models import Plan
+
         lang = self.context.get('lang', 'en')
 
         if 'email' not in data:
@@ -993,7 +1081,21 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                             es='El usuario ya existe, inicie sesión en su lugar.',
                             slug='user-exists'))
 
+        plan_id = self.context.get('plan')
+        plan = None
+        if plan_id and not (plan := Plan.objects.filter(id=plan_id).first()):
+            raise ValidationException(
+                translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
+
+        if plan and plan.has_waiting_list == True:
+            raise ValidationException(
+                translation(lang,
+                            en='This plan has a waiting list',
+                            es='Este plan tiene una lista de espera',
+                            slug='plan-has-waiting-list'))
+
         self.user = user
+        self.plan = plan
 
         now = str(timezone.now())
 
@@ -1007,6 +1109,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         elif syllabus and Cohort.objects.filter(academy__available_as_saas=True,
                                                 syllabus_version__syllabus=syllabus).exists():
             data['syllabus'] = syllabus
+            data['status'] = 'ACCEPTED'
+
+        elif plan:
             data['status'] = 'ACCEPTED'
 
         else:
@@ -1027,7 +1132,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         without_syllabus = not self.syllabus or not Cohort.objects.filter(
             academy__available_as_saas=True, syllabus_version__syllabus=self.syllabus).exists()
 
-        if without_cohort and without_syllabus:
+        if without_cohort and without_syllabus and not self.plan:
             return None
 
         if not self.user:

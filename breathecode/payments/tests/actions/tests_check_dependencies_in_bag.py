@@ -46,7 +46,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_bag__cohort_not_available_for_any_plan__because_is_not_available_in_selected_plan(self):
-        plan = {'available_cohorts': []}
+        plan = {'available_cohorts': [], 'is_renewable': False}
         model = self.bc.database.create(bag=1, cohort=1, plan=plan)
         db = self.bc.format.to_dict(model.bag)
 
@@ -95,7 +95,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_bag__cohort_alright(self):
-        model = self.bc.database.create(bag=1, cohort=1, plan=1)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(bag=1, cohort=1, plan=plan)
         db = self.bc.format.to_dict(model.bag)
 
         check_dependencies_in_bag(model.bag, 'en')
@@ -110,7 +111,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     def test_bag__mentorship_service_set_alright(self):
         service = {'type': 'MENTORSHIP_SERVICE_SET'}
-        model = self.bc.database.create(bag=1, mentorship_service_set=1, plan=1, service=service)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(bag=1, mentorship_service_set=1, plan=plan, service=service)
         db = self.bc.format.to_dict(model.bag)
 
         with self.assertRaisesMessage(
@@ -129,9 +131,10 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_bag__event_type_set_alright(self):
         event_type = {'icon_url': self.bc.fake.url()}
         service = {'type': 'EVENT_TYPE_SET'}
+        plan = {'is_renewable': False}
         model = self.bc.database.create(bag=1,
                                         event_type_set=1,
-                                        plan=1,
+                                        plan=plan,
                                         event_type=event_type,
                                         service=service)
         db = self.bc.format.to_dict(model.bag)

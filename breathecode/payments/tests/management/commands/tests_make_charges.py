@@ -60,11 +60,11 @@ class SlackTestSuite(PaymentsTestCase):
         """Testing when context is None or not provided."""
         utc_now = timezone.now()
         cases = [
-            (utc_now - relativedelta(days=1, seconds=1), 'ACTIVE'),
-            (utc_now - relativedelta(days=1, seconds=1), 'ERROR'),
-            (utc_now - relativedelta(days=1, seconds=1), 'PAYMENT_ISSUE'),
+            (utc_now - relativedelta(days=1, seconds=1), 'ACTIVE', True),
+            (utc_now - relativedelta(days=1, seconds=1), 'ERROR', False),
+            (utc_now - relativedelta(days=1, seconds=1), 'PAYMENT_ISSUE', False),
         ]
-        for valid_until, status in cases:
+        for valid_until, status, status_changed in cases:
             subscription = {'valid_until': valid_until, 'status': status}
 
             model = self.bc.database.create(subscription=(2, subscription))
@@ -73,10 +73,12 @@ class SlackTestSuite(PaymentsTestCase):
             result = command.handle()
 
             self.assertEqual(result, None)
-            self.assertEqual(
-                self.bc.database.list_of('payments.Subscription'),
-                self.bc.format.to_dict(model.subscription),
-            )
+            db = self.bc.format.to_dict(model.subscription)
+            for i in range(len(db)):
+                if status_changed:
+                    db[i]['status'] = 'EXPIRED'
+
+            self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)
             self.assertEqual(tasks.charge_subscription.delay.call_args_list, [
                 call(model.subscription[0].id),
                 call(model.subscription[1].id),
@@ -141,11 +143,11 @@ class SlackTestSuite(PaymentsTestCase):
         """Testing when context is None or not provided."""
         utc_now = timezone.now()
         cases = [
-            (utc_now - relativedelta(days=1, seconds=1), 'ACTIVE'),
-            (utc_now - relativedelta(days=1, seconds=1), 'ERROR'),
-            (utc_now - relativedelta(days=1, seconds=1), 'PAYMENT_ISSUE'),
+            (utc_now - relativedelta(days=1, seconds=1), 'ACTIVE', True),
+            (utc_now - relativedelta(days=1, seconds=1), 'ERROR', False),
+            (utc_now - relativedelta(days=1, seconds=1), 'PAYMENT_ISSUE', False),
         ]
-        for valid_until, status in cases:
+        for valid_until, status, status_changed in cases:
             plan_financing = {
                 'valid_until': valid_until,
                 'status': status,
@@ -159,10 +161,13 @@ class SlackTestSuite(PaymentsTestCase):
             result = command.handle()
 
             self.assertEqual(result, None)
-            self.assertEqual(
-                self.bc.database.list_of('payments.PlanFinancing'),
-                self.bc.format.to_dict(model.plan_financing),
-            )
+
+            db = self.bc.format.to_dict(model.plan_financing)
+            for i in range(len(db)):
+                if status_changed:
+                    db[i]['status'] = 'EXPIRED'
+
+            self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), db)
             self.assertEqual(tasks.charge_plan_financing.delay.call_args_list, [
                 call(model.plan_financing[0].id),
                 call(model.plan_financing[1].id),

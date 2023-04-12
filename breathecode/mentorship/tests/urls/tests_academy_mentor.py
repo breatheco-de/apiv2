@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
+import breathecode.mentorship.actions as actions
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import MentorshipTestCase
 from django.utils import timezone
@@ -577,13 +578,18 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     def test__get__with_two_mentor_profile__passing_syllabus(self):
         slug = self.bc.fake.slug()
         syllabus = {'slug': slug}
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email(),
+        }
         model = self.bc.database.create(user=1,
                                         role=1,
                                         capability='read_mentorship_mentor',
                                         mentor_profile=1,
                                         mentorship_service=1,
                                         syllabus=syllabus,
-                                        profile_academy=1)
+                                        profile_academy=profile_academy)
 
         self.bc.request.set_headers(academy=model.academy.id)
         self.bc.request.authenticate(model.user)
@@ -624,7 +630,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['LanguageExtension', 'PaginationExtension', 'SortExtension']),
+            call(['LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
@@ -708,11 +714,13 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__post__creating_a_element(self):
+    def test__post__creating_a_elements(self):
+        email = self.bc.fake.email()
+        profile_academy = {'name': self.bc.fake.name(), 'email': email}
         model = self.bc.database.create(user=1,
                                         role=1,
                                         capability='crud_mentorship_mentor',
-                                        profile_academy=1,
+                                        profile_academy=profile_academy,
                                         mentorship_service=1)
 
         self.bc.request.set_headers(academy=1)
@@ -734,7 +742,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                    model.user,
                                    data={
                                        'id': 1,
-                                       'slug': 'mirai-nikki'
+                                       'slug': 'mirai-nikki',
+                                       'email': email,
                                    })
 
         self.assertEqual(json, expected)
@@ -748,8 +757,159 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                 'user_id': 1,
                 'academy_id': 1,
                 'price_per_hour': 20.0,
+                'email': email,
             }),
         ])
 
         mentor_profile = self.bc.database.get('mentorship.MentorProfile', 1, dict=False)
         self.bc.check.queryset_with_pks(mentor_profile.services.all(), [1])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__post__creating_a_element_taking_email_from_user(self):
+        profile_academy = {
+            'first_name': self.bc.fake.name(),
+            'last_name': self.bc.fake.name(),
+        }
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_mentor',
+                                        profile_academy=profile_academy,
+                                        mentorship_service=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        data = {
+            'slug': 'mirai-nikki',
+            'name': 'Mirai Nikki',
+            'price_per_hour': 20,
+            'services': [1],
+            'user': 1
+        }
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = post_serializer(self,
+                                   model.mentorship_service,
+                                   model.user,
+                                   data={
+                                       'id': 1,
+                                       'slug': 'mirai-nikki',
+                                       'email': model.user.email
+                                   })
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+            mentor_profile_columns({
+                'id': 1,
+                'name': 'Mirai Nikki',
+                'slug': 'mirai-nikki',
+                'bio': None,
+                'user_id': 1,
+                'academy_id': 1,
+                'price_per_hour': 20.0,
+                'email': model.user.email,
+            }),
+        ])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock(side_effect=Exception('hello')))
+    def test__post__with_one_mentor_profile__changing_to_a_success_status__without_property_set(self):
+        statuses = ['INVITED', 'ACTIVE', 'UNLISTED', 'INNACTIVE']
+        valid_statuses = ['ACTIVE', 'UNLISTED']
+
+        for db_status in statuses:
+            mentor_profile = {'status': db_status}
+            model = self.bc.database.create(user=1,
+                                            role=1,
+                                            academy=1,
+                                            capability='crud_mentorship_mentor',
+                                            mentorship_service=1,
+                                            profile_academy=1,
+                                            mentor_profile=mentor_profile)
+
+            self.bc.request.set_headers(academy=model.academy.id)
+            self.bc.request.authenticate(model.user)
+
+            url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': model.mentor_profile.id})
+
+            good_statuses = [x for x in statuses if x != db_status and x in valid_statuses]
+            for current_status in good_statuses:
+                model.mentor_profile.status = db_status
+                model.mentor_profile.save()
+
+                data = {'status': current_status}
+                response = self.client.put(url, data)
+
+                json = response.json()
+                expected = {'detail': 'without-first-name', 'status_code': 400}
+
+                self.assertEqual(json, expected)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+                    self.bc.format.to_dict(model.mentor_profile),
+                ])
+
+                self.assertEqual(actions.mentor_is_ready.call_args_list, [])
+
+                # teardown
+                actions.mentor_is_ready.call_args_list = []
+
+            # teardown
+            self.bc.database.delete('mentorship.MentorProfile')
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__post__creating_a_elements_without_name(self):
+        email = self.bc.fake.email()
+        profile_academy = {'name': self.bc.fake.name(), 'email': email}
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_mentor',
+                                        profile_academy=profile_academy,
+                                        mentorship_service=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        data = {'slug': 'mirai-nikki', 'price_per_hour': 20, 'services': [1], 'user': 1}
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'name-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test__post__creating_a_elements_without_email(self):
+        profile_academy = {
+            'name': self.bc.fake.name(),
+        }
+        user = {'first_name': self.bc.fake.name(), 'last_name': self.bc.fake.name(), 'email': ''}
+        model = self.bc.database.create(user=user,
+                                        role=1,
+                                        capability='crud_mentorship_mentor',
+                                        profile_academy=profile_academy,
+                                        mentorship_service=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor')
+        data = {
+            'slug': 'mirai-nikki',
+            'price_per_hour': 20,
+            'services': [1],
+            'user': 1,
+            'name': 'Mirai Nikki'
+        }
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'email-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

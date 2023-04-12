@@ -1,7 +1,7 @@
 import logging
 import serpy
 from breathecode.admissions.models import Cohort
-from breathecode.payments.models import Plan, Service, ServiceItem, ServiceItemFeature, Subscription
+from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature, Subscription
 from django.db.models.query_utils import Q
 
 from breathecode.utils import serializers, custom_serpy
@@ -191,6 +191,10 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
     trial_duration_unit = serpy.Field()
     service_items = serpy.MethodField()
     financing_options = serpy.MethodField()
+    has_available_cohorts = serpy.MethodField()
+
+    def get_has_available_cohorts(self, obj):
+        return obj.available_cohorts.exists()
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
@@ -209,7 +213,35 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     price_per_year = serpy.Field()
     currency = GetCurrencySmallSerializer()
     is_renewable = serpy.Field()
-    owner = GetAcademySmallSerializer()
+    owner = GetAcademySmallSerializer(required=False, many=False)
+
+
+class GetPlanOfferTranslationSerializer(custom_serpy.Serializer):
+    lang = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+    short_description = serpy.Field()
+
+
+class GetPlanOfferSerializer(custom_serpy.Serializer):
+    original_plan = GetPlanSerializer(required=False, many=False)
+    suggested_plan = GetPlanSerializer(required=False, many=False)
+    details = serpy.MethodField()
+    show_modal = serpy.Field()
+    expires_at = serpy.Field()
+
+    def get_details(self, obj):
+        query_args = []
+        query_kwargs = {'offer': obj}
+        obj.lang = obj.lang or 'en'
+
+        query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
+
+        item = PlanOfferTranslation.objects.filter(*query_args, **query_kwargs).first()
+        if item:
+            return GetPlanOfferTranslationSerializer(item, many=False).data
+
+        return None
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
@@ -242,8 +274,15 @@ class GetMentorshipServiceSerializer(serpy.Serializer):
     academy = GetAcademySmallSerializer(many=False)
 
 
-class GetMentorshipServiceSetSerializer(serpy.Serializer):
+class GetAcademyServiceSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+    service = GetServiceSmallSerializer()
+    currency = GetCurrencySmallSerializer()
+    price_per_unit = serpy.Field()
 
+
+class GetMentorshipServiceSetSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     academy = GetAcademySmallSerializer(many=False)
@@ -251,6 +290,14 @@ class GetMentorshipServiceSetSerializer(serpy.Serializer):
 
     def get_mentorship_services(self, obj):
         return GetMentorshipServiceSerializer(obj.mentorship_services.filter(), many=True).data
+
+
+class GetMentorshipServiceSetSerializer(GetMentorshipServiceSetSmallSerializer):
+    academy_services = serpy.MethodField()
+
+    def get_academy_services(self, obj):
+        items = AcademyService.objects.filter(available_mentorship_service_sets=obj)
+        return GetAcademyServiceSmallSerializer(items, many=True).data
 
 
 class GetEventTypeSerializer(serpy.Serializer):
@@ -264,7 +311,7 @@ class GetEventTypeSerializer(serpy.Serializer):
     allow_shared_creation = serpy.Field()
 
 
-class GetEventTypeSetSerializer(serpy.Serializer):
+class GetEventTypeSetSmallSerializer(serpy.Serializer):
 
     id = serpy.Field()
     slug = serpy.Field()
@@ -273,6 +320,14 @@ class GetEventTypeSetSerializer(serpy.Serializer):
 
     def get_event_types(self, obj):
         return GetEventTypeSerializer(obj.event_types.filter(), many=True).data
+
+
+class GetEventTypeSetSerializer(GetEventTypeSetSmallSerializer):
+    academy_services = serpy.MethodField()
+
+    def get_academy_services(self, obj):
+        items = AcademyService.objects.filter(available_event_type_sets=obj)
+        return GetAcademyServiceSmallSerializer(items, many=True).data
 
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
@@ -301,6 +356,11 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
         return GetInvoiceSerializer(obj.invoices.filter(), many=True).data
 
 
+class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
+    plan_expires_at = serpy.Field()
+    monthly_price = serpy.Field()
+
+
 class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
     is_refundable = serpy.Field()
@@ -312,12 +372,6 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
-
-
-#NOTE: this is before feature/add-plan-duration branch, this will be outdated
-class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
-    plan_expires_at = serpy.Field()
-    monthly_price = serpy.Field()
 
 
 class GetBagSerializer(serpy.Serializer):

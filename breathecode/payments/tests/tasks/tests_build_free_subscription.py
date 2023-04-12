@@ -9,7 +9,7 @@ from django.utils import timezone
 from breathecode.payments import tasks
 from breathecode.payments.actions import calculate_relative_delta
 
-from ...tasks import build_free_trial
+from ...tasks import build_free_subscription
 
 from ..mixins import PaymentsTestCase
 from dateutil.relativedelta import relativedelta
@@ -45,11 +45,12 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_bag_not_found(self):
-        build_free_trial.delay(1, 1)
+        build_free_subscription.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting build_free_trial for bag 1')])
+        self.assertEqual(logging.Logger.info.call_args_list,
+                         [call('Starting build_free_subscription for bag 1')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Bag with id 1 not found')])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
@@ -70,11 +71,12 @@ class PaymentsTestSuite(PaymentsTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        build_free_trial.delay(1, 1)
+        build_free_subscription.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting build_free_trial for bag 1')])
+        self.assertEqual(logging.Logger.info.call_args_list,
+                         [call('Starting build_free_subscription for bag 1')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Invoice with id 1 not found')])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
@@ -103,15 +105,15 @@ class PaymentsTestSuite(PaymentsTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        build_free_trial.delay(1, 1)
+        build_free_subscription.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
         self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting build_free_trial for bag 1'),
+            call('Starting build_free_subscription for bag 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Not have plans to associated to this free trial in the bag 1'),
+            call('Not have plans to associated to this free subscription in the bag 1'),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
@@ -134,15 +136,16 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay', MagicMock())
-    def test_subscription_was_created(self):
+    def test_subscription_was_created__is_free_trial(self):
         bag = {
             'status': 'PAID',
             'was_delivered': False,
-            'chosen_period': random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR']),
+            'chosen_period': 'NO_SET',
         }
         invoice = {'status': 'FULFILLED'}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
@@ -153,14 +156,14 @@ class PaymentsTestSuite(PaymentsTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        build_free_trial.delay(1, 1)
+        build_free_subscription.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
         self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting build_free_trial for bag 1'),
-            call('Free trial subscription was created with id 1 for plan 1'),
-            call('Free trial subscription was created with id 2 for plan 2'),
+            call('Starting build_free_subscription for bag 1'),
+            call('Free subscription was created with id 1 for plan 1'),
+            call('Free subscription was created with id 2 for plan 2'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
@@ -215,6 +218,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {'status': 'FULFILLED', 'amount': (random.random() * 99.99) + 0.01}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
@@ -225,16 +229,16 @@ class PaymentsTestSuite(PaymentsTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        build_free_trial.delay(1, 1)
+        build_free_subscription.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
         self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting build_free_trial for bag 1'),
+            call('Starting build_free_subscription for bag 1'),
         ])
 
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The invoice with id 1 is invalid for a free trial'),
+            call('The invoice with id 1 is invalid for a free subscription'),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
@@ -267,6 +271,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {'status': 'FULFILLED'}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
@@ -277,16 +282,16 @@ class PaymentsTestSuite(PaymentsTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        build_free_trial.delay(1, 1)
+        build_free_subscription.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             self.bc.format.to_dict(model.cohort),
         ])
 
         self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting build_free_trial for bag 1'),
-            call('Free trial subscription was created with id 1 for plan 1'),
-            call('Free trial subscription was created with id 2 for plan 2'),
+            call('Starting build_free_subscription for bag 1'),
+            call('Free subscription was created with id 1 for plan 1'),
+            call('Free subscription was created with id 2 for plan 2'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
@@ -343,6 +348,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {'status': 'FULFILLED'}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
@@ -353,14 +359,14 @@ class PaymentsTestSuite(PaymentsTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        build_free_trial.delay(1, 1)
+        build_free_subscription.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
         self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting build_free_trial for bag 1'),
-            call('Free trial subscription was created with id 1 for plan 1'),
-            call('Free trial subscription was created with id 2 for plan 2'),
+            call('Starting build_free_subscription for bag 1'),
+            call('Free subscription was created with id 1 for plan 1'),
+            call('Free subscription was created with id 2 for plan 2'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
@@ -417,6 +423,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {'status': 'FULFILLED'}
 
         plans = [{
+            'is_renewable': False,
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
@@ -427,14 +434,14 @@ class PaymentsTestSuite(PaymentsTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        build_free_trial.delay(1, 1)
+        build_free_subscription.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
         self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting build_free_trial for bag 1'),
-            call('Free trial subscription was created with id 1 for plan 1'),
-            call('Free trial subscription was created with id 2 for plan 2'),
+            call('Starting build_free_subscription for bag 1'),
+            call('Free subscription was created with id 1 for plan 1'),
+            call('Free subscription was created with id 2 for plan 2'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
@@ -466,6 +473,156 @@ class PaymentsTestSuite(PaymentsTestCase):
                     model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
                     'valid_until':
                     model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                }))
+
+        self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)
+        self.assertEqual(tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list, [
+            call(1),
+            call(2),
+        ])
+
+    """
+    🔽🔽🔽 With Bag, Invoice and Plan with is_renewable=False
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay', MagicMock())
+    def test_subscription_was_created__is_free__is_not_renewable(self):
+        bag = {
+            'status': 'PAID',
+            'was_delivered': False,
+            'chosen_period': 'NO_SET',
+        }
+        invoice = {'status': 'FULFILLED'}
+
+        plans = [{
+            'is_renewable': False,
+            'trial_duration': 0,
+            'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+        } for _ in range(2)]
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans)
+
+        # remove prints from mixer
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        build_free_subscription.delay(1, 1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting build_free_subscription for bag 1'),
+            call('Free subscription was created with id 1 for plan 1'),
+            call('Free subscription was created with id 2 for plan 2'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'was_delivered': True,
+            },
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        db = []
+        for plan in model.plan:
+            unit = plan.time_of_life
+            unit_type = plan.time_of_life_unit
+            db.append(
+                subscription_item({
+                    'id':
+                    plan.id,
+                    'status':
+                    'ACTIVE',
+                    'paid_at':
+                    model.invoice.paid_at,
+                    'next_payment_at':
+                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'valid_until':
+                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                }))
+
+        self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)
+        self.assertEqual(tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list, [
+            call(1),
+            call(2),
+        ])
+
+    """
+    🔽🔽🔽 With Bag, Invoice and Plan with is_renewable=True
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay', MagicMock())
+    def test_subscription_was_created__is_free__is_renewable(self):
+        bag = {
+            'status': 'PAID',
+            'was_delivered': False,
+            'chosen_period': 'NO_SET',
+        }
+        invoice = {'status': 'FULFILLED'}
+
+        plans = [{
+            'is_renewable': True,
+            'trial_duration': 0,
+            'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+        } for _ in range(2)]
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans)
+
+        # remove prints from mixer
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        build_free_subscription.delay(1, 1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting build_free_subscription for bag 1'),
+            call('Free subscription was created with id 1 for plan 1'),
+            call('Free subscription was created with id 2 for plan 2'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'was_delivered': True,
+            },
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        db = []
+        for plan in model.plan:
+            unit = plan.time_of_life
+            unit_type = plan.time_of_life_unit
+            db.append(
+                subscription_item({
+                    'id':
+                    plan.id,
+                    'status':
+                    'ACTIVE',
+                    'paid_at':
+                    model.invoice.paid_at,
+                    'next_payment_at':
+                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'valid_until':
+                    None,
                 }))
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)

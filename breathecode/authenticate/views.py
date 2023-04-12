@@ -26,6 +26,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
+from breathecode.authenticate.actions import get_user_language
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser, Syllabus
@@ -43,8 +44,9 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
-from .actions import (generate_academy_token, resend_invite, reset_password, set_gitpod_user_expiration,
-                      update_gitpod_users, sync_organization_members, get_github_scopes)
+from .actions import (generate_academy_token, get_user_language, resend_invite, reset_password, 
+                      set_gitpod_user_expiration, update_gitpod_users, sync_organization_members, 
+                      get_github_scopes)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
@@ -155,12 +157,12 @@ class LogoutView(APIView):
 
 class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions()
 
     def post(self, request):
-        handler = self.extensions(request)
+        from breathecode.payments.models import Plan
+
         data = {**request.data}
-        lang = handler.language.get() or 'en'
+        lang = get_user_language(request)
 
         if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
             try:
@@ -172,15 +174,30 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
 
-        serializer = UserInviteWaitingListSerializer(data=data)
+        if (plan := data.get('plan')) and isinstance(plan, str):
+            try:
+                data['plan'] = Plan.objects.filter(slug=plan).values_list('id', flat=True).first()
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='The plan does not exist',
+                                es='El plan no existe',
+                                slug='plan-not-found'))
+
+        serializer = UserInviteWaitingListSerializer(data=data,
+                                                     context={
+                                                         'lang': lang,
+                                                         'plan': data.get('plan'),
+                                                     })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request):
-        handler = self.extensions(request)
-        lang = handler.language.get() or 'en'
+        from breathecode.payments.models import Plan
+
+        lang = get_user_language(request)
 
         invite = UserInvite.objects.filter(email=request.data.get('email'),
                                            status='WAITING_LIST',
@@ -204,7 +221,22 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
 
-        serializer = UserInviteWaitingListSerializer(invite, data=request.data, context={'lang': lang})
+        if (plan := data.get('plan')) and isinstance(plan, str):
+            try:
+                data['plan'] = Plan.objects.filter(slug=plan).values_list('id', flat=True).first()
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='The plan does not exist',
+                                es='El plan no existe',
+                                slug='plan-not-found'))
+
+        serializer = UserInviteWaitingListSerializer(invite,
+                                                     data=request.data,
+                                                     context={
+                                                         'lang': lang,
+                                                         'plan': data.get('plan'),
+                                                     })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -272,13 +304,28 @@ class MemberView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_member')
     def put(self, request, academy_id=None, user_id_or_email=None):
+        lang = get_user_language(request)
+
+        user = ProfileAcademy.objects.filter(user__id=request.user.id, academy__id=academy_id).first()
+
+        if user.email is None or user.email.strip() == '':
+            raise ValidationException(
+                translation(lang,
+                            en='This mentor does not have an email address',
+                            es='Este mentor no tiene una dirección de correo electrónico',
+                            slug='email-not-found'),
+                code=400,
+            )
+
+        if user.phone is None or user.phone.strip() == '':
+            raise ValidationException('This mentor does not have a phone', code=404, slug='phone-not-found')
 
         already = None
         if user_id_or_email.isnumeric():
             already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
         else:
             raise ValidationException('User id must be a numeric value',
-                                      code=404,
+                                      code=400,
                                       slug='user-id-is-not-numeric')
 
         request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
@@ -1892,7 +1939,7 @@ class GithubUserView(APIView, GenerateLookupsMixin):
                 Q(username__icontains=like) | Q(user__email__icontains=like)
                 | Q(user__first_name__icontains=like) | Q(user__last_name__icontains=like))
 
-        items = items.order_by(request.GET.get('sort', 'created_at'))
+        items = items.order_by(request.GET.get('sort', '-created_at'))
 
         items = handler.queryset(items)
         serializer = GithubUserSerializer(items, many=True)

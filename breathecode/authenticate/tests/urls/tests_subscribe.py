@@ -546,21 +546,6 @@ class SubscribeTestSuite(AuthTestCase):
             call(user=model.user, token_type='login'),
         ])
 
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
-    #############################################################################################
     """
     🔽🔽🔽 Put with UserInvite, passing Syllabus not found
     """
@@ -845,4 +830,241 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [
             call(user=model.user, token_type='login'),
+        ])
+
+    """
+    🔽🔽🔽 Put with UserInvite, passing Cohort and it found, Academy available as saas, User does not exists,
+    Plan does not exists
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=now))
+    @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
+    def test_task__put__plan_does_not_exist(self):
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        user_invite = {
+            'email': 'pokemon@potato.io',
+            'status': 'WAITING_LIST',
+            'token': token,
+        }
+        academy = {'available_as_saas': True}
+        self.bc.database.create(user_invite=user_invite, cohort=1, academy=academy)
+        url = reverse_lazy('authenticate:subscribe')
+        data = {
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'last_name': 'valdomero',
+            'phone': '+123123123',
+            # 'cohort': 1,
+            'token': token,
+            'plan': 1,
+        }
+        access_token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+            response = self.client.put(url, data, format='json')
+
+        del data['token']
+
+        json = response.json()
+        expected = {'detail': 'plan-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # del data['cohort']
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
+                         [{
+                             'academy_id': 1,
+                             'author_id': None,
+                             'cohort_id': 1,
+                             'id': 1,
+                             'role_id': None,
+                             'sent_at': None,
+                             'status': 'WAITING_LIST',
+                             'email': 'pokemon@potato.io',
+                             'first_name': None,
+                             'last_name': None,
+                             'phone': '',
+                             'token': hashlib.sha1(
+                                 (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                             'process_message': '',
+                             'process_status': 'PENDING',
+                             'token': token,
+                             'syllabus_id': None,
+                         }])
+
+        user_db = self.bc.database.list_of('auth.User')
+        for item in user_db:
+            self.assertTrue(isinstance(item['date_joined'], datetime))
+            del item['date_joined']
+
+        self.assertEqual(user_db, [])
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+
+        self.assertEqual(Token.get_or_create.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with UserInvite, passing Cohort and it found, Academy available as saas, User does not exists,
+    Plan with has_waiting_list = True
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=now))
+    @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
+    def test_task__put__plan_has_waiting_list(self):
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        user_invite = {
+            'email': 'pokemon@potato.io',
+            'status': 'WAITING_LIST',
+            'token': token,
+        }
+        academy = {'available_as_saas': True}
+        plan = {'time_of_life': None, 'time_of_life_unit': None, 'has_waiting_list': True}
+        self.bc.database.create(user_invite=user_invite, cohort=1, academy=academy, plan=plan)
+        url = reverse_lazy('authenticate:subscribe')
+        data = {
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'last_name': 'valdomero',
+            'phone': '+123123123',
+            # 'cohort': 1,
+            'token': token,
+            'plan': 1,
+        }
+        access_token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+            response = self.client.put(url, data, format='json')
+
+        del data['token']
+
+        json = response.json()
+        expected = {'detail': 'plan-has-waiting-list', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # del data['cohort']
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
+                         [{
+                             'academy_id': 1,
+                             'author_id': None,
+                             'cohort_id': 1,
+                             'id': 1,
+                             'role_id': None,
+                             'sent_at': None,
+                             'status': 'WAITING_LIST',
+                             'email': 'pokemon@potato.io',
+                             'first_name': None,
+                             'last_name': None,
+                             'phone': '',
+                             'token': hashlib.sha1(
+                                 (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                             'process_message': '',
+                             'process_status': 'PENDING',
+                             'token': token,
+                             'syllabus_id': None,
+                         }])
+
+        user_db = self.bc.database.list_of('auth.User')
+        for item in user_db:
+            self.assertTrue(isinstance(item['date_joined'], datetime))
+            del item['date_joined']
+
+        self.assertEqual(user_db, [])
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+
+        self.assertEqual(Token.get_or_create.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with UserInvite, passing Cohort and it found, Academy available as saas, User does not exists,
+    Plan with has_waiting_list = False
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=now))
+    @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
+    def test_task__put__plan_has_not_waiting_list(self):
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        user_invite = {
+            'email': 'pokemon@potato.io',
+            'status': 'WAITING_LIST',
+            'token': token,
+            'cohort_id': None,
+        }
+        academy = {'available_as_saas': True}
+        plan = {'time_of_life': None, 'time_of_life_unit': None, 'has_waiting_list': False}
+        self.bc.database.create(user_invite=user_invite, cohort=1, academy=academy, plan=plan)
+        url = reverse_lazy('authenticate:subscribe')
+        data = {
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'last_name': 'valdomero',
+            'phone': '+123123123',
+            'token': token,
+            'plan': 1,
+        }
+        access_token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+            response = self.client.put(url, data, format='json')
+
+        del data['token']
+        del data['plan']
+
+        json = response.json()
+        expected = {
+            'id': 1,
+            'access_token': access_token,
+            'cohort': None,
+            'syllabus': None,
+            'cohort': None,
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
+                         [{
+                             'academy_id': 1,
+                             'author_id': None,
+                             'cohort_id': None,
+                             'id': 1,
+                             'role_id': None,
+                             'sent_at': None,
+                             'status': 'ACCEPTED',
+                             'token': hashlib.sha1(
+                                 (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                             'process_message': '',
+                             'process_status': 'PENDING',
+                             'token': token,
+                             'syllabus_id': None,
+                             **data,
+                         }])
+
+        user_db = self.bc.database.list_of('auth.User')
+        for item in user_db:
+            self.assertTrue(isinstance(item['date_joined'], datetime))
+            del item['date_joined']
+
+        self.assertEqual(user_db, [{
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'id': 1,
+            'is_active': True,
+            'is_staff': False,
+            'is_superuser': False,
+            'last_login': None,
+            'last_name': 'valdomero',
+            'password': '',
+            'username': 'pokemon@potato.io',
+        }])
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+            call(
+                'pick_password', 'pokemon@potato.io', {
+                    'SUBJECT': 'Set your password at 4Geeks',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
+        ])
+
+        user = self.bc.database.get('auth.User', 1, dict=False)
+        self.assertEqual(Token.get_or_create.call_args_list, [
+            call(user=user, token_type='login'),
         ])

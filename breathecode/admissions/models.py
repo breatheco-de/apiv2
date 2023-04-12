@@ -504,7 +504,7 @@ class CohortUser(models.Model):
         result = super().save(*args, **kwargs)  # Call the "real" save() method.
 
         if edu_status_updated:
-            student_edu_status_updated.send(instance=self, sender=self.__class__)
+            signals.student_edu_status_updated.send(instance=self, sender=self.__class__)
 
         signals.cohort_log_saved.send(instance=self, sender=self.__class__)
 
