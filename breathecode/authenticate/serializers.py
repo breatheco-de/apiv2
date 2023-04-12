@@ -75,22 +75,6 @@ class GitpodUserSmallSerializer(serpy.Serializer):
     target_cohort = GetSmallCohortSerializer(required=False)
 
 
-class GithubUserSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    id = serpy.Field()
-    academy = GetSmallAcademySerializer(required=False)
-    user = UserTinySerializer(required=False)
-    username = serpy.Field()
-
-    storage_status = serpy.Field()
-    storage_action = serpy.Field()
-    storage_log = serpy.Field()
-    storage_synch_at = serpy.Field()
-
-    created_at = serpy.Field()
-
-
 class AcademyTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -152,6 +136,29 @@ class GithubSmallSerializer(serpy.Serializer):
     avatar_url = serpy.Field()
     name = serpy.Field()
     username = serpy.Field()
+    
+class GithubUserSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    academy = GetSmallAcademySerializer(required=False)
+    user = UserTinySerializer(required=False)
+    username = serpy.Field()
+
+    storage_status = serpy.Field()
+    storage_action = serpy.Field()
+    storage_log = serpy.Field()
+    storage_synch_at = serpy.Field()
+
+    created_at = serpy.Field()
+    
+    github = serpy.MethodField()
+
+    def get_github(self, obj):
+        github = CredentialsGithub.objects.filter(user=obj.user).first()
+        if github is None:
+            return None
+        return GithubSmallSerializer(github).data
 
 
 class GetProfileSmallSerializer(serpy.Serializer):
