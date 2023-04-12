@@ -36,7 +36,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'scope': 'user repo read:org',
         }
 
-        redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}'
+        redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}+admin%3Aorg'
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(response.url, redirect)
