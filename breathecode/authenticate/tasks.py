@@ -42,12 +42,14 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
         return
 
     if not invite.email:
+        invite.status = 'ACCEPTED'
         invite.process_status = 'ERROR'
         invite.process_message = "Can't determine the user email"
         invite.save()
         return
 
     if user := User.objects.filter(email=invite.email).first():
+        invite.status = 'ACCEPTED'
         invite.process_status = 'DONE'
         invite.process_message = f'User already exists with the id {user.id}'
         invite.save()
@@ -61,6 +63,7 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
     user.save()
 
     invite.user = user
+    invite.status = 'ACCEPTED'
     invite.process_status = 'DONE'
     invite.process_message = f'Registered as User with id {user.id}'
     invite.save()
