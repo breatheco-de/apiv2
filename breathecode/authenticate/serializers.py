@@ -973,7 +973,7 @@ class POSTGithubUserSerializer(serializers.ModelSerializer):
         if github is None:
             raise ValidationError('No github credentials found for user')
 
-        return data
+        return {**data, 'username': github.username}
 
     def create(self, validated_data):
 

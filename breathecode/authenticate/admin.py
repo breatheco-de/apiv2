@@ -320,13 +320,30 @@ def mark_as_ignore(modeladmin, request, queryset):
     queryset.all().update(storage_status='SYNCHED', storage_action='IGNORE')
 
 
+def look_for_github_credentials(modeladmin, request, queryset):
+    users = queryset.all()
+    for u in users:
+        github = CredentialsGithub.objects.filter(user=u.user).first()
+        if github is None:
+            u.username = None
+        else:
+            u.username = github.username
+        u.save()
+
+
 @admin.register(GithubAcademyUser)
 class GithubAcademyUserAdmin(admin.ModelAdmin):
-    list_display = ('academy', 'user', 'username', 'storage_status', 'storage_action')
+    list_display = ('academy', 'user', 'github', 'storage_status', 'storage_action')
     search_fields = ['username', 'user__email', 'user__first_name', 'user__last_name']
-    actions = [mark_as_deleted, mark_as_add, mark_as_ignore]
+    actions = [mark_as_deleted, mark_as_add, mark_as_ignore, look_for_github_credentials]
     list_filter = ('academy', 'storage_status', 'storage_action')
     raw_id_fields = ['user']
+
+    def github(self, obj):
+        if obj.username is None:
+            return 'missing github connect'
+        else:
+            return obj.username
 
 
 @admin.register(GithubAcademyUserLog)
