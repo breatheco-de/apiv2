@@ -44,8 +44,9 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
-from .actions import (generate_academy_token, get_user_language, resend_invite, reset_password,
-                      set_gitpod_user_expiration, update_gitpod_users, sync_organization_members)
+from .actions import (generate_academy_token, get_user_language, resend_invite, reset_password, 
+                      set_gitpod_user_expiration, update_gitpod_users, sync_organization_members, 
+                      get_github_scopes)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
@@ -58,7 +59,8 @@ from .serializers import (AuthSerializer, GetGitpodUserSerializer, GetProfileAca
                           TokenSmallSerializer, UserInviteSerializer, UserInviteSmallSerializer,
                           UserInviteWaitingListSerializer, UserMeSerializer, UserSerializer,
                           UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
-                          PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer)
+                          PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer,
+                          POSTGithubUserSerializer)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -852,7 +854,7 @@ def get_github_token(request, token=None):
         else:
             url = url + f'&user={token}'
 
-    scope = request.query_params.get('scope', 'user repo read:org')
+    scope = request.query_params.get('scope', 'user repo read:org admin:org')
     try:
         scope = base64.b64decode(scope.encode('utf-8')).decode('utf-8')
     except Exception as e:
@@ -1554,7 +1556,10 @@ def render_user_invite(request, token):
 
                 cu = CohortUser.objects.filter(user=token.user, cohort=invite.cohort).first()
                 if cu is None:
-                    cu = CohortUser(user=token.user, cohort=invite.cohort, role=role)
+                    cu = CohortUser(user=token.user,
+                                    cohort=invite.cohort,
+                                    role=role,
+                                    educational_status='ACTIVE')
                     cu.save()
 
             invite.status = 'ACCEPTED'
@@ -1934,7 +1939,7 @@ class GithubUserView(APIView, GenerateLookupsMixin):
                 Q(username__icontains=like) | Q(user__email__icontains=like)
                 | Q(user__first_name__icontains=like) | Q(user__last_name__icontains=like))
 
-        items = items.order_by(request.GET.get('sort', 'created_at'))
+        items = items.order_by(request.GET.get('sort', '-created_at'))
 
         items = handler.queryset(items)
         serializer = GithubUserSerializer(items, many=True)
@@ -1973,6 +1978,36 @@ class GithubUserView(APIView, GenerateLookupsMixin):
             return Response(GithubUserSerializer(data_list, many=True).data, status=status.HTTP_200_OK)
         else:
             return Response(GithubUserSerializer(data_list[0], many=False).data, status=status.HTTP_200_OK)
+
+    @capable_of('update_github_user')
+    def post(self, request, academy_id):
+
+        body = request.data
+        if 'cohort' not in body:
+            raise ValidationException(translation(
+                en='You must specify the cohort the user belongs to, and it must be active on it',
+                es='Debes especificar la cohort y el usuario debe estar activo en ella'),
+                                      slug='user-not-found')
+        if 'user' not in body:
+            raise ValidationException(translation(en='You must specify the user',
+                                                  es='Debes especificar el usuario'),
+                                      slug='user-not-found')
+
+        cu = CohortUser.objects.filter(user=body['user'], cohort=body['cohort'],
+                                       educational_status='ACTIVE').first()
+        if cu is None:
+            raise ValidationException(translation(
+                en='You must specify the cohort the user belongs to, and it must be active on it',
+                es='Debes especificar la cohort y el usuario debe estar activo en ella'),
+                                      slug='cohort-not-found')
+
+        context = {'academy_id': academy_id, 'request': request}
+        serializer = POSTGithubUserSerializer(data=request.data, context=context)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AcademyGithubSyncView(APIView, GenerateLookupsMixin):

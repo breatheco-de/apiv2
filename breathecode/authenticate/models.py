@@ -286,6 +286,12 @@ STORAGE_ACTION = (
 
 
 class GithubAcademyUser(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(GithubAcademyUser, self).__init__(*args, **kwargs)
+        self.__old_status = self.storage_status
+        self.__old_action = self.storage_action
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
     username = models.SlugField(max_length=40,
@@ -317,6 +323,34 @@ class GithubAcademyUser(models.Model):
             self.storage_log = []
 
         self.storage_log.append(GithubAcademyUser.create_log(msg))
+
+    def save(self, *args, **kwargs):
+        has_mutated = False
+
+        if self.__old_status != self.storage_status:
+            has_mutated = True
+        if self.__old_action != self.storage_action:
+            has_mutated = True
+
+        exit_op = super().save(*args, **kwargs)
+
+        if has_mutated and self.storage_status == 'SYNCHED':
+            user_log = GithubAcademyUserLog(
+                academy_user=self,
+                storage_status=self.storage_status,
+                storage_action=self.storage_action,
+            )
+            user_log.save()
+
+        return exit_op
+
+
+class GithubAcademyUserLog(models.Model):
+    academy_user = models.ForeignKey(GithubAcademyUser, on_delete=models.CASCADE)
+    storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
+    storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
 class CredentialsSlack(models.Model):
