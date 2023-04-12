@@ -394,7 +394,7 @@ def clean_readme_relative_paths(asset):
 def clean_readme_hide_comments(asset):
     logger.debug(f'Clearning readme for asset {asset.slug}')
     readme = asset.get_readme()
-    regex = r'<!--\s+(:?end)?hide\s+-->'
+    regex = r'<!--\s*(:?end)?hide\s*-->'
 
     content = readme['decoded']
     findings = list(re.finditer(regex, content))
