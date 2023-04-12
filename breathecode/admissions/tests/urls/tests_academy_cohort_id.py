@@ -659,6 +659,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              'academy_id': 1,
+                             'accepts_enrollment_suggestions': True,
                              'current_day': data['current_day'],
                              'current_module': None,
                              'ending_date': model['cohort'].ending_date,
@@ -824,6 +825,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              'academy_id': 1,
+                             'accepts_enrollment_suggestions': True,
                              'current_day': data['current_day'],
                              'current_module': None,
                              'ending_date': model['cohort'].ending_date,
@@ -996,6 +998,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              'academy_id': 1,
+                             'accepts_enrollment_suggestions': True,
                              'current_day': data['current_day'],
                              'current_module': None,
                              'ending_date': model['cohort'].ending_date,
@@ -1156,6 +1159,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              'academy_id': 1,
+                             'accepts_enrollment_suggestions': True,
                              'current_day': data['current_day'],
                              'current_module': None,
                              'ending_date': model['cohort'].ending_date,
@@ -1497,7 +1501,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
+            call([
+                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
+                'SortExtension'
+            ]),
         ])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

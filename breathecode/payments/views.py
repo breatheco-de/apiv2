@@ -7,9 +7,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import get_user_language, get_user_settings
-from breathecode.events.models import EventType
-from breathecode.mentorship.models import MentorshipService
+from breathecode.authenticate.actions import get_user_language
 from django.db.models import CharField, Q, Value
 
 from breathecode.payments import tasks
@@ -17,14 +15,14 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
-from breathecode.payments.models import (Bag, Consumable, EventTypeSet, FinancialReputation, Invoice,
-                                         MentorshipServiceSet, Plan, PlanFinancing, PlanServiceItem, Service,
-                                         ServiceItem, Subscription)
-from breathecode.payments.serializers import (GetBagSerializer, GetInvoiceSerializer,
-                                              GetInvoiceSmallSerializer, GetPlanFinancingSerializer,
-                                              GetPlanSerializer, GetServiceItemWithFeaturesSerializer,
-                                              GetServiceSerializer, GetSubscriptionSerializer,
-                                              ServiceSerializer)
+from breathecode.payments.models import (AcademyService, Bag, Consumable, EventTypeSet, FinancialReputation,
+                                         Invoice, MentorshipServiceSet, Plan, PlanFinancing, PlanOffer,
+                                         Service, ServiceItem, Subscription)
+from breathecode.payments.serializers import (
+    GetBagSerializer, GetEventTypeSetSerializer, GetEventTypeSetSmallSerializer, GetInvoiceSerializer,
+    GetInvoiceSmallSerializer, GetMentorshipServiceSetSerializer, GetMentorshipServiceSetSmallSerializer,
+    GetPlanFinancingSerializer, GetPlanOfferSerializer, GetPlanSerializer,
+    GetServiceItemWithFeaturesSerializer, GetServiceSerializer, GetSubscriptionSerializer, ServiceSerializer)
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators.capable_of import capable_of
@@ -32,7 +30,7 @@ from breathecode.utils.generate_lookups_mixin import GenerateLookupsMixin
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -415,6 +413,91 @@ class MeConsumableView(APIView):
         return Response(balance)
 
 
+class MentorshipServiceSetView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def get(self, request, mentorship_service_set_id=None):
+        handler = self.extensions(request)
+
+        lang = get_user_language(request)
+
+        if mentorship_service_set_id:
+            item = MentorshipServiceSet.objects.filter(id=mentorship_service_set_id).first()
+            if not item:
+                raise ValidationException(translation(lang,
+                                                      en='Mentorship Service Set not found',
+                                                      es='No existe el Servicio de Mentoría',
+                                                      slug='not-found'),
+                                          code=404)
+
+            serializer = GetMentorshipServiceSetSerializer(item, many=False)
+
+            return handler.response(serializer.data)
+
+        query = handler.lookup.build(
+            lang,
+            slugs=[
+                '',
+                'academy',
+                'mentorship_services',
+            ],
+            overwrite={
+                'mentorship_service': 'mentorship_services',
+            },
+        )
+
+        items = MentorshipServiceSet.objects.filter(query)
+
+        items = handler.queryset(items)
+        serializer = GetMentorshipServiceSetSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class EventTypeSetView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def get(self, request, event_type_set_id=None):
+        handler = self.extensions(request)
+
+        lang = get_user_language(request)
+
+        if event_type_set_id:
+            item = EventTypeSet.objects.filter(id=event_type_set_id).first()
+            if not item:
+                raise ValidationException(translation(lang,
+                                                      en='Event type set not found',
+                                                      es='No existe el tipo de evento',
+                                                      slug='not-found'),
+                                          code=404)
+            serializer = GetEventTypeSetSerializer(item, many=False)
+
+            return handler.response(serializer.data)
+
+        query = handler.lookup.build(
+            lang,
+            strings={'exact': ['event_types__lang']},
+            slugs=[
+                '',
+                'academy',
+                'event_types',
+            ],
+            overwrite={
+                'event_type': 'event_types',
+                'lang': 'event_types__lang',
+            },
+        )
+
+        items = EventTypeSet.objects.filter(query)
+
+        items = handler.queryset(items)
+        serializer = GetEventTypeSetSmallSerializer(items, many=True)
+
+        return Response(serializer.data)
+
+
 class MeSubscriptionView(APIView):
     # this cannot support cache because the cache does not support associated two models to a response yet
     extensions = APIViewExtensions(sort='-id')
@@ -561,6 +644,42 @@ class MeSubscriptionChargeView(APIView):
         tasks.charge_subscription.delay(subscription_id)
 
         return Response({'status': 'loading'}, status=status.HTTP_202_ACCEPTED)
+
+
+class MeSubscriptionCancelView(APIView):
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def put(self, request, subscription_id):
+        lang = get_user_language(request)
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id, user=request.user).first()):
+            raise ValidationException(translation(lang,
+                                                  en='Subscription not found',
+                                                  es='No existe la suscripción',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if subscription.status == 'CANCELLED':
+            raise ValidationException(translation(lang,
+                                                  en='Subscription already cancelled',
+                                                  es='La suscripción ya está cancelada',
+                                                  slug='already-cancelled'),
+                                      code=400)
+
+        if subscription.status == 'DEPRECATED':
+            raise ValidationException(translation(
+                lang,
+                en='This subscription is deprecated, so is already cancelled',
+                es='Esta suscripción está obsoleta, por lo que ya está cancelada',
+                slug='deprecated'),
+                                      code=400)
+
+        subscription.status = 'CANCELLED'
+        subscription.save()
+
+        serializer = GetSubscriptionSerializer(subscription)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class MePlanFinancingChargeView(APIView):
@@ -740,6 +859,59 @@ class CardView(APIView):
         return Response({'status': 'ok'})
 
 
+class PlanOfferView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def get_lookup(self, key, value):
+        args = ()
+        kwargs = {}
+        slug_key = f'{key}__slug__in'
+        pk_key = f'{key}__id__in'
+
+        for v in value.split(','):
+            if slug_key not in kwargs and not v.isnumeric():
+                kwargs[slug_key] = []
+
+            if pk_key not in kwargs and v.isnumeric():
+                kwargs[pk_key] = []
+
+            if v.isnumeric():
+                kwargs[pk_key].append(int(v))
+
+            else:
+                kwargs[slug_key].append(v)
+
+        if len(kwargs) > 1:
+            args = (Q(**{slug_key: kwargs[slug_key]}) | Q(**{pk_key: kwargs[pk_key]}), )
+            kwargs = {}
+
+        return args, kwargs
+
+    def get(self, request):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+        utc_now = timezone.now()
+
+        # do no show the bags of type preview they are build
+        items = PlanOffer.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now))
+
+        if suggested_plan := request.GET.get('suggested_plan'):
+            args, kwargs = self.get_lookup('suggested_plan', suggested_plan)
+            items = items.filter(*args, **kwargs)
+
+        if original_plan := request.GET.get('original_plan'):
+            args, kwargs = self.get_lookup('original_plan', original_plan)
+            items = items.filter(*args, **kwargs)
+
+        items = items.distinct()
+        items = handler.queryset(items)
+        items = items.annotate(lang=Value(lang, output_field=CharField()))
+        serializer = GetPlanOfferSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
 class BagView(APIView):
     extensions = APIViewExtensions(sort='-id', paginate=True)
 
@@ -851,7 +1023,10 @@ class CheckingView(APIView):
                 #FIXME: the service items should be bought without renewals
                 if not plan or plan.is_renewable:
                     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = \
-                        get_amount(bag, bag.academy.main_currency)
+                        get_amount(bag, bag.academy.main_currency, lang)
+
+                else:
+                    actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
 
                 amount = bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
                 plans = bag.plans.all()
@@ -875,6 +1050,143 @@ class CheckingView(APIView):
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
+
+
+# consumables/checkout
+class ConsumableCheckoutView(APIView):
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def post(self, request):
+        lang = get_user_language(request)
+
+        service = request.data.get('service')
+        how_many = request.data.get('how_many')
+        academy = request.data.get('academy')
+
+        if not service:
+            raise ValidationException(translation(lang,
+                                                  en='Service is required',
+                                                  es='El servicio es requerido',
+                                                  slug='service-is-required'),
+                                      code=400)
+
+        if not how_many:
+            raise ValidationException(translation(lang,
+                                                  en='How many is required',
+                                                  es='La cantidad es requerida',
+                                                  slug='how-many-is-required'),
+                                      code=400)
+
+        if not isinstance(how_many, int) or how_many <= 0:
+            raise ValidationException(translation(lang,
+                                                  en='How many is not valid',
+                                                  es='La cantidad no es válida',
+                                                  slug='how-many-is-not-valid'),
+                                      code=400)
+
+        if not academy:
+            raise ValidationException(translation(lang,
+                                                  en='Academy is required',
+                                                  es='La academia es requerida',
+                                                  slug='academy-is-required'),
+                                      code=400)
+
+        mentorship_service_set = request.data.get('mentorship_service_set')
+        event_type_set = request.data.get('event_type_set')
+
+        if [mentorship_service_set, event_type_set].count(None) != 1:
+            raise ValidationException(translation(
+                lang,
+                en='Mentorship service set or event type set is required',
+                es='El servicio de mentoría o el tipo de evento es requerido',
+                slug='mentorship-service-set-or-event-type-set-is-required'),
+                                      code=400)
+
+        if service.type == 'MENTORSHIP_SERVICE_SET' and not mentorship_service_set:
+            raise ValidationException(translation(
+                lang,
+                en='This service is type mentorship service set, but you provided other type of resource',
+                es='Este servicio es de tipo mentoría, pero usted proporcionó otro tipo de recurso',
+                slug='bad-service-type-mentorship-service-set'),
+                                      code=400)
+
+        elif service.type == 'EVENT_TYPE_SET' and not event_type_set:
+            raise ValidationException(translation(
+                lang,
+                en='This service is type event type set, but you provided other type of resource',
+                es='Este servicio es de tipo tipo de evento, pero usted proporcionó otro tipo de recurso',
+                slug='bad-service-type-event-type-set'),
+                                      code=400)
+
+        elif service.type not in ['MENTORSHIP_SERVICE_SET', 'EVENT_TYPE_SET']:
+            raise ValidationException(translation(lang,
+                                                  en='This service can\'t be bought here yet',
+                                                  es='Este servicio no se puede comprar aquí todavía',
+                                                  slug='bad-service-type'),
+                                      code=400)
+
+        kwargs = {}
+        if mentorship_service_set:
+            kwargs['available_mentorship_service_sets'] = mentorship_service_set
+
+        elif event_type_set:
+            kwargs['available_event_type_sets'] = event_type_set
+
+        academy_service = AcademyService.objects.filter(academy=academy, service=service, **kwargs).first()
+        if not academy_service:
+            raise ValidationException(translation(lang,
+                                                  en='Academy service not found',
+                                                  es='Servicio de academia no encontrado',
+                                                  slug='academy-service-not-found'),
+                                      code=404)
+
+        price_per_unit = academy_service.price_per_unit
+        currency = academy_service.currency
+
+        amount = price_per_unit * how_many
+
+        if amount <= 0.5:
+            raise ValidationException(translation(lang,
+                                                  en='The amount is too low',
+                                                  es='El monto es muy bajo',
+                                                  slug='the-amount-is-too-low'),
+                                      code=400)
+
+        with transaction.atomic():
+            sid = transaction.savepoint()
+            try:
+                s = Stripe()
+                s.set_language(lang)
+                s.add_contact(request.user)
+                service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=how_many)
+                bag = Bag(type='CHARGE',
+                          status='PAID',
+                          user=request.user,
+                          currency=currency,
+                          amount=amount,
+                          academy=academy,
+                          is_recurrent=False)
+
+                bag.save()
+
+                if mentorship_service_set:
+                    bag.selected_mentorship_service_sets.add(mentorship_service_set)
+
+                else:
+                    bag.selected_event_type_sets.add(event_type_set)
+
+                bag.service_items.add(service_item)
+
+                invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
+
+                tasks.build_consumables_from_bag.delay(bag.id)
+
+            except Exception as e:
+                transaction.savepoint_rollback(sid)
+                raise e
+
+        serializer = GetInvoiceSerializer(invoice, many=False)
+        return Response(serializer.data, status=201)
 
 
 class PayView(APIView):
@@ -936,6 +1248,7 @@ class PayView(APIView):
                 chosen_period = request.data.get('chosen_period', '').upper()
 
                 available_for_free_trial = False
+                available_free = False
                 if not how_many_installments and not chosen_period:
                     available_for_free_trial = (bag.amount_per_month == 0 and bag.amount_per_quarter == 0
                                                 and bag.amount_per_half == 0 and bag.amount_per_year == 0)
@@ -944,23 +1257,28 @@ class PayView(APIView):
                     available_for_free_trial = available_for_free_trial and (
                         not plan.financing_options.filter().exists() if plan else False)
 
-                if not available_for_free_trial and not how_many_installments and not chosen_period:
+                    available_free = available_for_free_trial and not plan.trial_duration
+                    available_for_free_trial = available_for_free_trial and plan.trial_duration
+
+                if (not available_for_free_trial and not available_free and not how_many_installments
+                        and not chosen_period):
                     raise ValidationException(translation(lang,
                                                           en='Missing chosen period',
                                                           es='Falta el periodo elegido',
                                                           slug='missing-chosen-period'),
                                               code=400)
 
-                if not available_for_free_trial and not how_many_installments and chosen_period not in [
-                        'MONTH', 'QUARTER', 'HALF', 'YEAR'
-                ]:
-                    raise ValidationException(translation(lang,
-                                                          en='Invalid chosen period',
-                                                          es='Periodo elegido inválido',
-                                                          slug='invalid-chosen-period'),
+                available_chosen_periods = ['MONTH', 'QUARTER', 'HALF', 'YEAR']
+                if (not available_for_free_trial and not available_free and not how_many_installments
+                        and chosen_period not in available_chosen_periods):
+                    raise ValidationException(translation(
+                        lang,
+                        en=f"Invalid chosen period ({', '.join(available_chosen_periods)})",
+                        es=f"Periodo elegido inválido ({', '.join(available_chosen_periods)})",
+                        slug='invalid-chosen-period'),
                                               code=400)
 
-                if not available_for_free_trial and not chosen_period and (
+                if not available_for_free_trial and not available_free and not chosen_period and (
                         not isinstance(how_many_installments, int) or how_many_installments <= 0):
                     raise ValidationException(translation(
                         lang,
@@ -969,10 +1287,11 @@ class PayView(APIView):
                         slug='invalid-how-many-installments'),
                                               code=400)
 
-                if not available_for_free_trial and not chosen_period and how_many_installments:
+                if (not available_for_free_trial and not available_free and not chosen_period
+                        and how_many_installments):
                     bag.how_many_installments = how_many_installments
 
-                if not available_for_free_trial and bag.how_many_installments > 0:
+                if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
                     try:
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(
@@ -986,7 +1305,8 @@ class PayView(APIView):
                             es='La bolsa esta mal configurada, relacionado a la opción de financiamiento',
                             slug='invalid-bag-configured-by-installments'),
                                                   code=500)
-                elif not available_for_free_trial:
+
+                elif not available_for_free_trial and not available_free:
                     amount = get_amount_by_chosen_period(bag, chosen_period, lang)
 
                 else:
@@ -1001,6 +1321,14 @@ class PayView(APIView):
                                               code=500)
 
                 actions.check_dependencies_in_bag(bag, lang)
+
+                if amount == 0 and not available_free and available_for_free_trial and not bag.plans.filter(
+                        plan_offer_from__id__gte=1).exists():
+                    raise ValidationException(
+                        translation(lang,
+                                    en='The plan was chosen is not ready too be sold',
+                                    es='El plan elegido no esta listo para ser vendido',
+                                    slug='the-plan-was-chosen-is-not-ready-too-be-sold'))
 
                 if amount >= 0.50:
                     s = Stripe()
@@ -1035,7 +1363,7 @@ class PayView(APIView):
                 transaction.savepoint_commit(sid)
 
                 if amount == 0:
-                    tasks.build_free_trial.delay(bag.id, invoice.id)
+                    tasks.build_free_subscription.delay(bag.id, invoice.id)
 
                 elif bag.how_many_installments > 0:
                     tasks.build_plan_financing.delay(bag.id, invoice.id)

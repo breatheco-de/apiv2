@@ -254,6 +254,7 @@ class GetCourseTranslationSerializer(serpy.Serializer):
     title = serpy.Field()
     description = serpy.Field()
     lang = serpy.Field()
+    course_modules = serpy.Field()
 
 
 class GetCourseSmallSerializer(serpy.Serializer):

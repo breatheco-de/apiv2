@@ -1,25 +1,21 @@
 from __future__ import annotations
 
-import ast
 from datetime import timedelta
 import os
-from typing import Optional
 from django.contrib.auth.models import Group, User
 from django.db import models
 from django.utils import timezone
-# from breathecode.payments.signals import consume_service
+from django.db.models import Q
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
 from breathecode.events.models import EventType
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
-from django.core.exceptions import ValidationError
 from django import forms
 from django.core.handlers.wsgi import WSGIRequest
 
 from breathecode.utils.validators.language import validate_language_code
-from . import signals
 from breathecode.utils.i18n import translation
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
@@ -278,11 +274,27 @@ class FinancingOption(models.Model):
     This model is used as referenced of units of a service can be used.
     """
 
+    _lang = 'en'
+
     monthly_price = models.FloatField(default=1, help_text='Monthly price (e.g. 1, 2, 3, ...)')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency')
 
     how_many_months = models.IntegerField(
         default=1, help_text='How many months and installments to collect (e.g. 1, 2, 3, ...)')
+
+    def clean(self) -> None:
+        if not self.monthly_price:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Monthly price is required',
+                            es='El precio mensual es requerido',
+                            slug='monthly-price-required'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f'{self.monthly_price} {self.currency.code} per {self.how_many_months} months'
@@ -445,6 +457,7 @@ class Plan(AbstractPriceByTime):
                               null=True,
                               help_text='Academy owner')
     is_onboarding = models.BooleanField(default=False, help_text='Is onboarding plan?')
+    has_waiting_list = models.BooleanField(default=False, help_text='Has waiting list?')
 
     # patterns
     cohort_pattern = models.CharField(max_length=80,
@@ -475,13 +488,32 @@ class Plan(AbstractPriceByTime):
         return self.slug
 
     def clean(self) -> None:
-        if self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
-            raise forms.ValidationError(
-                'If the plan is renewable, you must set time_of_life and time_of_life_unit')
 
-        if not self.is_renewable and (self.time_of_life or self.time_of_life_unit):
+        if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
             raise forms.ValidationError(
-                'If the plan is not renewable, you must not set time_of_life and time_of_life_unit')
+                'If the plan is not renewable, you must set time_of_life and time_of_life_unit')
+
+        have_price = (self.price_per_month or self.price_per_year or self.price_per_quarter
+                      or self.price_per_half)
+
+        if self.is_renewable and have_price and (self.time_of_life or self.time_of_life_unit):
+            raise forms.ValidationError(
+                'If the plan is renewable and have price, you must not set time_of_life and '
+                'time_of_life_unit')
+
+        free_trial_available = self.trial_duration
+
+        if self.is_renewable and not have_price and free_trial_available and (self.time_of_life
+                                                                              or self.time_of_life_unit):
+            raise forms.ValidationError(
+                'If the plan is renewable and a have free trial available, you must not set time_of_life '
+                'and time_of_life_unit')
+
+        if self.is_renewable and not have_price and not free_trial_available and (not self.time_of_life or
+                                                                                  not self.time_of_life_unit):
+            raise forms.ValidationError(
+                'If the plan is renewable and a not have free trial available, you must set time_of_life '
+                'and time_of_life_unit')
 
         return super().clean()
 
@@ -509,10 +541,33 @@ class PlanTranslation(models.Model):
 
 
 class PlanOffer(models.Model):
-    original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='original_plan')
-    from_syllabus = models.ManyToManyField('admissions.Syllabus',
-                                           help_text='Syllabus from which the plan is offered')
-    suggested_plans = models.ManyToManyField(Plan, related_name='+', help_text='Suggested plans')
+    original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='plan_offer_from')
+    suggested_plan = models.ForeignKey(Plan,
+                                       related_name='plan_offer_to',
+                                       help_text='Suggested plans',
+                                       null=True,
+                                       blank=False,
+                                       on_delete=models.CASCADE)
+    show_modal = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(default=None, blank=True, null=True)
+
+    def clean(self) -> None:
+        utc_now = timezone.now()
+        others = self.__class__.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now),
+                                               original_plan=self.original_plan)
+
+        if self.pk:
+            others = others.exclude(pk=self.pk)
+
+        if others.exists():
+            raise forms.ValidationError('There is already an active plan offer for this plan')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+
+        super().save(*args, **kwargs)
 
 
 class PlanOfferTranslation(models.Model):
@@ -709,6 +764,7 @@ DEPRECATED = 'DEPRECATED'
 PAYMENT_ISSUE = 'PAYMENT_ISSUE'
 ERROR = 'ERROR'
 FULLY_PAID = 'FULLY_PAID'
+EXPIRED = 'EXPIRED'
 SUBSCRIPTION_STATUS = [
     (FREE_TRIAL, 'Free trial'),
     (ACTIVE, 'Active'),
@@ -717,6 +773,7 @@ SUBSCRIPTION_STATUS = [
     (PAYMENT_ISSUE, 'Payment issue'),
     (ERROR, 'Error'),
     (FULLY_PAID, 'Fully Paid'),
+    (EXPIRED, 'Expired'),
 ]
 
 
@@ -768,73 +825,6 @@ class AbstractIOweYou(models.Model):
         abstract = True
 
 
-class Subscription(AbstractIOweYou):
-    """
-    Allows to create a subscription to a plan and services.
-    """
-
-    # last time the subscription was paid
-    paid_at = models.DateTimeField(help_text='Last time the subscription was paid')
-
-    is_refundable = models.BooleanField(default=True, help_text='Is it refundable?')
-
-    # in this day the subscription needs being paid again
-    next_payment_at = models.DateTimeField(help_text='Next payment date')
-
-    # in this moment the subscription will be expired
-    valid_until = models.DateTimeField(
-        default=None,
-        null=True,
-        blank=True,
-        help_text='Valid until, after this date the subscription will be destroyed')
-
-    # this reminds the service items to change the stock scheduler on change
-    # only for consuming single items without having a plan, when you buy consumable quantities
-    service_items = models.ManyToManyField(ServiceItem,
-                                           blank=True,
-                                           through='SubscriptionServiceItem',
-                                           through_fields=('subscription', 'service_item'),
-                                           help_text='Service items to be suplied')
-
-    # remember the chosen period to pay again
-    pay_every = models.IntegerField(default=1, help_text='Pay every X units (e.g. 1, 2, 3, ...)')
-    pay_every_unit = models.CharField(max_length=10,
-                                      choices=PAY_EVERY_UNIT,
-                                      default=MONTH,
-                                      help_text='Pay every unit (e.g. DAY, WEEK, MONTH or YEAR)')
-
-    def __str__(self) -> str:
-        return f'{self.user.email} ({self.valid_until})'
-
-
-class SubscriptionServiceItem(models.Model):
-    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text='Subscription')
-    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text='Service item')
-
-    cohorts = models.ManyToManyField(Cohort, blank=True, help_text='Cohorts')
-    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
-                                               on_delete=models.CASCADE,
-                                               blank=True,
-                                               null=True,
-                                               help_text='Mentorship service set')
-
-    def clean(self):
-        if self.id and self.mentorship_service_set and self.cohorts.count():
-            raise forms.ValidationError(
-                translation(
-                    self._lang,
-                    en='You can not set cohorts and mentorship service set at the same time',
-                    es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-
-        super().save(*args, **kwargs)
-
-    def __str__(self) -> str:
-        return str(self.service_item)
-
-
 class PlanFinancing(AbstractIOweYou):
     """
     Allows to financing a plan
@@ -881,6 +871,89 @@ class PlanFinancing(AbstractIOweYou):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class Subscription(AbstractIOweYou):
+    """
+    Allows to create a subscription to a plan and services.
+    """
+
+    _lang = 'en'
+
+    # last time the subscription was paid
+    paid_at = models.DateTimeField(help_text='Last time the subscription was paid')
+
+    is_refundable = models.BooleanField(default=True, help_text='Is it refundable?')
+
+    # in this day the subscription needs being paid again
+    next_payment_at = models.DateTimeField(help_text='Next payment date')
+
+    # in this moment the subscription will be expired
+    valid_until = models.DateTimeField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text='Valid until, after this date the subscription will be destroyed')
+
+    # this reminds the service items to change the stock scheduler on change
+    # only for consuming single items without having a plan, when you buy consumable quantities
+    service_items = models.ManyToManyField(ServiceItem,
+                                           blank=True,
+                                           through='SubscriptionServiceItem',
+                                           through_fields=('subscription', 'service_item'),
+                                           help_text='Service items to be suplied')
+
+    # remember the chosen period to pay again
+    pay_every = models.IntegerField(default=1, help_text='Pay every X units (e.g. 1, 2, 3, ...)')
+    pay_every_unit = models.CharField(max_length=10,
+                                      choices=PAY_EVERY_UNIT,
+                                      default=MONTH,
+                                      help_text='Pay every unit (e.g. DAY, WEEK, MONTH or YEAR)')
+
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.valid_until})'
+
+    def clean(self) -> None:
+        if self.status == 'FULLY_PAID':
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Subscription cannot have fully paid as status',
+                            es='La suscripción no puede tener pagado como estado',
+                            slug='subscription-as-fully-paid'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class SubscriptionServiceItem(models.Model):
+    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text='Subscription')
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text='Service item')
+
+    cohorts = models.ManyToManyField(Cohort, blank=True, help_text='Cohorts')
+    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
+                                               on_delete=models.CASCADE,
+                                               blank=True,
+                                               null=True,
+                                               help_text='Mentorship service set')
+
+    def clean(self):
+        if self.id and self.mentorship_service_set and self.cohorts.count():
+            raise forms.ValidationError(
+                translation(
+                    self._lang,
+                    en='You can not set cohorts and mentorship service set at the same time',
+                    es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return str(self.service_item)
 
 
 class Consumable(AbstractServiceItem):
@@ -1005,15 +1078,22 @@ class ConsumptionSession(models.Model):
 
         utc_now = timezone.now()
 
-        resource = consumable.cohort or consumable.mentorship_service or consumable.event_type
+        resource = consumable.cohort or consumable.mentorship_service_set or consumable.event_type_set
         id = resource.id if resource else 0
         slug = resource.slug if resource else ''
 
         path = resource.__class__._meta.app_label + '.' + resource.__class__.__name__ if resource else ''
 
+        if hasattr(request, 'parser_context'):
+            args = request.parser_context['args']
+            kwargs = request.parser_context['kwargs']
+        else:
+            args = request.resolver_match.args
+            kwargs = request.resolver_match.kwargs
+
         data = {
-            'args': request.parser_context['args'],
-            'kwargs': request.parser_context['kwargs'],
+            'args': args,
+            'kwargs': kwargs,
             'headers': {
                 'academy': request.META.get('HTTP_ACADEMY')
             },
@@ -1040,9 +1120,16 @@ class ConsumptionSession(models.Model):
             return None
 
         utc_now = timezone.now()
+        if hasattr(request, 'parser_context'):
+            args = request.parser_context['args']
+            kwargs = request.parser_context['kwargs']
+        else:
+            args = request.resolver_match.args
+            kwargs = request.resolver_match.kwargs
+
         data = {
-            'args': request.parser_context['args'],
-            'kwargs': request.parser_context['kwargs'],
+            'args': args,
+            'kwargs': kwargs,
             'headers': {
                 'academy': request.META.get('HTTP_ACADEMY')
             },

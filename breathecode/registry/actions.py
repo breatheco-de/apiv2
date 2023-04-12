@@ -280,7 +280,7 @@ def push_github_asset(github, asset):
     result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
-    
+
     # we commit the raw readme, we don't want images to be replaced in the original github
     decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
     result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
@@ -485,7 +485,6 @@ class AssetThumbnailGenerator:
             # register click
             media.hits += 1
             media.save()
-
             tasks.async_resize_asset_thumbnail.delay(media.id, width=self.width, height=self.height)
             return (media.url, False)
 
@@ -831,9 +830,9 @@ def add_syllabus_translations(_json):
                 _asset = Asset.objects.filter(slug=slug).first()
                 if _asset is not None:
                     if 'slug' not in ass:
-                        _json['days'][day_count][asset_type][index] = { 
-                          "slug": _asset.slug,
-                          "title": _asset.title,
+                        _json['days'][day_count][asset_type][index] = {
+                            'slug': _asset.slug,
+                            'title': _asset.title,
                         }
                     _json['days'][day_count][asset_type][index]['translations'] = {}
                     for a in _asset.all_translations.all():

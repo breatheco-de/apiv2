@@ -823,6 +823,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': False
             }),
@@ -904,6 +905,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': False
             }),
@@ -985,6 +987,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': True
             }),
@@ -1066,6 +1069,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': False
             }),
@@ -1146,6 +1150,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': model.academy.available_as_saas
             }),
@@ -2349,7 +2354,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'LanguageExtension', 'PaginationExtension', 'SortExtension']),
+            call([
+                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
+                'SortExtension'
+            ]),
         ])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

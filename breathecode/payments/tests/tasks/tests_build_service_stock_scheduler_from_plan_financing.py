@@ -97,10 +97,11 @@ class PaymentsTestSuite(PaymentsTestCase):
             'valid_until': UTC_NOW + relativedelta(months=3),
             'monthly_price': (random.random() * 99.99) + 0.01,
         }
+        plan = {'is_renewable': False}
         model = self.bc.database.create(plan_financing=subscription,
                                         service_item=1,
                                         plan_service_item=1,
-                                        plan=1)
+                                        plan=plan)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -144,7 +145,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             'monthly_price': (random.random() * 99.99) + 0.01,
         }
 
-        model = self.bc.database.create(plan_financing=subscription, plan=1, plan_service_item=1)
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(plan_financing=subscription, plan=plan, plan_service_item=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -194,9 +197,10 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_id': 2,
             'service_item_id': n
         } for n in range(3, 5)]
+        plan = {'is_renewable': False}
         model = self.bc.database.create(plan_financing=subscription,
                                         plan_service_item=plan_service_items,
-                                        plan=2,
+                                        plan=(2, plan),
                                         service_item=4)
 
         # remove prints from mixer

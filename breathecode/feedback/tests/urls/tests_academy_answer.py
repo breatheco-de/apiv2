@@ -1029,7 +1029,7 @@ class AnswerTestSuite(FeedbackTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['LanguageExtension', 'PaginationExtension', 'SortExtension']),
+            call(['LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())

@@ -9,6 +9,7 @@ from django.db.models.query_utils import Q
 from django.db.models import Sum, QuerySet
 from django.core.handlers.wsgi import WSGIRequest
 from pytz import UTC
+from django.contrib.auth.models import User
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_settings
@@ -18,7 +19,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from rest_framework.request import Request
 
-from .models import (SERVICE_UNITS, AcademyService, Bag, Consumable, Currency, EventTypeSet,
+from .models import (SERVICE_UNITS, AcademyService, Bag, Consumable, Currency, EventTypeSet, FinancingOption,
                      MentorshipServiceSet, Plan, PlanFinancing, Service, ServiceItem, Subscription)
 from breathecode.utils import getLogger
 
@@ -164,6 +165,72 @@ class PlanFinder:
         return self.get_plans_belongs(**additional_args)
 
 
+def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
+    """
+    Ask to add plan to bag, and return if it must be charged or not.
+    """
+    utc_now = timezone.now()
+    plan_have_free_trial = plan.trial_duration and plan.trial_duration_unit
+
+    if plan.is_renewable:
+        price = plan.price_per_month or plan.price_per_quarter or plan.price_per_half or plan.price_per_year
+
+    else:
+        price = not plan.is_renewable and plan.financing_options.exists()
+
+    subscriptions = Subscription.objects.filter(user=user, plans=plan)
+
+    # avoid bought a free trial for financing if this was bought before
+    if not price and plan_have_free_trial and not plan.is_renewable and subscriptions.filter(
+            valid_until__gte=utc_now):
+        raise ValidationException(
+            translation(lang,
+                        en='Free trial plans can\'t be bought again',
+                        es='Los planes de prueba no pueden ser comprados de nuevo',
+                        slug='free-trial-plan-for-financing'),
+            code=400,
+        )
+
+    # avoid bought a plan if it doesn't have a price yet after free trial
+    if not price and subscriptions:
+        raise ValidationException(
+            translation(lang,
+                        en='Free trial plans can\'t be bought more than once',
+                        es='Los planes de prueba no pueden ser comprados más de una vez',
+                        slug='free-trial-already-bought'),
+            code=400,
+        )
+
+    # avoid financing plans if it was financed before
+    if not plan.is_renewable and PlanFinancing.objects.filter(user=user, plans=plan):
+        raise ValidationException(
+            translation(lang,
+                        en='You already have or had a financing on this plan',
+                        es='Ya tienes o tuviste un financiamiento en este plan',
+                        slug='plan-already-financed'),
+            code=400,
+        )
+
+    # avoid to buy a plan if exists a subscription with same plan with remaining days
+    if price and plan.is_renewable and subscriptions.filter(
+            Q(Q(status='CANCELLED') | Q(status='DEPRECATED'), valid_until=None, next_payment_at__gte=utc_now)
+            | Q(valid_until__gte=utc_now)):
+        raise ValidationException(
+            translation(lang,
+                        en='You already have a subscription to this plan',
+                        es='Ya tienes una suscripción a este plan',
+                        slug='plan-already-bought'),
+            code=400,
+        )
+
+    # avoid to charge a plan if it has a free trial and was not bought before
+    if not price or (plan_have_free_trial and not subscriptions.exists()):
+        return False
+
+    # charge a plan if it has a price
+    return bool(price)
+
+
 class BagHandler:
 
     def __init__(self, request: Request, bag: Bag, lang: str) -> None:
@@ -194,15 +261,30 @@ class BagHandler:
         self.cohorts_not_found = set()
 
     def _lookups(self, value, offset=''):
+        args = ()
         kwargs = {}
+        slug_key = f'{offset}slug__in'
+        pk_key = f'{offset}id__in'
 
-        if isinstance(value, int) or value.isnumeric():
-            kwargs[offset + 'id'] = int(value)
+        values = value.split(',') if isinstance(value, str) and ',' in value else [value]
+        for v in values:
+            if slug_key not in kwargs and (not isinstance(v, str) or not v.isnumeric()):
+                kwargs[slug_key] = []
 
-        else:
-            kwargs[offset + 'slug'] = value
+            if pk_key not in kwargs and (isinstance(v, int) or v.isnumeric()):
+                kwargs[pk_key] = []
 
-        return kwargs
+            if isinstance(v, int) or v.isnumeric():
+                kwargs[pk_key].append(int(v))
+
+            else:
+                kwargs[slug_key].append(v)
+
+        if len(kwargs) > 1:
+            args = (Q(**{slug_key: kwargs[slug_key]}) | Q(**{pk_key: kwargs[pk_key]}), )
+            kwargs = {}
+
+        return args, kwargs
 
     def _more_than_one_generator(self, en, es):
         return translation(self.lang,
@@ -272,16 +354,25 @@ class BagHandler:
                     self.service_items_not_found.add(service_item['service'])
 
     def _validate_just_select_one_resource_per_type(self):
-        if self.selected_cohort and (x :=
-                                     Cohort.objects.filter(**self._lookups(self.selected_cohort)).first()):
+        args, kwargs = tuple(), {}
+
+        if self.selected_cohort:
+            args, kwargs = self._lookups(self.selected_cohort)
+
+        if self.selected_cohort and (x := Cohort.objects.filter(*args, **kwargs).first()):
             self.selected_cohort = x
 
-        if self.selected_event_type_set and (x := EventTypeSet.objects.filter(
-                **self._lookups(self.selected_event_type_set)).first()):
+        if self.selected_event_type_set:
+            args, kwargs = self._lookups(self.selected_event_type_set)
+
+        if self.selected_event_type_set and (x := EventTypeSet.objects.filter(*args, **kwargs).first()):
             self.selected_event_type_set = x
 
+        if self.selected_mentorship_service_set:
+            args, kwargs = self._lookups(self.selected_mentorship_service_set)
+
         if self.selected_mentorship_service_set and (x := MentorshipServiceSet.objects.filter(
-                **self._lookups(self.selected_mentorship_service_set)).first()):
+                *args, **kwargs).first()):
             self.selected_mentorship_service_set = x
 
     def _get_plans_that_not_found(self):
@@ -311,9 +402,9 @@ class BagHandler:
     def _add_service_items_to_bag(self):
         if isinstance(self.service_items, list):
             for service_item in self.service_items:
-                kwargs = self._lookups(service_item['service'])
+                args, kwargs = self._lookups(service_item['service'])
 
-                service = Service.objects.filter(**kwargs).first()
+                service = Service.objects.filter(*args, **kwargs).first()
                 service_item, _ = ServiceItem.objects.get_or_create(service=service,
                                                                     how_many=service_item['how_many'])
                 self.bag.service_items.add(service_item)
@@ -323,9 +414,9 @@ class BagHandler:
             for plan in self.plans:
                 kwargs = {}
 
-                kwargs = self._lookups(plan)
+                args, kwargs = self._lookups(plan)
 
-                p = Plan.objects.filter(**kwargs, available_cohorts=self.selected_cohort).first()
+                p = Plan.objects.filter(*args, **kwargs, available_cohorts=self.selected_cohort).first()
 
                 if p and p not in self.bag.plans.filter():
                     self.bag.plans.add(p)
@@ -351,6 +442,10 @@ class BagHandler:
             if self.bag.selected_cohorts not in self.bag.selected_cohorts.all():
                 self.bag.selected_cohorts.add(self.selected_cohort)
 
+    def _ask_to_add_plan_and_charge_it_in_the_bag(self):
+        for plan in self.bag.plans.all():
+            ask_to_add_plan_and_charge_it_in_the_bag(plan, self.bag.user, self.lang)
+
     def execute(self):
         self._reset_bag()
 
@@ -367,6 +462,8 @@ class BagHandler:
         self._validate_just_one_plan()
 
         self._validate_buy_plans_or_service_items()
+
+        self._ask_to_add_plan_and_charge_it_in_the_bag()
 
         self.bag.save()
 
@@ -496,7 +593,8 @@ def check_dependencies_in_bag(bag: Bag, lang: str):
                                   code=400)
 
 
-def get_amount(bag: Bag, currency: Currency) -> tuple[float, float, float, float]:
+def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, float, float]:
+    user = bag.user
     price_per_month = 0
     price_per_quarter = 0
     price_per_half = 0
@@ -520,10 +618,14 @@ def get_amount(bag: Bag, currency: Currency) -> tuple[float, float, float, float
             bag.plans.remove(plan)
             continue
 
-        price_per_month += plan.price_per_month
-        price_per_quarter += plan.price_per_quarter
-        price_per_half += plan.price_per_half
-        price_per_year += plan.price_per_year
+        must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(plan, user, lang)
+
+        # this prices is just used if it are generating a subscription
+        if not bag.how_many_installments and (bag.chosen_period != 'NO_SET' or must_it_be_charged):
+            price_per_month += (plan.price_per_month or 0)
+            price_per_quarter += (plan.price_per_quarter or 0)
+            price_per_half += (plan.price_per_half or 0)
+            price_per_year += (plan.price_per_year or 0)
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -556,16 +658,21 @@ def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> floa
     return amount
 
 
-def get_bag_from_subscription(subscription: Subscription, settings: Optional[UserSetting] = None) -> Bag:
+def get_bag_from_subscription(subscription: Subscription,
+                              settings: Optional[UserSetting] = None,
+                              lang: Optional[str] = None) -> Bag:
     bag = Bag()
 
-    if not settings:
+    if not lang and not settings:
         settings = get_user_settings(subscription.user.id)
+        lang = settings.lang
+    elif settings:
+        lang = settings.lang
 
     last_invoice = subscription.invoices.filter().last()
     if not last_invoice:
         raise Exception(
-            translation(settings.lang,
+            translation(lang,
                         en='Invalid subscription, this has no invoices',
                         es='Suscripción invalida, esta no tiene facturas',
                         slug='subscription-has-no-invoices'))
@@ -585,7 +692,7 @@ def get_bag_from_subscription(subscription: Subscription, settings: Optional[Use
         bag.plans.add(plan)
 
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-        bag, last_invoice.currency)
+        bag, last_invoice.currency, lang)
 
     bag.save()
 
@@ -681,4 +788,4 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
 
 
 def async_consume(bag_id: int, eta: datetime):
-    logger.info(f'Starting build_free_trial for bag {bag_id}')
+    logger.info(f'Starting build_free_subscription for bag {bag_id}')

@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.caches import (CohortCache, CohortUserCache, TeacherCache)
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.payments.consumers import cohort_by_url_param
+from .permissions.consumers import cohort_by_url_param
 from breathecode.utils import (APIViewExtensions, DatetimeInteger, GenerateLookupsMixin,
                                HeaderLimitOffsetPagination, ValidationException, capable_of, localize_query)
 from breathecode.utils.decorators import has_permission
@@ -152,8 +152,8 @@ def get_cohorts(request, id=None):
     upcoming = request.GET.get('upcoming', None)
     if upcoming == 'true':
         now = timezone.now()
-        items = items.filter(Q(kickoff_date__gte=now)| Q(never_ends=True))
-        
+        items = items.filter(Q(kickoff_date__gte=now) | Q(never_ends=True))
+
     never_ends = request.GET.get('never_ends', None)
     if never_ends == 'false':
         items = items.filter(never_ends=False)

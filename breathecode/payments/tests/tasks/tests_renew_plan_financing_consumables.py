@@ -63,7 +63,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
             'monthly_price': random.random() * 99.99 + 0.01,
         }
-        model = self.bc.database.create(plan_financing=subscription, )
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(plan_financing=subscription, plan=plan)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -101,7 +102,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
             'monthly_price': random.random() * 99.99 + 0.01,
         }
-        model = self.bc.database.create(plan_financing=subscription)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(plan_financing=subscription, plan=plan)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -137,7 +139,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
             'monthly_price': random.random() * 99.99 + 0.01,
         }
-        model = self.bc.database.create(plan_financing=subscription)
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(plan_financing=subscription, plan=plan)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -189,9 +192,11 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_handler_id': n,
         } for n in range(1, 5)]
 
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(plan_financing=subscription,
                                         service_stock_scheduler=service_stock_schedulers,
-                                        plan=2,
+                                        plan=(2, plan),
                                         service_item=4,
                                         plan_service_item=plan_service_items,
                                         plan_service_item_handler=plan_service_item_handlers)

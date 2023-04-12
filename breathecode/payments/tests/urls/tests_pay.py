@@ -238,7 +238,10 @@ class SignalTestSuite(PaymentsTestCase):
             'type': 'BAG',
             random.choice(['amount_per_month', 'amount_per_quarter', 'amount_per_half', 'amount_per_year']): 1
         }
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
@@ -275,11 +278,13 @@ class SignalTestSuite(PaymentsTestCase):
             'status': 'CHECKING',
             'type': 'BAG',
         }
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
-        # data = {'token': 'xdxdxdxdxdxdxdxdxdxd', 'chosen_period': 'MONTH'}
         data = {'token': 'xdxdxdxdxdxdxdxdxdxd', 'chosen_period': self.bc.fake.slug()}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
@@ -303,16 +308,72 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_trial.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
-    def test__without_bag__passing_token__passing_chosen_period__good_value(self):
+    def test__without_bag__passing_token__passing_chosen_period__good_value__free_trial_without_plan_offer(
+            self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
             'expires_at': UTC_NOW,
             'status': 'CHECKING',
             'type': 'BAG',
         }
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+        }
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = {'detail': 'the-plan-was-chosen-is-not-ready-too-be-sold', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    def test__without_bag__passing_token__free_trial(self):
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+        }
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        currency=1,
+                                        plan=plan,
+                                        service_item=1,
+                                        plan_offer=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
@@ -344,13 +405,125 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
-        self.assertEqual(tasks.build_free_trial.delay.call_args_list, [call(1, 1)])
+        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [call(1, 1)])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_trial.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    def test__without_bag__passing_token__free_plan__is_renewable(self):
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+        }
+
+        plan = {'is_renewable': True, 'trial_duration': 0}
+
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        currency=1,
+                                        plan=plan,
+                                        service_item=1,
+                                        plan_offer=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+        }
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = get_serializer(self, model.currency, model.user, data={})
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'),
+                         [{
+                             **self.bc.format.to_dict(model.bag),
+                             'token': None,
+                             'status': 'PAID',
+                             'expires_at': None,
+                         }])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [format_invoice_item()])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [call(1, 1)])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    def test__without_bag__passing_token__free_plan__not_is_renewable(self):
+        bag = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+            'expires_at': UTC_NOW,
+            'status': 'CHECKING',
+            'type': 'BAG',
+        }
+
+        plan = {'is_renewable': False, 'trial_duration': 0}
+
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        currency=1,
+                                        plan=plan,
+                                        service_item=1,
+                                        plan_offer=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('payments:pay')
+        data = {
+            'token': 'xdxdxdxdxdxdxdxdxdxd',
+        }
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
+
+        json = response.json()
+        expected = get_serializer(self, model.currency, model.user, data={})
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'),
+                         [{
+                             **self.bc.format.to_dict(model.bag),
+                             'token': None,
+                             'status': 'PAID',
+                             'expires_at': None,
+                         }])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [format_invoice_item()])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
+
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
+        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [call(1, 1)])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
@@ -364,7 +537,10 @@ class SignalTestSuite(PaymentsTestCase):
         }
         chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
         amount = get_amount_per_period(chosen_period, bag)
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
@@ -403,13 +579,13 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(tasks.build_subscription.delay.call_args_list, [call(1, 1)])
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
-        self.assertEqual(tasks.build_free_trial.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_trial.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
@@ -423,7 +599,10 @@ class SignalTestSuite(PaymentsTestCase):
         }
         chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
         amount = get_amount_per_period(chosen_period, bag)
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=1, service_item=1)
+
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:pay')
@@ -452,13 +631,13 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
-        self.assertEqual(tasks.build_free_trial.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_trial.delay', MagicMock())
+    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
@@ -473,11 +652,13 @@ class SignalTestSuite(PaymentsTestCase):
             **generate_amounts_by_time()
         }
         financing_option = {'monthly_price': charge, 'how_many_months': how_many_installments}
+        plan = {'is_renewable': False}
+
         model = self.bc.database.create(user=1,
                                         bag=bag,
                                         academy=1,
                                         currency=1,
-                                        plan=1,
+                                        plan=plan,
                                         service_item=1,
                                         financing_option=financing_option)
         self.bc.request.authenticate(model.user)
@@ -520,5 +701,5 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [call(1, 1)])
-        self.assertEqual(tasks.build_free_trial.delay.call_args_list, [])
+        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])

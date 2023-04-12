@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
 from breathecode.events.caches import EventCache
-from breathecode.payments.consumers import cohort_schedule_by_url_param
+from .permissions.consumers import event_by_url_param, live_class_by_url_param
 from breathecode.utils import APIException
 from datetime import datetime, timedelta
 from breathecode.utils.views import private_view, render_message, set_query_parameter
@@ -25,12 +25,12 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from .actions import fix_datetime_weekday, update_timeslots_out_of_range, get_my_events
+from .actions import fix_datetime_weekday, update_timeslots_out_of_range, get_my_event_types
 from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibilitySetting, Organization,
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (GetLiveClassJoinSerializer, EventBigSerializer, GetLiveClassSerializer,
+from .serializers import (EventBigSerializer, GetLiveClassSerializer, LiveClassJoinSerializer,
                           LiveClassSerializer, EventSerializer, EventSmallSerializer, EventTypeSerializer,
                           EventTypeBigSerializer, EventCheckinSerializer, EventSmallSerializerNoAcademy,
                           EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
@@ -153,7 +153,7 @@ class EventMeView(APIView):
 
     def get(self, request, event_id=None):
 
-        items = get_my_events(request.user)
+        items = get_my_event_types(request.user)
 
         if event_id is not None:
             single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
@@ -186,45 +186,41 @@ class EventMeView(APIView):
 class MeLiveClassView(APIView):
     extensions = APIViewExtensions(sort='-starting_at', paginate=True)
 
-    def _get_lookup(self, pk: str, prefix: str = ''):
-        if pk.isnumeric():
-            return {f'{prefix}id': int(pk)}
-
-        else:
-            return {f'{prefix}slug': pk}
-
-    def get(self, request, format=None):
+    def get(self, request):
         handler = self.extensions(request)
 
-        items = LiveClass.objects.filter(cohort_time_slot__cohort__cohortuser__user=request.user)
-        lookup = {}
+        lang = get_user_language(request)
 
-        if cohort := self.request.GET.get('cohort', ''):
-            lookup.update(self._get_lookup(cohort, 'cohort_time_slot__cohort__'))
+        query = handler.lookup.build(
+            lang,
+            strings={
+                'exact': [
+                    'remote_meeting_url',
+                ],
+            },
+            bools={
+                'is_null': ['ended_at'],
+            },
+            datetimes={
+                'gte': ['starting_at'],
+                'lte': ['ending_at'],
+            },
+            slugs=[
+                'cohort_time_slot__cohort',
+                'cohort_time_slot__cohort__academy',
+                'cohort_time_slot__cohort__syllabus_version__syllabus',
+            ],
+            overwrite={
+                'cohort': 'cohort_time_slot__cohort',
+                'academy': 'cohort_time_slot__cohort__academy',
+                'syllabus': 'cohort_time_slot__cohort__syllabus_version__syllabus',
+                'start': 'starting_at',
+                'end': 'ending_at',
+                'upcoming': 'ended_at',
+            },
+        )
 
-        if academy := self.request.GET.get('academy', ''):
-            lookup.update(self._get_lookup(academy, 'cohort_time_slot__cohort__academy__'))
-
-        if syllabus := self.request.GET.get('syllabus', ''):
-            lookup.update(self._get_lookup(syllabus,
-                                           'cohort_time_slot__cohort__syllabus_version__syllabus__'))
-
-        upcoming = self.request.GET.get('upcoming', '')
-        if upcoming == 'true':
-            lookup['ended_at__isnull'] = True
-
-        elif upcoming == 'false':
-            lookup['ended_at__isnull'] = False
-
-        start = self.request.GET.get('start', '')
-        if start:
-            lookup['starting_at__gte'] = start
-
-        end = self.request.GET.get('end', '')
-        if end:
-            lookup['ending_at__lte'] = end
-
-        items = items.filter(**lookup)
+        items = LiveClass.objects.filter(query, cohort_time_slot__cohort__cohortuser__user=request.user)
 
         items = handler.queryset(items)
         serializer = GetLiveClassSerializer(items, many=True)
@@ -232,79 +228,65 @@ class MeLiveClassView(APIView):
         return handler.response(serializer.data)
 
 
-class MeLiveClassJoinView(APIView):
+@private_view()
+@has_permission('live_class_join', consumer=live_class_by_url_param, format='html')
+def join_live_class(request, token, live_class, lang):
+    now = timezone.now()
 
-    def get(self, request, hash):
-        lang = get_user_language(request)
+    if live_class.starting_at > now:
+        return render(request, 'countdown.html', {
+            'token': token.key,
+            'event': LiveClassJoinSerializer(live_class).data,
+        })
 
-        live_class = LiveClass.objects.filter(cohort_time_slot__cohort__cohortuser__user=request.user,
-                                              hash=hash).first()
-        if not live_class:
-            raise ValidationException(lang,
-                                      en='Live class not found',
-                                      es='Clase en vivo no encontrada',
-                                      slug='not-found')
-
-        serializer = GetLiveClassJoinSerializer(live_class, many=False)
-
-        return Response(serializer.data)
+    return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
 
 
 class AcademyLiveClassView(APIView):
     extensions = APIViewExtensions(sort='-starting_at', paginate=True)
 
-    def _get_lookup(self, pk: str, prefix: str = ''):
-        if pk.isnumeric():
-            return {f'{prefix}id': int(pk)}
-
-        elif '@' in pk:
-            return {f'{prefix}email': int(pk)}
-
-        else:
-            return {f'{prefix}slug': pk}
-
     @capable_of('start_or_end_class')
     def get(self, request, academy_id=None):
+        from .models import LiveClass
+
         handler = self.extensions(request)
 
         lang = get_user_language(request)
 
-        items = LiveClass.objects.filter(cohort_time_slot__cohort__academy__id=academy_id)
-        lookup = {}
+        query = handler.lookup.build(
+            lang,
+            strings={
+                'exact': [
+                    'remote_meeting_url',
+                    'cohort_time_slot__cohort__cohortuser__user__email',
+                ],
+            },
+            bools={
+                'is_null': ['ended_at'],
+            },
+            datetimes={
+                'gte': ['starting_at'],
+                'lte': ['ending_at'],
+            },
+            slugs=[
+                'cohort_time_slot__cohort__cohortuser__user',
+                'cohort_time_slot__cohort',
+                'cohort_time_slot__cohort__academy',
+                'cohort_time_slot__cohort__syllabus_version__syllabus',
+            ],
+            overwrite={
+                'cohort': 'cohort_time_slot__cohort',
+                'academy': 'cohort_time_slot__cohort__academy',
+                'syllabus': 'cohort_time_slot__cohort__syllabus_version__syllabus',
+                'start': 'starting_at',
+                'end': 'ending_at',
+                'upcoming': 'ended_at',
+                'user': 'cohort_time_slot__cohort__cohortuser__user',
+                'user_email': 'cohort_time_slot__cohort__cohortuser__user__email',
+            },
+        )
 
-        if user := self.request.GET.get('user', ''):
-            lookup.update(self._get_lookup(user, 'cohort_time_slot__cohort__cohortuser__user__'))
-
-        if cohort := self.request.GET.get('cohort', ''):
-            lookup.update(self._get_lookup(cohort, 'cohort_time_slot__cohort__'))
-
-        if syllabus := self.request.GET.get('syllabus', ''):
-            lookup.update(self._get_lookup(syllabus,
-                                           'cohort_time_slot__cohort__syllabus_version__syllabus__'))
-
-        upcoming = self.request.GET.get('upcoming', '')
-        if upcoming == 'true':
-            lookup['ended_at__isnull'] = True
-
-        elif upcoming == 'false':
-            lookup['ended_at__isnull'] = False
-
-        start = self.request.GET.get('start', '')
-        if start:
-            lookup['starting_at__gte'] = start
-
-        end = self.request.GET.get('end', '')
-        if end:
-            lookup['ending_at__lte'] = end
-
-        try:
-            items = items.filter(**lookup)
-        except FieldError:
-            raise ValidationException(
-                translation(lang,
-                            en='Some querystring have a ilogic value',
-                            es='Algunos parametros en el querystring tienen un valor ilógico',
-                            slug='querystring-with-ilogic-value'))
+        items = LiveClass.objects.filter(query, cohort_time_slot__cohort__academy__id=academy_id)
 
         items = handler.queryset(items)
         serializer = GetLiveClassSerializer(items, many=True)
@@ -364,9 +346,7 @@ class AcademyLiveClassJoinView(APIView):
                                       es='Clase en vivo no encontrada',
                                       slug='not-found')
 
-        serializer = GetLiveClassJoinSerializer(live_class, many=False)
-
-        return Response(serializer.data)
+        return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
 
 
 class AcademyEventView(APIView, GenerateLookupsMixin):
@@ -749,19 +729,9 @@ class EventTypeVisibilitySettingView(APIView):
 
 
 @private_view()
-def join_event(request, token, event_id):
-
-    items = get_my_events(token.user)
-
-    event = Event.objects.filter(event_type__in=items, id=event_id).first()
-    if event is None:
-        return render_message(request, 'Event not found or you dont have access')
-    if event.live_stream_url is None or event.live_stream_url == '':
-        return render_message(request, 'Event live stream URL was not found')
-
+@has_permission('event_join', consumer=event_by_url_param, format='html')
+def join_event(request, token, event):
     now = timezone.now()
-    if event.ending_at < now:
-        return render_message(request, 'This event has already finished')
 
     if event.starting_at > now:
         return render(request, 'countdown.html', {
@@ -790,7 +760,7 @@ class EventMeCheckinView(APIView):
 
     def put(self, request, event_id):
 
-        items = get_my_events(request.user)
+        items = get_my_event_types(request.user)
 
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
         if event is None:
