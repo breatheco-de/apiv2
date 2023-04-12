@@ -54,8 +54,11 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     show('before', context['consumables'])
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
     show('after', context['consumables'])
-    # context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
-    context['will_consume'] = False
+
+    if event.academy and event.academy.available_as_saas:
+        # context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
+        context['will_consume'] = False
+
     show('will_consume', context['will_consume'])
 
     kwargs['event'] = event
@@ -89,6 +92,7 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple,
 
     live_class = LiveClass.objects.filter(cohort_time_slot__cohort__cohortuser__user=request.user,
                                           hash=kwargs.get('hash')).first()
+
     if not live_class:
         raise ValidationException(translation(lang,
                                               en='Live class not found',
@@ -109,8 +113,18 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple,
     kwargs['lang'] = lang
     del kwargs['hash']
 
-    # context['will_consume'] = api.release.enable_consume_live_classes(context['request'].user)
-    context['will_consume'] = False
+    # avoid to be taken if the cohort is available as saas is not set
+    cohort_available_as_saas = (live_class.cohort_time_slot.cohort.available_as_saas is not None
+                                and live_class.cohort_time_slot.cohort.available_as_saas)
+
+    # avoid to be taken if the cohort is available as saas is set
+    academy_available_as_saas = (live_class.cohort_time_slot.cohort.available_as_saas is None
+                                 and live_class.cohort_time_slot.cohort.academy
+                                 and live_class.cohort_time_slot.cohort.academy.available_as_saas)
+
+    if cohort_available_as_saas or academy_available_as_saas:
+        # context['will_consume'] = api.release.enable_consume_live_classes(context['request'].user)
+        context['will_consume'] = False
 
     utc_now = timezone.now()
     if live_class.ending_at < utc_now:
