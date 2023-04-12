@@ -377,7 +377,7 @@ def add_to_organization(cohort_id, user_id):
         return False
 
 
-def remove_from_organization(cohort_id, user_id):
+def remove_from_organization(cohort_id, user_id, force=False):
 
     logger.debug(f'Removing user {user_id} from organization')
     cohort_user = CohortUser.objects.filter(cohort__id=cohort_id, user__id=user_id).first()
@@ -394,7 +394,7 @@ def remove_from_organization(cohort_id, user_id):
         active_cohorts_in_academy = CohortUser.objects.filter(user=user,
                                                               cohort__academy=academy,
                                                               educational_status='ACTIVE').first()
-        if active_cohorts_in_academy is not None:
+        if active_cohorts_in_academy is not None and not force:
             raise ValidationException(translation(
                 en=
                 f'Cannot remove user={user.id} from organization because edu_status is ACTIVE in {active_cohorts_in_academy.cohort.slug}',
@@ -543,7 +543,6 @@ def sync_organization_members(academy_id, only_status=[]):
         remaining_usernames = set(
             [username for username in remaining_usernames if username != github_username])
 
-    print('remaining_usernames', remaining_usernames)
     # there are some users from github we could not find in THIS academy cohorts
     for u in remaining_usernames:
         _user = CredentialsGithub.objects.filter(username=u).first()
@@ -578,6 +577,17 @@ def sync_organization_members(academy_id, only_status=[]):
 
     return True
 
+
+# def schedule_org_members_to_delete():
+
+#     uknown_users = GithubAcademyUser.objects.filter(
+#                                 deletion_scheduled_at__isnull=True,
+#                                 storage_status='UNKNOWN',
+#                                 storage_action='IGNORE')
+#     for uknown in uknown_users:
+#         added_elsewhere = GithubAcademyUser.objects.filter(storage_action='ADD', academyauthsettings__github_username=uknown.academyauthsettings.github_username).exists()
+#         if not added_elsewhere:
+#             uknown.deletion_scheduled_at = timezone.now() + datetime.timedelta(days=3)
 
 # def invite_org_member(academy_id, org_member_id):
 

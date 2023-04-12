@@ -29,8 +29,8 @@ def async_add_to_organization(cohort_id, user_id):
 
 
 @shared_task
-def async_remove_from_organization(cohort_id, user_id):
-    return remove_from_organization(cohort_id, user_id)
+def async_remove_from_organization(cohort_id, user_id, force=False):
+    return remove_from_organization(cohort_id, user_id, force=force)
 
 
 @shared_task
