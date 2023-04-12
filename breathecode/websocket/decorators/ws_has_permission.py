@@ -42,7 +42,7 @@ class SyncWsHasPermission:
         callback = lambda request, academy_id=None: SyncWsHasPermission.sync_post_decorator(
             self, instance, academy_id)
 
-        return has_permission(instance.permission)(callback)
+        return has_permission(instance.permission, format='websocket')(callback)
 
     def sync_post_decorator(self: JsonWebsocketConsumer, instance: WsHasPermission, academy_id: int):
         self.scope['academy_id'] = academy_id
@@ -83,7 +83,7 @@ class AsyncWsHasPermission:
             consumer.scope['academy_id'] = academy_id
             event.set()
 
-        decorator = has_permission(self.permission)(callback)
+        decorator = has_permission(self.permission, format='websocket')(callback)
         return decorator(request)
 
     async def await_for_connect(self, consumer: AsyncJsonWebsocketConsumer, event: threading.Event):

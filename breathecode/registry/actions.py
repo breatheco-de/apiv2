@@ -280,7 +280,7 @@ def push_github_asset(github, asset):
     result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
-    
+
     # we commit the raw readme, we don't want images to be replaced in the original github
     decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
     result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
@@ -394,7 +394,7 @@ def clean_readme_relative_paths(asset):
 def clean_readme_hide_comments(asset):
     logger.debug(f'Clearning readme for asset {asset.slug}')
     readme = asset.get_readme()
-    regex = r'<!--\s+(:?end)?hide\s+-->'
+    regex = r'<!--\s*(:?end)?hide\s*-->'
 
     content = readme['decoded']
     findings = list(re.finditer(regex, content))
@@ -662,6 +662,10 @@ def pull_learnpack_asset(github, asset, override_meta):
             if 'url' in asset.delivery_formats:
                 if 'regex' in config['delivery'] and isinstance(config['delivery']['regex'], str):
                     asset.delivery_regex_url = config['delivery']['regex'].replace('\\\\', '\\')
+        else:
+            asset.delivery_instructions = ""
+            asset.delivery_formats = "url"
+            asset.delivery_regex_url = ""
 
     return asset
 
@@ -826,9 +830,9 @@ def add_syllabus_translations(_json):
                 _asset = Asset.objects.filter(slug=slug).first()
                 if _asset is not None:
                     if 'slug' not in ass:
-                        _json['days'][day_count][asset_type][index] = { 
-                          "slug": _asset.slug,
-                          "title": _asset.title,
+                        _json['days'][day_count][asset_type][index] = {
+                            'slug': _asset.slug,
+                            'title': _asset.title,
                         }
                     _json['days'][day_count][asset_type][index]['translations'] = {}
                     for a in _asset.all_translations.all():

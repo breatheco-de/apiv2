@@ -762,6 +762,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
     def test_plan_true__with_scheduler(self):
         """Test /cohort/all without auth"""
+        plan = {'time_of_life': None, 'time_of_life_unit': None}
         model = self.generate_models(authenticate=True,
                                      cohort=1,
                                      profile_academy=1,
@@ -770,7 +771,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      plan_service_item=1,
                                      mentorship_service=1,
                                      mentorship_service_set=1,
-                                     plan=1)
+                                     plan=plan)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?plan=true'
@@ -806,6 +807,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
     def test_plan_false__with_scheduler(self):
         """Test /cohort/all without auth"""
+        plan = {'time_of_life': None, 'time_of_life_unit': None}
         model = self.generate_models(authenticate=True,
                                      cohort=1,
                                      profile_academy=1,
@@ -814,7 +816,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      plan_service_item=1,
                                      mentorship_service=1,
                                      mentorship_service_set=1,
-                                     plan=1)
+                                     plan=plan)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?plan=false'
@@ -850,7 +852,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
     def test_plan_is_slug__with_scheduler(self):
         """Test /cohort/all without auth"""
         slug = self.bc.fake.slug()
-        plan = {'slug': slug}
+        plan = {'slug': slug, 'time_of_life': None, 'time_of_life_unit': None}
 
         model = self.generate_models(authenticate=True,
                                      cohort=1,

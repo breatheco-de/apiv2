@@ -146,6 +146,7 @@ class ReviewSmallSerializer(serpy.Serializer):
     cohort = GetCohortSerializer()
     author = UserSerializer()
     comments = serpy.Field()
+    lang = serpy.Field()
     platform = ReviewPlatformSerializer()
     updated_at = serpy.Field()
 

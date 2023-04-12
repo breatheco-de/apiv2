@@ -720,8 +720,8 @@ def build_plan_financing(self, bag_id: int, invoice_id: int):
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def build_free_trial(self, bag_id: int, invoice_id: int):
-    logger.info(f'Starting build_free_trial for bag {bag_id}')
+def build_free_subscription(self, bag_id: int, invoice_id: int):
+    logger.info(f'Starting build_free_subscription for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
         logger.error(f'Bag with id {bag_id} not found')
@@ -732,18 +732,25 @@ def build_free_trial(self, bag_id: int, invoice_id: int):
         return
 
     if invoice.amount != 0:
-        logger.error(f'The invoice with id {invoice_id} is invalid for a free trial')
+        logger.error(f'The invoice with id {invoice_id} is invalid for a free subscription')
         return
 
     plans = bag.plans.all()
 
     if not plans:
-        logger.error(f'Not have plans to associated to this free trial in the bag {bag_id}')
+        logger.error(f'Not have plans to associated to this free subscription in the bag {bag_id}')
         return
 
     for plan in plans:
+        is_free_trial = True
         unit = plan.trial_duration
         unit_type = plan.trial_duration_unit
+
+        if not unit:
+            is_free_trial = False
+            unit = plan.time_of_life
+            unit_type = plan.time_of_life_unit
+
         delta = actions.calculate_relative_delta(unit, unit_type)
 
         until = invoice.paid_at + delta
@@ -758,15 +765,34 @@ def build_free_trial(self, bag_id: int, invoice_id: int):
         if not mentorship_service_set:
             mentorship_service_set = plan.mentorship_service_set
 
+        status = 'FREE_TRIAL' if is_free_trial else 'ACTIVE'
+
+        if is_free_trial:
+            extra = {
+                'status': 'FREE_TRIAL',
+                'valid_until': until,
+            }
+
+        elif not is_free_trial and plan.is_renewable:
+            extra = {
+                'status': 'ACTIVE',
+                'valid_until': None,
+            }
+
+        else:
+            extra = {
+                'status': 'ACTIVE',
+                'valid_until': until,
+            }
+
         subscription = Subscription.objects.create(user=bag.user,
                                                    paid_at=invoice.paid_at,
                                                    academy=bag.academy,
-                                                   valid_until=until,
                                                    selected_cohort=cohort,
                                                    selected_event_type_set=event_type_set,
                                                    selected_mentorship_service_set=mentorship_service_set,
                                                    next_payment_at=until,
-                                                   status='FREE_TRIAL')
+                                                   **extra)
 
         subscription.plans.add(plan)
 
@@ -775,7 +801,7 @@ def build_free_trial(self, bag_id: int, invoice_id: int):
 
         build_service_stock_scheduler_from_subscription.delay(subscription.id)
 
-        logger.info(f'Free trial subscription was created with id {subscription.id} for plan {plan.id}')
+        logger.info(f'Free subscription was created with id {subscription.id} for plan {plan.id}')
 
     bag.was_delivered = True
     bag.save()
@@ -795,3 +821,40 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
 
     session.was_discounted = True
     session.status = 'DONE'
+
+
+@shared_task(bind=False, base=BaseTaskWithRetry)
+def build_consumables_from_bag(bag_id: int):
+    logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
+
+    if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
+        logger.error(f'Bag with id {bag_id} not found')
+        return
+
+    mentorship_service_set = bag.selected_mentorship_service_sets.first()
+    event_type_set = bag.selected_event_type_sets.first()
+
+    if [mentorship_service_set, event_type_set].count(None) != 1:
+        logger.error(f'Bag with id {bag_id} not have a resource associated')
+        return
+
+    consumables = []
+    for service_item in bag.service_items.all():
+        kwargs = {}
+        if service_item.service_item_type == 'MENTORSHIP_SERVICE_SET':
+            kwargs['mentorship_service_set'] = mentorship_service_set
+
+        if service_item.service_item_type == 'EVENT_TYPE_SET':
+            kwargs['event_type_set'] = event_type_set
+
+        if not kwargs:
+            logger.error(f'Bag with id {bag_id} have a resource associated opposite to the service item type')
+            return
+
+        consumables.append(Consumable(service_item=service_item, user=bag.user, **kwargs))
+
+    for consumable in consumables:
+        consumable.save()
+
+    bag.was_delivered = True
+    bag.save()

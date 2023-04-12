@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.extensions.language_extension import LanguageExtension
+from breathecode.utils.api_view_extensions.extensions.lookup_extension import LookupExtension
 from .extensions import CacheExtension
 
 __all__ = ['APIViewExtensionHandlers']
@@ -20,6 +21,7 @@ class APIViewExtensionHandlers:
     # the custom method we want to export go here
     cache: Optional[CacheExtension]
     language: Optional[LanguageExtension]
+    lookup: Optional[LookupExtension]
 
     # internal attrs
     _request: WSGIRequest

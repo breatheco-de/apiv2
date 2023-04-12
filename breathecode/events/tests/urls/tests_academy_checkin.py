@@ -365,7 +365,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['LanguageExtension', 'PaginationExtension', 'SortExtension']),
+            call(['LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())

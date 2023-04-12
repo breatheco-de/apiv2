@@ -159,6 +159,26 @@ class EventSmallSerializer(serpy.Serializer):
     tags = serpy.Field()
 
 
+class LiveClassJoinSerializer(serpy.Serializer):
+    id = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    live_stream_url = serpy.MethodField()
+    title = serpy.MethodField()
+
+    def get_live_stream_url(self, obj):
+        if obj.cohort_time_slot.cohort.online_meeting_url is not None:
+            return obj.cohort_time_slot.cohort.online_meeting_url
+
+        return None
+
+    def get_title(self, obj):
+        if obj.cohort_time_slot.cohort.online_meeting_url is not None:
+            return obj.cohort_time_slot.cohort.name
+
+        return None
+
+
 class EventSmallSerializerNoAcademy(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()

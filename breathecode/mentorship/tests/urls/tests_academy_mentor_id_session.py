@@ -858,7 +858,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['LanguageExtension', 'PaginationExtension', 'SortExtension']),
+            call(['LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
