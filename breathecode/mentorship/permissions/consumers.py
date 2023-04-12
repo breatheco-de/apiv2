@@ -19,7 +19,7 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
     if mentorship_service:
         # context['will_consume'] = api.release.enable_consume_mentorships(context['request'].user,
         #                                                                  mentorship_service)
-        context['will_consume'] = False
+        context['will_consume'] = True
 
     else:
         context['will_consume'] = False
