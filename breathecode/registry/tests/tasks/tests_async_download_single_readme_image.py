@@ -193,9 +193,13 @@ class RegistryTestSuite(RegistryTestCase):
 
         model = self.bc.database.create(asset={
             'slug': 'fake_slug',
-            'readme': encoded_readme
+            'readme': encoded_readme,
+            'readme_raw': encoded_readme
         },
                                         asset_image=asset_image)
+
+        #store the original readme_raw to verify it does not get modified
+        readme_raw = model['asset'].readme_raw
 
         result = async_download_single_readme_image('fake_slug', 'https://www.f.com')
         #The content is static in the decorator, so the hash is always the same
@@ -206,6 +210,7 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(result, 'OK')
         self.assertEqual('https://xyz/hardcoded_url' in readme, True)
         self.assertEqual('https://www.f.com' not in readme, True)
+        self.assertEqual(readme_raw, self.bc.database.get_model('registry.asset').objects.first().readme_raw)
         self.assertEqual(self.bc.database.list_of('registry.AssetImage'), [{
             'id': 1,
             'bucket_url': 'https://xyz/hardcoded_url',
@@ -234,13 +239,18 @@ class RegistryTestSuite(RegistryTestCase):
 
         model = self.bc.database.create(asset={
             'slug': 'fake_slug',
-            'readme': encoded_readme
+            'readme': encoded_readme,
+            'readme_raw': encoded_readme
         },
                                         asset_image=asset_image)
+
+        #store the original readme_raw to verify it does not get modified
+        readme_raw = model['asset'].readme_raw
 
         result = async_download_single_readme_image('fake_slug', 'https://www.f.com')
 
         readme = self.bc.database.get_model('registry.asset').objects.first().get_readme()['decoded']
 
         self.assertEqual(result, 'OK')
+        self.assertEqual(readme_raw, self.bc.database.get_model('registry.asset').objects.first().readme_raw)
         self.assertEqual('https://www.f.com' in readme, True)
