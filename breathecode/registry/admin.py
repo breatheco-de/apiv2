@@ -342,7 +342,7 @@ class AssetAdmin(admin.ModelAdmin):
 
     def main(self, obj):
 
-        lang = obj.lang.lower() if isinstance(obj.lang, str) else "?"
+        lang = obj.lang.lower() if isinstance(obj.lang, str) else '?'
         return format_html(f'''
                 <p style="border: 1px solid #BDBDBD; border-radius: 3px; font-size: 10px; padding: 3px;margin: 0;">{lang_flags.get(lang, None)} {obj.asset_type}</p>
                 <p style="margin: 0; padding: 0;">{obj.slug}</p>
@@ -387,7 +387,7 @@ class AssetAdmin(admin.ModelAdmin):
 
     def alias(self, obj):
         aliases = AssetAlias.objects.filter(asset__all_translations__slug=obj.slug)
-        get_lang = lambda l: l.lower() if isinstance(l, str) else "?"
+        get_lang = lambda l: l.lower() if isinstance(l, str) else '?'
         return format_html(''.join([
             f'<span style="display: inline-block; background: #2d302d; padding: 2px; border-radius: 3px; margin: 2px;">{lang_flags.get(get_lang(a.asset.lang), None)}{a.slug}</span>'
             for a in aliases
