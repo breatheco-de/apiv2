@@ -394,7 +394,7 @@ def clean_readme_relative_paths(asset):
 def clean_readme_hide_comments(asset):
     logger.debug(f'Clearning readme for asset {asset.slug}')
     readme = asset.get_readme()
-    regex = r'<!--\s+(:?end)?hide\s+-->'
+    regex = r'<!--\s*(:?end)?hide\s*-->'
 
     content = readme['decoded']
     findings = list(re.finditer(regex, content))
@@ -662,6 +662,10 @@ def pull_learnpack_asset(github, asset, override_meta):
             if 'url' in asset.delivery_formats:
                 if 'regex' in config['delivery'] and isinstance(config['delivery']['regex'], str):
                     asset.delivery_regex_url = config['delivery']['regex'].replace('\\\\', '\\')
+        else:
+            asset.delivery_instructions = ""
+            asset.delivery_formats = "url"
+            asset.delivery_regex_url = ""
 
     return asset
 
