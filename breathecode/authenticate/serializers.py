@@ -136,7 +136,8 @@ class GithubSmallSerializer(serpy.Serializer):
     avatar_url = serpy.Field()
     name = serpy.Field()
     username = serpy.Field()
-    
+
+
 class GithubUserSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -151,7 +152,7 @@ class GithubUserSerializer(serpy.Serializer):
     storage_synch_at = serpy.Field()
 
     created_at = serpy.Field()
-    
+
     github = serpy.MethodField()
 
     def get_github(self, obj):
