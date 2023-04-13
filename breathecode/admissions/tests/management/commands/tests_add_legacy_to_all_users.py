@@ -14,11 +14,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     # Then: does not migrate any user
     def test_0_users(self):
         """Test /academy/cohort without auth"""
-        # model = self.generate_models(cohort=True, user=True)
         self.bc.database.create()
         command = Command()
-
-        # self.bc.database.list_of
 
         self.assertEqual(command.handle(), None)
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
@@ -30,8 +27,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         user = {'groups': []}
         model = self.bc.database.create(user=(2, user), group={'name': 'Legacy'})
         command = Command()
-
-        # self.bc.database.list_of
 
         self.assertEqual(command.handle(), None)
         self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))
