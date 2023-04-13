@@ -7,7 +7,6 @@ from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, Aca
                     PlanOfferView, PlanView, ServiceItemView, ServiceView, MeSubscriptionView)
 
 # /v1/payment/offer
-ConsumableCheckoutView
 app_name = 'payments'
 urlpatterns = [
     path('planoffer', PlanOfferView.as_view(), name='planoffer'),
