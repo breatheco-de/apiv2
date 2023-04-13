@@ -9,7 +9,7 @@ class Command(BaseCommand):
         try:
             legacy_group = Group.objects.filter(name='Legacy').first()
             for user in User.objects.all():
-                if legacy_group not in user.groups:
+                if legacy_group not in user.groups.all():
                     user.groups.add(legacy_group)
-        except TypeError:
-            print(f'Failed to add the Legacy group to all users')
+        except Exception:
+            self.stderr.write(f'Failed to add the Legacy group to all users')
