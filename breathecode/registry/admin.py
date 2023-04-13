@@ -342,8 +342,9 @@ class AssetAdmin(admin.ModelAdmin):
 
     def main(self, obj):
 
+        lang = obj.lang.lower() if isinstance(obj, str) else "?"
         return format_html(f'''
-                <p style="border: 1px solid #BDBDBD; border-radius: 3px; font-size: 10px; padding: 3px;margin: 0;">{lang_flags.get(obj.lang.lower(), None)} {obj.asset_type}</p>
+                <p style="border: 1px solid #BDBDBD; border-radius: 3px; font-size: 10px; padding: 3px;margin: 0;">{lang_flags.get(lang, None)} {obj.asset_type}</p>
                 <p style="margin: 0; padding: 0;">{obj.slug}</p>
                 <p style="color: white; font-size: 10px;margin: 0; padding: 0;">{obj.title}</p>
             ''')
