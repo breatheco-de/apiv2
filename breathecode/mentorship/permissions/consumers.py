@@ -10,6 +10,9 @@ from .flags import api
 
 def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
                                     kwargs: dict) -> tuple[dict, tuple, dict]:
+
+    context['will_consume'] = False
+
     mentorship_service = MentorshipService.objects.filter(
         Q(id=kwargs.get('service_id')) | Q(slug=kwargs.get('service_slug')),
         Q(id=kwargs.get('mentor_id')) | Q(slug=kwargs.get('mentor_slug'))).first()

@@ -205,7 +205,7 @@ def has_permission(permission: str,
                 return Response({'detail': str(e), 'status_code': status}, status)
 
             # handle html views errors
-            except:
+            except Exception as e:
                 # show stacktrace for unexpected exceptions
                 traceback.print_exc()
 
