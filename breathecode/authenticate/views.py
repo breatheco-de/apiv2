@@ -44,8 +44,8 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
-from .actions import (generate_academy_token, get_user_language, resend_invite, reset_password, 
-                      set_gitpod_user_expiration, update_gitpod_users, sync_organization_members, 
+from .actions import (generate_academy_token, get_user_language, resend_invite, reset_password,
+                      set_gitpod_user_expiration, update_gitpod_users, sync_organization_members,
                       get_github_scopes)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
