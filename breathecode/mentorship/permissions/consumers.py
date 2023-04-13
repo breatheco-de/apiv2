@@ -10,13 +10,16 @@ from .flags import api
 
 def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
                                     kwargs: dict) -> tuple[dict, tuple, dict]:
+
+    context['will_consume'] = False
+
     mentorship_service = MentorshipService.objects.filter(
         Q(id=kwargs.get('service_id')) | Q(slug=kwargs.get('service_slug')),
         Q(id=kwargs.get('mentor_id')) | Q(slug=kwargs.get('mentor_slug'))).first()
     context['consumables'] = context['consumables'].filter(mentorship_services=mentorship_service)
 
     # avoid call LaunchDarkly if mentorship_service is empty
-    if mentorship_service:
+    if mentorship_service and mentorship_service.academy.available_as_saas:
         # context['will_consume'] = api.release.enable_consume_mentorships(context['request'].user,
         #                                                                  mentorship_service)
         context['will_consume'] = True
