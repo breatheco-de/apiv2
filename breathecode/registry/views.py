@@ -109,12 +109,10 @@ def get_technologies(request):
 
     if 'sort_priority' in request.GET:
         param = request.GET.get('sort_priority')
-        print(param)
+
         try:
 
             param = int(param)
-
-            lookup['sort_priority__iexact'] = param
 
         except Exception as e:
             raise ValidationException(
