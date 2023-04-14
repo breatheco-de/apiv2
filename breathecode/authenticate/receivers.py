@@ -2,7 +2,7 @@ import logging
 
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_delete
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.admissions.models import CohortUser
 from django.dispatch import receiver
@@ -78,8 +78,15 @@ def unset_user_group(sender, instance, **kwargs):
         groups.remove(group)
 
 
+@receiver(pre_delete, sender=CohortUser)
+def post_delete_cohort_user(sender, instance, **kwargs):
+    logger.debug('Cohort user deleted, removing from organization')
+    async_remove_from_organization(instance.cohort.id, instance.user.id, force=True)
+
+
 @receiver(student_edu_status_updated, sender=CohortUser)
 def post_save_cohort_user(sender, instance, **kwargs):
+    logger.debug('User educational status updated to: ' + str(instance.educational_status))
     if instance.educational_status == 'ACTIVE':
         async_add_to_organization(instance.cohort.id, instance.user.id)
     else:

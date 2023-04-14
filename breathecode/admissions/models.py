@@ -498,7 +498,7 @@ class CohortUser(models.Model):
         self.full_clean()
 
         edu_status_updated = False
-        if self.__old_edu_status != self.educational_status:
+        if self.pk is None or self.__old_edu_status != self.educational_status:
             edu_status_updated = True
 
         result = super().save(*args, **kwargs)  # Call the "real" save() method.

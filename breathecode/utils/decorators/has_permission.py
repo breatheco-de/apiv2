@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 import traceback
 from typing import Callable, Optional, TypedDict
 
@@ -20,6 +21,8 @@ from ..validation_exception import ValidationException
 from rest_framework.response import Response
 
 __all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'PermissionContextType']
+
+logger = logging.getLogger(__name__)
 
 
 class PermissionContextType(TypedDict):
@@ -186,7 +189,7 @@ def has_permission(permission: str,
                 return Response({'detail': str(e), 'status_code': status}, status)
 
             # handle html views errors
-            except:
+            except Exception as e:
                 # show stacktrace for unexpected exceptions
                 traceback.print_exc()
 
