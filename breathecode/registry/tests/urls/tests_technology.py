@@ -25,6 +25,20 @@ def get_serializer(asset_technology, assets=[], asset_technologies=[]):
 
 
 class RegistryTestSuite(RegistryTestCase):
+    """
+    🔽🔽🔽 Auth
+    """
+
+    def test_without_auth(self):
+        url = reverse_lazy('registry:technology')
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
 
     def test_with_two_asset_technologies__passing_sort_priority__not_found_for_get_technologies(self):
         cases = (
