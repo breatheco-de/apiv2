@@ -17,7 +17,7 @@ class LaunchDarkly:
     client: LDClient
 
     def __init__(self, api_key=None):
-        self.api_key = api_key or os.getenv('LAUNCH_DARKLY_API_KEY')
+        api_key = api_key or os.getenv('LAUNCH_DARKLY_API_KEY')
 
         if api_key not in clients:
             config = Config(api_key)
