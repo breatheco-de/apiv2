@@ -101,10 +101,8 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
     start_date = cohort.kickoff_date
 
     # this event end in the new day
-    if starting_at > ending_at:
-        ending_at.year = starting_at.year
-        ending_at.month = starting_at.month
-        ending_at.day = starting_at.day + 1
+    while starting_at > ending_at:
+        ending_at += relativedelta(days=1)
 
     if not until_date:
         logger.error(f'Timeslot {timeslot_id} not have a ending date')
@@ -150,9 +148,9 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
     live_classes.delete()
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def fix_live_classes_from_timeslot(self, timeslot_id: int):
-    logger.info(f'Starting fix_live_classes_from_timeslot with id {timeslot_id}')
+@shared_task(bind=False, base=BaseTaskWithRetry)
+def fix_live_class_dates(timeslot_id: int):
+    logger.info(f'Starting fix_live_class_dates with id {timeslot_id}')
 
     timeslot = CohortTimeSlot.objects.filter(id=timeslot_id).first()
     if not timeslot:
@@ -161,25 +159,17 @@ def fix_live_classes_from_timeslot(self, timeslot_id: int):
 
     utc_now = timezone.now()
 
-    cohort = timeslot.cohort
-    # live_classes = LiveClass.objects.filter(cohort_time_slot=timeslot, starting_at__gte=utc_now)
+    if timeslot.cohort.ending_date and timeslot.cohort.ending_date < utc_now:
+        logger.info(f'Cohort {timeslot.cohort.id} is finished')
+        return
 
-    starting_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at)
-    ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
-    until_date = timeslot.removed_at or cohort.ending_date
-    start_date = cohort.kickoff_date
+    cohort = timeslot.cohort
+    starting_at = DatetimeInteger.to_utc_datetime(timeslot.timezone, timeslot.starting_at)
+    ending_at = DatetimeInteger.to_utc_datetime(timeslot.timezone, timeslot.ending_at)
 
     # this event end in the new day
-    if starting_at > ending_at:
-        ending_at.year = starting_at.year
-        ending_at.month = starting_at.month
-        ending_at.day = starting_at.day + 1
-
-    if not until_date:
-        logger.error(f'Timeslot {timeslot_id} not have a ending date')
-        # live_classes.delete()
-
-        return
+    while starting_at > ending_at:
+        ending_at += relativedelta(days=1)
 
     delta = relativedelta(0)
 
@@ -196,28 +186,25 @@ def fix_live_classes_from_timeslot(self, timeslot_id: int):
         logger.error(f'{timeslot.recurrency_type} is not a valid or not implemented recurrency_type')
         return
 
-    while True:
+    for live_class in LiveClass.objects.filter(cohort_time_slot=timeslot).order_by('starting_at'):
 
-        if ending_at > until_date:
-            break
+        if live_class.starting_at < utc_now or starting_at < cohort.kickoff_date:
+            starting_at += delta
+            ending_at += delta
+            continue
 
-        if starting_at > start_date:
-            try:
-                schedule, _ = LiveClass.objects.get(starting_at=starting_at,
-                                                    ending_at=ending_at,
-                                                    cohort_time_slot=timeslot)
-            except LiveClass.DoesNotExist:
-                schedule = LiveClass.objects.create(starting_at=starting_at,
-                                                    ending_at=ending_at,
-                                                    cohort_time_slot=timeslot,
-                                                    remote_meeting_url=cohort.online_meeting_url or '')
+        must_save = False
 
-            # live_classes = live_classes.exclude(id=schedule.id)
+        if live_class.starting_at != starting_at:
+            live_class.starting_at = starting_at
+            must_save = True
 
-            if not timeslot.recurrent:
-                break
+        if live_class.ending_at != ending_at:
+            live_class.ending_at = ending_at
+            must_save = True
+
+        if must_save:
+            live_class.save()
 
         starting_at += delta
         ending_at += delta
-
-    # live_classes.delete()

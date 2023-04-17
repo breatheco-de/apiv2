@@ -7,7 +7,7 @@ from breathecode.events import tasks
 
 
 class Command(BaseCommand):
-    help = 'Build live classes'
+    help = 'Fix live classes'
 
     def handle(self, *args, **options):
         utc_now = timezone.now()
@@ -22,12 +22,13 @@ class Command(BaseCommand):
         for cohort in cohorts:
             timeslots = CohortTimeSlot.objects.filter(cohort=cohort)
             total_cohort_timeslots = timeslots.count()
+
             if total_cohort_timeslots == 0:
                 continue
+
             else:
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'Adding cohort {cohort.slug} to the fixing queue, it ends on {str(cohort.ending_date)}'
-                    ))
+                        f'Adding cohort {cohort.slug} to the fixing queue, it ends on {cohort.ending_date}'))
                 for timeslot in timeslots:
-                    tasks.fix_live_classes_from_timeslot.delay(timeslot.id)
+                    tasks.fix_live_class_dates.delay(timeslot.id)
