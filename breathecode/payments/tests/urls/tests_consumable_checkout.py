@@ -621,75 +621,76 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.assertEqual(stripe.Refund.create.call_args_list, [])
 
-    # # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 EventTypeSet
-    # # When: is auth, with a service, how_many_bundle, academy and event_type_set in body,
-    # # ----> academy_service price_per_unit is greater than 0.50
-    # # Then: return 400
-    # @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    # @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
-    # @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
-    # @patch('stripe.Refund.create', MagicMock(return_value={'id': 1}))
-    # def test__x_event_type_set_bought(self):
-    #     how_many = random.randint(1, 10)
+    # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 EventTypeSet
+    # When: is auth, with a service, how_many_bundle, academy and event_type_set in body,
+    # ----> academy_service price_per_unit is greater than 0.50
+    # Then: return 400
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
+    @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
+    @patch('stripe.Refund.create', MagicMock(return_value={'id': 1}))
+    def test__x_event_type_set_bought(self):
+        how_many = random.randint(1, 10)
 
-    #     service = {'type': 'EVENT_TYPE_SET'}
-    #     price_per_unit = (random.random() + 0.50) * 100 / how_many
-    #     academy_service = {
-    #         'price_per_unit': price_per_unit,
-    #         'max_items': how_many,
-    #         'bundle_size': 2,
-    #         'max_amount': price_per_unit * how_many
-    #     }
+        service = {'type': 'EVENT_TYPE_SET'}
+        price_per_unit = (random.random() + 0.50) * 100 / how_many
+        academy_service = {
+            'price_per_unit': price_per_unit,
+            'max_items': how_many,
+            'bundle_size': 2,
+            'max_amount': price_per_unit * how_many,
+            'max_items': 11,
+        }
 
-    #     model = self.bc.database.create(user=1,
-    #                                     service=service,
-    #                                     academy=1,
-    #                                     academy_service=academy_service,
-    #                                     event_type_set=1)
-    #     self.bc.request.authenticate(model.user)
+        model = self.bc.database.create(user=1,
+                                        service=service,
+                                        academy=1,
+                                        academy_service=academy_service,
+                                        event_type_set=1)
+        self.bc.request.authenticate(model.user)
 
-    #     url = reverse_lazy('payments:consumable_checkout')
-    #     data = {'service': 1, 'how_many_bundle': how_many, 'academy': 1, 'event_type_set': 1}
-    #     response = self.client.post(url, data, format='json')
-    #     self.bc.request.authenticate(model.user)
+        url = reverse_lazy('payments:consumable_checkout')
+        data = {'service': 1, 'how_many_bundle': how_many / 2, 'academy': 1, 'event_type_set': 1}
+        response = self.client.post(url, data, format='json')
+        self.bc.request.authenticate(model.user)
 
-    #     json = response.json()
-    #     expected = get_serializer(self,
-    #                               model.currency,
-    #                               model.user,
-    #                               data={
-    #                                   'amount': math.ceil(price_per_unit * how_many),
-    #                               })
+        json = response.json()
+        expected = get_serializer(self,
+                                  model.currency,
+                                  model.user,
+                                  data={
+                                      'amount': math.ceil(price_per_unit * how_many),
+                                  })
 
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    #     self.assertEqual(self.bc.database.list_of('payments.Bag'), [format_bag_item()])
-    #     self.assertEqual(
-    #         self.bc.database.list_of('payments.Invoice'),
-    #         [format_invoice_item({
-    #             'stripe_id': '1',
-    #             'amount': math.ceil(price_per_unit * how_many),
-    #         })])
-    #     self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
-    #         format_consumable_item(data={
-    #             'event_type_set_id': 1,
-    #             'service_item_id': 1,
-    #             'user_id': 1,
-    #             'how_many': how_many,
-    #         }),
-    #     ])
-    #     self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-    #         format_user_setting({'lang': 'en'}),
-    #     ])
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [format_bag_item()])
+        self.assertEqual(
+            self.bc.database.list_of('payments.Invoice'),
+            [format_invoice_item({
+                'stripe_id': '1',
+                'amount': math.ceil(price_per_unit * how_many),
+            })])
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
+            format_consumable_item(data={
+                'event_type_set_id': 1,
+                'service_item_id': 1,
+                'user_id': 1,
+                'how_many': how_many,
+            }),
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({'lang': 'en'}),
+        ])
 
-    #     self.bc.check.calls(stripe.Charge.create.call_args_list, [
-    #         call(customer='1',
-    #              amount=math.ceil(price_per_unit * how_many),
-    #              currency=model.currency.code.lower(),
-    #              description=f'Can join to {how_many} events'),
-    #     ])
-    #     self.assertEqual(stripe.Customer.create.call_args_list, [
-    #         call(email=model.user.email, name=f'{model.user.first_name} {model.user.last_name}'),
-    #     ])
-    #     self.assertEqual(stripe.Refund.create.call_args_list, [])
+        self.bc.check.calls(stripe.Charge.create.call_args_list, [
+            call(customer='1',
+                 amount=math.ceil(price_per_unit * how_many),
+                 currency=model.currency.code.lower(),
+                 description=f'Can join to {int(how_many)} events'),
+        ])
+        self.assertEqual(stripe.Customer.create.call_args_list, [
+            call(email=model.user.email, name=f'{model.user.first_name} {model.user.last_name}'),
+        ])
+        self.assertEqual(stripe.Refund.create.call_args_list, [])
