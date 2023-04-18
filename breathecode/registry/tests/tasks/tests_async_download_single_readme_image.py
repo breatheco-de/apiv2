@@ -44,13 +44,15 @@ class RegistryTestSuite(RegistryTestCase):
         asset_image = {'name': 'john', 'original_url': original_url, 'bucket_url': 'https://www.f.com'}
         model = self.bc.database.create(asset={'slug': 'fake_slug'}, asset_image=asset_image)
 
+        bc = self.bc.format.to_dict(model.asset_image)
         result = async_download_single_readme_image('fake_slug', 'https://www.f.com')
-        asset_image = self.bc.database.get_model('registry.AssetImage').objects.first()
 
         self.assertEqual(result, False)
-        self.assertEqual(
-            asset_image.download_details,
-            f'Skipping image download for {original_url} in asset fake_slug, invalid mime application/json')
+        self.bc.database.list_of('registry.AssetImage'), [{
+            **bc, 'download_details':
+            f'Skipping image download for {original_url} in asset fake_slug, invalid mime application/json',
+            'download_status': 'ERROR'
+        }]
 
     @patch('requests.get',
            apply_requests_get_mock([(200, original_url, {
@@ -128,7 +130,8 @@ class RegistryTestSuite(RegistryTestCase):
            })))
     def test__with_download_status_not_ok(self):
         asset_image = {'name': 'john', 'original_url': original_url, 'bucket_url': 'https://www.f.com'}
-        fake_readme = 'hi https://www.f.com'
+        start_of_readme = 'hi '
+        fake_readme = f'{start_of_readme}https://www.f.com'
         encoded_readme = base64.b64encode(fake_readme.encode('utf-8')).decode('utf-8')
 
         model = self.bc.database.create(asset={
@@ -140,6 +143,7 @@ class RegistryTestSuite(RegistryTestCase):
         #store the original readme_raw to verify it does not get modified
         readme_raw = model['asset'].readme_raw
 
+        asset = self.bc.format.to_dict(model.asset)
         result = async_download_single_readme_image('fake_slug', 'https://www.f.com')
         #The content is static in the decorator, so the hash is always the same
         hash = '5186bd77843e507d2c6f568d282c56b06622b2fc7d6ae6a109c97ee1fc3cdebc'
@@ -147,8 +151,13 @@ class RegistryTestSuite(RegistryTestCase):
         readme = self.bc.database.get_model('registry.asset').objects.first().get_readme()['decoded']
         asset_image = self.bc.database.get_model('registry.AssetImage').objects.first()
         self.assertEqual(result, 'OK')
-        self.assertEqual('https://xyz/hardcoded_url' in readme, True)
-        self.assertEqual(readme_raw, self.bc.database.get_model('registry.asset').objects.first().readme_raw)
+        self.bc.database.list_of('registry.Asset'), [{
+            **asset,
+            'readme_raw': readme_raw,
+        }]
+        self.assertEqual(readme.count('https://xyz/hardcoded_url'), 1)
+        self.assertEqual(start_of_readme in readme, True)
+        self.assertEqual('https://www.f.com' not in readme, True)
         self.assertEqual(self.bc.database.list_of('registry.AssetImage'), [{
             'id': 1,
             'bucket_url': 'https://xyz/hardcoded_url',
@@ -188,7 +197,8 @@ class RegistryTestSuite(RegistryTestCase):
            })))
     def test__with_download_status_not_ok_many_images(self):
         asset_image = {'name': 'john', 'original_url': original_url, 'bucket_url': 'https://www.f.com'}
-        fake_readme = 'hi https://www.f.com https://www.f.com https://www.f.com'
+        start_of_readme = 'hi '
+        fake_readme = f'{start_of_readme}https://www.f.com https://www.f.com https://www.f.com'
         encoded_readme = base64.b64encode(fake_readme.encode('utf-8')).decode('utf-8')
 
         model = self.bc.database.create(asset={
@@ -208,7 +218,8 @@ class RegistryTestSuite(RegistryTestCase):
         readme = self.bc.database.get_model('registry.asset').objects.first().get_readme()['decoded']
         asset_image = self.bc.database.get_model('registry.AssetImage').objects.first()
         self.assertEqual(result, 'OK')
-        self.assertEqual('https://xyz/hardcoded_url' in readme, True)
+        self.assertEqual(readme.count('https://xyz/hardcoded_url'), 3)
+        self.assertEqual(start_of_readme in readme, True)
         self.assertEqual('https://www.f.com' not in readme, True)
         self.assertEqual(readme_raw, self.bc.database.get_model('registry.asset').objects.first().readme_raw)
         self.assertEqual(self.bc.database.list_of('registry.AssetImage'), [{
@@ -253,4 +264,4 @@ class RegistryTestSuite(RegistryTestCase):
 
         self.assertEqual(result, 'OK')
         self.assertEqual(readme_raw, self.bc.database.get_model('registry.asset').objects.first().readme_raw)
-        self.assertEqual('https://www.f.com' in readme, True)
+        self.assertEqual(fake_readme, readme)
