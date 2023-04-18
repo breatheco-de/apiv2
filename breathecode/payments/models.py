@@ -358,11 +358,15 @@ class AcademyService(models.Model):
     price_per_unit = models.FloatField(default=1, help_text='Price per unit (e.g. 1, 2, 3, ...)')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency')
 
-    cohort_patterns = models.JSONField(
-        default=[], blank=True, help_text='Array of cohort patterns to find cohorts to be sold in this plan')
-
-    available_cohorts = models.ManyToManyField(
-        Cohort, blank=True, help_text='Available cohorts to be sold in this this service and plan')
+    bundle_size = models.FloatField(default=1, help_text='Bundle size (e.g. 1, 2, 3, ...)')
+    max_items = models.FloatField(
+        default=1, help_text="How many items can be bought in total, it doens't matter the bundle size")
+    max_amount = models.FloatField(default=1,
+                                   help_text="Limit total amount, it doesn't matter the bundle size")
+    discount_ratio = models.FloatField(
+        default=1,
+        help_text='Determines the price of the bundle (price_per_unit * bundle_size * '
+        'discount_ratio)')
 
     available_mentorship_service_sets = models.ManyToManyField(
         MentorshipServiceSet,
@@ -379,14 +383,20 @@ class AcademyService(models.Model):
 
     def clean(self) -> None:
         if self.id and len([
-                x for x in [
-                    self.available_cohorts.count(),
-                    self.available_mentorship_service_sets.count(),
-                    self.available_event_type_sets.count()
-                ] if x
+                x for x in
+            [self.available_mentorship_service_sets.count(),
+             self.available_event_type_sets.count()] if x
         ]) > 1:
             raise forms.ValidationError('Only one of available_cohorts, available_mentorship_service_sets or '
                                         'available_event_type_sets can be set')
+
+        required_integer_fields = self.service.type in ['MENTORSHIP_SERVICE_SET', 'EVENT_TYPE_SET']
+
+        if required_integer_fields and not self.bundle_size.is_integer():
+            raise forms.ValidationError('bundle_size must be an integer')
+
+        if required_integer_fields and not self.max_items.is_integer():
+            raise forms.ValidationError('max_items must be an integer')
 
         return super().clean()
 

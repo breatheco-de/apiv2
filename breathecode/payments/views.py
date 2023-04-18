@@ -1059,7 +1059,7 @@ class ConsumableCheckoutView(APIView):
         lang = get_user_language(request)
 
         service = request.data.get('service')
-        how_many = request.data.get('how_many')
+        how_many_bundle = request.data.get('how_many_bundle')
         academy = request.data.get('academy')
 
         if not service:
@@ -1076,18 +1076,19 @@ class ConsumableCheckoutView(APIView):
                             es='El servicio no fue encontrado',
                             slug='service-not-found'))
 
-        if not how_many:
+        if not how_many_bundle:
             raise ValidationException(translation(lang,
-                                                  en='How many is required',
-                                                  es='La cantidad es requerida',
-                                                  slug='how-many-is-required'),
+                                                  en='How many bundle is required',
+                                                  es='La cantidad de paquetes es requerida',
+                                                  slug='how-many-bundle-is-required'),
                                       code=400)
 
-        if not isinstance(how_many, int) or how_many <= 0:
+        if not (isinstance(how_many_bundle, int)
+                or isinstance(how_many_bundle, float)) or how_many_bundle <= 0:
             raise ValidationException(translation(lang,
-                                                  en='How many is not valid',
-                                                  es='La cantidad no es válida',
-                                                  slug='how-many-is-not-valid'),
+                                                  en='How many bundle is not valid',
+                                                  es='La cantidad de paquetes no es válida',
+                                                  slug='how-many-bundle-is-not-valid'),
                                       code=400)
 
         if not academy:
@@ -1156,6 +1157,15 @@ class ConsumableCheckoutView(APIView):
         price_per_unit = academy_service.price_per_unit
         currency = academy_service.currency
 
+        how_many = how_many_bundle * academy_service.bundle_size
+        if how_many > academy_service.max_items:
+            raise ValidationException(translation(
+                lang,
+                en=f'The amount of items is too high (max {academy_service.max_items})',
+                es=f'La cantidad de elementos es demasiado alta (máx {academy_service.max_items})',
+                slug='the-amount-of-items-is-too-high'),
+                                      code=400)
+
         amount = price_per_unit * how_many
 
         if amount <= 0.5:
@@ -1163,6 +1173,14 @@ class ConsumableCheckoutView(APIView):
                                                   en='The amount is too low',
                                                   es='El monto es muy bajo',
                                                   slug='the-amount-is-too-low'),
+                                      code=400)
+
+        if amount > academy_service.max_amount:
+            raise ValidationException(translation(
+                lang,
+                en=f'The amount is too high (max {academy_service.max_amount})',
+                es=f'El monto es demasiado alto (máx {academy_service.max_amount})',
+                slug='the-amount-is-too-high'),
                                       code=400)
 
         s = None
@@ -1202,10 +1220,10 @@ class ConsumableCheckoutView(APIView):
                 bag.service_items.add(service_item)
 
                 if mentorship_service_set:
-                    description = f'Can join to {how_many} mentorships'
+                    description = f'Can join to {int(how_many)} mentorships'
 
                 else:
-                    description = f'Can join to {how_many} events'
+                    description = f'Can join to {int(how_many)} events'
 
                 invoice = s.pay(request.user,
                                 bag,
