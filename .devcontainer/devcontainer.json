@@ -31,5 +31,6 @@
     "forwardPorts": [
         8000
     ],
-    "postStartCommand": "bash -c .devcontainer/postStartCommand.sh"
+    "postStartCommand": "bash -c .devcontainer/postStartCommand.sh",
+    "onCreateCommand": "bash -c .devcontainer/onCreateCommand.sh"
 }
