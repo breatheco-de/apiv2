@@ -25,6 +25,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__with_user_without_cohort(self):
         model = self.generate_models(user=True)
         try:
@@ -45,6 +47,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__without_cohort_user(self):
         model = self.generate_models(user=True, cohort=True)
         try:
@@ -66,6 +70,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__cohort_not_ended(self):
         cohort_user_kwargs = {
             'finantial_status': 'FULLY_PAID',
@@ -141,6 +147,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__without_syllabus_version(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True, cohort=True, cohort_user=True, cohort_kwargs=cohort_kwargs)
@@ -163,6 +171,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__without_specialty(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -189,6 +199,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__without_syllabus(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -215,6 +227,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__without_specialty_layout(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -243,6 +257,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__without_teacher(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -272,6 +288,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate_with_bad_student_financial_status(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -335,6 +353,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__with_student_that_didnt_finish_tasks(self):
         cohort_kwargs = {'stage': 'ENDED'}
         task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
@@ -421,6 +441,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__with_student_that_didnt_finish_tasks_without_mandatory(self):
         cohort_kwargs = {'stage': 'ENDED'}
         task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
@@ -496,6 +518,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__with_student_that_didnt_finish_mandatory_tasks(self):
         cohort_kwargs = {'stage': 'ENDED'}
         task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
@@ -572,6 +596,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__without_proper_educational_status(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'FULLY_PAID'}
@@ -635,6 +661,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__with_cohort_user__with_finantial_status_eq_up_to_date(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE'}
@@ -699,6 +727,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__with_cohort_user__with_educational_status_eq_dropped(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'DROPPED'}
@@ -764,6 +794,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__with_cohort_not_finished(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -831,6 +863,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -908,6 +942,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__lang_en(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'en'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -983,6 +1019,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__lang_es(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'es'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -1060,6 +1098,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_generate_certificate__retry_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}

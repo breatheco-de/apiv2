@@ -3,10 +3,6 @@ Test /answer
 """
 from unittest.mock import patch, MagicMock
 from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
     MAILGUN_PATH,
     MAILGUN_INSTANCES,
     apply_mailgun_requests_post_mock,
@@ -25,6 +21,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_question__without_cohort(self):
         mock_mailgun = MAILGUN_INSTANCES['post']
         mock_mailgun.call_args_list = []
@@ -52,6 +50,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_question__with_same_user_in_two_cohort(self):
         mock_mailgun = MAILGUN_INSTANCES['post']
         mock_mailgun.call_args_list = []
@@ -85,6 +85,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_question__cohort_without_syllabus_version(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
@@ -143,6 +145,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_question__cohort_without_syllabus_schedule(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
@@ -201,6 +205,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_question__just_send_by_email(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
@@ -262,6 +268,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_question__just_send_by_email__passing_cohort(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
@@ -323,6 +331,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_question__send_by_email_and_slack(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
@@ -390,6 +400,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_question__with_cohort_lang_en(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
@@ -458,6 +470,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_question__with_cohort_lang_es(self):
         statuses = ['ACTIVE', 'GRADUATED']
 

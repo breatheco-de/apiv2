@@ -44,6 +44,8 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_not_found(self):
         get_attendancy_log_per_cohort_user.delay(1)
 
@@ -62,6 +64,8 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_cohort_user(self):
         cohort = {'history_log': random.choice(['', None, {}, []])}
         model = self.bc.database.create(cohort=cohort, cohort_user=1)
@@ -92,6 +96,8 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_cohort_user__user_do_not_assist(self):
         utc_now = timezone.now()
         day1 = str(random.randint(1, 9))
@@ -155,6 +161,8 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_cohort_user__user_assist(self):
         utc_now = timezone.now()
         day1 = str(random.randint(1, 9))
@@ -220,6 +228,8 @@ class MediaTestSuite(MediaTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_cohort_user__with_bad_user_log(self):
         utc_now = timezone.now()
         available_days = {str(random.randint(1, 9)) for _ in range(4)}

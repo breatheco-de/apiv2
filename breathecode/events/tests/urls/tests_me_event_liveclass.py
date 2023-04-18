@@ -31,6 +31,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: I call the API without authentication
     # Then: I should get a 401 error
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_auth(self):
         url = reverse_lazy('events:me_event_liveclass')
 
@@ -44,6 +46,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Given: User
     # When: User is authenticated and has no LiveClass
     # Then: I should get a 200 status code with no data
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_zero_live_classes(self):
         self.bc.request.set_headers(academy=1)
 
@@ -63,6 +67,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Given: a User, LiveClass, Cohort and CohortTimeSlot
     # When: User is authenticated, has LiveClass and CohortUser belongs to this LiveClass
     # Then: I should get a 200 status code with the LiveClass data
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_live_class(self):
         self.bc.request.set_headers(academy=1)
 
@@ -86,6 +92,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: the mock should be called with the correct arguments and does not raise an exception
     @patch('breathecode.utils.api_view_extensions.extensions.lookup_extension.compile_lookup',
            MagicMock(wraps=lookup_extension.compile_lookup))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_lookup_extension(self):
         self.bc.request.set_headers(academy=1)
 
