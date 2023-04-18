@@ -1,5 +1,5 @@
 import re, urllib
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from rest_framework import status
 from ..mixins import SlackTestCase
 import breathecode.services.slack.commands as commands
@@ -9,6 +9,8 @@ from ...commands.cohort import execute
 
 class SlackTestSuite(SlackTestCase):
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_slack_command___context_is_not_provided_or_is_none(self):
         """Testing when context is None or not provided."""
 
@@ -18,6 +20,8 @@ class SlackTestSuite(SlackTestCase):
         with self.assertRaisesMessage(SlackException, 'context-missing'):
             result = execute(users=[], context=None)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_slack_command___user_is_not_authorized(self):
         """Testing when user is not authorized."""
 
@@ -26,6 +30,8 @@ class SlackTestSuite(SlackTestCase):
         with self.assertRaisesMessage(SlackException, 'unauthorized-user'):
             result = execute(users=[], context=data)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_slack_command___cohort_does_not_exist(self):
         """Testing when cohort does not exist."""
 
@@ -45,6 +51,8 @@ class SlackTestSuite(SlackTestCase):
         with self.assertRaisesMessage(SlackException, 'cohort-not-found'):
             result = execute(users=[], context=data)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_slack_command___cohort_does_exist_but_not_associated_with_slack_channel(self):
         """Testing when cohort does exist but not associated with slack channel."""
 
@@ -68,6 +76,8 @@ class SlackTestSuite(SlackTestCase):
         with self.assertRaisesMessage(SlackException, 'cohort-not-found'):
             result = execute(users=['fdd2325'], context=data)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_slack_command___cohort_does_exist_and_associated_with_slack_channel(self):
         """Testing when cohort exists and is associated with slack channel"""
 
@@ -117,6 +127,8 @@ class SlackTestSuite(SlackTestCase):
 
         self.assertEqual(result, expected)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_slack_command___cohort_does_exist_and_role_is_teacher(self):
         """Testing when cohort exists and role is teacher"""
 

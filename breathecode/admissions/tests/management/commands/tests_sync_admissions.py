@@ -48,6 +48,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
 
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_students(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -112,6 +114,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_students_twice(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -177,6 +181,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_teachers(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -241,6 +247,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_teachers_twice(self):
         """Test /academy/cohort without auth"""
         cohorts = set()

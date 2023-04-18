@@ -85,6 +85,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: no auth
     # Then: return 401
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_auth(self):
 
         url = reverse_lazy('events:me_event_id_join', kwargs={'event_id': 1})
@@ -109,6 +111,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: no consumables
     # Then: return 402
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_consumables(self):
         model = self.bc.database.create(user=1, token=1)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -142,6 +146,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
            MagicMock(return_value=False))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__live_event_not_found(self):
         permission = {'codename': 'event_join'}
         model = self.bc.database.create(user=1, group=1, permission=permission, token=1)
@@ -176,6 +182,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
            MagicMock(return_value=False))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_event__cohort_without_url(self):
         permission = {'codename': 'event_join'}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -233,6 +241,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
            MagicMock(return_value=False))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_event__cohort_with_url(self):
         permission = {'codename': 'event_join'}
         online_meeting_url = self.bc.fake.url()
@@ -298,6 +308,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
            MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__live_event_not_found(self):
         permission = {'codename': 'event_join'}
         model = self.bc.database.create(user=1, group=1, permission=permission, token=1)
@@ -332,6 +344,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
            MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_event__cohort_without_url(self):
         permission = {'codename': 'event_join'}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -389,6 +403,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
            MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_event__cohort_with_url(self):
         permission = {'codename': 'event_join'}
         online_meeting_url = self.bc.fake.url()
@@ -409,9 +425,11 @@ class AcademyEventTestSuite(EventTestCase):
         if is_subscription and bool(random.randbytes(1)):
             i_owe_you['valid_until'] = None
 
+        academy = {'available_as_saas': True}
         extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
         model = self.bc.database.create(user=1,
                                         group=1,
+                                        academy=academy,
                                         permission=permission,
                                         event=event,
                                         event_type=event_type,
@@ -451,6 +469,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
            MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_event__in_the_past(self):
         permission = {'codename': 'event_join'}
         online_meeting_url = self.bc.fake.url()
@@ -517,6 +537,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
            MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_event__in_the_future(self):
         permission = {'codename': 'event_join'}
         online_meeting_url = self.bc.fake.url()
@@ -537,9 +559,11 @@ class AcademyEventTestSuite(EventTestCase):
         if is_subscription and bool(random.randbytes(1)):
             i_owe_you['valid_until'] = None
 
+        academy = {'available_as_saas': True}
         extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
         model = self.bc.database.create(user=1,
                                         group=1,
+                                        academy=academy,
                                         permission=permission,
                                         event=event,
                                         event_type=event_type,
@@ -596,6 +620,8 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
            MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_event__in_the_future__show_countdown(self):
         permission = {'codename': 'event_join'}
         online_meeting_url = self.bc.fake.url()
@@ -616,8 +642,10 @@ class AcademyEventTestSuite(EventTestCase):
         if is_subscription and bool(random.randbytes(1)):
             i_owe_you['valid_until'] = None
 
+        academy = {'available_as_saas': True}
         extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
         model = self.bc.database.create(user=1,
+                                        academy=academy,
                                         group=1,
                                         permission=permission,
                                         event=event,

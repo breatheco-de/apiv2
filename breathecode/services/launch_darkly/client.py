@@ -12,6 +12,12 @@ __all__ = ['LaunchDarkly']
 clients: dict[str, LDClient] = {}
 
 
+def show(name, data):
+    print(name, data)
+    logger.info(str(name))
+    logger.info(str(data))
+
+
 # docs https://docs.launchdarkly.com/sdk/server-side/python/migration-7-to-8
 class LaunchDarkly:
     client: LDClient
@@ -19,8 +25,10 @@ class LaunchDarkly:
     def __init__(self, api_key=None):
         api_key = api_key or os.getenv('LAUNCH_DARKLY_API_KEY')
 
+        show('api_key1', api_key)
         if api_key not in clients:
             config = Config(api_key)
+            show('api_key2', api_key)
             ldclient.set_config(config)
             clients[api_key] = ldclient.get()
 

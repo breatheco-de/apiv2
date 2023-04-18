@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, call, patch
 from rest_framework import status
+
+from breathecode.utils.validation_exception import ValidationException
 from ..mixins import MarketingTestCase
 
 
@@ -14,10 +16,21 @@ class LeadTestSuite(MarketingTestCase):
         from breathecode.marketing.tasks import add_cohort_task_to_student
         import logging
 
-        model = self.generate_models(cohort_user=True)
+        with self.assertRaisesMessage(ValidationException, 'user-not-found-in-org'):
+            model = self.generate_models(cohort_user=True)
 
-        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'),
-                         [self.model_to_dict(model, 'cohort_user')])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            {
+                'cohort_id': 1,
+                'educational_status': None,
+                'finantial_status': None,
+                'history_log': {},
+                'id': 1,
+                'role': 'STUDENT',
+                'user_id': 1,
+                'watching': False,
+            },
+        ])
         self.assertEqual(add_cohort_task_to_student.delay.call_args_list, [])
         self.assertEqual(logging.Logger.warn.call_args_list, [])
 

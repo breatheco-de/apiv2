@@ -21,6 +21,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Auth
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me__post__without_authorization(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -33,6 +35,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me__without_capability(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -57,6 +61,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me_without_data(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -86,6 +92,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me__with_data(self):
         """Test /cohort without auth"""
         self.check_cohort_me__with_data()
@@ -95,6 +103,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me__with_data__with_upcoming_false(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -178,6 +188,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me__with_data__with_upcoming_true__without_data(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -211,6 +223,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me__with_data__with_upcoming_true(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -298,6 +312,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me_with_data_with_academy(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -381,6 +397,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me_with_data_with_academy_with_comma(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -464,6 +482,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     # @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    # @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    # @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     # def test_cohort_me_with_ten_datas_with_academy_with_comma(self):
     #     """Test /cohort without auth"""
     #     from breathecode.admissions.signals import cohort_saved
@@ -552,6 +572,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me__with_data__with_sort(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -642,6 +664,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me_with_data__ignore_cohort_then_student_is_not_registered(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -673,6 +697,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me_with_data_with_location(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -756,6 +782,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me_with_data_with_location_with_comma(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -840,6 +868,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me__spy_extensions(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -873,6 +903,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_me__spy_extension_arguments(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
