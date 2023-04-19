@@ -23,6 +23,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__without_tasks(self):
         set_cohort_user_assignments.delay(1)
 
@@ -40,6 +42,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task(self):
         model = self.bc.database.create(task=1)
 
@@ -61,6 +65,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_pending(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -99,6 +105,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_done(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -141,6 +149,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_pending__with_log__already_exists(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -190,6 +200,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_pending__with_log__from_different_items(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -253,6 +265,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_done__with_log__already_exists(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -302,6 +316,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_done__with_log__from_different_items(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {

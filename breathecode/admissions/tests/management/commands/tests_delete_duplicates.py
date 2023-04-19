@@ -1,6 +1,7 @@
 """
 Test /academy/cohort
 """
+from unittest.mock import MagicMock, patch
 from mixer.backend.django import mixer
 
 from ...mixins import AdmissionsTestCase
@@ -10,6 +11,8 @@ from ....management.commands.delete_duplicates import Command
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_delete_duplicates(self):
         """Test /academy/cohort without auth"""
         model = self.generate_models(cohort=True, user=True)
@@ -27,6 +30,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+    # @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    # @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     # def test_delete_duplicates_with_one_student_graduated(self):
     #     """Test /academy/cohort without auth"""
     #     model = self.generate_models(cohort=True, user=True)
@@ -52,6 +58,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    # @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     # def test_delete_duplicates_with_one_student_with_finantial_status(self):
     #     """Test /academy/cohort without auth"""
     #     model = self.generate_models(cohort=True, user=True)

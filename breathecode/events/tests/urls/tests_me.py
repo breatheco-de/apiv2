@@ -108,6 +108,8 @@ def extract_starting_at(d):
 class AcademyEventTestSuite(EventTestCase):
     cache = EventCache()
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_auth(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me')
@@ -119,6 +121,8 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 401)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_zero_items(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me')
@@ -133,6 +137,8 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_item__non_visible(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me')
@@ -151,6 +157,8 @@ class AcademyEventTestSuite(EventTestCase):
     🥆🥆🥆 Academy hunter
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_item__academy_non_visible__because_owner_dont_allow_share_the_event_type(self):
         event_type_visibility_setting = {
             'academy_id': 2,
@@ -183,6 +191,8 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_item__academy_visible(self):
         cases = [
             (
@@ -245,6 +255,8 @@ class AcademyEventTestSuite(EventTestCase):
     🥆🥆🥆 Cohort hunter
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_item__cohort_non_visible__because_owner_dont_allow_share_the_event_type(self):
         event_type_visibility_setting = {
             'academy_id': 2,
@@ -277,6 +289,8 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_item__cohort_visible(self):
         cases = [
             (
@@ -340,6 +354,8 @@ class AcademyEventTestSuite(EventTestCase):
     🥆🥆🥆 Syllabus hunter
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_item__syllabus_non_visible__because_owner_dont_allow_share_the_event_type(self):
         event_type_visibility_setting = {
             'academy_id': 2,
@@ -370,6 +386,8 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_item__syllabus_visible(self):
         cases = [
             (
@@ -431,6 +449,8 @@ class AcademyEventTestSuite(EventTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, 200)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_item__status_not_active(self):
         cases = [
             (

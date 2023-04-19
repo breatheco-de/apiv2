@@ -176,6 +176,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Auth
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_user__without_auth(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -195,6 +197,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_user__post(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -239,6 +243,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_user__post__same_teacher_in_two_cohorts(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -307,6 +313,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_user__put(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -343,6 +351,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put teacher
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_user__put__teacher_with_role_student(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -373,6 +383,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                              'role': 'STUDENT',
                          }])
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_user__put__teacher(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -407,6 +419,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                          }])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_staff(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -415,6 +429,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_teacher(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -423,6 +439,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_syllabus_coordinator(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -431,6 +449,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_homework_reviewer(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -439,6 +459,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_growth_manager(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -447,6 +469,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_culture_and_recruitment(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -455,6 +479,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_country_manager(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -463,6 +489,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_community_manager(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -471,6 +499,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_career_support(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -479,6 +509,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_assistant(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -487,6 +519,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_admissions_developer(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -495,6 +529,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_admin(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -503,6 +539,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_academy_token(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,
@@ -511,6 +549,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                                                     additional_data={'watching': False})
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_cohort_id_user__post__one_teacher__with_role_academy_coordinator(self):
         """Test /cohort/:id/user without auth"""
         check_cohort_user_that_not_have_role_student_can_be_teacher(self,

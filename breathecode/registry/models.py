@@ -333,7 +333,11 @@ class Asset(models.Model):
     duration = models.IntegerField(null=True, blank=True, default=None, help_text='In hours')
 
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY, default=None, null=True, blank=True)
-    visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
+    visibility = models.CharField(
+        max_length=20,
+        choices=VISIBILITY,
+        default=PUBLIC,
+        help_text='It won\'t be shown on the website unleast the status is published')
     asset_type = models.CharField(max_length=20, choices=TYPE)
 
     status = models.CharField(max_length=20,

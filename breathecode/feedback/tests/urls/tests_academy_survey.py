@@ -14,6 +14,8 @@ now = timezone.now()
 class SurveyTestSuite(FeedbackTestCase):
     """Test /academy/survey"""
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__without_auth(self):
         """Test /academy/survey without authorization"""
         url = reverse_lazy('feedback:academy_survey')
@@ -23,6 +25,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__without_academy(self):
         """Test /academy/survey without academy"""
         self.bc.database.create(authenticate=True)
@@ -37,6 +41,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__without_role(self):
         """Test /academy/survey without role"""
         self.headers(academy=1)
@@ -52,6 +58,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__without_data(self):
         """Test /academy/survey without data"""
 
@@ -71,6 +79,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__with_data(self):
         """Test /academy/survey with data"""
 
@@ -108,6 +118,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__with_response_rate(self):
         """Test /academy/survey wiith response rate"""
 
@@ -145,6 +157,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__with_sent_status_query(self):
         """Test /academy/survey with sent status query"""
 
@@ -166,6 +180,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__with_pending_status_query(self):
         """Test /academy/survey with pending status query"""
 
@@ -203,6 +219,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__with_different_lang_query(self):
         """Test /academy/survey with different lang status query"""
 
@@ -224,6 +242,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__with_same_lang_query(self):
         """Test /academy/survey with same lang status query"""
 
@@ -261,6 +281,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__with_different_cohort_slug_cohort_query(self):
         """Test /academy/survey with different cohort slug than what is in the cohort query"""
 
@@ -283,6 +305,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__get__with_same_cohort_slug_cohort_query(self):
         """Test /academy/survey with same cohort slug as in the model"""
 
@@ -322,6 +346,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__without_auth(self):
         """Test /academy/survey without authorization"""
         url = reverse_lazy('feedback:academy_survey')
@@ -331,6 +357,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__without_academy(self):
         """Test /academy/survey without authorization"""
         self.bc.database.create(authenticate=True)
@@ -345,6 +373,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__without_role(self):
         """Test /academy/survey without role"""
         self.headers(academy=1)
@@ -360,6 +390,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__without_cohort(self):
         """Test /academy/survey post without cohort"""
 
@@ -379,6 +411,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__with_cohort_needs_rights(self):
         """Test /academy/survey post with cohort needs rights"""
 
@@ -400,6 +434,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__with_cohort_shorter_than_hour(self):
         """Test /academy/survey post with cohort shorter than hour"""
 
@@ -420,6 +456,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__without_cohort_teacher_assigned(self):
         """Test /academy/survey post without cohort teacher assigned"""
 
@@ -441,6 +479,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__with_cohort_teacher_assigned(self):
         """Test /academy/survey post with cohort teacher assigned"""
 
@@ -476,6 +516,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__with_cohort_teacher_assigned_with_longer_than_hour(self):
         """Test /academy/survey post with cohort teacher assigned with longer than hour."""
 
@@ -516,6 +558,8 @@ class SurveyTestSuite(FeedbackTestCase):
                'success': [],
                'error': []
            }))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__when_send_survey_group_is_called(self):
         """Test /academy/sur."""
 
@@ -555,6 +599,8 @@ class SurveyTestSuite(FeedbackTestCase):
 
     """DELETE Auth"""
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__delete__in_bulk_without_capability(self):
         """Test /academy/survey delete in bulk without capability."""
         self.headers(academy=1)
@@ -568,6 +614,8 @@ class SurveyTestSuite(FeedbackTestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey_delete_in_bulk_with_two_surveys(self):
         """Test /academy/survey/ delete in bulk with two surveys."""
         self.headers(academy=1)
@@ -584,6 +632,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__delete__without_passing_ids(self):
         """Test /academy/survey/ delete without passing ids."""
         self.headers(academy=1)
@@ -601,6 +651,8 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(response.json()['detail'], slug)
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), self.bc.format.to_dict(model.survey))
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey_id__delete__not_answered(self):
         """Test /academy/survey/ id delete not answered."""
 
@@ -625,6 +677,8 @@ class SurveyTestSuite(FeedbackTestCase):
             self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])
 
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey_id__delete__answered(self):
         """Test /academy/survey/ id delete answered."""
         self.headers(academy=1)
