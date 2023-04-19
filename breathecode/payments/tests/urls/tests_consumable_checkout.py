@@ -93,6 +93,28 @@ def get_serializer(self, currency, user, data={}):
     }
 
 
+def get_discounted_price(academy_service, num_items) -> float:
+    if num_items > academy_service.max_items:
+        raise ValueError('num_items cannot be greater than max_items')
+
+    total_discount_ratio = 0
+    current_discount_ratio = academy_service.discount_ratio
+    discount_nerf = 0.1
+    max_discount = 0.8
+
+    for _ in range(math.floor(num_items / academy_service.bundle_size)):
+        total_discount_ratio += current_discount_ratio
+        current_discount_ratio -= current_discount_ratio * discount_nerf
+
+    if total_discount_ratio > max_discount:
+        total_discount_ratio = max_discount
+
+    amount = academy_service.price_per_unit * num_items
+    discount = amount * total_discount_ratio
+
+    return amount - discount
+
+
 class SignalTestSuite(PaymentsTestCase):
     # When: no auth
     # Then: return 401
@@ -176,7 +198,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         json = response.json()
-        expected = {'detail': 'how-many-bundle-is-required', 'status_code': 400}
+        expected = {'detail': 'how-many-is-required', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -189,7 +211,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
     # Given: 1 User and 1 Service
-    # When: is auth, with a service and how_many_bundle in body
+    # When: is auth, with a service and how_many in body
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__academy_is_required(self):
@@ -197,7 +219,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': 1}
+        data = {'service': 1, 'how_many': 1}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -215,7 +237,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
     # Given: 1 User and 1 Service
-    # When: is auth, with a service, how_many_bundle and academy in body, and academy not found
+    # When: is auth, with a service, how_many and academy in body, and academy not found
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__academy_not_found(self):
@@ -223,7 +245,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': 1, 'academy': 1}
+        data = {'service': 1, 'how_many': 1, 'academy': 1}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -241,7 +263,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
     # Given: 1 User, 1 Service and 1 Academy
-    # When: is auth, with a service, how_many_bundle and academy in body, resource is required
+    # When: is auth, with a service, how_many and academy in body, resource is required
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__resourse_is_required(self):
@@ -249,7 +271,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': 1, 'academy': 1}
+        data = {'service': 1, 'how_many': 1, 'academy': 1}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -267,7 +289,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
     # Given: 1 User, 1 Service and 1 Academy
-    # When: is auth, with a service, how_many_bundle, academy and event_type_set in body,
+    # When: is auth, with a service, how_many, academy and event_type_set in body,
     # ----> service type is MENTORSHIP_SERVICE_SET
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -277,7 +299,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': 1, 'academy': 1, 'event_type_set': 1}
+        data = {'service': 1, 'how_many': 1, 'academy': 1, 'event_type_set': 1}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -295,7 +317,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
     # Given: 1 User, 1 Service and 1 Academy
-    # When: is auth, with a service, how_many_bundle, academy and mentorship_service_set in body,
+    # When: is auth, with a service, how_many, academy and mentorship_service_set in body,
     # ----> service type is EVENT_TYPE_SET
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -305,7 +327,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': 1, 'academy': 1, 'mentorship_service_set': 1}
+        data = {'service': 1, 'how_many': 1, 'academy': 1, 'mentorship_service_set': 1}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -323,7 +345,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
     # Given: 1 User, 1 Service and 1 Academy
-    # When: is auth, with a service, how_many_bundle and academy in body,
+    # When: is auth, with a service, how_many and academy in body,
     # ----> mentorship_service_set or event_type_set in body
     # ----> service type is COHORT
     # Then: return 400
@@ -341,7 +363,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': 1, 'academy': 1, 'mentorship_service_set': 1}
+        data = {'service': 1, 'how_many': 1, 'academy': 1, 'mentorship_service_set': 1}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -359,7 +381,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
     # Given: 1 User, 1 Service and 1 Academy
-    # When: is auth, with a service, how_many_bundle and academy in body,
+    # When: is auth, with a service, how_many and academy in body,
     # ----> mentorship_service_set and service type is MENTORSHIP_SERVICE_SET or
     # ----> event_type_set in body and service type is EVENT_TYPE_SET
     # Then: return 400
@@ -378,7 +400,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': 1, 'academy': 1, **kwargs}
+        data = {'service': 1, 'how_many': 1, 'academy': 1, **kwargs}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -396,7 +418,7 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
     # Given: 1 User, 1 Service, 1 Academy and 1 AcademyService
-    # When: is auth, with a service, how_many_bundle and academy in body,
+    # When: is auth, with a service, how_many and academy in body,
     # ----> mentorship_service_set and service type is MENTORSHIP_SERVICE_SET or
     # ----> event_type_set in body and service type is EVENT_TYPE_SET,
     # ----> over academy_service max_items
@@ -405,7 +427,7 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Refund.create', MagicMock(return_value={'id': 1}))
-    def test__how_many_bundle_too_hight(self):
+    def test__how_many_too_hight(self):
         kwargs = {}
 
         how_many = random.randint(2, 10)
@@ -429,7 +451,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': how_many, 'academy': 1, **kwargs}
+        data = {'service': 1, 'how_many': how_many, 'academy': 1, **kwargs}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -451,7 +473,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(stripe.Refund.create.call_args_list, [])
 
     # Given: 1 User, 1 Service, 1 Academy and 1 AcademyService
-    # When: is auth, with a service, how_many_bundle and academy in body,
+    # When: is auth, with a service, how_many and academy in body,
     # ----> mentorship_service_set and service type is MENTORSHIP_SERVICE_SET or
     # ----> event_type_set in body and service type is EVENT_TYPE_SET,
     # ----> academy_service price_per_unit is less than 0.50
@@ -482,7 +504,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': how_many, 'academy': 1, **kwargs}
+        data = {'service': 1, 'how_many': how_many, 'academy': 1, **kwargs}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -504,7 +526,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(stripe.Refund.create.call_args_list, [])
 
     # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 MentorshipServiceSet
-    # When: is auth, with a service, how_many_bundle, academy and mentorship_service_set in body,
+    # When: is auth, with a service, how_many, academy and mentorship_service_set in body,
     # ----> academy_service price_per_unit is greater than 0.50,
     # ----> over academy_service max_amount
     # Then: return 400
@@ -527,7 +549,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': how_many / 2, 'academy': 1, 'mentorship_service_set': 1}
+        data = {'service': 1, 'how_many': how_many / 2, 'academy': 1, 'mentorship_service_set': 1}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
@@ -549,7 +571,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(stripe.Refund.create.call_args_list, [])
 
     # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 MentorshipServiceSet
-    # When: is auth, with a service, how_many_bundle, academy and mentorship_service_set in body,
+    # When: is auth, with a service, how_many, academy and mentorship_service_set in body,
     # ----> academy_service price_per_unit is greater than 0.50
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -560,12 +582,13 @@ class SignalTestSuite(PaymentsTestCase):
         how_many = random.randint(1, 10)
 
         service = {'type': 'MENTORSHIP_SERVICE_SET'}
-        price_per_unit = (random.random() + 0.50) * 100 / how_many
+        price_per_unit = random.random() * 100 / how_many
         academy_service = {
             'price_per_unit': price_per_unit,
             'max_items': how_many,
             'bundle_size': 2,
-            'max_amount': price_per_unit * how_many
+            'max_amount': price_per_unit * how_many,
+            'discount_ratio': random.random() * 0.8,
         }
 
         model = self.bc.database.create(user=1,
@@ -576,28 +599,28 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': how_many / 2, 'academy': 1, 'mentorship_service_set': 1}
+        data = {'service': 1, 'how_many': how_many, 'academy': 1, 'mentorship_service_set': 1}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
         json = response.json()
-        expected = get_serializer(self,
-                                  model.currency,
-                                  model.user,
-                                  data={
-                                      'amount': math.ceil(price_per_unit * how_many),
-                                  })
+
+        amount = get_discounted_price(model.academy_service, how_many)
+        amount = math.ceil(amount)
+        expected = get_serializer(self, model.currency, model.user, data={
+            'amount': amount,
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [format_bag_item()])
-        self.assertEqual(
-            self.bc.database.list_of('payments.Invoice'),
-            [format_invoice_item({
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            format_invoice_item({
                 'stripe_id': '1',
-                'amount': math.ceil(price_per_unit * how_many),
-            })])
+                'amount': amount,
+            }),
+        ])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
             format_consumable_item(data={
                 'mentorship_service_set_id': 1,
@@ -612,7 +635,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.bc.check.calls(stripe.Charge.create.call_args_list, [
             call(customer='1',
-                 amount=math.ceil(price_per_unit * how_many),
+                 amount=amount,
                  currency=model.currency.code.lower(),
                  description=f'Can join to {int(how_many)} mentorships'),
         ])
@@ -622,7 +645,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(stripe.Refund.create.call_args_list, [])
 
     # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 EventTypeSet
-    # When: is auth, with a service, how_many_bundle, academy and event_type_set in body,
+    # When: is auth, with a service, how_many, academy and event_type_set in body,
     # ----> academy_service price_per_unit is greater than 0.50
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -633,13 +656,14 @@ class SignalTestSuite(PaymentsTestCase):
         how_many = random.randint(1, 10)
 
         service = {'type': 'EVENT_TYPE_SET'}
-        price_per_unit = (random.random() + 0.50) * 100 / how_many
+        price_per_unit = random.random() * 100 / how_many
         academy_service = {
             'price_per_unit': price_per_unit,
             'max_items': how_many,
             'bundle_size': 2,
             'max_amount': price_per_unit * how_many,
             'max_items': 11,
+            'discount_ratio': random.random() * 0.8,
         }
 
         model = self.bc.database.create(user=1,
@@ -650,28 +674,27 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
-        data = {'service': 1, 'how_many_bundle': how_many / 2, 'academy': 1, 'event_type_set': 1}
+        data = {'service': 1, 'how_many': how_many, 'academy': 1, 'event_type_set': 1}
         response = self.client.post(url, data, format='json')
         self.bc.request.authenticate(model.user)
 
+        amount = get_discounted_price(model.academy_service, how_many)
+        amount = math.ceil(amount)
+
         json = response.json()
-        expected = get_serializer(self,
-                                  model.currency,
-                                  model.user,
-                                  data={
-                                      'amount': math.ceil(price_per_unit * how_many),
-                                  })
+        expected = get_serializer(self, model.currency, model.user, data={
+            'amount': amount,
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [format_bag_item()])
-        self.assertEqual(
-            self.bc.database.list_of('payments.Invoice'),
-            [format_invoice_item({
-                'stripe_id': '1',
-                'amount': math.ceil(price_per_unit * how_many),
-            })])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'),
+                         [format_invoice_item({
+                             'stripe_id': '1',
+                             'amount': amount,
+                         })])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
             format_consumable_item(data={
                 'event_type_set_id': 1,
@@ -686,7 +709,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.bc.check.calls(stripe.Charge.create.call_args_list, [
             call(customer='1',
-                 amount=math.ceil(price_per_unit * how_many),
+                 amount=amount,
                  currency=model.currency.code.lower(),
                  description=f'Can join to {int(how_many)} events'),
         ])

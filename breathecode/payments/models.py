@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from datetime import timedelta
 import os
 from django.contrib.auth.models import Group, User
@@ -358,7 +359,10 @@ class AcademyService(models.Model):
     price_per_unit = models.FloatField(default=1, help_text='Price per unit (e.g. 1, 2, 3, ...)')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency')
 
-    bundle_size = models.FloatField(default=1, help_text='Bundle size (e.g. 1, 2, 3, ...)')
+    bundle_size = models.FloatField(
+        default=1,
+        help_text='Minimum unit size allowed to be bought, example: bundle_size=5, then you are '
+        'allowed to buy a minimum of 5 units. Related to the discount ratio')
     max_items = models.FloatField(
         default=1, help_text="How many items can be bought in total, it doens't matter the bundle size")
     max_amount = models.FloatField(default=1,
@@ -380,6 +384,27 @@ class AcademyService(models.Model):
 
     def __str__(self) -> str:
         return f'{self.academy.slug} -> {self.service.slug}'
+
+    def get_discounted_price(self, num_items) -> float:
+        if num_items > self.max_items:
+            raise ValueError('num_items cannot be greater than max_items')
+
+        total_discount_ratio = 0
+        current_discount_ratio = self.discount_ratio
+        discount_nerf = 0.1
+        max_discount = 0.8
+
+        for _ in range(math.floor(num_items / self.bundle_size)):
+            total_discount_ratio += current_discount_ratio
+            current_discount_ratio -= current_discount_ratio * discount_nerf
+
+        if total_discount_ratio > max_discount:
+            total_discount_ratio = max_discount
+
+        amount = self.price_per_unit * num_items
+        discount = amount * total_discount_ratio
+
+        return amount - discount
 
     def clean(self) -> None:
         if self.id and len([
