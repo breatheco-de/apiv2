@@ -14,6 +14,7 @@ class RegistryModelsMixin(ModelsMixin):
                                  keyword_cluster=False,
                                  asset_keyword=False,
                                  asset=False,
+                                 asset_image=False,
                                  asset_alias=False,
                                  asset_comment=False,
                                  asset_error_log=False,
@@ -104,5 +105,12 @@ class RegistryModelsMixin(ModelsMixin):
                 kargs['asset'] = just_one(models['asset'])
 
             models['asset_error_log'] = create_models(asset_error_log, 'registry.AssetErrorLog', **kargs)
+
+        if not 'asset_image' in models and is_valid(asset_image):
+            kargs = {}
+            if 'asset' in models:
+                kargs['assets'] = get_list(models['asset'])
+
+            models['asset_image'] = create_models(asset_image, 'registry.AssetImage', **kargs)
 
         return models

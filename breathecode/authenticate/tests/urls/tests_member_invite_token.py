@@ -144,6 +144,8 @@ class AuthenticateTestSuite(AuthTestCase):
     🔽🔽🔽 GET without UserInvite
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__without_user_invite(self):
         url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': 'invalid'})
         response = self.client.get(url)
@@ -168,6 +170,8 @@ class AuthenticateTestSuite(AuthTestCase):
     """
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__with_user_invite(self):
         model = self.bc.database.create(user_invite=1)
 
@@ -196,6 +200,8 @@ class AuthenticateTestSuite(AuthTestCase):
     """
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__with_user_invite__already_as_user(self):
         user = {'email': 'user@dotdotdotdot.dot'}
         model = self.bc.database.create(user_invite=user, user=user)
@@ -227,6 +233,8 @@ class AuthenticateTestSuite(AuthTestCase):
     """
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__with_user_invite__user_with_another_email(self):
         user = {'email': 'user1@dotdotdotdot.dot'}
         user_invite = {'email': 'user2@dotdotdotdot.dot'}
@@ -257,6 +265,8 @@ class AuthenticateTestSuite(AuthTestCase):
     """
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__bad_token(self):
         url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': 'invalid'})
         data = {}
@@ -288,6 +298,8 @@ class AuthenticateTestSuite(AuthTestCase):
     """
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__bad_first_and_last_name(self):
         user_invite = {'email': 'user@dotdotdotdot.dot'}
         model = self.bc.database.create(user_invite=user_invite)
@@ -324,6 +336,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__password_is_empty(self):
         user_invite = {'email': 'user@dotdotdotdot.dot'}
         model = self.bc.database.create(user_invite=user_invite)
@@ -360,6 +374,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__passwords_does_not_match(self):
         user_invite = {'email': 'user@dotdotdotdot.dot'}
         model = self.bc.database.create(user_invite=user_invite)
@@ -401,6 +417,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__with_first_name_last_name_and_passwords(self):
         user_invite = {'email': 'user@dotdotdotdot.dot'}
         model = self.bc.database.create(user_invite=user_invite)
@@ -457,6 +475,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__with_first_name_last_name_and_passwords__with_callback(self):
         user_invite = {'email': 'user@dotdotdotdot.dot'}
         model = self.bc.database.create(user_invite=user_invite)
@@ -515,6 +535,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__with_first_name_last_name_and_passwords__with_profile_academy(self):
         user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
         model = self.bc.database.create(user=user, user_invite=user, profile_academy=user, role='reviewer')
@@ -576,6 +598,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__with_cohort__with_role(self):
         user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
         model = self.bc.database.create(user=user, user_invite=user, cohort=1, role='student')
@@ -629,6 +653,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__with_cohort__with_role__accept_first_invite(self):
         user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
         user_invites = [{**user, 'cohort_id': 1}, {**user, 'cohort_id': 2}]
@@ -681,6 +707,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__with_cohort__with_role__accept_second_invite(self):
         user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
         user_invites = [{**user, 'cohort_id': 1}, {**user, 'cohort_id': 2}]
@@ -738,6 +766,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__with_cohort__without_role_in_the_invite__role_student_exists(self):
         user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
         user_invite = {**user, 'role_id': None}
@@ -792,6 +822,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
     @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_member_invite_token__post__with_cohort__without_role(self):
         user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
         model = self.bc.database.create(user=user, user_invite=user, cohort=1)

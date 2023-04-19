@@ -105,7 +105,25 @@ def render_preview_html(request, asset_slug):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_technologies(request):
-    tech = AssetTechnology.objects.filter(parent__isnull=True).order_by('sort_priority')
+    lang = get_user_language(request)
+    lookup = {}
+
+    if 'sort_priority' in request.GET:
+        param = request.GET.get('sort_priority')
+
+        try:
+
+            param = int(param)
+
+            lookup['sort_priority__exact'] = param
+        except Exception as e:
+            raise ValidationException(
+                translation(lang,
+                            en='The parameter must be an integer nothing else',
+                            es='El parametró debera ser un entero y nada mas ',
+                            slug='integer-not-found'))
+
+    tech = AssetTechnology.objects.filter(parent__isnull=True, **lookup).order_by('sort_priority')
 
     serializer = AssetTechnologySerializer(tech, many=True)
     return Response(serializer.data)

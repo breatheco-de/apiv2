@@ -1052,7 +1052,6 @@ class CheckingView(APIView):
                 raise e
 
 
-# consumables/checkout
 class ConsumableCheckoutView(APIView):
     extensions = APIViewExtensions(sort='-id', paginate=True)
 
@@ -1069,6 +1068,13 @@ class ConsumableCheckoutView(APIView):
                                                   es='El servicio es requerido',
                                                   slug='service-is-required'),
                                       code=400)
+
+        if not (service := Service.objects.filter(id=service).first()):
+            raise ValidationException(
+                translation(lang,
+                            en='Service not found',
+                            es='El servicio no fue encontrado',
+                            slug='service-not-found'))
 
         if not how_many:
             raise ValidationException(translation(lang,
@@ -1090,6 +1096,13 @@ class ConsumableCheckoutView(APIView):
                                                   es='La academia es requerida',
                                                   slug='academy-is-required'),
                                       code=400)
+
+        if not Academy.objects.filter(id=academy).exists():
+            raise ValidationException(
+                translation(lang,
+                            en='Academy not found',
+                            es='La academia no fue encontrada',
+                            slug='academy-not-found'))
 
         mentorship_service_set = request.data.get('mentorship_service_set')
         event_type_set = request.data.get('event_type_set')
@@ -1122,7 +1135,7 @@ class ConsumableCheckoutView(APIView):
             raise ValidationException(translation(lang,
                                                   en='This service can\'t be bought here yet',
                                                   es='Este servicio no se puede comprar aquí todavía',
-                                                  slug='bad-service-type'),
+                                                  slug='service-type-no-implemented'),
                                       code=400)
 
         kwargs = {}
@@ -1132,7 +1145,7 @@ class ConsumableCheckoutView(APIView):
         elif event_type_set:
             kwargs['available_event_type_sets'] = event_type_set
 
-        academy_service = AcademyService.objects.filter(academy=academy, service=service, **kwargs).first()
+        academy_service = AcademyService.objects.filter(academy_id=academy, service=service, **kwargs).first()
         if not academy_service:
             raise ValidationException(translation(lang,
                                                   en='Academy service not found',
@@ -1152,6 +1165,8 @@ class ConsumableCheckoutView(APIView):
                                                   slug='the-amount-is-too-low'),
                                       code=400)
 
+        s = None
+        invoice = None
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
@@ -1159,15 +1174,24 @@ class ConsumableCheckoutView(APIView):
                 s.set_language(lang)
                 s.add_contact(request.user)
                 service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=how_many)
+
+                # keeps this inside a transaction
                 bag = Bag(type='CHARGE',
                           status='PAID',
+                          was_delivered=True,
                           user=request.user,
                           currency=currency,
-                          amount=amount,
-                          academy=academy,
+                          academy_id=academy,
                           is_recurrent=False)
 
                 bag.save()
+
+                if mentorship_service_set:
+                    mentorship_service_set = MentorshipServiceSet.objects.filter(
+                        id=mentorship_service_set).first()
+
+                if event_type_set:
+                    event_type_set = EventTypeSet.objects.filter(id=event_type_set).first()
 
                 if mentorship_service_set:
                     bag.selected_mentorship_service_sets.add(mentorship_service_set)
@@ -1177,11 +1201,32 @@ class ConsumableCheckoutView(APIView):
 
                 bag.service_items.add(service_item)
 
-                invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
+                if mentorship_service_set:
+                    description = f'Can join to {how_many} mentorships'
 
-                tasks.build_consumables_from_bag.delay(bag.id)
+                else:
+                    description = f'Can join to {how_many} events'
+
+                invoice = s.pay(request.user,
+                                bag,
+                                amount,
+                                currency=bag.currency.code,
+                                description=description)
+
+                consumable = Consumable(service_item=service_item,
+                                        user=request.user,
+                                        how_many=how_many,
+                                        mentorship_service_set=mentorship_service_set,
+                                        event_type_set=event_type_set)
+
+                consumable.save()
 
             except Exception as e:
+                if invoice:
+                    s = Stripe()
+                    s.set_language(lang)
+                    s.refund_payment(invoice)
+
                 transaction.savepoint_rollback(sid)
                 raise e
 

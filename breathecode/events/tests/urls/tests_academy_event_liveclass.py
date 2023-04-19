@@ -33,6 +33,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: I should get a 401 error
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_no_auth(self):
         url = reverse_lazy('events:academy_event_liveclass')
 
@@ -48,6 +50,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: I should get a 200 status code with no data
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_zero_live_classes(self):
         model = self.bc.database.create(user=1, profile_academy=1, role=1, capability='start_or_end_class')
 
@@ -69,6 +73,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: I should get a 200 status code with the LiveClass data
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_one_live_class(self):
         model = self.bc.database.create(user=1,
                                         live_class=1,
@@ -100,6 +106,8 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(wraps=lookup_extension.compile_lookup))
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_lookup_extension(self):
 
         model = self.bc.database.create(user=1,

@@ -785,7 +785,3 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
             'items': items,
         })
     return result
-
-
-def async_consume(bag_id: int, eta: datetime):
-    logger.info(f'Starting build_free_subscription for bag {bag_id}')

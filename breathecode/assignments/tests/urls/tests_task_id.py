@@ -73,6 +73,8 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Auth
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__without_auth(self):
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         response = self.client.get(url)
@@ -88,6 +90,8 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get without Task
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__without_task(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
@@ -106,6 +110,8 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with Task
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__with_one_task(self):
         model = self.bc.database.create(user=1, task=1)
         self.bc.request.authenticate(model.user)
@@ -124,6 +130,8 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with Task but the other user
     """
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__with_one_task__but_the_other_user(self):
         task = {'user_id': 2}
         model = self.bc.database.create(user=2, task=task)
@@ -145,6 +153,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__without_tasks(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
@@ -171,6 +181,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
@@ -206,6 +218,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_task_status(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
@@ -238,6 +252,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_live_url(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
@@ -270,6 +286,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_github_url(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
@@ -302,6 +320,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_revision_status(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
@@ -329,6 +349,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_revision_status__teacher_auth(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
@@ -382,6 +404,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_revision_status__staff_auth(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
@@ -426,6 +450,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_status_pending_and_revision_status_pending(self):
         """Test /task with task_status = pending and revision_status = pending should pass"""
 
@@ -458,6 +484,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_status_pending_and_revision_status_approved(self):
         """Test /task with task_status = pending and revision_status = approved should fail"""
 
@@ -491,6 +519,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_status_pending_and_revision_status_approved_both(self):
         """Test /task with task_status = pending and revision_status = approved should fail"""
 
@@ -523,6 +553,8 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_delete_task_not_found(self):
 
         model = self.bc.database.create(user=1)
@@ -538,6 +570,8 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_delete_task_found_and_deleted(self):
 
         model = self.bc.database.create(user=1, task=1)
@@ -549,6 +583,8 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
 
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_delete_task_associated_with_another_user(self):
 
         model = self.bc.database.create(user=2, task=1)

@@ -16,6 +16,8 @@ UTC_NOW = timezone.now()
 class AnswerTestSuite(FeedbackTestCase):
 
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_send_survey_group(self):
 
         with self.assertRaisesMessage(ValidationException, 'missing-survey-or-cohort'):
@@ -24,6 +26,8 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(tasks.send_cohort_survey.delay.call_args_list, [])
 
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_survey_and_cohort_do_not_match(self):
 
         model = self.generate_models(cohort=2, survey=1)
@@ -34,6 +38,8 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(tasks.send_cohort_survey.delay.call_args_list, [])
 
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_cohort_does_not_have_teacher_assigned_to_survey(self):
         wrong_roles = ['ASSISTANT', 'REVIEWER', 'STUDENT']
 
@@ -49,6 +55,8 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_educational_status_is_active_or_graduated(self):
 
         statuses = ['ACTIVE', 'GRADUATED']
@@ -85,6 +93,8 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_educational_status_is_all_of_the_others_error(self):
 
         statuses = ['POSTPONED', 'SUSPENDED', 'DROPPED']
@@ -122,6 +132,8 @@ class AnswerTestSuite(FeedbackTestCase):
 
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_some_cases_are_successful_and_some_are_error(self):
 
         cohort_users = [{
@@ -167,6 +179,8 @@ class AnswerTestSuite(FeedbackTestCase):
 
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_survey_is_none(self):
 
         model = self.generate_models(cohort=1, cohort_user=[{'role': 'TEACHER'}, {'role': 'STUDENT'}])

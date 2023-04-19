@@ -86,7 +86,7 @@ def post_delete_cohort_user(sender, instance, **kwargs):
 
 @receiver(student_edu_status_updated, sender=CohortUser)
 def post_save_cohort_user(sender, instance, **kwargs):
-    logger.debug('User educational status updated to: ' + instance.educational_status)
+    logger.debug('User educational status updated to: ' + str(instance.educational_status))
     if instance.educational_status == 'ACTIVE':
         async_add_to_organization(instance.cohort.id, instance.user.id)
     else:
