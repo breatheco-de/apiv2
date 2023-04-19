@@ -107,7 +107,7 @@ class Check:
         ```
         """
 
-        assert len(first) == len(second)
+        assert len(first) == len(second), f'{first} not have same length than {second}'
         for i in range(0, len(first)):
             self._parent.assertEqual(first[i].args, second[i].args, msg=f'args in index {i} does not match')
             self._parent.assertEqual(first[i].kwargs,
