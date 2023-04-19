@@ -317,9 +317,6 @@ class MemberView(APIView, GenerateLookupsMixin):
                 code=400,
             )
 
-        if user.phone is None or user.phone.strip() == '':
-            raise ValidationException('This mentor does not have a phone', code=404, slug='phone-not-found')
-
         already = None
         if user_id_or_email.isnumeric():
             already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
