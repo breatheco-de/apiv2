@@ -335,16 +335,19 @@ class AcademyLiveClassView(APIView):
 class AcademyLiveClassJoinView(APIView):
 
     @capable_of('start_or_end_class')
-    def get(self, request, hash):
+    def get(self, request, hash, academy_id=None):
         lang = get_user_language(request)
 
         live_class = LiveClass.objects.filter(cohort_time_slot__cohort__cohortuser__user=request.user,
+                                              cohort_time_slot__cohort__academy__id=int(academy_id),
                                               hash=hash).first()
+
         if not live_class:
-            raise ValidationException(lang,
-                                      en='Live class not found',
-                                      es='Clase en vivo no encontrada',
-                                      slug='not-found')
+            raise ValidationException(
+                translation(lang,
+                            en='Live class not found',
+                            es='Clase en vivo no encontrada',
+                            slug='not-found'))
 
         return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
 
