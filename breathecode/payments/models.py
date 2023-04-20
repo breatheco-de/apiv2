@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.db.models import Q
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
+from breathecode.authenticate.models import UserInvite
 from breathecode.events.models import EventType
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
@@ -483,6 +484,8 @@ class Plan(AbstractPriceByTime):
                                        null=True,
                                        default=None,
                                        help_text='Event type sets to be sold in this service and plan')
+
+    invites = models.ManyToManyField(UserInvite, blank=True, help_text='Plan\'s invites')
 
     def __str__(self) -> str:
         return self.slug
