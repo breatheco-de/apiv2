@@ -42,6 +42,50 @@ def plan_db_item(plan, data={}):
     }
 
 
+def plan_serializer(plan):
+    return {
+        'financing_options': [],
+        'service_items': [],
+        'has_available_cohorts': plan.available_cohorts.exists(),
+        'slug': plan.slug,
+        'status': plan.status,
+        'time_of_life': plan.time_of_life,
+        'time_of_life_unit': plan.time_of_life_unit,
+        'trial_duration': plan.trial_duration,
+        'trial_duration_unit': plan.trial_duration_unit,
+    }
+
+
+def post_serializer(plans=[], data={}):
+    return {
+        'id': 0,
+        'access_token': None,
+        'cohort': None,
+        'syllabus': None,
+        'email': '',
+        'first_name': '',
+        'last_name': '',
+        'phone': '',
+        'plans': [plan_serializer(plan) for plan in plans],
+        **data,
+    }
+
+
+def put_serializer(user_invite, cohort=None, syllabus=None, plans=[], data={}):
+    return {
+        'id': user_invite.id,
+        'access_token': None,
+        'cohort': cohort.id if cohort else None,
+        'syllabus': syllabus.id if syllabus else None,
+        'email': user_invite.email,
+        'first_name': user_invite.first_name,
+        'last_name': user_invite.last_name,
+        'phone': user_invite.phone,
+        'plans': [plan_serializer(plan) for plan in plans],
+        **data,
+    }
+
+
 class SubscribeTestSuite(AuthTestCase):
     """Test /v1/auth/subscribe"""
     """
@@ -77,13 +121,7 @@ class SubscribeTestSuite(AuthTestCase):
         response = self.client.post(url, data, format='json')
 
         json = response.json()
-        expected = {
-            'id': 1,
-            'access_token': None,
-            'cohort': None,
-            'syllabus': None,
-            **data,
-        }
+        expected = post_serializer(data={'id': 1, **data})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -190,13 +228,7 @@ class SubscribeTestSuite(AuthTestCase):
         response = self.client.post(url, data, format='json')
 
         json = response.json()
-        expected = {
-            'id': 2,
-            'access_token': None,
-            'cohort': None,
-            'syllabus': None,
-            **data,
-        }
+        expected = post_serializer(data={'id': 2, **data})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -299,13 +331,7 @@ class SubscribeTestSuite(AuthTestCase):
 
         del data['plan']
         json = response.json()
-        expected = {
-            'id': 2,
-            'access_token': access_token,
-            'cohort': None,
-            'syllabus': None,
-            **data,
-        }
+        expected = post_serializer(plans=[model.plan], data={'id': 2, 'access_token': access_token, **data})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -383,7 +409,7 @@ class SubscribeTestSuite(AuthTestCase):
             'status': 'WAITING_LIST',
             'token': token,
         }
-        self.bc.database.create(user_invite=user_invite)
+        model = self.bc.database.create(user_invite=user_invite)
         url = reverse_lazy('authenticate:subscribe')
         data = {
             'email': 'pokemon@potato.io',
@@ -397,13 +423,11 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = {
+
+        expected = put_serializer(model.user_invite, data={
             'id': 1,
-            'access_token': None,
-            'cohort': None,
-            'syllabus': None,
             **data,
-        }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -505,7 +529,7 @@ class SubscribeTestSuite(AuthTestCase):
             'status': 'WAITING_LIST',
             'token': token,
         }
-        self.bc.database.create(user_invite=user_invite, cohort=1)
+        model = self.bc.database.create(user_invite=user_invite, cohort=1)
         url = reverse_lazy('authenticate:subscribe')
         data = {
             'email': 'pokemon@potato.io',
@@ -520,13 +544,10 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = {
+        expected = put_serializer(model.user_invite, data={
             'id': 1,
-            'access_token': None,
-            'cohort': None,
-            'syllabus': None,
             **data,
-        }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -571,7 +592,7 @@ class SubscribeTestSuite(AuthTestCase):
             'token': token,
         }
         academy = {'available_as_saas': True}
-        self.bc.database.create(user_invite=user_invite, cohort=1, academy=academy)
+        model = self.bc.database.create(user_invite=user_invite, cohort=1, academy=academy)
         url = reverse_lazy('authenticate:subscribe')
         data = {
             'email': 'pokemon@potato.io',
@@ -588,13 +609,11 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = {
+        expected = put_serializer(model.user_invite, data={
             'id': 1,
             'access_token': access_token,
-            'cohort': None,
-            'syllabus': None,
             **data,
-        }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -684,13 +703,11 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = {
+        expected = put_serializer(model.user_invite, data={
             'id': 1,
             'access_token': access_token,
-            'cohort': None,
-            'syllabus': None,
             **data,
-        }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -797,7 +814,7 @@ class SubscribeTestSuite(AuthTestCase):
             'token': token,
             'cohort_id': None,
         }
-        self.bc.database.create(user_invite=user_invite, cohort=1, syllabus_version=1)
+        model = self.bc.database.create(user_invite=user_invite, cohort=1, syllabus_version=1)
         url = reverse_lazy('authenticate:subscribe')
         data = {
             'email': 'pokemon@potato.io',
@@ -812,12 +829,10 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = {
+        expected = put_serializer(model.user_invite, data={
             'id': 1,
-            'access_token': None,
-            'cohort': None,
             **data,
-        }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -864,7 +879,10 @@ class SubscribeTestSuite(AuthTestCase):
             'cohort_id': None,
         }
         academy = {'available_as_saas': True}
-        self.bc.database.create(user_invite=user_invite, cohort=1, syllabus_version=1, academy=academy)
+        model = self.bc.database.create(user_invite=user_invite,
+                                        cohort=1,
+                                        syllabus_version=1,
+                                        academy=academy)
         url = reverse_lazy('authenticate:subscribe')
         data = {
             'email': 'pokemon@potato.io',
@@ -881,12 +899,11 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = {
+        expected = put_serializer(model.user_invite, data={
             'id': 1,
             'access_token': access_token,
-            'cohort': None,
             **data,
-        }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -982,12 +999,11 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = {
+        expected = put_serializer(model.user_invite, data={
             'id': 1,
             'access_token': access_token,
-            'cohort': None,
             **data,
-        }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -1198,14 +1214,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['plan']
 
         json = response.json()
-        expected = {
-            'id': 1,
-            'access_token': access_token,
-            'cohort': None,
-            'syllabus': None,
-            'cohort': None,
-            **data,
-        }
+        expected = put_serializer(model.user_invite,
+                                  plans=[model.plan],
+                                  data={
+                                      'id': 1,
+                                      'access_token': access_token,
+                                      **data,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

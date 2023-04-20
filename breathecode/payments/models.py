@@ -485,7 +485,10 @@ class Plan(AbstractPriceByTime):
                                        default=None,
                                        help_text='Event type sets to be sold in this service and plan')
 
-    invites = models.ManyToManyField(UserInvite, blank=True, help_text='Plan\'s invites')
+    invites = models.ManyToManyField(UserInvite,
+                                     blank=True,
+                                     help_text='Plan\'s invites',
+                                     related_name='plans')
 
     def __str__(self) -> str:
         return self.slug

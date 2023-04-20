@@ -1057,13 +1057,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     access_token = serializers.SerializerMethodField()
+    plans = serializers.SerializerMethodField()
     plan = serializers.ReadOnlyField()
 
     class Meta:
         model = UserInvite
 
         fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token',
-                  'plan')
+                  'plan', 'plans')
 
     def validate(self, data: dict[str, str]):
         from breathecode.payments.models import Plan
@@ -1183,3 +1184,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         token, _ = Token.get_or_create(user=self.user, token_type='login')
         return token.key
+
+    def get_plans(self, obj: UserInvite):
+        from breathecode.payments.serializers import GetPlanSmallSerializer
+
+        return GetPlanSmallSerializer(obj.plans.all(), many=True).data
