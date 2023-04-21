@@ -1,6 +1,15 @@
 from unittest.mock import MagicMock, patch
 from django.urls.base import reverse_lazy
+from django.template import loader
 from ..mixins.new_events_tests_case import EventTestCase
+
+
+# IMPORTANT: the loader.render_to_string in a function is inside of function render
+def render_message(message):
+    request = None
+    context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None}
+
+    return loader.render_to_string('message.html', context, request)
 
 
 class AcademyVenueTestSuite(EventTestCase):
@@ -65,6 +74,42 @@ class AcademyVenueTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [])
 
+    # When: have a LiveClass with no url
+    # Then: return 400
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test_no_url(self):
+        self.headers(academy=1)
+        model = self.bc.database.create(user=1,
+                                        profile_academy=1,
+                                        capability='start_or_end_class',
+                                        role='potato',
+                                        live_class=1,
+                                        cohort=1,
+                                        cohort_user=1)
+
+        self.bc.request.authenticate(model.user)
+        url = reverse_lazy('events:academy_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash})
+
+        response = self.client.get(url)
+        content = self.bc.format.from_bytes(response.content)
+        expected = render_message('no-meeting-url')
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, 400)
+
+        self.assertEqual(self.bc.database.list_of('events.LiveClass'), [
+            self.bc.format.to_dict(model.live_class),
+        ])
+
     # When: have a LiveClass
     # Then: redirect to the liveclass
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
@@ -84,9 +129,18 @@ class AcademyVenueTestSuite(EventTestCase):
         url = reverse_lazy('events:academy_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash})
 
         response = self.client.get(url)
-        expected = b''
+        content = self.bc.format.from_bytes(response.content)
+        expected = ''
 
-        self.assertEqual(response.content, expected)
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response.url, model.cohort.online_meeting_url)
 

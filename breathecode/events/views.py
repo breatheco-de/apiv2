@@ -360,6 +360,13 @@ class AcademyLiveClassJoinView(APIView):
                             es='Clase en vivo no encontrada',
                             slug='not-found'))
 
+        if not live_class.cohort_time_slot.cohort.online_meeting_url:
+            message = translation(lang,
+                                  en='Live class has no online meeting url',
+                                  es='La clase en vivo no tiene una URL de reunión en línea',
+                                  slug='no-meeting-url')
+            return render_message(request, message, status=400)
+
         return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
 
 
