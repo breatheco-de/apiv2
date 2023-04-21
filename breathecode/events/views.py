@@ -154,10 +154,21 @@ class EventMeView(APIView):
     def get(self, request, event_id=None):
 
         items = get_my_event_types(request.user)
+        lang = get_user_language(request)
 
         if event_id is not None:
             single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
+
+            if not single_event:
+                raise ValidationException(translation(lang,
+                                                      en='Event not found or you dont have access',
+                                                      es='Evento no encontrado o no tienes acceso',
+                                                      slug='not-found'),
+                                          code=404)
+
             _r = self.request.GET.get('redirect', 'false')
+
+            #DEPRECATED: due we have a new endpoint that manages the EventTypeSet consumables
             if _r == 'true':
                 if single_event is None:
                     return render_message(request, 'Event not found or you dont have access')
@@ -541,6 +552,28 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
         event.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyEventJoinView(APIView):
+
+    @capable_of('start_or_end_event')
+    def get(self, request, event_id, academy_id=None):
+        lang = get_user_language(request)
+
+        event = Event.objects.filter(academy__id=int(academy_id), id=event_id).first()
+
+        if not event:
+            raise ValidationException(
+                translation(lang, en='Event not found', es='Evento no encontrado', slug='not-found'))
+
+        if not event.live_stream_url:
+            message = translation(lang,
+                                  en='Event has no live stream url',
+                                  es='Evento no tiene url de live stream',
+                                  slug='no-live-stream-url')
+            return render_message(request, message, status=400)
+
+        return redirect(event.live_stream_url, permanent=True)
 
 
 class EventTypeView(APIView):
