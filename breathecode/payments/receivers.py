@@ -1,17 +1,17 @@
 import logging
-import re
 from typing import Type
 
 from django.db.models import Q
 from django.dispatch import receiver
 from django.utils import timezone
-from django.db.models.signals import post_delete, post_save
 
-from breathecode.admissions.models import Cohort
+from breathecode.mentorship.models import MentorshipSession
 
-from .models import Consumable, Subscription, ServiceStockScheduler
+from .models import Consumable
 from .signals import (consume_service, grant_service_permissions, lose_service_permissions,
                       reimburse_service_units)
+from breathecode.mentorship.signals import mentorship_session_status
+from breathecode.payments import tasks
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +67,14 @@ def lose_service_permissions_receiver(sender: Type[Consumable], instance: Consum
 
 @receiver(grant_service_permissions, sender=Consumable)
 def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consumable, **kwargs):
-    groups = instance.groups.all()
+    groups = instance.service_item.service.groups.all()
 
     for group in groups:
         if not instance.user.groups.filter(name=group.name).exists():
             instance.user.groups.add(group)
+
+
+@receiver(mentorship_session_status, sender=MentorshipSession)
+def post_mentoring_session_ended(sender, instance, **kwargs):
+    if instance.mentee and instance.service and instance.status in ['FAILED', 'IGNORED']:
+        tasks.refund_mentoring_session.delay(instance.id)

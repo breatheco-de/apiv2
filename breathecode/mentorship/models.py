@@ -395,6 +395,8 @@ class MentorshipSession(models.Model):
         if self.__old_status != self.status:
             signals.mentorship_session_status.send(instance=self, sender=MentorshipSession)
 
+        self.__old_status = self.status
+
 
 class ChatBot(models.Model):
     name = models.CharField(max_length=100, unique=True)

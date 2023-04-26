@@ -4,7 +4,7 @@ Test cases for /academy/:id/member/:id
 from datetime import timedelta
 import random
 import timeago
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 from django.template import loader
 from django.urls.base import reverse_lazy
 from rest_framework import status
@@ -15,6 +15,7 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.tests.mocks.requests import apply_requests_request_mock
 from ..mixins import MentorshipTestCase
 from django.core.handlers.wsgi import WSGIRequest
+from breathecode.payments import tasks
 
 UTC_NOW = timezone.now()
 URL = 'https://netscape.bankruptcy.story'
@@ -1371,6 +1372,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships',
            MagicMock(return_value=True))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__mentee_with_consumables(self):
         cases = [{
             'status': x,
@@ -1439,15 +1441,17 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
                 self.bc.format.to_dict(model.mentor_profile),
             ])
-            self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
-                format_consumable({
-                    'id': base.user.id // 2,
-                    'user_id': base.user.id,
-                    'how_many': base.consumable.how_many - 1,
-                    'mentorship_service_set_id': base.mentorship_service_set.id,
-                    'service_item_id': base.consumable.id,
-                })
-            ])
+            self.assertEqual(
+                self.bc.database.list_of('payments.Consumable'),
+                [
+                    format_consumable({
+                        'id': base.user.id // 2,
+                        'user_id': base.user.id,
+                        'how_many': base.consumable.how_many,  # this has not discounted yet
+                        'mentorship_service_set_id': base.mentorship_service_set.id,
+                        'service_item_id': base.consumable.id,
+                    })
+                ])
             self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
                 format_consumption_session(model.mentorship_service,
                                            model.mentor_profile,
@@ -1461,10 +1465,15 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                            }),
             ])
 
+            self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [
+                call(args=(id, 1), eta=UTC_NOW + delta),
+            ])
+
             # teardown
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
             self.bc.database.delete('auth.User')
+            tasks.end_the_consumption_session.apply_async.call_args_list = []
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
     @patch('os.getenv',

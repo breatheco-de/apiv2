@@ -580,15 +580,6 @@ class PlanOfferTranslation(models.Model):
     short_description = models.CharField(max_length=255, help_text='Short description of the plan offer')
 
 
-PENDING = 'PENDING'
-DONE = 'DONE'
-CANCELLED = 'CANCELLED'
-CONSUMPTION_SESSION_STATUS = [
-    (PENDING, 'Pending'),
-    (DONE, 'Done'),
-    (CANCELLED, 'Cancelled'),
-]
-
 RENEWAL = 'RENEWAL'
 CHECKING = 'CHECKING'
 PAID = 'PAID'
@@ -1029,6 +1020,16 @@ class Consumable(AbstractServiceItem):
 
     def __str__(self):
         return f'{self.user.email}: {self.service_item.service.slug} ({self.how_many})'
+
+
+PENDING = 'PENDING'
+DONE = 'DONE'
+CANCELLED = 'CANCELLED'
+CONSUMPTION_SESSION_STATUS = [
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (CANCELLED, 'Cancelled'),
+]
 
 
 class ConsumptionSession(models.Model):
