@@ -44,8 +44,11 @@ acp_ids = {
     'utm_country': '19',
     'gclid': '26',
     'referral_key': '27',
-    'expected_cohort': '10',
-    'expected_cohort_date': '21'
+    'deal': {
+        'expected_cohort': '10',
+        'expected_cohort_date': '21',
+        'utm_location': '16',
+    }
 }
 
 
