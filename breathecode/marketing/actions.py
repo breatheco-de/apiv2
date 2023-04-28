@@ -48,6 +48,7 @@ acp_ids = {
         'expected_cohort': '10',
         'expected_cohort_date': '21',
         'utm_location': '16',
+        'utm_course': '6',
     }
 }
 
