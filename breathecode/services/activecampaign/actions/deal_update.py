@@ -55,6 +55,7 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
 
     entry = update_expected_cohort(AC, entry, acp_ids, deal_custom_fields)
     entry = update_location(AC, entry, acp_ids, deal_custom_fields)
+    entry = update_course(AC, entry, acp_ids, deal_custom_fields)
 
     entry.save()
 
