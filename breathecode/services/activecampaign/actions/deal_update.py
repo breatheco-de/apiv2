@@ -69,7 +69,7 @@ def update_course(AC, entry, acp_ids, deal_custom_fields):
     if deal_ids['utm_course'] in deal_custom_fields:
         new_course = deal_custom_fields[deal_ids['utm_course']]
         if new_course is not None and new_course != '':
-            entry.course = new_course
+            entry.ac_deal_course = new_course
 
     return entry
 
@@ -80,7 +80,7 @@ def update_location(AC, entry, acp_ids, deal_custom_fields):
     if deal_ids['utm_location'] in deal_custom_fields:
         new_location = deal_custom_fields[deal_ids['utm_location']]
         if new_location is not None and entry.location != new_location and new_location != '':
-            entry.location = new_location
+            entry.ac_deal_location = new_location
 
             new_alias = AcademyAlias.objects.filter(slug=new_location).first()
             if new_alias and new_alias.academy is not None:

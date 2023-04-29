@@ -209,6 +209,8 @@ class FormEntryBigSerializer(serpy.Serializer):
     updated_at = serpy.Field()
     won_at = serpy.Field()
     sentiment = serpy.Field()
+    ac_deal_location = serpy.Field()
+    ac_deal_course = serpy.Field()
     ac_deal_owner_full_name = serpy.Field()
     ac_deal_owner_id = serpy.Field()
     ac_expected_cohort_date = serpy.Field()
