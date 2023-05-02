@@ -9,6 +9,7 @@ from django.template import loader
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins.new_events_tests_case import EventTestCase
 from django.utils import timezone
+from breathecode.payments import tasks
 
 UTC_NOW = timezone.now()
 
@@ -76,6 +77,7 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 401
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_auth(self):
 
         url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': 'potato'})
@@ -97,11 +99,13 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, f'/v1/auth/view/login?attempt=1&url={url_hash}')
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # When: no consumables
     # Then: return 402
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables(self):
         model = self.bc.database.create(user=1, token=1)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -128,6 +132,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # Given: no Consumable and LiveClass, User have Group and Permission
     # When: Feature flag set to False
@@ -137,6 +142,7 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(return_value=False))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__live_class_not_found(self):
         permission = {'codename': 'live_class_join'}
         model = self.bc.database.create(user=1, group=1, permission=permission, token=1)
@@ -164,6 +170,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # Given: no Consumable, with LiveClass, CohortUser, User have Group and Permission
     # When: Feature flag set to False, right hash and cohort.live_class_join not set
@@ -173,6 +180,7 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(return_value=False))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_class__cohort_without_url(self):
         permission = {'codename': 'live_class_join'}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -209,6 +217,7 @@ class AcademyEventTestSuite(EventTestCase):
         ])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # Given: no Consumable, with LiveClass, CohortUser, User have Group and Permission
     # When: Feature flag set to False, right hash and cohort.live_class_join set
@@ -218,6 +227,7 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(return_value=False))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_class__cohort_with_url(self):
         permission = {'codename': 'live_class_join'}
         online_meeting_url = self.bc.fake.url()
@@ -258,6 +268,7 @@ class AcademyEventTestSuite(EventTestCase):
         ])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # Given: no Consumable and LiveClass, User have Group and Permission
     # When: Feature flag set to True
@@ -267,6 +278,7 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__live_class_not_found(self):
         permission = {'codename': 'live_class_join'}
         model = self.bc.database.create(user=1, group=1, permission=permission, token=1)
@@ -294,6 +306,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # Given: no Consumable with LiveClass, User have Group and Permission
     # When: Feature flag set to True and cohort.live_class_join not set
@@ -303,6 +316,7 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_class__cohort_without_url(self):
         permission = {'codename': 'live_class_join'}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -340,6 +354,7 @@ class AcademyEventTestSuite(EventTestCase):
         ])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # Given: no Consumable with LiveClass, User have Group and Permission
     # When: Feature flag set to True and cohort.live_class_join set
@@ -349,6 +364,7 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_class__cohort_with_url(self):
         permission = {'codename': 'live_class_join'}
         online_meeting_url = self.bc.fake.url()
@@ -388,6 +404,7 @@ class AcademyEventTestSuite(EventTestCase):
         ])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # Given: with Consumable, LiveClass, User have Group and Permission
     # When: Feature flag set to True, class end in the past and cohort.live_class_join set
@@ -397,6 +414,7 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__in_the_past(self):
         permission = {'codename': 'live_class_join'}
         online_meeting_url = self.bc.fake.url()
@@ -440,6 +458,7 @@ class AcademyEventTestSuite(EventTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # Given: with Consumable, LiveClass, User have Group and Permission
     # When: Feature flag set to True and class end in the future
@@ -449,6 +468,7 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__in_the_future(self):
         permission = {'codename': 'live_class_join'}
         online_meeting_url = self.bc.fake.url()
@@ -504,6 +524,10 @@ class AcademyEventTestSuite(EventTestCase):
                                 }),
         ])
 
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [
+            call(args=(1, 1), eta=UTC_NOW + delta),
+        ])
+
     # Given: with Consumable, LiveClass, User have Group and Permission
     # When: Feature flag set to True and class start and end in the future
     # Then: return 200 and create a ConsumptionSession
@@ -512,7 +536,9 @@ class AcademyEventTestSuite(EventTestCase):
            MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__in_the_future__show_countdown(self):
+
         permission = {'codename': 'live_class_join'}
         online_meeting_url = self.bc.fake.url()
         cohort = {'online_meeting_url': online_meeting_url, 'available_as_saas': True}
@@ -564,4 +590,8 @@ class AcademyEventTestSuite(EventTestCase):
                                     'duration': delta,
                                     'eta': UTC_NOW + delta,
                                 }),
+        ])
+
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [
+            call(args=(1, 1), eta=UTC_NOW + delta),
         ])
