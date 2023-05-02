@@ -392,7 +392,7 @@ class AcademyService(models.Model):
         total_discount_ratio = 0
         current_discount_ratio = self.discount_ratio
         discount_nerf = 0.1
-        max_discount = 0.8
+        max_discount = 0.2
 
         for _ in range(math.floor(num_items / self.bundle_size)):
             total_discount_ratio += current_discount_ratio
@@ -502,7 +502,11 @@ class Plan(AbstractPriceByTime):
                                       help_text='Cohort pattern to find cohorts to be sold in this plan')
 
     available_cohorts = models.ManyToManyField(
-        Cohort, blank=True, help_text='Available cohorts to be sold in this this service and plan')
+        Cohort,
+        blank=True,
+        help_text=
+        'Minimum unit size allowed to be bought, example: bundle_size=5, then you are allowed to buy a minimum of 5 units. Related to the discount ratio'
+    )
 
     mentorship_service_set = models.ForeignKey(
         MentorshipServiceSet,
