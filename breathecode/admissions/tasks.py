@@ -2,11 +2,13 @@ import logging, os
 from celery import shared_task, Task
 
 from breathecode.authenticate.models import ProfileAcademy, Role
+from breathecode.services import Emit
 from .models import Cohort, CohortUser, SyllabusVersion
 from .actions import test_syllabus
 from django.utils import timezone
 from django.contrib.auth.models import User
 from breathecode.notify import actions as notify_actions
+from breathecode.admissions.serializers import GetCohortUserSerializer
 
 API_URL = os.getenv('API_URL', '')
 
@@ -67,13 +69,13 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT') -> No
         logger.error(f'User with id {user_id} not found')
         return
 
-    _, created = CohortUser.objects.get_or_create(cohort=cohort,
-                                                  user=user,
-                                                  role=role,
-                                                  defaults={
-                                                      'finantial_status': 'UP_TO_DATE',
-                                                      'educational_status': 'ACTIVE',
-                                                  })
+    cohort_user, created = CohortUser.objects.get_or_create(cohort=cohort,
+                                                            user=user,
+                                                            role=role,
+                                                            defaults={
+                                                                'finantial_status': 'UP_TO_DATE',
+                                                                'educational_status': 'ACTIVE',
+                                                            })
 
     if created:
         logger.info('User added to cohort')
@@ -110,3 +112,8 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT') -> No
 
     if created:
         logger.info('ProfileAcademy added')
+
+    serializer = GetCohortUserSerializer(cohort_user, many=False)
+
+    emit = Emit()
+    emit.websocket.send('admissions.CohortUser', cohort_user.id, response=serializer.data)
