@@ -1057,11 +1057,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     access_token = serializers.SerializerMethodField()
+    plans = serializers.SerializerMethodField()
+    plan = serializers.ReadOnlyField()
 
     class Meta:
         model = UserInvite
 
-        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token')
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token',
+                  'plan', 'plans')
 
     def validate(self, data: dict[str, str]):
         from breathecode.payments.models import Plan
@@ -1133,6 +1136,22 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         return data
 
+    def create(self, *args, **kwargs):
+        instance = super().create(*args, **kwargs)
+
+        if self.plan:
+            self.plan.invites.add(instance)
+
+        return instance
+
+    def update(self, *args, **kwargs):
+        instance = super().update(*args, **kwargs)
+
+        if self.plan:
+            self.plan.invites.add(instance)
+
+        return instance
+
     def get_access_token(self, obj: UserInvite):
         lang = self.context.get('lang', 'en')
 
@@ -1165,3 +1184,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         token, _ = Token.get_or_create(user=self.user, token_type='login')
         return token.key
+
+    def get_plans(self, obj: UserInvite):
+        from breathecode.payments.serializers import GetPlanSmallSerializer
+
+        return GetPlanSmallSerializer(obj.plans.all(), many=True).data
