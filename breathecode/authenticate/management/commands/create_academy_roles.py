@@ -689,6 +689,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'update_github_user',
             'read_project_invoice',
             'read_freelance_projects',
+            'sync_organization_users',
         ]
     })
     roles.append({
