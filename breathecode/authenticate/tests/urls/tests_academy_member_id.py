@@ -752,6 +752,35 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_academy_member_id_put_without__phone(self):
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email(),
+            'phone': '',
+        }
+        user = {'first_name': self.bc.fake.first_name(), 'phone': '', 'email': self.bc.fake.email()}
+        self.bc.request.set_headers(academy=1)
+        model = self.bc.database.create(user=user,
+                                        authenticate=True,
+                                        capability='crud_member',
+                                        role='role',
+                                        profile_academy=profile_academy)
+
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': model.user.id})
+        data = {
+            'role': 'role',
+            'invite': True,
+            'phone': None,
+        }
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'phone': ['This field may not be null.']}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     """
     🔽🔽🔽 PUT role does not exists
     """
