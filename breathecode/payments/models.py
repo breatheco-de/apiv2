@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from datetime import timedelta
 import os
 from django.contrib.auth.models import Group, User
@@ -359,11 +360,15 @@ class AcademyService(models.Model):
     price_per_unit = models.FloatField(default=1, help_text='Price per unit (e.g. 1, 2, 3, ...)')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency')
 
-    cohort_patterns = models.JSONField(
-        default=[], blank=True, help_text='Array of cohort patterns to find cohorts to be sold in this plan')
-
-    available_cohorts = models.ManyToManyField(
-        Cohort, blank=True, help_text='Available cohorts to be sold in this this service and plan')
+    bundle_size = models.FloatField(
+        default=1,
+        help_text='Minimum unit size allowed to be bought, example: bundle_size=5, then you are '
+        'allowed to buy a minimum of 5 units. Related to the discount ratio')
+    max_items = models.FloatField(
+        default=1, help_text="How many items can be bought in total, it doens't matter the bundle size")
+    max_amount = models.FloatField(default=1,
+                                   help_text="Limit total amount, it doesn't matter the bundle size")
+    discount_ratio = models.FloatField(default=1, help_text='Will be used when calculated by the final price')
 
     available_mentorship_service_sets = models.ManyToManyField(
         MentorshipServiceSet,
@@ -378,16 +383,43 @@ class AcademyService(models.Model):
     def __str__(self) -> str:
         return f'{self.academy.slug} -> {self.service.slug}'
 
+    def get_discounted_price(self, num_items) -> float:
+        if num_items > self.max_items:
+            raise ValueError('num_items cannot be greater than max_items')
+
+        total_discount_ratio = 0
+        current_discount_ratio = self.discount_ratio
+        discount_nerf = 0.1
+        max_discount = 0.2
+
+        for _ in range(math.floor(num_items / self.bundle_size)):
+            total_discount_ratio += current_discount_ratio
+            current_discount_ratio -= current_discount_ratio * discount_nerf
+
+        if total_discount_ratio > max_discount:
+            total_discount_ratio = max_discount
+
+        amount = self.price_per_unit * num_items
+        discount = amount * total_discount_ratio
+
+        return amount - discount
+
     def clean(self) -> None:
         if self.id and len([
-                x for x in [
-                    self.available_cohorts.count(),
-                    self.available_mentorship_service_sets.count(),
-                    self.available_event_type_sets.count()
-                ] if x
+                x for x in
+            [self.available_mentorship_service_sets.count(),
+             self.available_event_type_sets.count()] if x
         ]) > 1:
             raise forms.ValidationError('Only one of available_cohorts, available_mentorship_service_sets or '
                                         'available_event_type_sets can be set')
+
+        required_integer_fields = self.service.type in ['MENTORSHIP_SERVICE_SET', 'EVENT_TYPE_SET']
+
+        if required_integer_fields and not self.bundle_size.is_integer():
+            raise forms.ValidationError('bundle_size must be an integer')
+
+        if required_integer_fields and not self.max_items.is_integer():
+            raise forms.ValidationError('max_items must be an integer')
 
         return super().clean()
 
@@ -468,7 +500,11 @@ class Plan(AbstractPriceByTime):
                                       help_text='Cohort pattern to find cohorts to be sold in this plan')
 
     available_cohorts = models.ManyToManyField(
-        Cohort, blank=True, help_text='Available cohorts to be sold in this this service and plan')
+        Cohort,
+        blank=True,
+        help_text=
+        'Minimum unit size allowed to be bought, example: bundle_size=5, then you are allowed to buy a minimum of 5 units. Related to the discount ratio'
+    )
 
     mentorship_service_set = models.ForeignKey(
         MentorshipServiceSet,
