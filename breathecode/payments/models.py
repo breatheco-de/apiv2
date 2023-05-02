@@ -367,10 +367,7 @@ class AcademyService(models.Model):
         default=1, help_text="How many items can be bought in total, it doens't matter the bundle size")
     max_amount = models.FloatField(default=1,
                                    help_text="Limit total amount, it doesn't matter the bundle size")
-    discount_ratio = models.FloatField(
-        default=1,
-        help_text='Determines the price of the bundle (price_per_unit * bundle_size * '
-        'discount_ratio)')
+    discount_ratio = models.FloatField(default=1, help_text='Will be used when calculated by the final price')
 
     available_mentorship_service_sets = models.ManyToManyField(
         MentorshipServiceSet,
