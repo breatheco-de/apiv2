@@ -10,6 +10,10 @@ from breathecode.registry.models import Asset
 from ..mixins import RegistryTestCase
 from ...models import AssetCategory
 from breathecode.registry import tasks
+from datetime import timedelta
+from django.utils import timezone
+
+UTC_NOW = timezone.now()
 
 
 def database_item(academy, category, data={}):
@@ -357,32 +361,114 @@ class RegistryTestAsset(RegistryTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    # def test_asset__put_many_with_wrong_id(self):
-    #     """Test Asset bulk update"""
-    #     self.headers(academy=1)
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_asset__put_many_with_test_status_ok(self):
+        """Test Asset bulk update"""
+        self.headers(academy=1)
 
-    #     model = self.generate_models(authenticate=True,
-    #                                 profile_academy=True,
-    #                                 capability='crud_asset',
-    #                                 role='potato',
-    #                                 asset_category=True,
-    #                                 visibility= 'PRIVATE',
-    #                                 asset={
-    #                                         'category_id': 1,
-    #                                         'academy_id': 1,
-    #                                         'slug': 'asset-1'
-    #                                     })
+        slug = self.bc.fake.slug()
 
-    #     url = reverse_lazy('registry:academy_asset')
-    #     data = [{
-    #         'category': 1,
-    #         'id': 1,
-    #     }]
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_asset',
+                                     role='potato',
+                                     asset_category={'lang': 'es'},
+                                     asset={
+                                         'category_id': 1,
+                                         'academy_id': 1,
+                                         'slug': 'asset-1',
+                                         'visibility': 'PRIVATE',
+                                         'test_status': 'OK',
+                                         'lang': 'es',
+                                     })
 
-    #     response = self.client.put(url, data, format='json')
-    #     json = response.json()
+        title = self.bc.fake.slug()
+        date = timezone.now()
 
-    #     expected = {}
+        url = reverse_lazy('registry:academy_asset')
+        data = [{
+            'category': 1,
+            'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+            'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
+            'title': title,
+            'id': 1,
+            'visibility': 'PUBLIC',
+            'asset_type': 'VIDEO',
+        }]
 
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = [
+            put_serializer(model.academy,
+                           model.asset_category,
+                           model.asset,
+                           data={
+                               'test_status': 'OK',
+                               'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+                               'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
+                               'title': title,
+                               'id': 1,
+                               'visibility': 'PUBLIC',
+                               'asset_type': 'VIDEO',
+                           })
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_asset__put_many_with_test_status_warning(self):
+        """Test Asset bulk update"""
+        self.headers(academy=1)
+
+        slug = self.bc.fake.slug()
+
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_asset',
+                                     role='potato',
+                                     asset_category={'lang': 'es'},
+                                     asset={
+                                         'category_id': 1,
+                                         'academy_id': 1,
+                                         'slug': 'asset-1',
+                                         'visibility': 'PRIVATE',
+                                         'test_status': 'WARNING',
+                                         'lang': 'es',
+                                     })
+
+        title = self.bc.fake.slug()
+        date = timezone.now()
+
+        url = reverse_lazy('registry:academy_asset')
+        data = [{
+            'category': 1,
+            'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+            'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
+            'title': title,
+            'id': 1,
+            'visibility': 'PUBLIC',
+            'asset_type': 'VIDEO',
+        }]
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = [
+            put_serializer(model.academy,
+                           model.asset_category,
+                           model.asset,
+                           data={
+                               'test_status': 'WARNING',
+                               'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+                               'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
+                               'title': title,
+                               'id': 1,
+                               'visibility': 'PUBLIC',
+                               'asset_type': 'VIDEO',
+                           })
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
