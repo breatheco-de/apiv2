@@ -11,7 +11,7 @@ from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscrip
 from breathecode.utils.datetime_interger import DatetimeInteger
 from django.db.models import QuerySet
 
-from .models import Organization, Venue, Event, Organizer, EventType
+from .models import EventTypeVisibilitySetting, Organization, Venue, Event, Organizer, EventType
 from .utils import Eventbrite
 from django.db.models import QuerySet
 
