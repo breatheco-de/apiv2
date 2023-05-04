@@ -375,6 +375,10 @@ CAPABILITIES = [
         'slug': 'crud_academy_auth_settings',
         'description': 'Settings related to authentication, for example the github auth integration'
     },
+    {
+        'slug': 'start_or_end_event',
+        'description': 'Start or end event'
+    },
 ]
 
 ROLES = [
@@ -544,7 +548,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         extend(roles, ['staff']) + [
             'read_assignment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers',
             'classroom_activity', 'read_event', 'read_event_type', 'task_delivery_details', 'crud_cohort',
-            'read_cohort_log', 'crud_cohort_log'
+            'read_cohort_log', 'crud_cohort_log', 'start_or_end_class', 'start_or_end_event'
         ]
     })
     roles.append({
@@ -651,7 +655,7 @@ def extend_roles(roles: list[RoleType]) -> None:
     roles.append({
         'slug': 'teacher',
         'name': 'Teacher',
-        'caps': extend(roles, ['assistant']) + ['crud_cohort', 'start_or_end_class']
+        'caps': extend(roles, ['assistant']) + ['crud_cohort']
     })
     roles.append({
         'slug':

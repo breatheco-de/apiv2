@@ -184,14 +184,14 @@ def pick_mentorship_service(request, token, mentor_slug):
 
 class ForwardMeetUrl:
 
-    def __init__(self, request, mentor_slug, service_slug, token):
+    def __init__(self, request, mentor_profile, mentorship_service, token):
         self.request = request
-        self.mentor_slug = mentor_slug
-        self.service_slug = service_slug
         self.token = token
         self.baseUrl = request.get_full_path()
         self.now = timezone.now()
         self.query_params = self.querystring()
+        self.mentor = mentor_profile
+        self.service = mentorship_service
 
         if '?' not in self.baseUrl:
             self.baseUrl += '?'
@@ -297,13 +297,8 @@ class ForwardMeetUrl:
         if isinstance(self.token, HttpResponseRedirect):
             return self.token
 
-        mentor = MentorProfile.objects.filter(slug=self.mentor_slug).first()
-        if mentor is None:
-            return render_message(self.request, f'No mentor found with slug {self.mentor_slug}')
-
-        service = MentorshipService.objects.filter(slug=self.service_slug).first()
-        if service is None:
-            return render_message(self.request, f'No service found with slug {self.service_slug}')
+        mentor = self.mentor
+        service = self.service
 
         # add academy to session, will be available on html templates
         self.request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
@@ -423,9 +418,9 @@ class ForwardMeetUrl:
 
 
 @private_view()
-# @has_permission('join_mentorship', consumer=mentorship_service_by_url_param, format='html')
-def forward_meet_url(request, mentor_slug, service_slug, token):
-    handler = ForwardMeetUrl(request, mentor_slug, service_slug, token)
+@has_permission('join_mentorship', consumer=mentorship_service_by_url_param, format='html')
+def forward_meet_url(request, mentor_profile, mentorship_service, token):
+    handler = ForwardMeetUrl(request, mentor_profile, mentorship_service, token)
     return handler()
 
 

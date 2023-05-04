@@ -16,12 +16,6 @@ from .flags import api
 logger = logging.getLogger(__name__)
 
 
-def show(name, data):
-    print(name, data)
-    logger.info(str(name))
-    logger.info(str(data))
-
-
 def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
     context['will_consume'] = False
 
@@ -49,20 +43,11 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     event_type = event.event_type
 
-    import os
-    show("os.getenv('LAUNCH_DARKLY_API_KEY')", os.getenv('LAUNCH_DARKLY_API_KEY'))
-    show('event', event)
-    show('event_type', event_type)
-    show('before', context['consumables'])
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
-    show('after', context['consumables'])
 
     if event.academy and event.academy.available_as_saas:
         context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
-        show("context['will_consume']", context['will_consume'])
-        context['will_consume'] = True
-
-    show('will_consume', context['will_consume'])
+        # context['will_consume'] = True
 
     kwargs['event'] = event
 
@@ -129,7 +114,7 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple,
 
     if cohort_available_as_saas or academy_available_as_saas:
         context['will_consume'] = api.release.enable_consume_live_classes(context['request'].user)
-        context['will_consume'] = True
+        # context['will_consume'] = True
 
     utc_now = timezone.now()
     if live_class.ending_at < utc_now:
