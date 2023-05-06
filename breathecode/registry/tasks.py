@@ -346,6 +346,7 @@ def async_upload_image_to_bucket(id):
         raise Exception(f'Image with id {id} not found')
 
     img.download_status = 'PENDING'
+    # FIXME: undefined variable
     img.download_details = f'Downloading {link}'
     img.save()
 

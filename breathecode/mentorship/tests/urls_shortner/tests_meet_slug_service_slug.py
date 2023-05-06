@@ -546,7 +546,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 f.write(expected)
 
         self.assertEqual(content, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
             self.bc.format.to_dict(model.mentor_profile),
         ])
@@ -592,7 +592,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     f.write(expected)
 
             self.assertEqual(content, expected)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
                 self.bc.format.to_dict(model.mentor_profile),
             ])
@@ -630,7 +630,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             content = self.bc.format.from_bytes(response.content)
             expected = render(
-                f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
+                f'This mentor is not ready, please contact the mentor directly or anyone from the academy '
+                'staff.',
                 model.mentor_profile,
                 model.token,
                 fix_logo=True)
@@ -644,7 +645,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     f.write(expected)
 
             self.assertEqual(content, expected)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
                 self.bc.format.to_dict(model.mentor_profile),
             ])
@@ -1030,7 +1031,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                         f.write(expected)
 
                 self.assertEqual(content, expected)
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
                     self.bc.format.to_dict(model.mentor_profile),
                 ])
@@ -1840,7 +1841,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                         f.write(expected)
 
                 self.assertEqual(content, expected)
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
                     self.bc.format.to_dict(model.mentor_profile),
                 ])
@@ -1944,7 +1945,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                         f.write(expected)
 
                 self.assertEqual(content, expected)
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
                     self.bc.format.to_dict(model.mentor_profile),
                 ])
@@ -2146,7 +2147,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                         f.write(expected)
 
                 self.assertEqual(content, expected)
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
                     self.bc.format.to_dict(model.mentor_profile),
                 ])
