@@ -1,5 +1,4 @@
 from typing import Optional
-from async_timeout import Any
 from django.db.models import QuerySet
 from django.core.handlers.wsgi import WSGIRequest
 
@@ -22,10 +21,10 @@ class ExtensionBase:
     def _get_order_of_response(self) -> int:
         return -1
 
-    def _apply_queryset_mutation(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
+    def _apply_queryset_mutation(self, queryset: QuerySet[any]) -> QuerySet[any]:
         raise NotImplementedError()
 
-    def _apply_response_mutation(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
+    def _apply_response_mutation(self, queryset: QuerySet[any]) -> QuerySet[any]:
         raise NotImplementedError()
 
     def _set_request(self, request: WSGIRequest) -> None:

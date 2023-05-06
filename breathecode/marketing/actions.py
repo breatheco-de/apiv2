@@ -44,8 +44,12 @@ acp_ids = {
     'utm_country': '19',
     'gclid': '26',
     'referral_key': '27',
-    'expected_cohort': '10',
-    'expected_cohort_date': '21'
+    'deal': {
+        'expected_cohort': '10',
+        'expected_cohort_date': '21',
+        'utm_location': '16',
+        'utm_course': '6',
+    }
 }
 
 
@@ -365,6 +369,9 @@ def sync_automations(ac_academy):
     while len(response['automations']) == 100:
         count = count + 100
         response = client.tags.list_all_tags(limit=100, offset=count)
+        if 'automations' not in response:
+            logger.error('Invalid automations incoming from AC')
+            return False
         automations = automations + response['automations']
 
     for auto in automations:

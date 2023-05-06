@@ -453,6 +453,17 @@ class FormEntry(models.Model):
                                   blank=True,
                                   help_text='Active Campaign Deal ID')
 
+    ac_deal_location = models.CharField(max_length=50,
+                                        default=None,
+                                        null=True,
+                                        blank=True,
+                                        help_text='If != location it means it was updated later on CRM')
+    ac_deal_course = models.CharField(max_length=100,
+                                      default=None,
+                                      null=True,
+                                      blank=True,
+                                      help_text='If != course it means it was updated later on CRM')
+
     ac_deal_owner_id = models.CharField(max_length=15, default=None, null=True, blank=True)
     ac_deal_owner_full_name = models.CharField(max_length=150, default=None, null=True, blank=True)
 

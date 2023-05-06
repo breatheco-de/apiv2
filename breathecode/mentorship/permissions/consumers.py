@@ -1,9 +1,7 @@
 from datetime import timedelta
 from django.db.models import Q
 from breathecode.authenticate.actions import get_user_language
-from breathecode.events.models import Event, EventType
 from breathecode.mentorship.models import MentorProfile, MentorshipService
-from breathecode.payments.models import Consumable
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException

@@ -504,7 +504,7 @@ def sync_organization_members(academy_id, only_status=[]):
                 try:
                     gb.invite_org_member(github.email, team_ids=teams)
                 except Exception as e:
-                    settings.add_error('Error inviting member to org: ' + str(e))
+                    settings.add_error('Error inviting member ' + str(github.email) + ' to org: ' + str(e))
                     raise e
                 _member.storage_status = 'SYNCHED'
                 _member.log(f'Sent invitation to {github.email}')
