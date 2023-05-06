@@ -7,6 +7,8 @@ from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.authenticate.models import Token
 
+from breathecode.notify import actions
+
 API_URL = os.getenv('API_URL', '')
 
 logger = logging.getLogger(__name__)
@@ -29,11 +31,14 @@ def async_slack_team_channel(team_id):
 def send_mentorship_starting_notification(session_id):
     logger.debug('Starting send_mentorship_starting_notification')
 
-    session = MentorshipSession.objects.filter(id=session_id).first()
+    session = MentorshipSession.objects.filter(id=session_id, mentee__isnull=False).first()
+    if not session:
+        logger.error(f'No mentorship session found for {session_id}')
+        return False
 
     token, created = Token.get_or_create(session.mentor.user, token_type='temporal', hours_length=2)
 
-    send_email_message(
+    actions.send_email_message(
         'message', session.mentor.user.email, {
             'SUBJECT': 'Mentorship session starting',
             'MESSAGE':

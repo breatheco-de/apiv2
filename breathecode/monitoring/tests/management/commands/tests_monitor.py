@@ -938,9 +938,20 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='scripts'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
-        self.assertEqual(self.all_monitor_script_dict(), [{
-            **self.model_to_dict(model, 'monitor_script'),
-        }])
+
+        monitor_scripts = [{
+            **x, 'last_run': None
+        } for x in self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+
+        self.assertEqual(monitor_scripts, [
+            {
+                **self.model_to_dict(model, 'monitor_script'),
+                'status_code': 1,
+                'status': 'CRITICAL',
+                'special_status_text': 'Script not found or its body is empty: None',
+                'response_text': 'Script not found or its body is empty: None',
+            },
+        ])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])

@@ -33,7 +33,7 @@ img_regex = r'https?:(?:[/|.|\w|\s|-])*\.(?:jpg|gif|png|svg|jpeg)'
 
 
 def is_remote_image(_str):
-    if _str is None or _str == '' or asset_images_bucket() in _str:
+    if _str is None or _str == '' or asset_images_bucket('') in _str:
         return False
 
     match = re.search(img_regex, _str)
@@ -124,7 +124,6 @@ def async_create_asset_thumbnail(asset_slug: str):
         logger.error(f'Asset with slug {asset_slug} not found')
         return
 
-    print('aaaaaaaaaaaa', google_project_id())
     func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
 
     preview_url = asset.get_preview_generation_url()
@@ -133,7 +132,6 @@ def async_create_asset_thumbnail(asset_slug: str):
         return False
 
     name = asset.get_thumbnail_name()
-    print('preview_url', preview_url)
     url = set_query_parameter(preview_url, 'slug', asset_slug)
 
     response = None
