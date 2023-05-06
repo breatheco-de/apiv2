@@ -9,7 +9,10 @@ from breathecode.authenticate.models import Token
 
 from breathecode.notify import actions
 
-API_URL = os.getenv('API_URL', '')
+
+def get_api_url():
+    return os.getenv('API_URL', '')
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +47,7 @@ def send_mentorship_starting_notification(session_id):
             'MESSAGE':
             f'Mentee {session.mentee.first_name} {session.mentee.last_name} is joining your session, please come back to this email when the session is over to marke it as completed',
             'BUTTON': f'Finish and review this session',
-            'LINK': f'{API_URL}/mentor/session/{session.id}?token={token.key}',
+            'LINK': f'{get_api_url()}/mentor/session/{session.id}?token={token.key}',
         })
 
     return True

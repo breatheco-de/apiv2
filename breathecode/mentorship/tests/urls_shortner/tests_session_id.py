@@ -571,7 +571,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                         'MESSAGE':
                         f'Mentee {model.user.first_name} {model.user.last_name} is joining your session, please come back to this email when the session is over to marke it as completed',
                         'BUTTON': f'Finish and review this session',
-                        'LINK': f'http://localhost:8000/mentor/session/4?token={token.key}',
+                        'LINK': f'/mentor/session/4?token={token.key}',
                     },
                 )
             ]
