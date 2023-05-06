@@ -172,9 +172,13 @@ class PaymentsTestSuite(PaymentsTestCase):
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
         plan = {'is_renewable': False}
+        service_item = {'how_many': -1}
+        if random.randint(0, 1) == 1:
+            service_item['how_many'] = random.randint(1, 100)
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
+                                        service_item=service_item,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
                                         cohort=2)
@@ -197,6 +201,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
+                'how_many': model.service_item.how_many,
                 'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
         ])
@@ -256,9 +261,13 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         service = {'type': 'MENTORSHIP_SERVICE_SET'}
         plan = {'is_renewable': False}
+        service_item = {'how_many': -1}
+        if random.randint(0, 1) == 1:
+            service_item['how_many'] = random.randint(1, 100)
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
+                                        service_item=service_item,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
                                         mentorship_service=2,
@@ -283,6 +292,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
+                'how_many': model.service_item.how_many,
                 'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
         ])
@@ -447,9 +457,13 @@ class PaymentsTestSuite(PaymentsTestCase):
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
         plan = {'is_renewable': False}
+        service_item = {'how_many': -1}
+        if random.randint(0, 1) == 1:
+            service_item['how_many'] = random.randint(1, 100)
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
+                                        service_item=service_item,
                                         subscription=subscription,
                                         plan_service_item_handler=1,
                                         cohort=2)
@@ -472,6 +486,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
+                'how_many': model.service_item.how_many,
                 'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
         ])
@@ -493,9 +508,13 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         service = {'type': 'MENTORSHIP_SERVICE_SET'}
         plan = {'is_renewable': False}
+        service_item = {'how_many': -1}
+        if random.randint(0, 1) == 1:
+            service_item['how_many'] = random.randint(1, 100)
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
+                                        service_item=service_item,
                                         subscription=subscription,
                                         plan_service_item_handler=1,
                                         mentorship_service=2,
@@ -520,6 +539,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
+                'how_many': model.service_item.how_many,
                 'valid_until': UTC_NOW + relativedelta(minutes=5),
             }),
         ])
@@ -679,7 +699,12 @@ class PaymentsTestSuite(PaymentsTestCase):
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
+        service_item = {'how_many': -1}
+        if random.randint(0, 1) == 1:
+            service_item['how_many'] = random.randint(1, 100)
+
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service_item=service_item,
                                         subscription=subscription,
                                         subscription_service_item=1,
                                         cohort=2)
@@ -702,6 +727,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
+                'how_many': model.service_item.how_many,
                 'valid_until': UTC_NOW + relativedelta(minutes=3),
             }),
         ])
@@ -722,8 +748,12 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
 
         service = {'type': 'MENTORSHIP_SERVICE_SET'}
+        service_item = {'how_many': -1}
+        if random.randint(0, 1) == 1:
+            service_item['how_many'] = random.randint(1, 100)
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service_item=service_item,
                                         subscription=subscription,
                                         subscription_service_item=1,
                                         mentorship_service=2,
@@ -748,6 +778,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
+                'how_many': model.service_item.how_many,
                 'valid_until': UTC_NOW + relativedelta(minutes=3),
             }),
         ])

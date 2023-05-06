@@ -160,6 +160,8 @@ def renew_consumables(self, scheduler_id: int):
 
     consumable = Consumable(service_item=service_item,
                             user=user,
+                            unit_type=service_item.unit_type,
+                            how_many=service_item.how_many,
                             valid_until=scheduler.valid_until,
                             **selected_lookup)
 
@@ -829,6 +831,8 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
     session.save()
 
 
+# TODO: this task is not being used, if you will use this task, you need to take in consideration
+# you need fix the logic about the consumable valid until, maybe this must be removed
 @shared_task(bind=False, base=BaseTaskWithRetry)
 def build_consumables_from_bag(bag_id: int):
     logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
@@ -857,7 +861,12 @@ def build_consumables_from_bag(bag_id: int):
             logger.error(f'Bag with id {bag_id} have a resource associated opposite to the service item type')
             return
 
-        consumables.append(Consumable(service_item=service_item, user=bag.user, **kwargs))
+        consumables.append(
+            Consumable(service_item=service_item,
+                       unit_type=service_item.unit_type,
+                       how_many=service_item.how_many,
+                       user=bag.user,
+                       **kwargs))
 
     for consumable in consumables:
         consumable.save()
