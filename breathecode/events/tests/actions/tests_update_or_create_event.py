@@ -173,6 +173,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_organizer_id': None,
             'live_stream_url': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
+            'host_user_id': None,
         }
 
         self.assertEqual(self.all_event_dict(), [kwargs])
@@ -249,6 +250,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_organizer_id': None,
             'live_stream_url': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
+            'host_user_id': None,
         }
 
         self.assertEqual(self.all_event_dict(), [kwargs])

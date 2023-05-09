@@ -1,5 +1,6 @@
 from datetime import timedelta
 from typing import Any
+from breathecode.authenticate.models import Profile, ProfileTranslation
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
@@ -21,6 +22,42 @@ class UserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+
+
+class ProfileTranslationSerializer(serpy.Serializer):
+    bio = serpy.Field()
+    lang = serpy.Field()
+
+
+class ProfileSerializer(serpy.Serializer):
+    avatar_url = serpy.Field()
+    phone = serpy.Field()
+
+    twitter_username = serpy.Field()
+    github_username = serpy.Field()
+    portfolio_url = serpy.Field()
+    linkedin_url = serpy.Field()
+
+    blog = serpy.Field()
+    bio = serpy.Field()
+
+    translations = serpy.MethodField()
+
+    def get_translations(self, obj):
+        translations = ProfileTranslation.objects.filter(profile=obj)
+        return ProfileTranslationSerializer(translations, many=True).data
+
+
+class UserBigSerializer(UserSerializer):
+    profile = serpy.MethodField()
+
+    def get_profile(self, obj):
+        profile = Profile.objects.filter(user=obj).first()
+
+        if not profile:
+            return None
+
+        return ProfileSerializer(profile, many=False).data
 
 
 class AcademySerializer(serpy.Serializer):
@@ -157,6 +194,8 @@ class EventSmallSerializer(serpy.Serializer):
     eventbrite_sync_description = serpy.Field()
     live_stream_url = serpy.Field()
     tags = serpy.Field()
+    host_user = UserSerializer(required=False)
+    author = UserSerializer(required=False)
 
 
 class LiveClassJoinSerializer(serpy.Serializer):
@@ -220,6 +259,7 @@ class EventBigSerializer(serpy.Serializer):
     academy = AcademySerializer(required=False)
     organization = OrganizationSmallSerializer(required=False)
     author = UserSerializer(required=False)
+    host_user = UserBigSerializer(required=False)
     online_event = serpy.Field()
     venue = VenueSerializer(required=False)
     event_type = EventTypeBigSerializer(required=False)
