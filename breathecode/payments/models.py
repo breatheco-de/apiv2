@@ -79,10 +79,26 @@ class AbstractPriceByTime(models.Model):
     This model is used to store the price of a Product or a Service.
     """
 
-    price_per_month = models.FloatField(default=None, blank=True, null=True, help_text='Price per month')
-    price_per_quarter = models.FloatField(default=None, blank=True, null=True, help_text='Price per quarter')
-    price_per_half = models.FloatField(default=None, blank=True, null=True, help_text='Price per half')
-    price_per_year = models.FloatField(default=None, blank=True, null=True, help_text='Price per year')
+    price_per_month = models.FloatField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text='If it is not a subscription, then the value fo these fields should be 0')
+    price_per_quarter = models.FloatField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text='If it is not a subscription, then the value fo these fields should be 0')
+    price_per_half = models.FloatField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text='If it is not a subscription, then the value fo these fields should be 0')
+    price_per_year = models.FloatField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text='If it is not a subscription, then the value fo these fields should be 0')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency')
 
     def format_price(self):
