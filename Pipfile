@@ -46,7 +46,7 @@ pytest-xdist = "*"
 mkdocstrings-python = "*"
 
 [packages]
-django = "~=3.2.18"
+django = "~=3.2.19"
 djangorestframework = "~=3.14.0"
 serpy = "*"
 gunicorn = "*"
