@@ -47,9 +47,7 @@ class Profile(models.Model):
         max_length=255,
         blank=True,
         null=True,
-        help_text=
-        'User biography, this will be used the bio in the lang of the user, otherwise frontend will use'
-        'the Profile translation')
+        help_text='User biography in user\'s language. Will be used if there are no ProfileTranslations.')
 
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
@@ -75,11 +73,7 @@ class ProfileTranslation(models.Model):
                             unique=True,
                             help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
 
-    bio = models.CharField(
-        max_length=255,
-        help_text=
-        'User biography, this will be used the bio in the lang of the user, otherwise frontend will use'
-        'the Profile translation')
+    bio = models.CharField(max_length=255)
 
     def __str__(self) -> str:
         return f'{self.lang}: {self.profile.user.email}'
