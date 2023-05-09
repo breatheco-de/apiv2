@@ -685,6 +685,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              'academy_id': 1,
+                             'intro_video': None,
                              'accepts_enrollment_suggestions': True,
                              'current_day': data['current_day'],
                              'current_module': None,
@@ -853,6 +854,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              'academy_id': 1,
+                             'intro_video': None,
                              'accepts_enrollment_suggestions': True,
                              'current_day': data['current_day'],
                              'current_module': None,
@@ -1028,6 +1030,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              'academy_id': 1,
+                             'intro_video': None,
                              'accepts_enrollment_suggestions': True,
                              'current_day': data['current_day'],
                              'current_module': None,
@@ -1191,6 +1194,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
                          [{
                              'academy_id': 1,
+                             'intro_video': None,
                              'accepts_enrollment_suggestions': True,
                              'current_day': data['current_day'],
                              'current_module': None,
