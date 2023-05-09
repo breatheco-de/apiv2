@@ -23,7 +23,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      credentials_quick_books=False,
                                      academy_auth_settings=False,
                                      github_academy_user=False,
-                                     cohort=False,
+                                     profile_translation=False,
                                      cohort_user=False,
                                      token=False,
                                      device_id=False,
@@ -40,20 +40,27 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      credentials_facebook_kwargs={},
                                      credentials_quick_books_kwargs={},
                                      token_kwargs={},
-                                     cohort_kwargs={},
                                      github_academy_user_kwargs={},
                                      academy_auth_settings_kwargs={},
                                      models={},
                                      **kwargs):
         models = models.copy()
 
-        if not 'profile' in models and is_valid(profile):
+        if not 'profile' in models and (is_valid(profile) or is_valid(profile_translation)):
             kargs = {}
 
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
             models['profile'] = create_models(profile, 'authenticate.Profile', **{**kargs, **profile_kwargs})
+
+        if not 'profile_translation' in models and is_valid(profile_translation):
+            kargs = {
+                'profile': just_one(models['profile']),
+            }
+
+            models['profile_translation'] = create_models(profile_translation,
+                                                          'authenticate.ProfileTranslation', **kargs)
 
         if not 'user_setting' in models and is_valid(user_setting):
             kargs = {}

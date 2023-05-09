@@ -43,7 +43,13 @@ class AcademyProxy(Academy):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     avatar_url = models.CharField(max_length=255, blank=True, null=True, default=None)
-    bio = models.CharField(max_length=255, blank=True, null=True)
+    bio = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text=
+        'User biography, this will be used the bio in the lang of the user, otherwise frontend will use'
+        'the Profile translation')
 
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
@@ -60,6 +66,23 @@ class Profile(models.Model):
     linkedin_url = models.CharField(max_length=50, blank=True, null=True)
 
     blog = models.CharField(max_length=150, blank=True, null=True)
+
+
+class ProfileTranslation(models.Model):
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, help_text='Profile')
+    lang = models.CharField(max_length=5,
+                            validators=[validate_language_code],
+                            unique=True,
+                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+
+    bio = models.CharField(
+        max_length=255,
+        help_text=
+        'User biography, this will be used the bio in the lang of the user, otherwise frontend will use'
+        'the Profile translation')
+
+    def __str__(self) -> str:
+        return f'{self.lang}: {self.profile.user.email}'
 
 
 class UserSetting(models.Model):
