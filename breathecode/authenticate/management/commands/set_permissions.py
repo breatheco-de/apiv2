@@ -61,8 +61,8 @@ PERMISSIONS = [
         'codename': 'get_containers',
     },
     {
-        'name': 'Add core reviews',
-        'description': 'Add core reviews',
+        'name': 'Add code reviews',
+        'description': 'Add code reviews',
         'codename': 'add_code_review',
     },
 ]
