@@ -54,7 +54,7 @@ def mark_as(queryset, status, request):
 class FreelancerAdmin(admin.ModelAdmin):
     list_display = ['user_id', 'full_name', 'email', 'github', 'price_per_hour']
     search_fields = [
-        'email', 'user__email', 'user__first_name', 'user__last_name',
+        'user__email', 'user__first_name', 'user__last_name',
         'full_name'
     ]
     raw_id_fields = ['user', 'github_user']
