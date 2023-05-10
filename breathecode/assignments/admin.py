@@ -104,6 +104,11 @@ class TaskAdmin(admin.ModelAdmin):
         url = os.getenv('API_URL') + f'/v1/assignment/task/{str(obj.id)}/deliver/{token}'
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>deliver</a>")
 
+@admin.register(UserAttachment)
+class UserAttachmentAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'name', 'user__first_name', 'user__last_name', 'user__email']
+    list_display = ('slug', 'name', 'user', 'url', 'mime')
+    list_filter = ['mime']
 
 @admin.register(FinalProject)
 class FinalProjectAdmin(admin.ModelAdmin):
