@@ -727,12 +727,27 @@ def get_bag_from_plan_financing(plan_financing: PlanFinancing, settings: Optiona
     return bag
 
 
+def show(s, d):
+    print('it\'s', s)
+    print('-----------------')
+    print('data', d)
+    logger.info('it\'s')
+    logger.info(s)
+    logger.info('-----------------')
+    logger.info('data')
+    logger.info(d)
+
+
 def filter_consumables(request: WSGIRequest,
                        items: QuerySet[Consumable],
                        queryset: QuerySet,
                        key: str,
                        custom_query_key: Optional[str] = None):
+
+    show('before filter by ids', queryset)
     if ids := request.GET.get(key):
+        show('get in filter by ids', queryset)
+
         try:
             ids = [int(x) for x in ids.split(',')]
         except:
@@ -741,13 +756,19 @@ def filter_consumables(request: WSGIRequest,
         query_key = custom_query_key or key
         queryset |= items.filter(**{f'{query_key}__id__in': ids})
 
+    show('before filter by slugs', queryset)
     if slugs := request.GET.get(f'{key}_slug'):
+        show('get in filter by slugs', queryset)
+
         slugs = slugs.split(',')
 
         query_key = custom_query_key or key
         queryset |= items.filter(**{f'{query_key}__slug__in': slugs})
 
+    show('after all filters', queryset)
+
     queryset = queryset.distinct()
+    show('after apply distinct', queryset)
     return queryset
 
 
