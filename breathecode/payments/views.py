@@ -386,17 +386,6 @@ class ServiceItemView(APIView):
         return handler.response(serializer.data)
 
 
-def show(s, d):
-    print('it\'s', s)
-    print('-----------------')
-    print('data', d)
-    logger.info('it\'s')
-    logger.info(s)
-    logger.info('-----------------')
-    logger.info('data')
-    logger.info(d)
-
-
 class MeConsumableView(APIView):
 
     def get(self, request):
@@ -405,26 +394,15 @@ class MeConsumableView(APIView):
         items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None),
                                           user=request.user)
 
-        show('query', items)
-        show('query just user', Consumable.objects.filter(user=request.user))
-        show('query with user and expires in future',
-             Consumable.objects.filter(user=request.user, valid_until__gte=utc_now))
-        show('query with user and never expires',
-             Consumable.objects.filter(user=request.user, valid_until=None))
-
         mentorship_services = MentorshipServiceSet.objects.none()
         mentorship_services = filter_consumables(request, items, mentorship_services,
                                                  'mentorship_service_set')
 
-        show('mentorship_services', mentorship_services)
-
         cohorts = Cohort.objects.none()
         cohorts = filter_consumables(request, items, cohorts, 'cohort')
-        show('cohorts', cohorts)
 
         event_types = EventTypeSet.objects.none()
         event_types = filter_consumables(request, items, event_types, 'event_type_set')
-        show('event_types', event_types)
 
         balance = {
             'mentorship_service_sets': get_balance_by_resource(mentorship_services, 'mentorship_service_set'),
