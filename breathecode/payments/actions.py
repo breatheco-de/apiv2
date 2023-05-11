@@ -765,6 +765,11 @@ def filter_consumables(request: WSGIRequest,
         query_key = custom_query_key or key
         queryset |= items.filter(**{f'{query_key}__slug__in': slugs})
 
+    show('before default', queryset)
+    if not ids and not slugs:
+        query_key = custom_query_key or key
+        queryset |= items.filter(**{f'{query_key}__isnull': False})
+
     show('after all filters', queryset)
 
     queryset = queryset.distinct()
