@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from datetime import timedelta
 import os
+from typing import Optional
 from django.contrib.auth.models import Group, User
 from django.db import models
 from django.utils import timezone
@@ -1108,13 +1109,11 @@ class ConsumptionSession(models.Model):
         super().save(*args, **kwargs)
 
     @classmethod
-    def build_session(
-        cls,
-        request: WSGIRequest,
-        consumable: Consumable,
-        delta: timedelta,
-        # info: Optional[str] = None,
-    ) -> 'ConsumptionSession':
+    def build_session(cls,
+                      request: WSGIRequest,
+                      consumable: Consumable,
+                      delta: timedelta,
+                      user: Optional[User] = None) -> 'ConsumptionSession':
         assert request, 'You must provide a request'
         assert consumable, 'You must provide a consumable'
         assert delta, 'You must provide a delta'
@@ -1126,6 +1125,7 @@ class ConsumptionSession(models.Model):
         slug = resource.slug if resource else ''
 
         path = resource.__class__._meta.app_label + '.' + resource.__class__.__name__ if resource else ''
+        user = request.user
 
         if hasattr(request, 'parser_context'):
             args = request.parser_context['args']
@@ -1140,7 +1140,7 @@ class ConsumptionSession(models.Model):
             'headers': {
                 'academy': request.META.get('HTTP_ACADEMY')
             },
-            'user': request.user.id,
+            'user': user.id,
         }
 
         # assert path, 'You must provide a path'
@@ -1155,7 +1155,7 @@ class ConsumptionSession(models.Model):
             related_id=id,
             related_slug=slug,
             #   related_info=info,
-            user=request.user)
+            user=user)
 
     @classmethod
     def get_session(cls, request: WSGIRequest) -> 'ConsumptionSession':
