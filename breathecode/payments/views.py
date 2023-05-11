@@ -403,7 +403,7 @@ class MeConsumableView(APIView):
         utc_now = timezone.now()
 
         items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None),
-                                          user=request.user)  #.exclude(how_many=0)
+                                          user=request.user)
 
         show('query', items)
         show('query just user', Consumable.objects.filter(user=request.user))
