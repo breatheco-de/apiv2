@@ -466,8 +466,8 @@ class GetCohortUserTasksSerializer(serpy.Serializer):
         return GetProfileAcademySmallSerializer(profile).data if profile else None
 
     def get_tasks(self, obj):
-        profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
-        return GetProfileAcademySmallSerializer(profile).data if profile else None
+        tasks = Task.objects.filter(user=obj.user, cohort=obj.cohort).first()
+        return TaskGETSmallSerializer(tasks).data if tasks else None
 
 
 class GETCohortTimeSlotSerializer(serpy.Serializer):
