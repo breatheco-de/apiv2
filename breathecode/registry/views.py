@@ -520,8 +520,8 @@ class AssetView(APIView, GenerateLookupsMixin):
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1)
 
-        if 'category_not' in self.request.GET:
-            param = self.request.GET.get('category_not')
+        if 'exclude_category' in self.request.GET:
+            param = self.request.GET.get('exclude_category')
             items = items.exclude(category__slug__in=[p for p in param.split(',') if p])
 
         items = items.filter(**lookup)
