@@ -448,26 +448,13 @@ class GetCohortUserSerializer(serpy.Serializer):
         return GetProfileAcademySmallSerializer(profile).data if profile else None
 
 
-class GetCohortUserTasksSerializer(serpy.Serializer):
+class GetCohortUserTasksSerializer(GetCohortUserSerializer):
     """The serializer schema definition."""
-    id = serpy.Field()
-    user = UserSerializer()
-    cohort = GetSmallCohortSerializer()
-    role = serpy.Field()
-    finantial_status = serpy.Field()
-    educational_status = serpy.Field()
-    watching = serpy.Field()
-    created_at = serpy.Field()
-    profile_academy = serpy.MethodField()
     tasks = serpy.MethodField()
 
-    def get_profile_academy(self, obj):
-        profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
-        return GetProfileAcademySmallSerializer(profile).data if profile else None
-
     def get_tasks(self, obj):
-        tasks = Task.objects.filter(user=obj.user, cohort=obj.cohort).first()
-        return TaskGETSmallSerializer(tasks).data if tasks else None
+        tasks = Task.objects.filter(user=obj.user, cohort=obj.cohort)
+        return TaskGETSmallSerializer(tasks, many=True).data
 
 
 class GETCohortTimeSlotSerializer(serpy.Serializer):

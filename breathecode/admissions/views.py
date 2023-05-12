@@ -27,11 +27,12 @@ from .serializers import (
     AcademyReportSerializer, AcademySerializer, CohortPUTSerializer, CohortSerializer,
     CohortTimeSlotSerializer, CohortUserPUTSerializer, CohortUserSerializer, GetAcademyWithStatusSerializer,
     GetBigAcademySerializer, GetCohortSerializer, GETCohortTimeSlotSerializer, GetCohortUserSerializer,
-    GetPublicCohortUserSerializer, GetSyllabusScheduleSerializer, GETSyllabusScheduleTimeSlotSerializer,
-    GetSyllabusSerializer, GetSyllabusSmallSerializer, GetSyllabusVersionSerializer,
-    GetTeacherAcademySmallSerializer, PublicCohortSerializer, SyllabusSchedulePUTSerializer,
-    SyllabusScheduleSerializer, SyllabusScheduleTimeSlotSerializer, SyllabusSerializer,
-    SyllabusVersionPutSerializer, SyllabusVersionSerializer, UserDJangoRestSerializer, UserMeSerializer)
+    GetCohortUserTasksSerializer, GetPublicCohortUserSerializer, GetSyllabusScheduleSerializer,
+    GETSyllabusScheduleTimeSlotSerializer, GetSyllabusSerializer, GetSyllabusSmallSerializer,
+    GetSyllabusVersionSerializer, GetTeacherAcademySmallSerializer, PublicCohortSerializer,
+    SyllabusSchedulePUTSerializer, SyllabusScheduleSerializer, SyllabusScheduleTimeSlotSerializer,
+    SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer, UserDJangoRestSerializer,
+    UserMeSerializer)
 from .utils import CohortLog
 
 logger = logging.getLogger(__name__)
@@ -542,7 +543,10 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
                                              cohort__id=cohort_id).first()
             if item is None:
                 raise ValidationException('Cohort user not found', 404)
-            serializer = GetCohortUserSerializer(item, many=False)
+            tasks = request.GET.get('tasks', None)
+            serializer = GetCohortUserTasksSerializer(
+                item, many=False) if tasks is not None and tasks == 'True' else GetCohortUserSerializer(
+                    item, many=False)
             return Response(serializer.data)
 
         items = CohortUser.objects.filter(cohort__academy__id=academy_id)
@@ -595,7 +599,10 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             raise ValidationException(str(e), 400)
 
         page = self.paginate_queryset(items, request)
-        serializer = GetCohortUserSerializer(page, many=True)
+        tasks = request.GET.get('tasks', None)
+        serializer = GetCohortUserTasksSerializer(
+            page, many=True) if tasks is not None and tasks == 'True' else GetCohortUserSerializer(page,
+                                                                                                   many=True)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
