@@ -4,7 +4,8 @@ from .views import (AcademyEventJoinView, AcademyEventTypeView, AcademyLiveClass
                     MeLiveClassView, get_events, eventbrite_webhook, AcademyEventView, AcademyVenueView,
                     ICalCohortsView, ICalEventView, ICalStudentView, AcademyOrganizationView,
                     OrganizationWebhookView, AcademyOrganizerView, AcademyOrganizationOrganizerView,
-                    AcademyLiveClassJoinView, join_event, EventMeCheckinView, join_live_class)
+                    AcademyLiveClassJoinView, join_event, EventMeCheckinView, join_live_class,
+                    calendly_webhook, AcademyCalendlyOrgView)
 
 app_name = 'events'
 urlpatterns = [
@@ -52,4 +53,10 @@ urlpatterns = [
          name='academy_eventype_slug_visibilitysetting_id'),
     path('academy/checkin', AcademyEventCheckinView.as_view(), name='academy_checkin'),
     path('eventbrite/webhook/<int:organization_id>', eventbrite_webhook, name='eventbrite_webhook_id'),
+
+    # hash belongs to the calendly organization
+    path('calendly/webhook/<str:hash>', calendly_webhook, name='calendly_webhook_id'),
+    path('academy/calendly/organization',
+         AcademyCalendlyOrgView.as_view(),
+         name='academy_calendly_organization'),
 ]

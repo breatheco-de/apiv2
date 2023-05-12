@@ -3,7 +3,8 @@ from typing import Any
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-from .models import Event, EventType, LiveClass, Organization, EventbriteWebhook, EventCheckin
+from .models import (Event, EventType, LiveClass, Organization, EventbriteWebhook, EventCheckin,
+                     CalendlyOrganization)
 from breathecode.admissions.models import Academy
 from slugify import slugify
 from rest_framework import serializers
@@ -102,6 +103,16 @@ class OrganizationBigSerializer(serpy.Serializer):
     eventbrite_id = serpy.Field()
     eventbrite_key = serpy.Field()
     name = serpy.Field()
+    sync_status = serpy.Field()
+    sync_desc = serpy.Field()
+    updated_at = serpy.Field()
+    created_at = serpy.Field()
+
+
+class CalendlyOrganizationBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    access_token = serpy.Field()
     sync_status = serpy.Field()
     sync_desc = serpy.Field()
     updated_at = serpy.Field()
@@ -356,6 +367,50 @@ class EventSerializer(serializers.ModelSerializer):
             pass
 
         return super().update(instance, validated_data)
+
+
+class CalendlyOrganizationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CalendlyOrganization
+        include = ('access_token', 'sync_status', 'sync_desc', 'username')
+
+    def validate(self, data):
+
+        if 'access_token' not in data:
+            ValidationException(
+                translation(
+                    self.context['lang'],
+                    en=
+                    'You need to specify the access token to be used by the calendly organization credentials',
+                    es=
+                    'Por favor especifíca el access_token para conectar la organización con el API de calendly',
+                    slug='missing-access-token'))
+
+        if 'username' not in data:
+            ValidationException(
+                translation(
+                    self.context['lang'],
+                    en='You need to specify the organization calendly username or handle',
+                    es='Por favor especifíca el nombre de usuario o handle para la organizacion en calendly',
+                    slug='missing-access-token'))
+
+        try:
+            cal = Calendly(token=data['access_token'])
+            subscriptions = cal.get_subscriptions(data['username'])
+        except Exception as e:
+            raise ValidationException(str(e))
+
+        return data
+
+    def create(self, validated_data):
+
+        org = super().create(validated_data)
+
+        cal = Calendly(token=org.access_token)
+        res = cal.subscribe(org.username, org.hash)
+
+        return organization
 
 
 class OrganizationSerializer(serializers.ModelSerializer):

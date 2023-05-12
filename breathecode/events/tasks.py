@@ -2,10 +2,12 @@ import logging
 from breathecode.admissions.models import CohortTimeSlot
 from breathecode.events.actions import fix_datetime_weekday
 from breathecode.services.eventbrite import Eventbrite
+from breathecode.services.calendly import Calendly
 from celery import shared_task, Task
 
 from breathecode.utils.datetime_interger import DatetimeInteger
 from .models import Event, LiveClass, Organization, EventbriteWebhook
+from .models import CalendlyOrganization, CalendlyWebhook
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
@@ -27,6 +29,39 @@ def persist_organization_events(self, args):
     org = Organization.objects.get(id=args['org_id'])
     result = sync_org_events(org)
     return True
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def async_calendly_webhook(self, calendly_webhook_id):
+    logger.debug('Starting async_calendly_webhook')
+    status = 'ok'
+
+    webhook = CalendlyWebhook.objects.filter(id=calendly_webhook_id).first()
+    organization = webhook.organization
+    if organization is None:
+        organization = CalendlyOrganization.objects.filter(
+            organization_hash=webhook.organization_hash).first()
+
+    if organization:
+        try:
+            client = Calendly(organization.access_token)
+            client.execute_action(calendly_webhook_id)
+        except Exception as e:
+            logger.debug(f'Calendly webhook exception')
+            logger.debug(str(e))
+            status = 'error'
+
+    else:
+        message = f"Calendly Organization {organization_id} doesn\'t exist"
+
+        webhook.status = 'ERROR'
+        webhook.status_text = message
+        webhook.save()
+
+        logger.debug(message)
+        status = 'error'
+
+    logger.debug(f'Calendly status: {status}')
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)

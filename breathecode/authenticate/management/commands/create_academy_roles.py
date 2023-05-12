@@ -379,6 +379,22 @@ CAPABILITIES = [
         'slug': 'start_or_end_event',
         'description': 'Start or end event'
     },
+    {
+        'slug': 'read_calendly_organization',
+        'description': 'Access info about the calendly integration'
+    },
+    {
+        'slug': 'create_calendly_organization',
+        'description': 'Add a new calendly integration'
+    },
+    {
+        'slug': 'reset_calendly_organization',
+        'description': 'Reset the calendly token'
+    },
+    {
+        'slug': 'delete_calendly_organization',
+        'description': 'Delete calendly integration'
+    },
 ]
 
 ROLES = [
@@ -416,6 +432,7 @@ ROLES = [
             'read_mentorship_mentor',
             'read_freelancer_bill',
             'read_keywordcluster',
+            'read_calendly_organization',
         ],
     },
     {
@@ -694,6 +711,10 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_project_invoice',
             'read_freelance_projects',
             'sync_organization_users',
+            'read_calendly_organization',
+            'reset_calendly_organization',
+            'create_calendly_organization',
+            'delete_calendly_organization',
         ]
     })
     roles.append({
