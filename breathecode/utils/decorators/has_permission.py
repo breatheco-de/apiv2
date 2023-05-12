@@ -15,7 +15,7 @@ from django.http import JsonResponse
 from breathecode.authenticate.models import Permission, User
 from breathecode.payments.signals import consume_service
 
-from ..exceptions import ProgramingError
+from ..exceptions import ProgrammingError
 from ..payment_exception import PaymentException
 from ..validation_exception import ValidationException
 from rest_framework.response import Response
@@ -56,7 +56,6 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
-#TODO: change html param for string with selected encode
 def has_permission(permission: str,
                    consumer: bool | HasPermissionCallback = False,
                    format='json') -> callable:
@@ -68,7 +67,7 @@ def has_permission(permission: str,
 
         def wrapper(*args, **kwargs):
             if isinstance(permission, str) == False:
-                raise ProgramingError('Permission must be a string')
+                raise ProgrammingError('Permission must be a string')
 
             try:
                 if hasattr(args[0], '__class__') and isinstance(args[0], APIView):
@@ -81,7 +80,7 @@ def has_permission(permission: str,
                     raise IndexError()
 
             except IndexError:
-                raise ProgramingError('Missing request information, use this decorator with DRF View')
+                raise ProgrammingError('Missing request information, use this decorator with DRF View')
 
             try:
                 utc_now = timezone.now()
@@ -100,13 +99,16 @@ def has_permission(permission: str,
                         'will_consume': True,
                     }
 
-                    if consumer:
-                        items = Consumable.objects.filter(
-                            Q(valid_until__lte=utc_now) | Q(valid_until=None),
-                            user=request.user,
-                            service_item__service__groups__permissions__codename=permission).exclude(
-                                how_many=0).order_by('id')
+                    # session_created_right_now = False
 
+                    if consumer:
+                        # items = Consumable.objects.filter(
+                        #     Q(valid_until__gte=utc_now) | Q(valid_until=None),
+                        #     user=request.user,
+                        #     service_item__service__groups__permissions__codename=permission).exclude(
+                        #         how_many=0).order_by('id')
+
+                        items = Consumable.list(user=request.user, permission=permission)
                         context['consumables'] = items
 
                     if callable(consumer):
