@@ -47,6 +47,22 @@ class TaskGETSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
+class TaskGETSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    title = serpy.Field()
+    task_status = serpy.Field()
+    associated_slug = serpy.Field()
+    description = serpy.Field()
+    revision_status = serpy.Field()
+    github_url = serpy.Field()
+    live_url = serpy.Field()
+    task_type = serpy.Field()
+
+    created_at = serpy.Field()
+
+
 class TaskGETDeliverSerializer(TaskGETSerializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
