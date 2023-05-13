@@ -70,6 +70,15 @@ class SmallAsset(serpy.Serializer):
     slug = serpy.Field()
 
 
+class AssetSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    asset_type = serpy.Field()
+    status = serpy.Field()
+
+
 class AcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
@@ -264,10 +273,10 @@ class AssetCategorySerializer(serpy.Serializer):
 
 class _Keyword(serpy.Serializer):
     slug = serpy.Field()
-    published_assets = serpy.MethodField()
+    all_assets = serpy.MethodField()
 
-    def get_published_assets(self, obj):
-        return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
+    def get_all_assets(self, obj):
+        return AssetSmallSerializer(obj.asset_set.all(), many=True).data
 
 
 class KeywordClusterMidSerializer(serpy.Serializer):

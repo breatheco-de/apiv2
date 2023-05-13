@@ -34,5 +34,5 @@ class KeywordCache(Cache):
 
 class KeywordClusterCache(Cache):
     model = KeywordCluster
-    depends = ['KeywordCluster']
+    depends = ['KeywordCluster', 'Asset']
     parents = []
