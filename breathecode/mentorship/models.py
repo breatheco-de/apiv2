@@ -194,6 +194,12 @@ class MentorProfile(models.Model):
                              on_delete=models.CASCADE,
                              help_text='If the user does not exist, you can use the email field instead')
 
+    calendly_uuid = models.CharField(blank=True,
+                                     max_length=255,
+                                     null=True,
+                                     default=None,
+                                     help_text='To be used by the calendly API')
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -272,10 +278,12 @@ STARTED = 'STARTED'
 COMPLETED = 'COMPLETED'
 FAILED = 'FAILED'
 IGNORED = 'IGNORED'
+CANCELED = 'CANCELED'
 MENTORSHIP_STATUS = (
     (PENDING, 'Pending'),
     (STARTED, 'Started'),
     (COMPLETED, 'Completed'),
+    (CANCELED, 'Canceled'),
     (FAILED, 'Failed'),
     (IGNORED, 'Ignored'),  # will not be included on the bills
 )
@@ -382,6 +390,12 @@ class MentorshipSession(models.Model):
         default=None,
         help_text='Exact moment the mentee left the meeting for the last time')
 
+    calendly_uuid = models.CharField(blank=True,
+                                     max_length=255,
+                                     null=True,
+                                     default=None,
+                                     help_text='To be used by the calendly API')
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -412,3 +426,81 @@ class ChatBot(models.Model):
 
     def __str__(self):
         return self.name
+
+
+PENDING = 'PENDING'
+PERSISTED = 'PERSISTED'
+ERROR = 'ERROR'
+WARNING = 'WARNING'
+SYNCHED = 'SYNCHED'
+SYNC_STATUS = (
+    (PENDING, 'Pending'),
+    (PERSISTED, 'Persisted'),
+    (ERROR, 'Error'),
+    (WARNING, 'Warning'),
+    (SYNCHED, 'Synched'),
+)
+
+
+class CalendlyOrganization(models.Model):
+    username = models.CharField(max_length=100, help_text='Calendly username')
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
+    access_token = models.TextField(blank=True, null=True, default=None)
+
+    # this should be use in the future to create automatically the permalinks
+    hash = models.CharField(max_length=40, unique=True)
+
+    sync_status = models.CharField(
+        max_length=9,
+        choices=SYNC_STATUS,
+        default=PENDING,
+        help_text='One of: PENDING, PERSISTED or ERROR depending on how the calendly sync status')
+    sync_desc = models.TextField(max_length=255, null=True, default=None, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.username or 'Nameless calendly org'
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.hash = binascii.hexlify(os.urandom(20)).decode()
+
+        return super().save(*args, **kwargs)
+
+    def reset_hash(self):
+        self.hash = binascii.hexlify(os.urandom(20)).decode()
+        return self.save()
+
+
+# PENDING = 'PENDING'
+DONE = 'DONE'
+WEBHOOK_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (ERROR, 'Error'),
+)
+
+
+class CalendlyWebhook(models.Model):
+    organization_hash = models.CharField(max_length=50)
+    created_by = models.CharField(max_length=2500)
+    event = models.CharField(max_length=100)
+    called_at = models.DateTimeField()
+    payload = models.JSONField()
+
+    organization = models.ForeignKey(CalendlyOrganization,
+                                     on_delete=models.CASCADE,
+                                     null=True,
+                                     default=None,
+                                     blank=True)
+
+    status = models.CharField(max_length=9, choices=WEBHOOK_STATUS, default=PENDING)
+    status_text = models.TextField(default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'Event {self.event} {self.status} => {self.created_by}'

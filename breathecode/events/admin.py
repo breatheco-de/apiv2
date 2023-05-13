@@ -5,10 +5,9 @@ from django.contrib import messages
 
 import breathecode.events.tasks as tasks
 from .models import (Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin,
-                     Organization, Organizer, EventbriteWebhook, CalendlyWebhook, CalendlyOrganization)
+                     Organization, Organizer, EventbriteWebhook)
 from .actions import sync_org_venues, sync_org_events
 from breathecode.utils import AdminExportCsvMixin
-from breathecode.services.calendly import Calendly
 import breathecode.marketing.tasks as marketing_tasks
 
 
@@ -120,22 +119,6 @@ class EventbriteWebhookAdmin(admin.ModelAdmin):
         return Organization.objects.filter(eventbrite_id=obj.organization_id).first()
 
 
-def reattempt_calendly_webhook(modeladmin, request, queryset):
-    entries = queryset.all()
-
-    for entry in entries:
-        tasks.async_calendly_webhook.delay(entry.id)
-
-
-@admin.register(CalendlyWebhook)
-class CalendlyWebhookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'event', 'organization', 'organization_hash', 'created_by', 'status_text',
-                    'created_at')
-    list_filter = ['organization', 'status', 'event']
-    search_fields = ['organization__username']
-    actions = [reattempt_calendly_webhook]
-
-
 @admin.register(EventTypeVisibilitySetting)
 class EventTypeVisibilitySettingAdmin(admin.ModelAdmin):
     list_display = ('academy', 'cohort', 'syllabus')
@@ -159,34 +142,3 @@ class LiveClassAdmin(admin.ModelAdmin):
             return False
 
         return obj.ending_at + timedelta(minutes=30) == obj.ended_at
-
-
-def subscribe_to_webhooks(modeladmin, request, queryset):
-    entries = queryset.all()
-    for org in entries:
-        cal = Calendly(token=org.access_token)
-        data = cal.subscribe(org.username, org.hash)
-
-
-def unsubscribe_to_all_webhooks(modeladmin, request, queryset):
-    entries = queryset.all()
-    for org in entries:
-        cal = Calendly(token=org.access_token)
-        data = cal.unsubscribe_all(org.username)
-
-
-def get_subscription_webhooks(modeladmin, request, queryset):
-    entries = queryset.all()
-    for org in entries:
-        cal = Calendly(token=org.access_token)
-        data = cal.get_subscriptions(org.username)
-        print('subscriptions', data)
-
-
-@admin.register(CalendlyOrganization)
-class CalendlyOrganizationAdmin(admin.ModelAdmin):
-    list_display = ('username', 'academy', 'hash', 'sync_status', 'sync_desc')
-    list_filter = ['sync_status', 'academy']
-    search_fields = ['username']
-    readonly_fields = ('hash', )
-    actions = [subscribe_to_webhooks, get_subscription_webhooks, unsubscribe_to_all_webhooks]

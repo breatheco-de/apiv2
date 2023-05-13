@@ -2,8 +2,10 @@ import pytz, logging, requests, re
 from django.contrib import admin, messages
 from django import forms
 from .models import (MentorProfile, MentorshipService, MentorshipSession, MentorshipBill, SupportAgent,
-                     SupportChannel, ChatBot)
+                     SupportChannel, ChatBot, CalendlyOrganization, CalendlyWebhook)
+from breathecode.services.calendly import Calendly
 from django.utils.html import format_html
+import breathecode.mentorship.tasks as tasks
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
 import breathecode.mentorship.actions as actions
@@ -221,6 +223,7 @@ class SessionAdmin(admin.ModelAdmin):
             'FAILED': 'bg-error',
             'STARTED': 'bg-warning',
             'PENDING': 'bg-secondary',
+            'CANCELED': '',
             'IGNORED': 'bg-secondary',
         }
 
@@ -270,3 +273,50 @@ class ChatBotAdmin(admin.ModelAdmin):
     list_filter = ['academy']
     # actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID', 'IGNORED'],
     #                                                       name='status')
+
+
+def subscribe_to_webhooks(modeladmin, request, queryset):
+    entries = queryset.all()
+    for org in entries:
+        cal = Calendly(token=org.access_token)
+        data = cal.subscribe(org.username, org.hash)
+
+
+def unsubscribe_to_all_webhooks(modeladmin, request, queryset):
+    entries = queryset.all()
+    for org in entries:
+        cal = Calendly(token=org.access_token)
+        data = cal.unsubscribe_all(org.username)
+
+
+def get_subscription_webhooks(modeladmin, request, queryset):
+    entries = queryset.all()
+    for org in entries:
+        cal = Calendly(token=org.access_token)
+        data = cal.get_subscriptions(org.username)
+        print('subscriptions', data)
+
+
+@admin.register(CalendlyOrganization)
+class CalendlyOrganizationAdmin(admin.ModelAdmin):
+    list_display = ('username', 'academy', 'hash', 'sync_status', 'sync_desc')
+    list_filter = ['sync_status', 'academy']
+    search_fields = ['username']
+    readonly_fields = ('hash', )
+    actions = [subscribe_to_webhooks, get_subscription_webhooks, unsubscribe_to_all_webhooks]
+
+
+def reattempt_calendly_webhook(modeladmin, request, queryset):
+    entries = queryset.all()
+
+    for entry in entries:
+        tasks.async_calendly_webhook.delay(entry.id)
+
+
+@admin.register(CalendlyWebhook)
+class CalendlyWebhookAdmin(admin.ModelAdmin):
+    list_display = ('id', 'status', 'event', 'organization', 'organization_hash', 'created_by', 'status_text',
+                    'created_at')
+    list_filter = ['organization', 'status', 'event']
+    search_fields = ['organization__username']
+    actions = [reattempt_calendly_webhook]

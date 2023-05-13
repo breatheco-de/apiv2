@@ -19,7 +19,7 @@ from django.http.response import HttpResponse
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.cache import Cache
 from django.utils import timezone
-from breathecode.services.calendly import Calendly
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from breathecode.utils.decorators import has_permission
@@ -28,7 +28,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from .actions import fix_datetime_weekday, update_timeslots_out_of_range, get_my_event_types
 from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibilitySetting, Organization,
-                     Venue, EventbriteWebhook, Organizer, CalendlyOrganization)
+                     Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (EventBigSerializer, GetLiveClassSerializer, LiveClassJoinSerializer,
@@ -37,7 +37,7 @@ from .serializers import (EventBigSerializer, GetLiveClassSerializer, LiveClassJ
                           EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
                           EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
                           OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer,
-                          PUTEventCheckinSerializer, CalendlyOrganizationBigSerializer)
+                          PUTEventCheckinSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -46,8 +46,7 @@ from breathecode.utils import ValidationException, capable_of, HeaderLimitOffset
 from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
-from breathecode.services.calendly import Calendly
-from .tasks import async_eventbrite_webhook, async_calendly_webhook
+from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
 from breathecode.utils import response_207
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
@@ -881,24 +880,6 @@ def eventbrite_webhook(request, organization_id):
     return Response('ok', content_type='text/plain')
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@renderer_classes([PlainTextRenderer])
-def calendly_webhook(request, org_hash):
-
-    webhook = Calendly.add_webhook_to_log(request.data, org_hash)
-
-    if webhook:
-        async_calendly_webhook.delay(webhook.id)
-    else:
-        logger.debug('One request cannot be parsed, maybe you should update `Calendly'
-                     '.add_webhook_to_log`')
-        logger.debug(request.data)
-
-    # async_eventbrite_webhook(request.data)
-    return Response('ok', content_type='text/plain')
-
-
 class AcademyOrganizerView(APIView):
     """
     List all snippets
@@ -1469,84 +1450,3 @@ class ICalEventView(APIView):
         response = HttpResponse(calendar_text, content_type='text/calendar')
         response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
         return response
-
-
-# list venues
-class AcademyCalendlyOrgView(APIView):
-    """
-    Manage the calendly intetration for academy
-    """
-
-    @capable_of('read_calendly_organization')
-    def get(self, request, academy_id):
-
-        org = CalendlyOrganization.objects.filter(academy__id=academy_id).first()
-        if org is None:
-            raise ValidationException('Organization not found for this academy', 404)
-
-        serializer = CalendlyOrganizationBigSerializer(org, many=False)
-
-        cal = Calendly(token=org.access_token)
-        subscriptions = cal.get_subscriptions(org.username)
-
-        org_dict = {
-            'subscriptions': subscriptions,
-            **serializer.data,
-        }
-
-        return Response(org_dict)
-
-    @capable_of('create_calendly_organization')
-    def post(self, request, academy_id):
-
-        lang = get_user_language(request)
-
-        organization = CalendlyOrganization.objects.filter(academy__id=academy_id).first()
-        if organization:
-            raise ValidationException('Academy already has a calendly organization asociated',
-                                      slug='already-created')
-
-        serializer = CalendlyOrganizationSerializer(data={
-            **request.data, 'academy': academy_id
-        },
-                                                    context={
-                                                        'lang': lang,
-                                                        'academy_id': academy_id,
-                                                    })
-
-        if serializer.is_valid():
-            serializer.save()
-
-            serializer = CalendlyOrganizationBigSerializer(organization)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @capable_of('reset_calendly_organization')
-    def put(self, request, academy_id):
-
-        organization = CalendlyOrganization.objects.filter(academy__id=academy_id).first()
-        if not organization:
-            raise ValidationException('Calendly Organization not found for this academy',
-                                      slug='org-not-found')
-
-        organization.reset_hash()
-
-        cal = Calendly(token=organization.access_token)
-        cal.unsubscribe_all(organization.username)
-        cal.subscribe(organization.username, organization.hash)
-
-        serializer = CalendlyOrganizationBigSerializer(organization)
-        return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
-
-    @capable_of('delete_calendly_organization')
-    def delete(self, request, academy_id):
-
-        organization = CalendlyOrganization.objects.filter(academy__id=academy_id).first()
-        if not organization:
-            raise ValidationException('Calendly Organization not found for this academy',
-                                      slug='org-not-found')
-
-        cal.unsubscribe_all(organization.username)
-        organization.delete()
-
-        return Response(None, status=status.HTTP_204_NO_CONTENT)

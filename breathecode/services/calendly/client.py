@@ -74,7 +74,7 @@ class Calendly:
         data = self.request('POST',
                             f'/webhook_subscriptions',
                             json={
-                                'url': f'{API_URL}/v1/events/calendly/webhook/{org_hash}',
+                                'url': f'{API_URL}/v1/mentorship/calendly/webhook/{org_hash}',
                                 'events': ['invitee.created', 'invitee.canceled'],
                                 'organization': f'{self.host}/organizations/{org_username}',
                                 'scope': 'organization',
@@ -105,12 +105,16 @@ class Calendly:
         else:
             return data
 
+    def get_event(self, uuid):
+        data = self.request('GET', f'/scheduled_events/{uuid}')
+        return data
+
     def execute_action(self, calendly_webhook_id: int):
         # wonderful way to fix one poor mocking system
         import requests
 
         # prevent circular dependency import between thousand modules previuosly loaded and cached
-        from breathecode.events.models import CalendlyWebhook
+        from breathecode.mentorship.models import CalendlyWebhook, CalendlyOrganization
 
         # example = {
         #     "created_at": "2020-11-23T17:51:19.000000Z",
@@ -171,7 +175,7 @@ class Calendly:
         """Add one incoming webhook request to log"""
 
         # prevent circular dependency import between thousand modules previuosly loaded and cached
-        from breathecode.events.models import CalendlyWebhook
+        from breathecode.mentorship.models import CalendlyWebhook
 
         if not context or not len(context):
             return None
