@@ -45,7 +45,15 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
 
-    if event.host_user != request.user and event.academy and event.academy.available_as_saas:
+    is_host = event.host_user == request.user
+    is_free_for_bootscamp = (event.free_for_bootcamps) or (event.free_for_bootcamps is None
+                                                           and event_type.free_for_bootcamps)
+    is_available_as_saas = event.academy and event.academy.available_as_saas
+
+    if not is_host and is_available_as_saas:
+        context['will_consume'] = True
+
+    if (not is_host and not is_available_as_saas and not is_free_for_bootscamp):
         context['will_consume'] = True
 
     kwargs['event'] = event
