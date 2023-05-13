@@ -818,6 +818,60 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test__with_data__with_cohorts_get_tasks_with_no_tasks(self):
+        """Test /cohort/user without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     cohort_user_kwargs={'educational_status': 'GRADUATED'},
+                                     profile_academy=True,
+                                     capability='read_all_cohort',
+                                     role='potato')
+        model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
+        base_url = reverse_lazy('admissions:academy_cohort_user') + '?tasks=True'
+        url = f'{base_url}?cohorts=' + model['cohort_user'].cohort.slug
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': model['cohort_user'].id,
+            'role': model['cohort_user'].role,
+            'finantial_status': model['cohort_user'].finantial_status,
+            'educational_status': model['cohort_user'].educational_status,
+            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'user': {
+                'id': model['cohort_user'].user.id,
+                'first_name': model['cohort_user'].user.first_name,
+                'last_name': model['cohort_user'].user.last_name,
+                'email': model['cohort_user'].user.email,
+            },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
+            },
+            'cohort': {
+                'id': model['cohort_user'].cohort.id,
+                'slug': model['cohort_user'].cohort.slug,
+                'name': model['cohort_user'].cohort.name,
+                'kickoff_date': re.sub(r'\+00:00$', 'Z',
+                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date': model['cohort_user'].cohort.ending_date,
+                'stage': model['cohort_user'].cohort.stage,
+                'available_as_saas': model['cohort_user'].cohort.available_as_saas,
+            },
+            'watching': False,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort_user(), 1)
+        self.assertEqual(self.get_cohort_user_dict(1), model_dict)
+
     """
     🔽🔽🔽 Put without id
     """
