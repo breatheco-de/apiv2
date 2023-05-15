@@ -145,7 +145,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         return asset
     except Exception as e:
-        raise e
+#        raise e
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -310,7 +310,11 @@ def pull_github_lesson(github, asset, override_meta=False):
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
 
-    base64_readme = get_blob_content(repo, file_path, branch=branch_name).content
+    blob_file = get_blob_content(repo, file_path, branch=branch_name)
+    if blob_file is None:
+        raise Exception('Nothing was found under '+file_path)
+        
+    base64_readme = blob_file.content
     asset.readme_raw = base64_readme
 
     # this avoids to keep using the old readme file, we do have a new version

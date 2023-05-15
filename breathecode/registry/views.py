@@ -1229,7 +1229,7 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    extensions = APIViewExtensions(cache=KeywordClusterCache, sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_keywordcluster')
     def get(self, request, cluster_slug=None, academy_id=None):
@@ -1244,9 +1244,11 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+
+        # cache has been disabled because I cant get it to refresh then keywords are resigned to assets
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         items = KeywordCluster.objects.filter(academy__id=academy_id)
         lookup = {}

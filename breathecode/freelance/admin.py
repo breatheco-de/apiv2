@@ -53,6 +53,9 @@ def mark_as(queryset, status, request):
 @admin.register(Freelancer)
 class FreelancerAdmin(admin.ModelAdmin):
     list_display = ['user_id', 'full_name', 'email', 'github', 'price_per_hour']
+    search_fields = [
+        'user__email', 'user__first_name', 'user__last_name'
+    ]
     raw_id_fields = ['user', 'github_user']
     actions = [sync_issues, generate_freelancer_bill]
 
