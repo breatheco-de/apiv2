@@ -340,6 +340,9 @@ class PostAssetSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         validated_data = super().validate(data)
+        
+        if 'lang' not in validated_data or validated_data['lang'] is None:
+            raise ValidationException(f'Asset is missing a language',slug='no-language')
 
         if 'category' not in data or data['category'] is None:
             if 'all_translations' not in validated_data or len(validated_data['all_translations']) == 0:
