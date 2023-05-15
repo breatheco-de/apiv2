@@ -272,6 +272,7 @@ class AssetCategorySerializer(serpy.Serializer):
 
 
 class _Keyword(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     all_assets = serpy.MethodField()
 
