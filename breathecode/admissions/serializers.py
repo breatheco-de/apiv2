@@ -10,6 +10,8 @@ from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query, SerpyExtensions, serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from breathecode.assignments.serializers import TaskGETSmallSerializer
+from breathecode.assignments.models import Task
 from .actions import test_syllabus, haversine
 from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
                      Syllabus, SyllabusVersion, COHORT_STAGE)
@@ -444,6 +446,15 @@ class GetCohortUserSerializer(serpy.Serializer):
     def get_profile_academy(self, obj):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
         return GetProfileAcademySmallSerializer(profile).data if profile else None
+
+
+class GetCohortUserTasksSerializer(GetCohortUserSerializer):
+    """The serializer schema definition."""
+    tasks = serpy.MethodField()
+
+    def get_tasks(self, obj):
+        tasks = Task.objects.filter(user=obj.user, cohort=obj.cohort)
+        return TaskGETSmallSerializer(tasks, many=True).data
 
 
 class GETCohortTimeSlotSerializer(serpy.Serializer):
