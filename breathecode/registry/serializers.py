@@ -108,11 +108,11 @@ class AssetKeywordBigSerializer(serpy.Serializer):
     title = serpy.Field()
     lang = serpy.Field()
     cluster = KeywordClusterSmallSerializer(required=False)
+    
+    all_assets = serpy.MethodField()
 
-    published_assets = serpy.MethodField()
-
-    def get_published_assets(self, obj):
-        return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
+    def get_all_assets(self, obj):
+        return AssetSmallSerializer(obj.asset_set.all(), many=True).data
 
 
 class AcademyCommentSerializer(serpy.Serializer):
@@ -272,6 +272,7 @@ class AssetCategorySerializer(serpy.Serializer):
 
 
 class _Keyword(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     all_assets = serpy.MethodField()
 
