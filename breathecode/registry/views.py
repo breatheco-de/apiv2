@@ -446,7 +446,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         if 'asset_type' in self.request.GET:
             param = self.request.GET.get('asset_type')
-            lookup['asset_type__iexact'] = param
+            lookup['asset_type__in'] = [p.upper() for p in param.split(',') if p]
 
         if 'category' in self.request.GET:
             param = self.request.GET.get('category')
@@ -519,6 +519,10 @@ class AssetView(APIView, GenerateLookupsMixin):
         need_translation = self.request.GET.get('need_translation', False)
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1)
+
+        if 'exclude_category' in self.request.GET:
+            param = self.request.GET.get('exclude_category')
+            items = items.exclude(category__slug__in=[p for p in param.split(',') if p])
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
