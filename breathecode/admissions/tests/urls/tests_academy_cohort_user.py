@@ -831,8 +831,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
-        base_url = reverse_lazy('admissions:academy_cohort_user') + '?tasks=True'
-        url = f'{base_url}?cohorts=' + model['cohort_user'].cohort.slug
+        base_url = reverse_lazy('admissions:academy_cohort_user')
+        url = f'{base_url}?cohorts=' + model['cohort_user'].cohort.slug + '&tasks=True'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -887,8 +887,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
-        base_url = reverse_lazy('admissions:academy_cohort_user') + '?tasks=True'
-        url = f'{base_url}?cohorts=' + model['cohort_user'].cohort.slug
+        base_url = reverse_lazy('admissions:academy_cohort_user')
+        url = f'{base_url}?cohorts=' + model['cohort_user'].cohort.slug + '&tasks=True'
         response = self.client.get(url)
         json = response.json()
         expected = [{
