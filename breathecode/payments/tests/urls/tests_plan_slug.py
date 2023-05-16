@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, call, patch
 
 from django.urls import reverse_lazy
 from rest_framework import status
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
 from ..mixins import PaymentsTestCase
@@ -125,4 +126,28 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [
             self.bc.format.to_dict(model.plan),
+        ])
+
+    # When: get is called
+    # Then: it's setup properly
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_get__spy_extensions(self):
+        """Test /cohort/:id without auth"""
+        plan = {'time_of_life': None, 'time_of_life_unit': None, 'is_renewable': True}
+        plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
+        model = self.bc.database.create(plan=plan,
+                                        service_item=2,
+                                        plan_service_item=plan_service_items,
+                                        financing_option=2)
+
+        url = reverse_lazy('payments:plan_slug', kwargs={'plan_slug': model.plan.slug})
+        self.client.get(url)
+
+        self.bc.check.calls(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
+        ])
+
+        self.bc.check.calls(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(sort='-id', paginate=True),
         ])

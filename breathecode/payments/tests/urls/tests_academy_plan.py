@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, call, patch
 from django.urls import reverse_lazy
 from rest_framework import status
 from breathecode.payments.views import PlanView
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
 from ..mixins import PaymentsTestCase
@@ -663,3 +664,41 @@ class SignalTestSuite(PaymentsTestCase):
             self.bc.database.list_of('payments.Plan'),
             self.bc.format.to_dict(model.plan),
         )
+
+    # When: get is called
+    # Then: it's setup properly
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_get__spy_extensions(self):
+        plan = {'time_of_life': None, 'time_of_life_unit': None, 'is_renewable': True, 'is_onboarding': True}
+        plan_service_items = [{
+            'service_item_id': n,
+            'plan_id': 1
+        } for n in range(1, 3)] + [{
+            'service_item_id': n,
+            'plan_id': 2
+        } for n in range(1, 3)]
+        model = self.bc.database.create(plan=(2, plan),
+                                        user=1,
+                                        capability='read_plan',
+                                        role=1,
+                                        profile_academy=1,
+                                        service_item=2,
+                                        plan_service_item=plan_service_items,
+                                        financing_option=2,
+                                        cohort=1,
+                                        syllabus_version=1)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy('payments:academy_plan') + '?syllabus=1'
+        response = self.client.get(url)
+
+        self.bc.check.calls(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
+        ])
+
+        self.bc.check.calls(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(sort='-id', paginate=True),
+        ])
