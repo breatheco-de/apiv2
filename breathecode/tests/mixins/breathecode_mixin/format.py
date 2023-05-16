@@ -139,11 +139,7 @@ class Format:
         return Q(**query)
 
     # remove lang from args
-    def lookup(self,
-               lang: str,
-               custom_fields: dict = dict(),
-               overwrite: dict = dict(),
-               **kwargs: dict | tuple) -> dict[str, Any]:
+    def lookup(self, lang: str, overwrite: dict = dict(), **kwargs: dict | tuple) -> dict[str, Any]:
         """
         Generate from lookups the values in test side to be used in querystring.
 
