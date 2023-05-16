@@ -54,7 +54,7 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
         | Q(cohort__available_as_saas=None, cohort__academy__available_as_saas=False),
         user=request.user).exists()
 
-    if not is_host and not is_free_for_bootcamps and not user_with_available_as_saas_false:
+    if not is_host and (not is_free_for_bootcamps or not user_with_available_as_saas_false):
         context['will_consume'] = True
 
     kwargs['event'] = event
