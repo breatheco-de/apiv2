@@ -116,6 +116,7 @@ class EventType(models.Model):
     icon_url = models.URLField(blank=False, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
     lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
+    free_for_bootcamps = models.BooleanField(default=True)
 
     visibility_settings = models.ManyToManyField(
         EventTypeVisibilitySetting,
@@ -172,6 +173,7 @@ class Event(models.Model):
                             validators=[validate_language_code])
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
+    free_for_bootcamps = models.BooleanField(default=None, blank=True, null=True)
 
     url = models.URLField(
         max_length=255,

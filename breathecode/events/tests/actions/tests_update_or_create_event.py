@@ -174,6 +174,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'live_stream_url': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
             'host_user_id': None,
+            'free_for_bootcamps': None,
         }
 
         self.assertEqual(self.all_event_dict(), [kwargs])
@@ -251,6 +252,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'live_stream_url': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
             'host_user_id': None,
+            'free_for_bootcamps': None,
         }
 
         self.assertEqual(self.all_event_dict(), [kwargs])
