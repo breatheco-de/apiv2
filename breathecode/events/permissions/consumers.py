@@ -1,6 +1,7 @@
 from datetime import timedelta
 import logging
 from django.db.models import Q
+from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.events.actions import get_my_event_types
 from breathecode.events.models import Event, EventType, LiveClass
@@ -46,14 +47,14 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
 
     is_host = event.host_user == request.user
-    is_free_for_bootscamp = (event.free_for_bootcamps) or (event.free_for_bootcamps is None
+    is_free_for_bootcamps = (event.free_for_bootcamps) or (event.free_for_bootcamps is None
                                                            and event_type.free_for_bootcamps)
-    is_available_as_saas = event.academy and event.academy.available_as_saas
+    user_with_available_as_saas_false = CohortUser.objects.filter(
+        Q(cohort__available_as_saas=False)
+        | Q(cohort__available_as_saas=None, cohort__academy__available_as_saas=False),
+        user=request.user).exists()
 
-    if not is_host and is_available_as_saas:
-        context['will_consume'] = True
-
-    if (not is_host and not is_available_as_saas and not is_free_for_bootscamp):
+    if not is_host and not is_free_for_bootcamps and not user_with_available_as_saas_false:
         context['will_consume'] = True
 
     kwargs['event'] = event
