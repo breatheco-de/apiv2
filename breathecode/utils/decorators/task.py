@@ -1,4 +1,4 @@
-from breathecode.utils.exceptions import ProgramingError
+from breathecode.utils.exceptions import ProgrammingError
 from celery import shared_task
 from django.db import transaction
 import copy
@@ -14,7 +14,7 @@ class Task(object):
         self.fallback = kwargs.pop('fallback')
 
         if self.fallback and not callable(self.fallback):
-            raise ProgramingError('Fallback must be a callable')
+            raise ProgrammingError('Fallback must be a callable')
 
         self.parent_decorator = shared_task(*args, **kwargs)
 

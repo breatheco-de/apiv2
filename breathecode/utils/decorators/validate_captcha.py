@@ -2,7 +2,7 @@ import os
 import logging
 from rest_framework.views import APIView
 from breathecode.services.google_cloud import Recaptcha
-from breathecode.utils.exceptions import ProgramingError
+from breathecode.utils.exceptions import ProgrammingError
 from ..validation_exception import ValidationException
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ def validate_captcha(function):
                                           code=429)
 
         except IndexError:
-            raise ProgramingError('Missing request information, use this decorator with DRF View')
+            raise ProgrammingError('Missing request information, use this decorator with DRF View')
 
         return function(*args, **kwargs)
 
