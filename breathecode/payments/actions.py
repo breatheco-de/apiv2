@@ -47,8 +47,9 @@ class PlanFinder:
     cohort: Optional[Cohort] = None
     syllabus: Optional[Syllabus] = None
 
-    def __init__(self, request: Request, lang: Optional[str] = None) -> None:
+    def __init__(self, request: Request, lang: Optional[str] = None, query: Optional[Q] = None) -> None:
         self.request = request
+        self.query = query
 
         if lang:
             self.lang = lang
@@ -120,7 +121,9 @@ class PlanFinder:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.cohort.syllabus_version.syllabus).exists()
 
-        plans = Plan.objects.filter(available_cohorts__id=self.cohort.id,
+        args = (self.query, ) if self.query else tuple()
+        plans = Plan.objects.filter(*args,
+                                    available_cohorts__id=self.cohort.id,
                                     available_cohorts__stage__in=['INACTIVE', 'PREWORK'],
                                     **additional_args).distinct()
 
@@ -136,7 +139,9 @@ class PlanFinder:
             additional_args['is_onboarding'] = not CohortUser.objects.filter(
                 cohort__syllabus_version__syllabus=self.syllabus).exists()
 
-        plans = Plan.objects.filter(available_cohorts__syllabus_version__syllabus=self.syllabus,
+        args = (self.query, ) if self.query else tuple()
+        plans = Plan.objects.filter(*args,
+                                    available_cohorts__syllabus_version__syllabus=self.syllabus,
                                     available_cohorts__stage__in=['INACTIVE', 'PREWORK'],
                                     **additional_args).distinct()
 

@@ -74,6 +74,8 @@ def plan_serializer(self, plan, service, currency, groups=[], permissions=[], se
         plan.trial_duration,
         'trial_duration_unit':
         plan.trial_duration_unit,
+        'has_waiting_list':
+        plan.has_waiting_list,
         'is_renewable':
         plan.is_renewable,
         'owner':
