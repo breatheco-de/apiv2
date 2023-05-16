@@ -99,15 +99,7 @@ def has_permission(permission: str,
                         'will_consume': True,
                     }
 
-                    # session_created_right_now = False
-
                     if consumer:
-                        # items = Consumable.objects.filter(
-                        #     Q(valid_until__gte=utc_now) | Q(valid_until=None),
-                        #     user=request.user,
-                        #     service_item__service__groups__permissions__codename=permission).exclude(
-                        #         how_many=0).order_by('id')
-
                         items = Consumable.list(user=request.user, permission=permission)
                         context['consumables'] = items
 
@@ -125,7 +117,6 @@ def has_permission(permission: str,
                                 context['consumables'] = context['consumables'].exclude(id=item.id)
 
                     if consumer and context['will_consume'] and not context['consumables']:
-                        #TODO: send a url to recharge this service
                         raise PaymentException(
                             f'You do not have enough credits to access this service: {permission}',
                             slug='with-consumer-not-enough-consumables')
