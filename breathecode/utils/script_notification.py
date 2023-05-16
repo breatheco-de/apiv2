@@ -11,3 +11,7 @@ class ScriptNotification(Exception):
         self.btn_url = btn_url
         self.btn_label = btn_label
         super().__init__(details)
+
+
+class WrongScriptConfiguration(Exception):
+    pass

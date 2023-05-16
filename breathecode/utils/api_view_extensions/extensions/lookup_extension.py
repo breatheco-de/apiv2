@@ -279,8 +279,7 @@ class LookupExtension(ExtensionBase):
 
         return frozenset(result.items())
 
-    def build(self, lang: str, custom_fields: dict = dict(), overwrite: dict = dict(),
-              **kwargs: dict | tuple) -> tuple[tuple, dict]:
+    def build(self, lang: str, overwrite: dict = dict(), **kwargs: dict | tuple) -> tuple[tuple, dict]:
 
         # foreign
         ids = kwargs.get('ids', tuple())

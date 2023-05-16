@@ -1,17 +1,14 @@
 """
 Test /certificate
 """
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from breathecode.services import datetime_to_iso_format
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
+from django.utils import timezone
 from ..mixins import AdmissionsTestCase
+
+UTC_NOW = timezone.now()
 
 
 class CertificateTestSuite(AdmissionsTestCase):
@@ -59,9 +56,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_syllabus_schedule_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_syllabus_slug_version_version_without_syllabus(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
@@ -86,9 +80,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_syllabus_version_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_syllabus_slug_version_version(self):
         """Test /certificate without auth"""
         self.headers(academy=1)

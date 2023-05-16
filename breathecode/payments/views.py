@@ -41,6 +41,13 @@ class PlanView(APIView):
     extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request, plan_slug=None, service_slug=None):
+
+        def is_onboarding(value: str):
+            if filtering:
+                return Q()
+
+            return Q(is_onboarding=value.lower() == 'true')
+
         handler = self.extensions(request)
         lang = get_user_language(request)
 
@@ -60,19 +67,23 @@ class PlanView(APIView):
             return handler.response(serializer.data)
 
         filtering = 'cohort' in request.GET or 'syllabus' in request.GET
-        if 'cohort' in request.GET or 'syllabus' in request.GET:
-            items = PlanFinder(request).get_plans_belongs_from_request()
+        query = handler.lookup.build(lang,
+                                     strings={
+                                         'exact': [
+                                             'service_items__service__slug',
+                                         ],
+                                     },
+                                     overwrite={
+                                         'service_slug': 'service_items__service__slug',
+                                     },
+                                     custom_fields={'is_onboarding': is_onboarding})
+
+        if filtering:
+            items = PlanFinder(request,
+                               query=query).get_plans_belongs_from_request().exclude(status='DELETED')
 
         else:
-            items = Plan.objects.filter()
-
-        if not filtering and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
-            items = items.filter(is_onboarding=is_onboarding == 'true')
-
-        items = items.exclude(status='DELETED')
-
-        if service_slug:
-            items = items.filter(services__slug=service_slug)
+            items = Plan.objects.filter(query).exclude(status='DELETED')
 
         items = handler.queryset(items)
         serializer = GetPlanSerializer(items,
@@ -88,13 +99,20 @@ class AcademyPlanView(APIView):
 
     @capable_of('read_plan')
     def get(self, request, plan_id=None, plan_slug=None, service_slug=None, academy_id=None):
+
+        def is_onboarding(value: str):
+            if filtering:
+                return Q()
+
+            return Q(is_onboarding=value.lower() == 'true')
+
         handler = self.extensions(request)
         lang = get_user_language(request)
 
-        if plan_slug or plan_slug:
-            item = Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
-                                       Q(owner__id=academy_id) | Q(owner=None),
-                                       slug=plan_slug).exclude(status='DELETED').first()
+        if plan_id or plan_slug:
+            item = Plan.objects.filter(
+                Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False),
+                Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED').first()
             if not item:
                 raise ValidationException(translation(lang,
                                                       en='Plan not found',
@@ -109,19 +127,27 @@ class AcademyPlanView(APIView):
             return handler.response(serializer.data)
 
         filtering = 'cohort' in request.GET or 'syllabus' in request.GET
-        if 'cohort' in request.GET or 'syllabus' in request.GET:
-            items = PlanFinder(request).get_plans_belongs_from_request()
+        query = handler.lookup.build(lang,
+                                     strings={
+                                         'exact': [
+                                             'service_items__service__slug',
+                                         ],
+                                     },
+                                     overwrite={
+                                         'service_slug': 'service_items__service__slug',
+                                     },
+                                     custom_fields={'is_onboarding': is_onboarding})
+
+        if filtering:
+            items = PlanFinder(
+                request,
+                query=query).get_plans_belongs_from_request().filter(Q(owner__id=academy_id)
+                                                                     | Q(owner=None)).exclude(
+                                                                         status='DELETED')
 
         else:
-            items = Plan.objects.filter()
-
-        if not filtering and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
-            items = items.filter(is_onboarding=is_onboarding == 'true')
-
-        items = items.filter(Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED')
-
-        if service_slug:
-            items = items.filter(services__slug=service_slug).exclude(status='DELETED')
+            items = Plan.objects.filter(query,
+                                        Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED')
 
         items = handler.queryset(items)
         serializer = GetPlanSerializer(items,

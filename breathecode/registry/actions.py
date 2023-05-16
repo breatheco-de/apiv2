@@ -56,8 +56,8 @@ def allowed_mimes():
     return ['image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'image/jpg']
 
 
-def asset_images_bucket():
-    return os.getenv('ASSET_IMAGES_BUCKET', None)
+def asset_images_bucket(default=None):
+    return os.getenv('ASSET_IMAGES_BUCKET', default)
 
 
 def generate_external_readme(a):
@@ -822,9 +822,12 @@ def upload_image_to_bucket(img, asset):
     return img
 
 
-def add_syllabus_translations(_json):
+def add_syllabus_translations(_json: dict):
+    if not isinstance(_json, dict) or 'days' not in _json or not isinstance(_json['days'], list):
+        return _json
+
     day_count = -1
-    for day in _json['days']:
+    for day in _json.get('days', []):
         day_count += 1
         for asset_type in ['assignments', 'lessons', 'quizzes', 'replits']:
             index = -1

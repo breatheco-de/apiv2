@@ -23,9 +23,9 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     lang = get_user_language(request)
     items = get_my_event_types(request.user)
 
-    event = Event.objects.filter(Q(id=kwargs.get('event_id'))
-                                 | Q(slug=kwargs.get('event_slug'), slug__isnull=False),
-                                 event_type__in=items).first()
+    pk = Q(id=kwargs.get('event_id')) | Q(slug=kwargs.get('event_slug'), slug__isnull=False)
+    belongs_to_this_event = Q(event_type__in=items) | Q(host_user=request.user)
+    event = Event.objects.filter(pk, belongs_to_this_event).first()
 
     if not event:
         raise ValidationException(translation(lang,
@@ -45,9 +45,8 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
 
-    if event.academy and event.academy.available_as_saas:
-        context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
-        # context['will_consume'] = True
+    if event.host_user != request.user and event.academy and event.academy.available_as_saas:
+        context['will_consume'] = True
 
     kwargs['event'] = event
 
@@ -113,8 +112,7 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple,
                                  and live_class.cohort_time_slot.cohort.academy.available_as_saas)
 
     if cohort_available_as_saas or academy_available_as_saas:
-        context['will_consume'] = api.release.enable_consume_live_classes(context['request'].user)
-        # context['will_consume'] = True
+        context['will_consume'] = True
 
     utc_now = timezone.now()
     if live_class.ending_at < utc_now:

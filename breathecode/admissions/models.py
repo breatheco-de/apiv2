@@ -348,6 +348,7 @@ class Cohort(models.Model):
                                          null=True,
                                          blank=True)
 
+    intro_video = models.URLField(null=True, blank=True, default=None)
     schedule = models.ForeignKey(SyllabusSchedule,
                                  on_delete=models.SET_NULL,
                                  default=None,

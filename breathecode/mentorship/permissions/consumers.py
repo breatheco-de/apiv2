@@ -1,9 +1,7 @@
 from datetime import timedelta
 from django.db.models import Q
 from breathecode.authenticate.actions import get_user_language
-from breathecode.events.models import Event, EventType
 from breathecode.mentorship.models import MentorProfile, MentorshipService
-from breathecode.payments.models import Consumable
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
@@ -41,9 +39,7 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
     # avoid call LaunchDarkly if mentorship_service is empty
     if (mentor_profile.user.id != request.user.id and mentorship_service
             and mentorship_service.academy.available_as_saas):
-        context['will_consume'] = api.release.enable_consume_mentorships(context['request'].user,
-                                                                         mentorship_service)
-        # context['will_consume'] = True
+        context['will_consume'] = True
 
     else:
         context['will_consume'] = False

@@ -427,6 +427,7 @@ class AcademyEventTestSuite(EventTestCase):
         online_meeting_url = self.bc.fake.url()
         delta = timedelta(seconds=random.randint(1, 1000))
         event = {
+            'host_user_id': None,
             'starting_at': UTC_NOW - delta,
             'ending_at': UTC_NOW + delta,
             'live_stream_url': online_meeting_url,
@@ -565,6 +566,7 @@ class AcademyEventTestSuite(EventTestCase):
         online_meeting_url = self.bc.fake.url()
         delta = timedelta(seconds=random.randint(1, 1000))
         event = {
+            'host_user_id': None,
             'starting_at': UTC_NOW - delta,
             'ending_at': UTC_NOW + delta,
             'live_stream_url': online_meeting_url,
@@ -653,6 +655,7 @@ class AcademyEventTestSuite(EventTestCase):
         online_meeting_url = self.bc.fake.url()
         delta = timedelta(seconds=random.randint(1, 1000))
         event = {
+            'host_user_id': None,
             'starting_at': UTC_NOW + delta,
             'ending_at': UTC_NOW + delta,
             'live_stream_url': online_meeting_url,
@@ -723,3 +726,77 @@ class AcademyEventTestSuite(EventTestCase):
         self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [
             call(args=(1, 1), eta=UTC_NOW + delta),
         ])
+
+    # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group and Permission
+    # When: Feature flag set to True and event start and end in the future,
+    #    -> authenticate user is event host
+    # Then: return 200 and avoid to create a ConsumptionSession
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
+           MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
+    def test_with_consumable__it_try_to_consume__with_live_event__in_the_future__show_countdown(self):
+        permission = {'codename': 'event_join'}
+        online_meeting_url = self.bc.fake.url()
+        delta = timedelta(seconds=random.randint(1, 1000))
+        event = {
+            'host_user_id': 1,
+            'starting_at': UTC_NOW + delta,
+            'ending_at': UTC_NOW + delta,
+            'live_stream_url': online_meeting_url,
+        }
+        event_type = {'icon_url': self.bc.fake.url()}
+
+        is_subscription = bool(random.randbytes(1))
+        i_owe_you = {
+            'next_payment_at': UTC_NOW + timedelta(weeks=4),
+            'valid_until': UTC_NOW + timedelta(weeks=4),
+        }
+
+        if is_subscription and bool(random.randbytes(1)):
+            i_owe_you['valid_until'] = None
+
+        academy = {'available_as_saas': True}
+        extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
+        model = self.bc.database.create(
+            user=1,
+            academy=academy,
+            group=1,
+            permission=permission,
+            event=event,
+            event_type=event_type,
+            # event_type_set=1,
+            # consumable=1,
+            token=1,
+            **extra)
+        querystring = self.bc.format.to_querystring({'token': model.token.key})
+
+        url = reverse_lazy('events:me_event_id_join', kwargs={'event_id': model.event.id}) + f'?{querystring}'
+
+        response = self.client.get(url)
+
+        content = self.bc.format.from_bytes(response.content)
+        expected = render_countdown(model.event, model.token)
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(self.bc.database.list_of('events.Event'), [
+            self.bc.format.to_dict(model.event),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+
+        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+        self.assertEqual(self.bc.database.list_of('events.EventCheckin'), [])
+
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])

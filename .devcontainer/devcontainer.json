@@ -24,7 +24,8 @@
                 "gruntfuggly.todo-tree",
                 "redhat.vscode-yaml",
                 "bungcip.better-toml",
-                "TabNine.tabnine-vscode"
+                "TabNine.tabnine-vscode",
+                "github.vscode-github-actions"
             ]
         }
     },
