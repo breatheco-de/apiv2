@@ -518,6 +518,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'slug': None,
             'live_stream_url': None,
             'host_user': 1,
+            'free_for_bootcamps': None,
             **data,
         }
 
@@ -530,6 +531,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'starting_at': current_date,
             'ending_at': current_date,
             'slug': None,
+            'free_for_bootcamps': None,
         }])
 
     """
@@ -717,6 +719,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'currency': 'USD',
             'live_stream_url': None,
             'host_user': 1,
+            'free_for_bootcamps': None,
             **data,
         }
 
@@ -728,6 +731,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'organization_id': 1,
             'starting_at': current_date,
             'ending_at': current_date,
+            'free_for_bootcamps': None,
         }])
 
     """
@@ -807,6 +811,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'currency': 'USD',
             'live_stream_url': None,
             'host_user': 1,
+            'free_for_bootcamps': None,
             **data,
         }
 
@@ -818,6 +823,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'organization_id': 1,
             'starting_at': current_date,
             'ending_at': current_date,
+            'free_for_bootcamps': None,
         }])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())

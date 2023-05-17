@@ -1,7 +1,7 @@
 from rest_framework.exceptions import PermissionDenied
 from django.contrib.auth.models import AnonymousUser
 
-from breathecode.utils.exceptions import ProgramingError
+from breathecode.utils.exceptions import ProgrammingError
 from ..validation_exception import ValidationException
 from rest_framework.views import APIView
 
@@ -14,7 +14,7 @@ def capable_of(capability=None):
 
         def wrapper(*args, **kwargs):
             if isinstance(capability, str) == False:
-                raise ProgramingError('Capability must be a string')
+                raise ProgrammingError('Capability must be a string')
 
             try:
                 if hasattr(args[0], '__class__') and isinstance(args[0], APIView):
@@ -31,7 +31,7 @@ def capable_of(capability=None):
                     raise IndexError()
 
             except IndexError:
-                raise ProgramingError('Missing request information, use this decorator with DRF View')
+                raise ProgrammingError('Missing request information, use this decorator with DRF View')
 
             academy_id = get_academy_from_capability(kwargs, request, capability)
             if academy_id:
