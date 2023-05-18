@@ -145,7 +145,6 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         return asset
     except Exception as e:
-        #        raise e
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -153,6 +152,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
             message = str(e).replace('"', '\'')
 
         logger.error(f'Error updating {asset_slug} from github: ' + str(message))
+
         # if the exception triggered too early, the asset will be early
         if asset is not None:
             asset.status_text = str(message)
