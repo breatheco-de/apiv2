@@ -103,7 +103,7 @@ def async_activecampaign_webhook(self, webhook_id):
     webhook = ActiveCampaignWebhook.objects.filter(id=webhook_id).first()
     ac_academy = webhook.ac_academy
 
-    bind_deal_with_webhook(webhook)
+    bind_formentry_with_webhook(webhook)
 
     if ac_academy is not None:
         try:
