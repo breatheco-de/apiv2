@@ -337,7 +337,6 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
 
-    ##########################################################3
     """
     🔽🔽🔽 ServiceStockScheduler with Subscription that is over
     """

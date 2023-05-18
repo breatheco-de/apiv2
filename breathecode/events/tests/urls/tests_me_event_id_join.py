@@ -833,8 +833,6 @@ class AcademyEventTestSuite(EventTestCase):
             call(args=(1, 1), eta=UTC_NOW + delta),
         ])
 
-    # ------------------------------
-
     # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group, Permission,
     #     -> Cohort and CohortUser
     # When: Feature flag set to True and event end in the future,
@@ -1026,8 +1024,6 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.bc.database.list_of('events.EventCheckin'), [
             event_checkin_serializer(1, model.event, model.user),
         ])
-
-    #################################
 
     # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group, Permission,
     #     -> Cohort and CohortUser
