@@ -371,13 +371,14 @@ def bind_with_formentry(modeladmin, request, queryset):
 
 def async_process_hook(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
-    for hook in queryset.all():
+    for hook in queryset.all().order_by('created_at'):
         async_activecampaign_webhook.delay(hook.id)
 
 
 def process_hook(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
-    for hook in queryset.all():
+    for hook in queryset.all().order_by('created_at'):
+        print(f'Procesing hook: {hook.id}')
         ac_academy = hook.ac_academy
         client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
         client.execute_action(hook.id, acp_ids)
