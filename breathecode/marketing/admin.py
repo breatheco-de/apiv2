@@ -398,7 +398,11 @@ class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
             'ERROR': 'bg-error',
             'PENDING': 'bg-warning',
         }
-        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        if obj.status == 'DONE':
+            return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(
+            f"<div><span class='badge {colors[obj.status]}'>{obj.status}</span></div><small>{obj.status_text}</small>"
+        )
 
     def formentry(self, obj):
         if obj.form_entry is None:
