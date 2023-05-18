@@ -49,5 +49,9 @@ def deal_add(self, webhook, payload: dict, acp_ids):
 
     entry.save()
 
+    # update entry on the webhook
+    webhook.form_entry = entry
+    webhook.save()
+
     logger.debug(f"Form Entry successfuly updated with deal {str(payload['deal[id]'])} information")
     return True
