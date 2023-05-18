@@ -46,7 +46,7 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
         entry.ac_deal_owner_full_name = payload['deal[owner_firstname]'] + ' ' + payload[
             'deal[owner_lastname]']
 
-        entry.ac_deal_amount = float(payload['deal[value]'])
+        entry.ac_deal_amount = float(payload['deal[value_raw]'])
         entry.ac_deal_currency_code = payload['deal[currency]']
 
     # lets get the custom fields and use them to update some local fields
