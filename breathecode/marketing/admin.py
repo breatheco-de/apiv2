@@ -377,6 +377,7 @@ run_hook.short_description = 'Process Hook'
 class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
     list_display = ('id', 'webhook_type', 'current_status', 'run_at', 'initiated_by', 'created_at')
     list_filter = ['status', 'webhook_type']
+    raw_id_fields = ['form_entry']
     actions = [run_hook]
 
     def current_status(self, obj):
