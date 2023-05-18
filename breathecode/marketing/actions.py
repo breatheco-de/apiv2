@@ -1,4 +1,4 @@
-import os, re, requests
+import os, re, requests, json
 from typing import Optional
 from itertools import chain
 from django.utils import timezone
@@ -51,6 +51,17 @@ acp_ids = {
         'utm_course': '6',
     }
 }
+
+
+def bind_formentry_with_webhook(webhook):
+    payload = json.loads(webhook.payload)
+
+    if 'deal[id]' in payload:
+        entry = FormEntry.objects.filter(ac_deal_id=payload['deal[id]']).order_by('-created_at').first()
+        webhook.form_entry = entry
+        webhook.save()
+        return True
+    return False
 
 
 def set_optional(contact, key, data, custom_key=None):

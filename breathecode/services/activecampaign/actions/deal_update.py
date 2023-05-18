@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 status = {
     'Won': 'WON',
     'Lost': 'LOST',
+    '0': None,
     '1': 'WON',
     '2': 'LOST',
 }

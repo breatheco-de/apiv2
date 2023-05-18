@@ -6,6 +6,7 @@ from breathecode.marketing.models import FormEntry
 status = {
     'Won': 'WON',
     'Lost': 'LOST',
+    '0': None,
     '1': 'WON',
     '2': 'LOST',
 }

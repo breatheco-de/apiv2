@@ -5,7 +5,8 @@ from .models import (Course, CourseTranslation, FormEntry, Tag, Automation, Shor
                      ActiveCampaignWebhook, AcademyAlias, Downloadable, LeadGenerationApp, UTMField,
                      AcademyProxy)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
-                      sync_tags, sync_automations, acp_ids, delete_tag)
+                      sync_tags, sync_automations, acp_ids, delete_tag, bind_formentry_with_webhook)
+from .tasks import (async_activecampaign_webhook)
 from breathecode.services.activecampaign import ActiveCampaign
 from django.utils import timezone
 from django.utils.html import format_html
@@ -362,7 +363,19 @@ class ShortLinkAdmin(admin.ModelAdmin, AdminExportCsvMixin):
                            short_link=f'https://s.4geeks.co/s/{obj.slug}')
 
 
-def run_hook(modeladmin, request, queryset):
+def bind_with_formentry(modeladmin, request, queryset):
+    # stay this here for use the poor mocking system
+    for hook in queryset.all():
+        bind_formentry_with_webhook(hook)
+
+
+def async_process_hook(modeladmin, request, queryset):
+    # stay this here for use the poor mocking system
+    for hook in queryset.all():
+        async_activecampaign_webhook.delay(hook.id)
+
+
+def process_hook(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for hook in queryset.all():
         ac_academy = hook.ac_academy
@@ -370,15 +383,13 @@ def run_hook(modeladmin, request, queryset):
         client.execute_action(hook.id, acp_ids)
 
 
-run_hook.short_description = 'Process Hook'
-
-
 @admin.register(ActiveCampaignWebhook)
 class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'webhook_type', 'current_status', 'run_at', 'initiated_by', 'created_at')
-    list_filter = ['status', 'webhook_type']
+    list_display = ('id', 'webhook_type', 'current_status', 'run_at', 'created_at', 'formentry')
+    search_fields = ['form_entry__email', 'form_entry__ac_deal_id']
+    list_filter = ['status', 'webhook_type', 'form_entry__location']
     raw_id_fields = ['form_entry']
-    actions = [run_hook]
+    actions = [process_hook, async_process_hook, bind_with_formentry]
 
     def current_status(self, obj):
         colors = {
@@ -387,6 +398,12 @@ class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
             'PENDING': 'bg-warning',
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
+    def formentry(self, obj):
+        if obj.form_entry is None:
+            return '-'
+        return format_html(
+            f"<a href='/admin/marketing/formentry/{obj.form_entry.id}/change/'>{str(obj.form_entry)}</a>")
 
 
 @admin.register(Downloadable)
