@@ -113,7 +113,6 @@ class ActiveCampaign:
 
         webhook = ActiveCampaignWebhook()
         webhook.webhook_type = context['type']
-        webhook.run_at = context['date_time']
         webhook.initiated_by = context['initiated_by']
         webhook.ac_academy = ac_academy
         webhook.status = 'PENDING'
