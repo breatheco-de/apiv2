@@ -56,11 +56,19 @@ reattempt_add_event_slug_as_acp_tag.short_description = 'Reattempt add event slu
 # Register your models here.
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    list_display = ('slug', 'eventbrite_sync_status', 'title', 'eventbrite_status', 'starting_at',
+    list_display = ('slug', 'eventbrite_sync_status', 'title', 'status', 'eventbrite_status', 'starting_at',
                     'ending_at', 'eventbrite_sync_description', 'sync_with_eventbrite')
     list_filter = [
-        'eventbrite_status', 'eventbrite_sync_status', 'sync_with_eventbrite', 'currency', 'lang', 'academy',
-        'organization', 'online_event', 'event_type', 'status'
+        'status',
+        'eventbrite_status',
+        'eventbrite_sync_status',
+        'sync_with_eventbrite',
+        'currency',
+        'lang',
+        'academy',
+        'organization',
+        'online_event',
+        'event_type',
     ]
     search_fields = ['slug', 'title', 'eventbrite_id', 'eventbrite_organizer_id']
     actions = ['export_as_csv', reattempt_add_event_slug_as_acp_tag]

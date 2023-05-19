@@ -108,7 +108,7 @@ class AssetKeywordBigSerializer(serpy.Serializer):
     title = serpy.Field()
     lang = serpy.Field()
     cluster = KeywordClusterSmallSerializer(required=False)
-    
+
     all_assets = serpy.MethodField()
 
     def get_all_assets(self, obj):
@@ -340,14 +340,15 @@ class PostAssetSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         validated_data = super().validate(data)
-        
+
         if 'lang' not in validated_data or validated_data['lang'] is None:
-            raise ValidationException(f'Asset is missing a language',slug='no-language')
+            raise ValidationException(f'Asset is missing a language', slug='no-language')
 
         if 'category' not in data or data['category'] is None:
             if 'all_translations' not in validated_data or len(validated_data['all_translations']) == 0:
                 raise ValidationException(
-                    f'No category was specified and we could not retrieve it from any translation')
+                    f'No category was specified and we could not retrieve it from any translation',
+                    slug='no-category')
 
             asset_translation = Asset.objects.filter(slug=validated_data['all_translations'][0]).first()
             if asset_translation is None or asset_translation.category is None:
@@ -606,12 +607,14 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 if key != 'status' and data[key] != getattr(self.instance, key):
                     raise ValidationException(f'You are only allowed to change the status of this asset',
                                               status.HTTP_400_BAD_REQUEST)
-            if 'status' in data and data['status'] not in ['DRAFT', 'WRITING', 'UNASSIGNED', 'OPTIMIZED']:
+            if 'status' in data and data['status'] not in [
+                    'DRAFT', 'WRITING', 'NOT_STARTED', 'OPTIMIZED', 'PLANNING'
+            ]:
                 raise ValidationException(
-                    f'You can only set the status to draft, writing, optimized, or unassigned',
+                    f'You can only set the status to not started, draft, writing, optimized, or planning',
                     status.HTTP_400_BAD_REQUEST)
 
-            if self.instance.author is None and data['status'] != 'UNASSIGNED':
+            if self.instance.author is None and data['status'] != 'NOT_STARTED':
                 data['author'] = session_user
             elif self.instance.author.id != session_user.id:
                 raise ValidationException(f'You can only update card assigned to yourself',

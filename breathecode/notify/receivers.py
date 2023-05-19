@@ -6,6 +6,10 @@ from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.marketing.signals import form_entry_won_or_lost
 from breathecode.marketing.models import FormEntry
 from breathecode.admissions.signals import student_edu_status_updated
+from breathecode.registry.models import Asset
+from breathecode.registry.signals import asset_status_updated
+from breathecode.events.models import EventCheckin, Event
+from breathecode.events.signals import new_event_attendee, new_event_order, event_status_updated
 from breathecode.admissions.models import CohortUser
 from breathecode.admissions.serializers import CohortUserHookSerializer
 from .tasks import send_mentorship_starting_notification
@@ -58,6 +62,30 @@ def model_deleted(sender, instance, using, **kwargs):
 def form_entry_updated(sender, instance, **kwargs):
     model_label = get_model_label(instance)
     HookManager.process_model_event(instance, model_label, 'won_or_lost')
+
+
+@receiver(new_event_attendee, sender=EventCheckin)
+def handle_new_event_attendee(sender, instance, **kwargs):
+    model_label = get_model_label(instance)
+    HookManager.process_model_event(instance, model_label, 'new_attendee')
+
+
+@receiver(new_event_order, sender=EventCheckin)
+def handle_new_event_order(sender, instance, **kwargs):
+    model_label = get_model_label(instance)
+    HookManager.process_model_event(instance, model_label, 'new_event_order')
+
+
+@receiver(event_status_updated, sender=Event)
+def handle_event_status_updated(sender, instance, **kwargs):
+    model_label = get_model_label(instance)
+    HookManager.process_model_event(instance, model_label, 'event_status_updated')
+
+
+@receiver(asset_status_updated, sender=Asset)
+def handle_asset_status_updated(sender, instance, **kwargs):
+    model_label = get_model_label(instance)
+    HookManager.process_model_event(instance, model_label, 'asset_status_updated')
 
 
 @receiver(student_edu_status_updated, sender=CohortUser)

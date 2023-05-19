@@ -8,7 +8,7 @@ from breathecode.admissions.models import Academy, Cohort, SyllabusVersion
 from breathecode.events.models import Event
 from django.utils import timezone
 from django.db.models import Q
-from .signals import asset_slug_modified, asset_readme_modified, asset_title_modified
+from .signals import (asset_slug_modified, asset_readme_modified, asset_title_modified, asset_status_updated)
 from slugify import slugify
 from breathecode.assessment.models import Assessment
 
@@ -241,13 +241,15 @@ DIFFICULTY = (
     (BEGINNER, 'Beginner'),
 )
 
-UNASSIGNED = 'UNASSIGNED'
+NOT_STARTED = 'NOT_STARTED'
+PLANNING = 'PLANNING'
 WRITING = 'WRITING'
 DRAFT = 'DRAFT'
 OPTIMIZED = 'OPTIMIZED'
 PUBLISHED = 'PUBLISHED'
 ASSET_STATUS = (
-    (UNASSIGNED, 'Unassigned'),
+    (NOT_STARTED, 'Not Started'),
+    (PLANNING, 'Planning'),
     (WRITING, 'Writing'),
     (DRAFT, 'Draft'),
     (OPTIMIZED, 'Optimized'),
@@ -269,6 +271,7 @@ class Asset(models.Model):
         super(Asset, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
         self.__old_title = self.title
+        self.__old_status = self.status
         self.__old_readme_raw = self.readme_raw
 
     slug = models.SlugField(
@@ -342,7 +345,7 @@ class Asset(models.Model):
 
     status = models.CharField(max_length=20,
                               choices=ASSET_STATUS,
-                              default=UNASSIGNED,
+                              default=NOT_STARTED,
                               help_text='Related to the publishing of the asset')
     sync_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
@@ -440,6 +443,7 @@ class Asset(models.Model):
         slug_modified = False
         title_modified = False
         readme_modified = False
+        status_modified = False
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
@@ -448,6 +452,9 @@ class Asset(models.Model):
 
         if self.__old_title != self.title:
             title_modified = True
+
+        if self.__old_status != self.status:
+            status_modified = True
 
         # only validate this on creation
         if self.pk is None or self.__old_slug != self.slug:
@@ -466,6 +473,7 @@ class Asset(models.Model):
         if slug_modified: asset_slug_modified.send(instance=self, sender=Asset)
         if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
         if title_modified: asset_title_modified.send(instance=self, sender=Asset)
+        if status_modified: asset_status_updated.send(instance=self, sender=Asset)
 
     def get_preview_generation_url(self):
 

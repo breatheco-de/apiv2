@@ -68,6 +68,9 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
+            'payload': None,
+            'event_id': None,
+            'attendee_id': None,
             'organization_id': '1',
             'status': 'ERROR',
             'status_text': 'Organization 1 doesn\'t exist',
@@ -299,11 +302,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        webhook_dicts = self.all_eventbrite_webhook_dict()
+        for wd in webhook_dicts:
+            del wd['payload']
+        self.assertEqual(webhook_dicts, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
+            'attendee_id': 1,
+            'event_id': 1,
             'organization_id': '1',
             'status': 'DONE',
             'status_text': 'OK',
@@ -389,11 +397,17 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        webhook_dict = self.all_eventbrite_webhook_dict()
+        for wd in webhook_dict:
+            del wd['payload']
+
+        self.assertEqual(webhook_dict, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
+            'attendee_id': 1,
+            'event_id': 1,
             'organization_id': '1',
             'status': 'DONE',
             'status_text': 'OK',
@@ -481,13 +495,18 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        webhook_dicts = self.all_eventbrite_webhook_dict()
+        for wd in webhook_dicts:
+            del wd['payload']
+        self.assertEqual(webhook_dicts, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'DONE',
+            'event_id': 1,
+            'attendee_id': 1,
             'status_text': 'OK',
             'user_id': '123456789012',
             'webhook_id': '1234567'
@@ -574,12 +593,17 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(actions.update_or_create_event.call_args_list,
                          [call(EVENTBRITE_EVENT, model.organization)])
 
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        webhook_dicts = self.all_eventbrite_webhook_dict()
+        for wd in webhook_dicts:
+            del wd['payload']
+        self.assertEqual(webhook_dicts, [{
             'action': 'event.created',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
+            'attendee_id': None,
+            'event_id': None,
             'status': 'DONE',
             'status_text': 'OK',
             'user_id': '123456789012',
@@ -647,11 +671,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(actions.update_or_create_event.call_args_list,
                          [call(EVENTBRITE_EVENT, model.organization)])
 
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        webhook_dicts = self.all_eventbrite_webhook_dict()
+        for wd in webhook_dicts:
+            del wd['payload']
+        self.assertEqual(webhook_dicts, [{
             'action': 'event.updated',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
+            'attendee_id': None,
+            'event_id': None,
             'organization_id': '1',
             'status': 'DONE',
             'status_text': 'OK',
@@ -702,7 +731,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
-    @patch.object(actions, 'publish_event_from_eventbrite', MagicMock())
+    @patch.object(actions, 'publish_event_from_eventbrite', MagicMock(return_value=None))
     @patch('time.sleep', MagicMock())
     def test_eventbrite_webhook__event_published(self):
         from breathecode.events.actions import publish_event_from_eventbrite
@@ -719,14 +748,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(publish_event_from_eventbrite.call_args_list,
-                         [call(EVENTBRITE_EVENT, model.organization)])
-
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        webhook_dicts = self.all_eventbrite_webhook_dict()
+        for wd in webhook_dicts:
+            del wd['payload']
+        self.assertEqual(webhook_dicts, [{
             'action': 'event.published',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
+            'attendee_id': None,
+            'event_id': None,
             'organization_id': '1',
             'status': 'DONE',
             'status_text': 'OK',

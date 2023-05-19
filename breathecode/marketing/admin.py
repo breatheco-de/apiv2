@@ -194,7 +194,7 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
             'PENDING_TRANSLATION': 'bg-error',
             'PENDING': 'bg-warning',
             'WARNING': 'bg-warning',
-            'UNASSIGNED': 'bg-error',
+            'NOT_STARTED': 'bg-error',
             'UNLISTED': 'bg-warning',
         }
 

@@ -2,6 +2,7 @@ import binascii
 import os
 from django.db import models
 from django.contrib.auth.models import User
+from .signals import event_status_updated, new_event_order, new_event_attendee
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Syllabus
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
@@ -141,10 +142,12 @@ class EventType(models.Model):
             raise e
 
 
+FINISHED = 'FINISHED'
 EVENT_STATUS = (
     (ACTIVE, 'Active'),
     (DRAFT, 'Draft'),
     (DELETED, 'Deleted'),
+    (FINISHED, 'Finished'),
 )
 
 USD = 'USD'  # United States dollar
@@ -162,6 +165,11 @@ CURRENCIES = (
 
 
 class Event(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(Event, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
+
     slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
@@ -247,10 +255,16 @@ class Event(models.Model):
     def save(self, *args, **kwargs):
         from .signals import event_saved
 
+        status_updated = False
+        if self.__old_status != self.status:
+            status_updated = True
+
         created = not self.id
         super().save(*args, **kwargs)
 
         event_saved.send(instance=self, sender=self.__class__, created=created)
+
+        if status_updated: event_status_updated.send(instance=self, sender=Event)
 
 
 PENDING = 'PENDING'
@@ -262,6 +276,11 @@ CHECKIN_STATUS = (
 
 
 class EventCheckin(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(EventCheckin, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
+
     email = models.EmailField(max_length=150)
 
     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
@@ -274,6 +293,22 @@ class EventCheckin(models.Model):
 
     def __str__(self):
         return self.email
+
+    def save(self, *args, **kwargs):
+
+        creating = False
+        if self.pk is None:
+            creating = True
+
+        status_updated = False
+        if self.__old_status != self.status:
+            status_updated = True
+
+        super().save(*args, **kwargs)
+
+        if creating: new_event_order.send(instance=self, sender=EventCheckin)
+        elif status_updated and self.status == 'DONE':
+            new_event_attendee.send(instance=self, sender=EventCheckin)
 
 
 # PENDING = 'PENDING'

@@ -1028,7 +1028,7 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
             raise ValidationException('This comment does not exist for this academy', 404)
 
         data = {**request.data}
-        if 'status' in request.data and request.data['status'] == 'UNASSIGNED':
+        if 'status' in request.data and request.data['status'] == 'NOT_STARTED':
             data['author'] = None
 
         serializer = PutAssetCommentSerializer(comment,
