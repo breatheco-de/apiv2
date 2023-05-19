@@ -30,10 +30,13 @@ def order_placed(self, webhook, payload: dict):
 
     local_event = Event.objects.filter(eventbrite_id=event_id).first()
 
-    if not local_event:
+    if not local_event or local_event is None:
         message = "event doesn't exist"
         logger.debug(message)
         raise Exception(message)
+
+    webhook.event = local_event
+    webhook.save()
 
     local_attendee = User.objects.filter(email=email).first()
 
