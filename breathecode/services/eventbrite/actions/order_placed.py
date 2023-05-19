@@ -34,11 +34,15 @@ def order_placed(self, webhook, payload: dict):
         message = "event doesn't exist"
         logger.debug(message)
         raise Exception(message)
-
     webhook.event = local_event
-    webhook.save()
 
     local_attendee = User.objects.filter(email=email).first()
+    if local_attendee is not None:
+        webhook.attendee = local_attendee
+
+    # we can save the webhook info an continue with the rest of the action
+    # move this line down if you need to add more stuff to the webhook further down
+    webhook.save()
 
     if not EventCheckin.objects.filter(email=email, event=local_event).count():
         EventCheckin(email=email, status='PENDING', event=local_event, attendee=local_attendee).save()

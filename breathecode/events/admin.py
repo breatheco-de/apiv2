@@ -108,11 +108,13 @@ def reattempt_eventbrite_webhook(modeladmin, request, queryset):
 
 @admin.register(EventbriteWebhook)
 class EventbriteWebhookAdmin(admin.ModelAdmin):
-    list_display = ('api_url', 'event', 'current_status', 'action', 'organization', 'endpoint_url',
-                    'created_at')
+    list_display = ('id', 'current_status', 'action', 'organization', 'user_attendee', 'event', 'created_at')
     list_filter = ['organization_id', 'status', 'action']
-    search_fields = ['organization_id', 'status']
-    raw_id_fields = ['event']
+    search_fields = [
+        'organization_id', 'status', 'event__title', 'event__slug', 'attendee__email', 'attendee__first_name',
+        'attendee__last_name'
+    ]
+    raw_id_fields = ['event', 'attendee']
     actions = [reattempt_eventbrite_webhook]
 
     def organization(self, obj):
@@ -129,6 +131,11 @@ class EventbriteWebhookAdmin(admin.ModelAdmin):
         return format_html(
             f"<div><span class='badge {colors[obj.status]}'>{obj.status}</span></div><small>{obj.status_text}</small>"
         )
+
+    def user_attendee(self, obj):
+        if obj.attendee is None:
+            return '-'
+        return format_html(f"<a href='/admin/auth/user/{obj.attendee.id}/change/'>{str(obj.attendee)}</a>")
 
 
 @admin.register(EventTypeVisibilitySetting)
