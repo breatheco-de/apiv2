@@ -291,6 +291,9 @@ class EventbriteWebhook(models.Model):
     user_id = models.CharField(max_length=20, blank=True, null=True, default=None)
     action = models.CharField(max_length=15, blank=True, null=True, default=None)
     webhook_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+    payload = models.JSONField(blank=True, null=True, default=None, help_text='Will be set by async task')
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, blank=True, null=True, default=None)
+
     organization_id = models.CharField(max_length=20, blank=True, null=True, default=None)
     endpoint_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 

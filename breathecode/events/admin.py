@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
-
+from django.utils.html import format_html
 import breathecode.events.tasks as tasks
 from .models import Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
 from .actions import sync_org_venues, sync_org_events
@@ -108,14 +108,27 @@ def reattempt_eventbrite_webhook(modeladmin, request, queryset):
 
 @admin.register(EventbriteWebhook)
 class EventbriteWebhookAdmin(admin.ModelAdmin):
-    list_display = ('api_url', 'user_id', 'action', 'webhook_id', 'organization', 'endpoint_url', 'status',
-                    'status_text', 'created_at')
+    list_display = ('api_url', 'event', 'current_status', 'action', 'organization', 'endpoint_url',
+                    'created_at')
     list_filter = ['organization_id', 'status', 'action']
     search_fields = ['organization_id', 'status']
+    raw_id_fields = ['event']
     actions = [reattempt_eventbrite_webhook]
 
     def organization(self, obj):
         return Organization.objects.filter(eventbrite_id=obj.organization_id).first()
+
+    def current_status(self, obj):
+        colors = {
+            'DONE': 'bg-success',
+            'ERROR': 'bg-error',
+            'PENDING': 'bg-warning',
+        }
+        if obj.status == 'DONE':
+            return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(
+            f"<div><span class='badge {colors[obj.status]}'>{obj.status}</span></div><small>{obj.status_text}</small>"
+        )
 
 
 @admin.register(EventTypeVisibilitySetting)

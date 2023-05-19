@@ -18,12 +18,14 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
     # prevent circular dependency import between thousand modules previuosly loaded and cached
     from breathecode.marketing.models import FormEntry
 
-    entry = FormEntry.objects.filter(ac_deal_id=payload['deal[id]']).order_by('-created_at').first()
+    entry = FormEntry.objects.filter(ac_deal_id=payload['deal[id]'],
+                                     storage_status='PERSISTED').order_by('-created_at').first()
     if entry is None and 'deal[contactid]' in payload:
-        entry = FormEntry.objects.filter(
-            ac_contact_id=payload['deal[contactid]']).order_by('-created_at').first()
+        entry = FormEntry.objects.filter(ac_contact_id=payload['deal[contactid]'],
+                                         storage_status='PERSISTED').order_by('-created_at').first()
     if entry is None and 'deal[contact_email]' in payload:
-        entry = FormEntry.objects.filter(email=payload['deal[contact_email]']).order_by('-created_at').first()
+        entry = FormEntry.objects.filter(email=payload['deal[contact_email]'],
+                                         storage_status='PERSISTED').order_by('-created_at').first()
     if entry is None:
         raise Exception(
             f'Impossible to find formentry with deal {payload["deal[id]"]} for webhook {webhook.id} -> '
