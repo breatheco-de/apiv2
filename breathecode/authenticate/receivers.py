@@ -81,7 +81,10 @@ def unset_user_group(sender, instance, **kwargs):
 @receiver(pre_delete, sender=CohortUser)
 def post_delete_cohort_user(sender, instance, **kwargs):
     logger.debug('Cohort user deleted, removing from organization')
-    async_remove_from_organization(instance.cohort.id, instance.user.id, force=True)
+    try:
+        async_remove_from_organization(instance.cohort.id, instance.user.id, force=True)
+    except Exception as e:
+        logger.debug(str(e))
 
 
 @receiver(student_edu_status_updated, sender=CohortUser)
