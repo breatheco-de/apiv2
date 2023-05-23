@@ -14,7 +14,7 @@ TIMEZONES = [
 ]
 
 
-def random_datetime_interger():
+def random_datetime_integer():
     year = '{:04d}'.format(randint(2021, 2999))
     month = '{:02d}'.format(randint(1, 12))
     day = '{:02d}'.format(randint(1, 28))
@@ -185,8 +185,8 @@ class AdmissionsModelsMixin(ModelsMixin):
 
         if not 'syllabus_schedule_time_slot' in models and is_valid(syllabus_schedule_time_slot):
             kargs = {
-                'starting_at': random_datetime_interger(),
-                'ending_at': random_datetime_interger(),
+                'starting_at': random_datetime_integer(),
+                'ending_at': random_datetime_integer(),
                 'timezone': choice(TIMEZONES),
             }
 
@@ -204,8 +204,8 @@ class AdmissionsModelsMixin(ModelsMixin):
 
         if not 'cohort_time_slot' in models and (is_valid(cohort_time_slot) or is_valid(live_class)):
             kargs = {
-                'starting_at': random_datetime_interger(),
-                'ending_at': random_datetime_interger(),
+                'starting_at': random_datetime_integer(),
+                'ending_at': random_datetime_integer(),
                 'timezone': choice(TIMEZONES),
             }
 

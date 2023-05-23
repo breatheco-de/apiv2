@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
-from breathecode.utils.datetime_interger import from_now
+from breathecode.utils.datetime_integer import from_now
 from breathecode.utils import getLogger
 from django.db.models import QuerySet
 from breathecode.activity.tasks import get_attendancy_log

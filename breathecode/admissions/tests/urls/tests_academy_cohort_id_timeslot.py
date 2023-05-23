@@ -13,8 +13,8 @@ def get_serializer(self, cohort_time_slot):
     return {
         'id': cohort_time_slot.id,
         'cohort': cohort_time_slot.cohort.id,
-        'starting_at': self.interger_to_iso(cohort_time_slot.timezone, cohort_time_slot.starting_at),
-        'ending_at': self.interger_to_iso(cohort_time_slot.timezone, cohort_time_slot.ending_at),
+        'starting_at': self.integer_to_iso(cohort_time_slot.timezone, cohort_time_slot.starting_at),
+        'ending_at': self.integer_to_iso(cohort_time_slot.timezone, cohort_time_slot.ending_at),
         'recurrent': cohort_time_slot.recurrent,
         'recurrency_type': cohort_time_slot.recurrency_type,
         'created_at': self.datetime_to_iso(cohort_time_slot.created_at),

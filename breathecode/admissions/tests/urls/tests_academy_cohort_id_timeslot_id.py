@@ -116,9 +116,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort':
             model.cohort_time_slot.cohort.id,
             'starting_at':
-            self.interger_to_iso(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+            self.integer_to_iso(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
             'ending_at':
-            self.interger_to_iso(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
+            self.integer_to_iso(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
             'recurrent':
             model.cohort_time_slot.recurrent,
             'recurrency_type':
@@ -252,9 +252,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_time_slot_dict(), [{
             **self.model_to_dict(model, 'cohort_time_slot'),
             'ending_at':
-            self.datetime_to_interger(model.academy.timezone, ending_at),
+            self.datetime_to_integer(model.academy.timezone, ending_at),
             'starting_at':
-            self.datetime_to_interger(model.academy.timezone, starting_at),
+            self.datetime_to_integer(model.academy.timezone, starting_at),
             'timezone':
             model.academy.timezone,
             'recurrency_type':
@@ -300,9 +300,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_time_slot_dict(), [{
             **self.model_to_dict(model, 'cohort_time_slot'),
             'ending_at':
-            self.datetime_to_interger(model.academy.timezone, ending_at),
+            self.datetime_to_integer(model.academy.timezone, ending_at),
             'starting_at':
-            self.datetime_to_interger(model.academy.timezone, starting_at),
+            self.datetime_to_integer(model.academy.timezone, starting_at),
             'timezone':
             model.academy.timezone,
             'recurrency_type':

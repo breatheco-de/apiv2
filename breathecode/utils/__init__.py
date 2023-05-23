@@ -16,7 +16,7 @@ from .response_207 import *
 from .generate_lookups_mixin import *
 from .num_to_roman import *
 from .ndb import *
-from .datetime_interger import *
+from .datetime_integer import *
 from .serpy_extensions import *
 from .object import *
 from .io import *

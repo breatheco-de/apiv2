@@ -4,7 +4,7 @@ from breathecode.events.actions import fix_datetime_weekday
 from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
 
-from breathecode.utils.datetime_interger import DatetimeInteger
+from breathecode.utils.datetime_integer import DatetimeInteger
 from .models import Event, LiveClass, Organization, EventbriteWebhook
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone

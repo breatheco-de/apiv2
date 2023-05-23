@@ -6,7 +6,7 @@ from breathecode.marketing.models import FormEntry
 from django.db.models import Q
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Academy
-from breathecode.utils.datetime_interger import from_now
+from breathecode.utils.datetime_integer import from_now
 
 pending_leads = FormEntry.objects.filter(
     storage_status='PENDING').filter(Q(academy__id=academy.id) | Q(location=academy.slug))

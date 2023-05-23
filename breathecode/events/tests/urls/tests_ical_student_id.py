@@ -10,7 +10,7 @@ from rest_framework import status
 from breathecode.events.actions import fix_datetime_weekday
 from django.utils import timezone
 
-from breathecode.utils.datetime_interger import DatetimeInteger
+from breathecode.utils.datetime_integer import DatetimeInteger
 from ..mixins.new_events_tests_case import EventTestCase
 
 
@@ -87,11 +87,11 @@ class AcademyCohortTestSuite(EventTestCase):
         }
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
 
         model = self.generate_models(academy=True,
@@ -131,11 +131,11 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
 
         model = self.generate_models(academy=True,
@@ -178,11 +178,11 @@ class AcademyCohortTestSuite(EventTestCase):
         }
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
 
         model = self.generate_models(academy=True,
@@ -256,11 +256,11 @@ class AcademyCohortTestSuite(EventTestCase):
         }
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
             'recurrent': False,
         }
         model = self.generate_models(academy=True,
@@ -330,11 +330,11 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
         model = self.generate_models(academy=True,
                                      device_id=True,
@@ -394,11 +394,11 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort_kwargs = {'stage': 'DELETED'}
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
 
         model = self.generate_models(academy=True,
@@ -440,11 +440,11 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
 
         model = self.generate_models(academy=True,
@@ -488,11 +488,11 @@ class AcademyCohortTestSuite(EventTestCase):
         }
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
 
         model = self.generate_models(academy=True,
@@ -567,11 +567,11 @@ class AcademyCohortTestSuite(EventTestCase):
         teacher_kwargs = {'role': 'TEACHER'}
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
 
         base = self.generate_models(academy=True,
@@ -660,11 +660,11 @@ class AcademyCohortTestSuite(EventTestCase):
         teacher_kwargs = {'role': 'TEACHER'}
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
 
         base = self.generate_models(academy=True,
@@ -789,11 +789,11 @@ class AcademyCohortTestSuite(EventTestCase):
         teacher_kwargs = {'role': 'TEACHER'}
 
         # don't forget 🦾 2021 - 1010
-        datetime_interger = 202109111330
+        datetime_integer = 202109111330
         cohort_time_slot_kwargs = {
             'timezone': 'America/Bogota',
-            'starting_at': datetime_interger,
-            'ending_at': datetime_interger,
+            'starting_at': datetime_integer,
+            'ending_at': datetime_integer,
         }
 
         base = self.generate_models(academy=True,

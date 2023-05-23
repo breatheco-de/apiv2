@@ -1,3 +1,6 @@
+import hashlib
+from io import StringIO
+import os
 import re
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -5,6 +8,8 @@ from django.db.models import Avg
 from django.http import HttpResponse
 from breathecode.admissions.models import CohortUser, Academy
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.monitoring.models import CSVUpload
+from breathecode.provisioning.tasks import upload
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework import serializers
@@ -21,6 +26,8 @@ from rest_framework import status
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
 from django.db.models import Q
 from django.db.models import QuerySet
+from rest_framework.parsers import FileUploadParser, MultiPartParser
+import pandas as pd
 
 
 @private_view()
@@ -82,6 +89,67 @@ def redirect_workspaces(request, token):
         return render_message(request, str(e))
 
     return redirect(vendor.workspaces_url)
+
+
+class UploadView(APIView):
+    """
+    put:
+        Upload a file to Google Cloud.
+    """
+    parser_classes = [MultiPartParser, FileUploadParser]
+
+    # permission_classes = [AllowAny]
+
+    # upload was separated because in one moment I think that the serializer
+    # not should get many create and update operations together
+    def upload(self, file, academy_id):
+        from ..services.google_cloud import Storage
+
+        result = {
+            'data': [],
+            'instance': [],
+        }
+
+        if not file:
+            raise ValidationException('Missing file in request', code=400)
+
+        # files validation below
+        if file.content_type != 'application/csv':
+            raise ValidationException('You can upload only files on the following formats: application/csv')
+
+        content_bytes = file.read().decode('utf-8')
+        content = content_bytes.decode('utf-8')
+        hash = hashlib.sha256(content_bytes).hexdigest()
+
+        csvStringIO = StringIO(content)
+        df = pd.read_csv(csvStringIO, sep=',', header=None)
+        required_fields = ['first_name', 'last_name', 'email', 'location', 'phone', 'language']
+
+        # Think about uploading correct files and leaving out incorrect ones
+        for item in required_fields:
+            if item not in df.keys():
+                return ValidationException(f'{item} field missing inside of csv')
+
+        data = {'file_name': hash, 'status': 'PENDING'}
+
+        # upload file section
+        storage = Storage()
+        cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), hash)
+        if not cloud_file.exists():
+            cloud_file.upload(file, content_type=file.content_type)
+
+        upload.delay(hash)
+
+        return data
+
+    @capable_of('crud_media')
+    def put(self, request, academy_id=None):
+        files = request.data.getlist('file')
+        result = []
+        for file in files:
+            upload = self.upload(file, academy_id)
+            result.append(upload)
+        return Response(result, status=status.HTTP_200_OK)
 
 
 # class ContainerMeView(APIView):

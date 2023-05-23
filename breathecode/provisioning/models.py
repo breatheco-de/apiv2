@@ -80,16 +80,18 @@ DUE = 'DUE'
 DISPUTED = 'DISPUTED'
 PAID = 'PAID'
 IGNORED = 'IGNORED'
+PENDING = 'PENDING'
 BILL_STATUS = (
     (DUE, 'Due'),
     (DISPUTED, 'Disputed'),
     (IGNORED, 'Ignored'),
+    (PENDING, 'Pending'),
     (PAID, 'Paid'),
 )
 
 
 class ProvisioningBill(models.Model):
-    total_amount = models.FloatField()
+    total_amount = models.FloatField(default=0)
     currency_code = models.CharField(max_length=3, default='usd')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
@@ -121,7 +123,7 @@ class ProvisioningActivity(models.Model):
         null=True,
         default=None,
         blank=True,
-        help_text='When the activitiy happened, this field comes form the provisioning vendor')
+        help_text='When the activity happened, this field comes form the provisioning vendor')
     product_name = models.CharField(max_length=100)
     sku = models.CharField(max_length=100)
 
