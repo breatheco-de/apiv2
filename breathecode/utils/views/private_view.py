@@ -33,35 +33,38 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
-def private_view(permission=None):
+def private_view(permission=None, auth_url='/v1/auth/view/login'):
 
     def decorator(func):
 
         def inner(*args, **kwargs):
             req = args[0]
-
             url = req.get_full_path()
             token = req.GET.get('token', None)
-            attempt = req.GET.get('attempt', False)
 
-            valid_token = Token.get_valid(token)
-            if valid_token is None and 'token' in req.session:
+            if token is not None:
+                valid_token = Token.get_valid(token)
+
+            elif 'token' in req.session:
                 valid_token = Token.get_valid(req.session['token'])
+
+            else:
+                valid_token = None
 
             try:
 
                 if token is None and valid_token is None:
                     raise PermissionDenied(f'Please login before you can access this view')
-                elif valid_token is None:
+
+                if valid_token is None:
                     raise PermissionDenied(f'You don\'t have access to this view')
 
-                if permission is not None:
-                    if not validate_permission(valid_token.user, permission):
-                        raise PermissionDenied(f'You don\'t have permission {permission} to access this view')
+                if permission is not None and not validate_permission(valid_token.user, permission):
+                    raise PermissionDenied(f'You don\'t have permission {permission} to access this view')
 
             except Exception as e:
                 messages.add_message(req, messages.ERROR, str(e))
-                return HttpResponseRedirect(redirect_to=f'/v1/auth/view/login?attempt=1&url=' +
+                return HttpResponseRedirect(redirect_to=f'{auth_url}?attempt=1&url=' +
                                             str(base64.b64encode(url.encode('utf-8')), 'utf-8'))
 
             # inject user in request
