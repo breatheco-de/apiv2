@@ -108,7 +108,7 @@ class AssetKeywordBigSerializer(serpy.Serializer):
     title = serpy.Field()
     lang = serpy.Field()
     cluster = KeywordClusterSmallSerializer(required=False)
-    
+
     all_assets = serpy.MethodField()
 
     def get_all_assets(self, obj):

@@ -1181,7 +1181,7 @@ class ConsumptionSession(models.Model):
 
         utc_now = timezone.now()
 
-        resource = consumable.cohort or consumable.mentorship_service_set or consumable.event_type_set
+        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort
         id = resource.id if resource else 0
         slug = resource.slug if resource else ''
 
