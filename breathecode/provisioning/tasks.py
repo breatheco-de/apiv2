@@ -1,28 +1,13 @@
 from io import StringIO
 import logging
-from datetime import datetime, timedelta
 import os
-import traceback
-from typing import Optional
-from django.utils import timezone
 
 from celery import Task, shared_task
 import pandas as pd
-from breathecode.authenticate.actions import get_user_settings
 
-from breathecode.notify import actions as notify_actions
 from breathecode.provisioning import actions
-from breathecode.payments.services.stripe import Stripe
-from dateutil.relativedelta import relativedelta
-from django.db.models import Q
-from breathecode.payments.signals import consume_service
 from breathecode.services.google_cloud.storage import Storage
-from breathecode.utils.decorators import task
-from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-
-from .models import AbstractIOweYou, Bag, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription, SubscriptionServiceItem
-from breathecode.payments.signals import reimburse_service_units
 
 logger = logging.getLogger(__name__)
 
