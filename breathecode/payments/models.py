@@ -1044,6 +1044,7 @@ class Consumable(AbstractServiceItem):
         param = {}
         utc_now = timezone.now()
 
+        # User
         if isinstance(user, str) and not user.isdigit():
             raise ValidationException(
                 translation(lang,
@@ -1054,26 +1055,37 @@ class Consumable(AbstractServiceItem):
         if isinstance(user, str):
             param['user__id'] = int(user)
 
-        if isinstance(user, int):
+        elif isinstance(user, int):
             param['user__id'] = user
 
+        elif isinstance(user, User):
+            param['user'] = user
+
+        # Service
         if service and isinstance(service, str) and not service.isdigit():
             param['service_item__service__slug'] = service
 
-        if service and isinstance(service, str) and service.isdigit():
+        elif service and isinstance(service, str) and service.isdigit():
             param['service_item__service__id'] = int(service)
 
-        if service and isinstance(service, int):
+        elif service and isinstance(service, int):
             param['service_item__service__id'] = service
 
+        elif isinstance(service, Service):
+            param['service_item__service'] = service
+
+        # Permission
         if permission and isinstance(permission, str) and not permission.isdigit():
             param['service_item__service__groups__permissions__codename'] = permission
 
-        if permission and isinstance(permission, str) and permission.isdigit():
+        elif permission and isinstance(permission, str) and permission.isdigit():
             param['service_item__service__groups__permissions__id'] = int(permission)
 
-        if permission and isinstance(permission, int):
+        elif permission and isinstance(permission, int):
             param['service_item__service__groups__permissions__id'] = permission
+
+        elif isinstance(permission, Permission):
+            param['service_item__service__groups__permissions'] = permission
 
         return cls.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), **{
             **param,
