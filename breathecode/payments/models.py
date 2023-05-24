@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 
 import math
 from datetime import timedelta
@@ -29,6 +30,8 @@ from breathecode.utils.i18n import translation
 # ⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇
 # ↕ Remember do not save the card info in the backend ↕
 # ⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆
+
+logger = logging.getLogger(__name__)
 
 
 class Currency(models.Model):
@@ -993,6 +996,12 @@ class SubscriptionServiceItem(models.Model):
         return str(self.service_item)
 
 
+def show(name, data):
+    print(f'{name}: {data}')
+    logger.info(f'{name}: {data}')
+    return data
+
+
 class Consumable(AbstractServiceItem):
     """
     This model is used to represent the units of a service that can be consumed.
@@ -1086,6 +1095,9 @@ class Consumable(AbstractServiceItem):
 
         elif isinstance(permission, Permission):
             param['service_item__service__groups__permissions'] = permission
+
+        show('param', param)
+        show('extra', extra)
 
         return cls.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), **{
             **param,
