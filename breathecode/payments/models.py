@@ -1,19 +1,26 @@
 from __future__ import annotations
+import logging
 
+import math
 from datetime import timedelta
 import os
+from typing import Optional
 from django.contrib.auth.models import Group, User
 from django.db import models
 from django.utils import timezone
 from django.db.models import Q
+from django.contrib.auth.models import Permission
+from django.db.models import QuerySet
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
+from breathecode.authenticate.models import UserInvite
 from breathecode.events.models import EventType
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
 from django import forms
 from django.core.handlers.wsgi import WSGIRequest
+from breathecode.utils.validation_exception import ValidationException
 
 from breathecode.utils.validators.language import validate_language_code
 from breathecode.utils.i18n import translation
@@ -23,6 +30,8 @@ from breathecode.utils.i18n import translation
 # ⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇
 # ↕ Remember do not save the card info in the backend ↕
 # ⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆
+
+logger = logging.getLogger(__name__)
 
 
 class Currency(models.Model):
@@ -358,11 +367,15 @@ class AcademyService(models.Model):
     price_per_unit = models.FloatField(default=1, help_text='Price per unit (e.g. 1, 2, 3, ...)')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency')
 
-    cohort_patterns = models.JSONField(
-        default=[], blank=True, help_text='Array of cohort patterns to find cohorts to be sold in this plan')
-
-    available_cohorts = models.ManyToManyField(
-        Cohort, blank=True, help_text='Available cohorts to be sold in this this service and plan')
+    bundle_size = models.FloatField(
+        default=1,
+        help_text='Minimum unit size allowed to be bought, example: bundle_size=5, then you are '
+        'allowed to buy a minimum of 5 units. Related to the discount ratio')
+    max_items = models.FloatField(
+        default=1, help_text="How many items can be bought in total, it doens't matter the bundle size")
+    max_amount = models.FloatField(default=1,
+                                   help_text="Limit total amount, it doesn't matter the bundle size")
+    discount_ratio = models.FloatField(default=1, help_text='Will be used when calculated by the final price')
 
     available_mentorship_service_sets = models.ManyToManyField(
         MentorshipServiceSet,
@@ -377,16 +390,43 @@ class AcademyService(models.Model):
     def __str__(self) -> str:
         return f'{self.academy.slug} -> {self.service.slug}'
 
+    def get_discounted_price(self, num_items) -> float:
+        if num_items > self.max_items:
+            raise ValueError('num_items cannot be greater than max_items')
+
+        total_discount_ratio = 0
+        current_discount_ratio = self.discount_ratio
+        discount_nerf = 0.1
+        max_discount = 0.2
+
+        for _ in range(math.floor(num_items / self.bundle_size)):
+            total_discount_ratio += current_discount_ratio
+            current_discount_ratio -= current_discount_ratio * discount_nerf
+
+        if total_discount_ratio > max_discount:
+            total_discount_ratio = max_discount
+
+        amount = self.price_per_unit * num_items
+        discount = amount * total_discount_ratio
+
+        return amount - discount
+
     def clean(self) -> None:
         if self.id and len([
-                x for x in [
-                    self.available_cohorts.count(),
-                    self.available_mentorship_service_sets.count(),
-                    self.available_event_type_sets.count()
-                ] if x
+                x for x in
+            [self.available_mentorship_service_sets.count(),
+             self.available_event_type_sets.count()] if x
         ]) > 1:
             raise forms.ValidationError('Only one of available_cohorts, available_mentorship_service_sets or '
                                         'available_event_type_sets can be set')
+
+        required_integer_fields = self.service.type in ['MENTORSHIP_SERVICE_SET', 'EVENT_TYPE_SET']
+
+        if required_integer_fields and not self.bundle_size.is_integer():
+            raise forms.ValidationError('bundle_size must be an integer')
+
+        if required_integer_fields and not self.max_items.is_integer():
+            raise forms.ValidationError('max_items must be an integer')
 
         return super().clean()
 
@@ -467,7 +507,11 @@ class Plan(AbstractPriceByTime):
                                       help_text='Cohort pattern to find cohorts to be sold in this plan')
 
     available_cohorts = models.ManyToManyField(
-        Cohort, blank=True, help_text='Available cohorts to be sold in this this service and plan')
+        Cohort,
+        blank=True,
+        help_text=
+        'Minimum unit size allowed to be bought, example: bundle_size=5, then you are allowed to buy a minimum of 5 units. Related to the discount ratio'
+    )
 
     mentorship_service_set = models.ForeignKey(
         MentorshipServiceSet,
@@ -483,6 +527,11 @@ class Plan(AbstractPriceByTime):
                                        null=True,
                                        default=None,
                                        help_text='Event type sets to be sold in this service and plan')
+
+    invites = models.ManyToManyField(UserInvite,
+                                     blank=True,
+                                     help_text='Plan\'s invites',
+                                     related_name='plans')
 
     def __str__(self) -> str:
         return self.slug
@@ -579,15 +628,6 @@ class PlanOfferTranslation(models.Model):
     description = models.CharField(max_length=255, help_text='Description of the plan offer')
     short_description = models.CharField(max_length=255, help_text='Short description of the plan offer')
 
-
-PENDING = 'PENDING'
-DONE = 'DONE'
-CANCELLED = 'CANCELLED'
-CONSUMPTION_SESSION_STATUS = [
-    (PENDING, 'Pending'),
-    (DONE, 'Done'),
-    (CANCELLED, 'Cancelled'),
-]
 
 RENEWAL = 'RENEWAL'
 CHECKING = 'CHECKING'
@@ -995,6 +1035,76 @@ class Consumable(AbstractServiceItem):
         default=None,
         help_text='Valid until, this is null if the consumable is valid until resources are exhausted')
 
+    @classmethod
+    def list(cls,
+             *,
+             user: User | str | int,
+             lang: str = 'en',
+             service: Optional[Service | str | int] = None,
+             permission: Optional[Permission | str | int] = None,
+             extra: dict = {}) -> QuerySet[Consumable]:
+
+        param = {}
+        utc_now = timezone.now()
+
+        # User
+        if isinstance(user, str) and not user.isdigit():
+            raise ValidationException(
+                translation(lang,
+                            en='Client user id must be an integer',
+                            es='El id del cliente debe ser un entero',
+                            slug='client-user-id-must-be-an-integer'))
+
+        if isinstance(user, str):
+            param['user__id'] = int(user)
+
+        elif isinstance(user, int):
+            param['user__id'] = user
+
+        elif isinstance(user, User):
+            param['user'] = user
+
+        # Service
+        if service and isinstance(service, str) and not service.isdigit():
+            param['service_item__service__slug'] = service
+
+        elif service and isinstance(service, str) and service.isdigit():
+            param['service_item__service__id'] = int(service)
+
+        elif service and isinstance(service, int):
+            param['service_item__service__id'] = service
+
+        elif isinstance(service, Service):
+            param['service_item__service'] = service
+
+        # Permission
+        if permission and isinstance(permission, str) and not permission.isdigit():
+            param['service_item__service__groups__permissions__codename'] = permission
+
+        elif permission and isinstance(permission, str) and permission.isdigit():
+            param['service_item__service__groups__permissions__id'] = int(permission)
+
+        elif permission and isinstance(permission, int):
+            param['service_item__service__groups__permissions__id'] = permission
+
+        elif isinstance(permission, Permission):
+            param['service_item__service__groups__permissions'] = permission
+
+        return cls.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), **{
+            **param,
+            **extra
+        }).exclude(how_many=0).order_by('id')
+
+    @classmethod
+    def get(cls,
+            *,
+            user: User | str | int,
+            lang: str = 'en',
+            service: Optional[Service | str | int] = None,
+            permission: Optional[Permission | str | int] = None,
+            extra: dict = {}) -> Consumable | None:
+        return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
+
     def clean(self) -> None:
         resources = [self.cohort]
 
@@ -1031,6 +1141,16 @@ class Consumable(AbstractServiceItem):
         return f'{self.user.email}: {self.service_item.service.slug} ({self.how_many})'
 
 
+PENDING = 'PENDING'
+DONE = 'DONE'
+CANCELLED = 'CANCELLED'
+CONSUMPTION_SESSION_STATUS = [
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (CANCELLED, 'Cancelled'),
+]
+
+
 class ConsumptionSession(models.Model):
     consumable = models.ForeignKey(Consumable, on_delete=models.CASCADE, help_text='Consumable')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, help_text='Customer')
@@ -1065,24 +1185,23 @@ class ConsumptionSession(models.Model):
         super().save(*args, **kwargs)
 
     @classmethod
-    def build_session(
-        cls,
-        request: WSGIRequest,
-        consumable: Consumable,
-        delta: timedelta,
-        # info: Optional[str] = None,
-    ) -> 'ConsumptionSession':
+    def build_session(cls,
+                      request: WSGIRequest,
+                      consumable: Consumable,
+                      delta: timedelta,
+                      user: Optional[User] = None) -> 'ConsumptionSession':
         assert request, 'You must provide a request'
         assert consumable, 'You must provide a consumable'
         assert delta, 'You must provide a delta'
 
         utc_now = timezone.now()
 
-        resource = consumable.cohort or consumable.mentorship_service_set or consumable.event_type_set
+        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort
         id = resource.id if resource else 0
         slug = resource.slug if resource else ''
 
         path = resource.__class__._meta.app_label + '.' + resource.__class__.__name__ if resource else ''
+        user = user or request.user
 
         if hasattr(request, 'parser_context'):
             args = request.parser_context['args']
@@ -1097,11 +1216,24 @@ class ConsumptionSession(models.Model):
             'headers': {
                 'academy': request.META.get('HTTP_ACADEMY')
             },
-            'user': request.user.id,
+            'user': user.id,
         }
 
         # assert path, 'You must provide a path'
         assert delta, 'You must provide a delta'
+
+        session = cls.objects.filter(
+            eta__gte=utc_now,
+            request=data,
+            path=path,
+            duration=delta,
+            related_id=id,
+            related_slug=slug,
+            #   related_info=info,
+            user=user).exclude(eta__lte=utc_now).first()
+
+        if session:
+            return session
 
         return cls.objects.create(
             request=data,
@@ -1112,7 +1244,7 @@ class ConsumptionSession(models.Model):
             related_id=id,
             related_slug=slug,
             #   related_info=info,
-            user=request.user)
+            user=user)
 
     @classmethod
     def get_session(cls, request: WSGIRequest) -> 'ConsumptionSession':

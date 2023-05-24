@@ -376,16 +376,12 @@ HOOK_EVENTS = {
 ASGI_APPLICATION = 'breathecode.asgi.application'
 REDIS_URL_PATTERN = r'^redis://(.+):(\d+)$'
 
-ssl_context = ssl.SSLContext()
-ssl_context.check_hostname = False
-
 heroku_redis_ssl_host = {
     'address': REDIS_URL,  # The 'rediss' schema denotes a SSL connection.
-    'ssl': ssl_context
 }
 
-if not IS_REDIS_WITH_SSL:
-    del heroku_redis_ssl_host['ssl']
+if IS_REDIS_WITH_SSL:
+    heroku_redis_ssl_host['address'] += '?ssl_cert_reqs=none'
 
 CHANNEL_LAYERS = {
     'default': {

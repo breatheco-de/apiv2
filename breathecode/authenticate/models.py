@@ -43,7 +43,11 @@ class AcademyProxy(Academy):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     avatar_url = models.CharField(max_length=255, blank=True, null=True, default=None)
-    bio = models.CharField(max_length=255, blank=True, null=True)
+    bio = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text='User biography in user\'s language. Will be used if there are no ProfileTranslations.')
 
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
@@ -60,6 +64,19 @@ class Profile(models.Model):
     linkedin_url = models.CharField(max_length=50, blank=True, null=True)
 
     blog = models.CharField(max_length=150, blank=True, null=True)
+
+
+class ProfileTranslation(models.Model):
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, help_text='Profile')
+    lang = models.CharField(max_length=5,
+                            validators=[validate_language_code],
+                            unique=True,
+                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+
+    bio = models.CharField(max_length=255)
+
+    def __str__(self) -> str:
+        return f'{self.lang}: {self.profile.user.email}'
 
 
 class UserSetting(models.Model):
@@ -286,6 +303,12 @@ STORAGE_ACTION = (
 
 
 class GithubAcademyUser(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(GithubAcademyUser, self).__init__(*args, **kwargs)
+        self.__old_status = self.storage_status
+        self.__old_action = self.storage_action
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
     username = models.SlugField(max_length=40,
@@ -297,6 +320,7 @@ class GithubAcademyUser(models.Model):
     storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
     storage_log = models.JSONField(default=None, null=True, blank=True)
     storage_synch_at = models.DateTimeField(default=None, null=True, blank=True)
+    # deletion_scheduled_at = models.DateTimeField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -317,6 +341,34 @@ class GithubAcademyUser(models.Model):
             self.storage_log = []
 
         self.storage_log.append(GithubAcademyUser.create_log(msg))
+
+    def save(self, *args, **kwargs):
+        has_mutated = False
+
+        if self.__old_status != self.storage_status:
+            has_mutated = True
+        if self.__old_action != self.storage_action:
+            has_mutated = True
+
+        exit_op = super().save(*args, **kwargs)
+
+        if has_mutated and self.storage_status == 'SYNCHED':
+            user_log = GithubAcademyUserLog(
+                academy_user=self,
+                storage_status=self.storage_status,
+                storage_action=self.storage_action,
+            )
+            user_log.save()
+
+        return exit_op
+
+
+class GithubAcademyUserLog(models.Model):
+    academy_user = models.ForeignKey(GithubAcademyUser, on_delete=models.CASCADE)
+    storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
+    storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
 class CredentialsSlack(models.Model):

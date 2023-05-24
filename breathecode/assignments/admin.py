@@ -5,13 +5,12 @@ from breathecode.admissions.admin import CohortAdmin
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import Token
 from django.utils.html import format_html
-from .models import Task, UserProxy, CohortProxy, FinalProject
+from .models import Task, UserAttachment, UserProxy, CohortProxy, FinalProject
 from .actions import sync_student_tasks, sync_cohort_tasks
 # Register your models here.
 logger = logging.getLogger(__name__)
 
 
-#FIXME: this maybe is a deadcode
 def sync_tasks(modeladmin, request, queryset):
 
     for u in queryset:
@@ -58,7 +57,7 @@ delete_cohort_tasks.short_description = 'Delete tasks for all students of this c
 
 
 @admin.register(CohortProxy)
-class CohortAdmin(CohortAdmin):
+class CohortAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
     actions = [sync_cohort_tasks, delete_cohort_tasks]
 
@@ -103,6 +102,13 @@ class TaskAdmin(admin.ModelAdmin):
         token, created = Token.get_or_create(obj.user, token_type='temporal')
         url = os.getenv('API_URL') + f'/v1/assignment/task/{str(obj.id)}/deliver/{token}'
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>deliver</a>")
+
+
+@admin.register(UserAttachment)
+class UserAttachmentAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'name', 'user__first_name', 'user__last_name', 'user__email']
+    list_display = ('slug', 'name', 'user', 'url', 'mime')
+    list_filter = ['mime']
 
 
 @admin.register(FinalProject)

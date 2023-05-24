@@ -101,10 +101,8 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
     start_date = cohort.kickoff_date
 
     # this event end in the new day
-    if starting_at > ending_at:
-        ending_at.year = starting_at.year
-        ending_at.month = starting_at.month
-        ending_at.day = starting_at.day + 1
+    while starting_at > ending_at:
+        ending_at += relativedelta(days=1)
 
     if not until_date:
         logger.error(f'Timeslot {timeslot_id} not have a ending date')
@@ -148,3 +146,65 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
         ending_at += delta
 
     live_classes.delete()
+
+
+@shared_task(bind=False, base=BaseTaskWithRetry)
+def fix_live_class_dates(timeslot_id: int):
+    logger.info(f'Starting fix_live_class_dates with id {timeslot_id}')
+
+    timeslot = CohortTimeSlot.objects.filter(id=timeslot_id).first()
+    if not timeslot:
+        logger.error(f'Timeslot {timeslot_id} not fount')
+        return
+
+    utc_now = timezone.now()
+
+    if timeslot.cohort.ending_date and timeslot.cohort.ending_date < utc_now:
+        logger.info(f'Cohort {timeslot.cohort.id} is finished')
+        return
+
+    cohort = timeslot.cohort
+    starting_at = DatetimeInteger.to_utc_datetime(timeslot.timezone, timeslot.starting_at)
+    ending_at = DatetimeInteger.to_utc_datetime(timeslot.timezone, timeslot.ending_at)
+
+    # this event end in the new day
+    while starting_at > ending_at:
+        ending_at += relativedelta(days=1)
+
+    delta = relativedelta(0)
+
+    if timeslot.recurrency_type == 'DAILY':
+        delta += relativedelta(days=1)
+
+    if timeslot.recurrency_type == 'WEEKLY':
+        delta += relativedelta(weeks=1)
+
+    if timeslot.recurrency_type == 'MONTHLY':
+        delta += relativedelta(months=1)
+
+    if not delta:
+        logger.error(f'{timeslot.recurrency_type} is not a valid or not implemented recurrency_type')
+        return
+
+    for live_class in LiveClass.objects.filter(cohort_time_slot=timeslot).order_by('starting_at'):
+
+        if live_class.starting_at < utc_now or starting_at < cohort.kickoff_date:
+            starting_at += delta
+            ending_at += delta
+            continue
+
+        must_save = False
+
+        if live_class.starting_at != starting_at:
+            live_class.starting_at = starting_at
+            must_save = True
+
+        if live_class.ending_at != ending_at:
+            live_class.ending_at = ending_at
+            must_save = True
+
+        if must_save:
+            live_class.save()
+
+        starting_at += delta
+        ending_at += delta

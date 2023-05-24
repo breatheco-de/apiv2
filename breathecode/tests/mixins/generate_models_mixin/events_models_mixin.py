@@ -118,6 +118,7 @@ class EventsModelsMixin(ModelsMixin):
 
             if 'user' in models or user:
                 kargs['author'] = just_one(models['user'])
+                kargs['host_user'] = just_one(models['user'])
 
             if 'venue' in models or venue:
                 kargs['venue'] = just_one(models['venue'])

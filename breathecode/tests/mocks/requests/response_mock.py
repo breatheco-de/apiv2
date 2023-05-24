@@ -14,11 +14,15 @@ class ResponseMock():
         'content-type': 'application/json',
     }
 
-    def __init__(self, status_code=200, data='', url=''):
+    def __init__(self, status_code=200, data='', url='', request_headers=None):
         self.status_code = status_code
         self.reason = 'OK'
         self.raw = data
         self.url = url
+        self.headers = request_headers if request_headers is not None else {
+            'Content-Type': 'application/json',
+            'content-type': 'application/json',
+        }
 
         if isinstance(data, str):
             self.content = str(data).encode('utf-8')

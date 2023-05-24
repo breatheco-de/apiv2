@@ -116,6 +116,7 @@ class EventType(models.Model):
     icon_url = models.URLField(blank=False, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
     lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
+    free_for_bootcamps = models.BooleanField(default=True)
 
     visibility_settings = models.ManyToManyField(
         EventTypeVisibilitySetting,
@@ -172,6 +173,7 @@ class Event(models.Model):
                             validators=[validate_language_code])
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
+    free_for_bootcamps = models.BooleanField(default=None, blank=True, null=True)
 
     url = models.URLField(
         max_length=255,
@@ -195,7 +197,18 @@ class Event(models.Model):
     starting_at = models.DateTimeField(blank=False)
     ending_at = models.DateTimeField(blank=False)
 
-    host = models.CharField(max_length=100, blank=True, default=None, null=True)
+    host = models.CharField(max_length=100,
+                            blank=True,
+                            default=None,
+                            null=True,
+                            help_text='Host name that appear in Eventbrite')
+    host_user = models.ForeignKey(User,
+                                  on_delete=models.SET_NULL,
+                                  blank=True,
+                                  null=True,
+                                  related_name='event_host',
+                                  help_text='4geeks user that is the host of the event')
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)

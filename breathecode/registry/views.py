@@ -105,7 +105,25 @@ def render_preview_html(request, asset_slug):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_technologies(request):
-    tech = AssetTechnology.objects.filter(parent__isnull=True).order_by('sort_priority')
+    lang = get_user_language(request)
+    lookup = {}
+
+    if 'sort_priority' in request.GET:
+        param = request.GET.get('sort_priority')
+
+        try:
+
+            param = int(param)
+
+            lookup['sort_priority__exact'] = param
+        except Exception as e:
+            raise ValidationException(
+                translation(lang,
+                            en='The parameter must be an integer nothing else',
+                            es='El parametró debera ser un entero y nada mas ',
+                            slug='integer-not-found'))
+
+    tech = AssetTechnology.objects.filter(parent__isnull=True, **lookup).order_by('sort_priority')
 
     serializer = AssetTechnologySerializer(tech, many=True)
     return Response(serializer.data)
@@ -428,7 +446,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         if 'asset_type' in self.request.GET:
             param = self.request.GET.get('asset_type')
-            lookup['asset_type__iexact'] = param
+            lookup['asset_type__in'] = [p.upper() for p in param.split(',') if p]
 
         if 'category' in self.request.GET:
             param = self.request.GET.get('category')
@@ -501,6 +519,10 @@ class AssetView(APIView, GenerateLookupsMixin):
         need_translation = self.request.GET.get('need_translation', False)
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1)
+
+        if 'exclude_category' in self.request.GET:
+            param = self.request.GET.get('exclude_category')
+            items = items.exclude(category__slug__in=[p for p in param.split(',') if p])
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -1207,7 +1229,7 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    extensions = APIViewExtensions(cache=KeywordClusterCache, sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_keywordcluster')
     def get(self, request, cluster_slug=None, academy_id=None):
@@ -1222,9 +1244,11 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+
+        # cache has been disabled because I cant get it to refresh then keywords are resigned to assets
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         items = KeywordCluster.objects.filter(academy__id=academy_id)
         lookup = {}

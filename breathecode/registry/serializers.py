@@ -70,6 +70,15 @@ class SmallAsset(serpy.Serializer):
     slug = serpy.Field()
 
 
+class AssetSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    asset_type = serpy.Field()
+    status = serpy.Field()
+
+
 class AcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
@@ -100,10 +109,10 @@ class AssetKeywordBigSerializer(serpy.Serializer):
     lang = serpy.Field()
     cluster = KeywordClusterSmallSerializer(required=False)
 
-    published_assets = serpy.MethodField()
+    all_assets = serpy.MethodField()
 
-    def get_published_assets(self, obj):
-        return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
+    def get_all_assets(self, obj):
+        return AssetSmallSerializer(obj.asset_set.all(), many=True).data
 
 
 class AcademyCommentSerializer(serpy.Serializer):
@@ -263,11 +272,12 @@ class AssetCategorySerializer(serpy.Serializer):
 
 
 class _Keyword(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
-    published_assets = serpy.MethodField()
+    all_assets = serpy.MethodField()
 
-    def get_published_assets(self, obj):
-        return list(map(lambda t: t.slug, obj.asset_set.filter(status='PUBLISHED')))
+    def get_all_assets(self, obj):
+        return AssetSmallSerializer(obj.asset_set.all(), many=True).data
 
 
 class KeywordClusterMidSerializer(serpy.Serializer):
@@ -608,6 +618,12 @@ class AssetPUTSerializer(serializers.ModelSerializer):
             if self.instance.test_status not in ['OK', 'WARNING']:
                 raise ValidationException(f'This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
+
+        if 'visibility' in data and data['visibility'] in [
+                'PUBLIC', 'UNLISTED', 'PRIVATE'
+        ] and self.instance.test_status not in ['OK', 'WARNING']:
+            raise ValidationException(f'This asset has to pass tests successfully before publishing',
+                                      status.HTTP_400_BAD_REQUEST)
 
         if 'slug' in data:
             data['slug'] = slugify(data['slug']).lower()

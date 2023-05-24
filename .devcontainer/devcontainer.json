@@ -24,12 +24,14 @@
                 "gruntfuggly.todo-tree",
                 "redhat.vscode-yaml",
                 "bungcip.better-toml",
-                "TabNine.tabnine-vscode"
+                "TabNine.tabnine-vscode",
+                "github.vscode-github-actions"
             ]
         }
     },
     "forwardPorts": [
         8000
     ],
-    "postStartCommand": "bash -c .devcontainer/postStartCommand.sh"
+    "postStartCommand": "bash -c .devcontainer/postStartCommand.sh",
+    "onCreateCommand": "bash -c .devcontainer/onCreateCommand.sh"
 }

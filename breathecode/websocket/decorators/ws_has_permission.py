@@ -4,7 +4,7 @@ import threading
 from urllib.parse import parse_qsl
 from channels.generic.websocket import JsonWebsocketConsumer, AsyncJsonWebsocketConsumer
 
-from breathecode.utils.exceptions import ProgramingError
+from breathecode.utils.exceptions import ProgrammingError
 from breathecode.utils import has_permission
 from channels.db import database_sync_to_async
 
@@ -30,7 +30,7 @@ class SyncWsHasPermission:
 
             return instance.cls
 
-        except ProgramingError as e:
+        except ProgrammingError as e:
             raise e
 
         except Exception as e:
@@ -67,7 +67,7 @@ class AsyncWsHasPermission:
 
             return instance.cls
 
-        except ProgramingError as e:
+        except ProgrammingError as e:
             raise e
 
         except Exception as e:

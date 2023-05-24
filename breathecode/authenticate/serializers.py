@@ -75,22 +75,6 @@ class GitpodUserSmallSerializer(serpy.Serializer):
     target_cohort = GetSmallCohortSerializer(required=False)
 
 
-class GithubUserSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    id = serpy.Field()
-    academy = GetSmallAcademySerializer(required=False)
-    user = UserTinySerializer(required=False)
-    username = serpy.Field()
-
-    storage_status = serpy.Field()
-    storage_action = serpy.Field()
-    storage_log = serpy.Field()
-    storage_synch_at = serpy.Field()
-
-    created_at = serpy.Field()
-
-
 class AcademyTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -152,6 +136,30 @@ class GithubSmallSerializer(serpy.Serializer):
     avatar_url = serpy.Field()
     name = serpy.Field()
     username = serpy.Field()
+
+
+class GithubUserSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    academy = GetSmallAcademySerializer(required=False)
+    user = UserTinySerializer(required=False)
+    username = serpy.Field()
+
+    storage_status = serpy.Field()
+    storage_action = serpy.Field()
+    storage_log = serpy.Field()
+    storage_synch_at = serpy.Field()
+
+    created_at = serpy.Field()
+
+    github = serpy.MethodField()
+
+    def get_github(self, obj):
+        github = CredentialsGithub.objects.filter(user=obj.user).first()
+        if github is None:
+            return None
+        return GithubSmallSerializer(github).data
 
 
 class GetProfileSmallSerializer(serpy.Serializer):
@@ -941,7 +949,7 @@ class PUTGithubUserSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
 
-        if instance.storage_action != validated_data['storage_action']:
+        if instance.storage_action != validated_data['storage_action'] or instance.storage_action == 'ADD':
             # manually ignoring a contact is synched immediately
             if validated_data['storage_action'] == 'IGNORE':
                 validated_data['storage_status'] = 'SYNCHED'
@@ -954,6 +962,38 @@ class PUTGithubUserSerializer(serializers.ModelSerializer):
             ]
 
         return super().update(instance, validated_data)
+
+
+class POSTGithubUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = GithubAcademyUser
+        exclude = ('storage_status', 'academy', 'storage_log', 'storage_synch_at', 'username')
+
+    def validate(self, data):
+
+        academy_id = self.context.get('academy_id')
+        already = GithubAcademyUser.objects.filter(user=data['user'], academy=academy_id).first()
+        if already:
+            raise ValidationError('User already belongs to the organization')
+
+        github = CredentialsGithub.objects.filter(user=data['user']).first()
+        if github is None:
+            raise ValidationError('No github credentials found for user')
+
+        return {**data, 'username': github.username}
+
+    def create(self, validated_data):
+
+        # anything else has to be processed later
+        validated_data['storage_action'] = 'ADD'
+        validated_data['storage_status'] = 'PENDING'
+        validated_data['storage_log'] = [GithubAcademyUser.create_log('User was manually added')]
+
+        return super().create({
+            **validated_data, 'academy':
+            Academy.objects.filter(id=self.context['academy_id']).first()
+        })
 
 
 class AuthSerializer(serializers.Serializer):
@@ -1017,11 +1057,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     access_token = serializers.SerializerMethodField()
+    plans = serializers.SerializerMethodField()
+    plan = serializers.ReadOnlyField()
 
     class Meta:
         model = UserInvite
 
-        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token')
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token',
+                  'plan', 'plans')
 
     def validate(self, data: dict[str, str]):
         from breathecode.payments.models import Plan
@@ -1093,6 +1136,22 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         return data
 
+    def create(self, *args, **kwargs):
+        instance = super().create(*args, **kwargs)
+
+        if self.plan:
+            self.plan.invites.add(instance)
+
+        return instance
+
+    def update(self, *args, **kwargs):
+        instance = super().update(*args, **kwargs)
+
+        if self.plan:
+            self.plan.invites.add(instance)
+
+        return instance
+
     def get_access_token(self, obj: UserInvite):
         lang = self.context.get('lang', 'en')
 
@@ -1125,3 +1184,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         token, _ = Token.get_or_create(user=self.user, token_type='login')
         return token.key
+
+    def get_plans(self, obj: UserInvite):
+        from breathecode.payments.serializers import GetPlanSmallSerializer
+
+        return GetPlanSmallSerializer(obj.plans.all(), many=True).data

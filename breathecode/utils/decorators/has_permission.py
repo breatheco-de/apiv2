@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 import traceback
 from typing import Callable, Optional, TypedDict
 
@@ -14,12 +15,14 @@ from django.http import JsonResponse
 from breathecode.authenticate.models import Permission, User
 from breathecode.payments.signals import consume_service
 
-from ..exceptions import ProgramingError
+from ..exceptions import ProgrammingError
 from ..payment_exception import PaymentException
 from ..validation_exception import ValidationException
 from rest_framework.response import Response
 
 __all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'PermissionContextType']
+
+logger = logging.getLogger(__name__)
 
 
 class PermissionContextType(TypedDict):
@@ -30,6 +33,7 @@ class PermissionContextType(TypedDict):
     consumables: QuerySet
     time_of_life: Optional[timedelta]
     will_consume: bool
+    is_consumption_session: bool
 
 
 HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple,
@@ -53,7 +57,6 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
-#TODO: change html param for string with selected encode
 def has_permission(permission: str,
                    consumer: bool | HasPermissionCallback = False,
                    format='json') -> callable:
@@ -64,8 +67,22 @@ def has_permission(permission: str,
     def decorator(function: callable) -> callable:
 
         def wrapper(*args, **kwargs):
+
+            def build_context(**opts):
+                return {
+                    'utc_now': utc_now,
+                    'consumer': consumer,
+                    'permission': permission,
+                    'request': request,
+                    'consumables': Consumable.objects.none(),
+                    'time_of_life': None,
+                    'will_consume': True,
+                    'is_consumption_session': False,
+                    **opts,
+                }
+
             if isinstance(permission, str) == False:
-                raise ProgramingError('Permission must be a string')
+                raise ProgrammingError('Permission must be a string')
 
             try:
                 if hasattr(args[0], '__class__') and isinstance(args[0], APIView):
@@ -78,32 +95,23 @@ def has_permission(permission: str,
                     raise IndexError()
 
             except IndexError:
-                raise ProgramingError('Missing request information, use this decorator with DRF View')
+                raise ProgrammingError('Missing request information, use this decorator with DRF View')
 
             try:
                 utc_now = timezone.now()
                 session = ConsumptionSession.get_session(request)
                 if session:
+                    if callable(consumer):
+                        context = build_context(is_consumption_session=True)
+                        context, args, kwargs = consumer(context, args, kwargs)
+
                     return function(*args, **kwargs)
 
                 if validate_permission(request.user, permission, consumer):
-                    context = {
-                        'utc_now': utc_now,
-                        'consumer': consumer,
-                        'permission': permission,
-                        'request': request,
-                        'consumables': Consumable.objects.none(),
-                        'time_of_life': None,
-                        'will_consume': True,
-                    }
+                    context = build_context()
 
                     if consumer:
-                        items = Consumable.objects.filter(
-                            Q(valid_until__lte=utc_now) | Q(valid_until=None),
-                            user=request.user,
-                            service_item__service__groups__permissions__codename=permission).exclude(
-                                how_many=0).order_by('id')
-
+                        items = Consumable.list(user=request.user, permission=permission)
                         context['consumables'] = items
 
                     if callable(consumer):
@@ -120,7 +128,6 @@ def has_permission(permission: str,
                                 context['consumables'] = context['consumables'].exclude(id=item.id)
 
                     if consumer and context['will_consume'] and not context['consumables']:
-                        #TODO: send a url to recharge this service
                         raise PaymentException(
                             f'You do not have enough credits to access this service: {permission}',
                             slug='with-consumer-not-enough-consumables')
@@ -186,7 +193,7 @@ def has_permission(permission: str,
                 return Response({'detail': str(e), 'status_code': status}, status)
 
             # handle html views errors
-            except:
+            except Exception as e:
                 # show stacktrace for unexpected exceptions
                 traceback.print_exc()
 

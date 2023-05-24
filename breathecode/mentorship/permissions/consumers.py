@@ -1,29 +1,98 @@
-from datetime import timedelta
-from django.db.models import Q
-from breathecode.events.models import Event, EventType
-from breathecode.mentorship.models import MentorshipService
-from breathecode.payments.models import Consumable
+import logging
+from breathecode.authenticate.actions import get_user_language
+from breathecode.authenticate.models import User
+from breathecode.mentorship.models import MentorProfile, MentorshipService
+from breathecode.payments.models import Consumable, ConsumptionSession
 from breathecode.utils.decorators import PermissionContextType
+from breathecode.utils.i18n import translation
+from breathecode.utils.validation_exception import ValidationException
 
-from .flags import api
+logger = logging.getLogger(__name__)
 
 
 def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
                                     kwargs: dict) -> tuple[dict, tuple, dict]:
-    mentorship_service = MentorshipService.objects.filter(
-        Q(id=kwargs.get('service_id')) | Q(slug=kwargs.get('service_slug')),
-        Q(id=kwargs.get('mentor_id')) | Q(slug=kwargs.get('mentor_slug'))).first()
-    context['consumables'] = context['consumables'].filter(mentorship_services=mentorship_service)
+
+    context['will_consume'] = False
+    request = context['request']
+    consumable = None
+
+    lang = get_user_language(request)
+
+    slug = kwargs.get('mentor_slug')
+    mentor_profile = MentorProfile.objects.filter(slug=slug).first()
+    if mentor_profile is None:
+        raise ValidationException(translation(lang,
+                                              en=f'No mentor found with slug {slug}',
+                                              es=f'No se encontró mentor con slug {slug}'),
+                                  code=404)
+
+    slug = kwargs.get('service_slug')
+    mentorship_service = MentorshipService.objects.filter(slug=slug).first()
+    if mentorship_service is None:
+        raise ValidationException(translation(lang,
+                                              en=f'No service found with slug {slug}',
+                                              es=f'No se encontró el servicio con slug {slug}'),
+                                  code=404)
+
+    kwargs['mentor_profile'] = mentor_profile
+    kwargs['mentorship_service'] = mentorship_service
+
+    del kwargs['mentor_slug']
+    del kwargs['service_slug']
+
+    # avoid do more stuff if it's a consumption session
+    if context['is_consumption_session']:
+        return (context, args, kwargs)
+
+    context['consumables'] = context['consumables'].filter(
+        mentorship_service_set__mentorship_services=mentorship_service)
+
+    is_saas = mentorship_service and mentorship_service.academy.available_as_saas
 
     # avoid call LaunchDarkly if mentorship_service is empty
-    if mentorship_service:
-        context['will_consume'] = api.release.enable_consume_mentorships(context['request'].user,
-                                                                         mentorship_service)
+    if mentor_profile.user.id != request.user.id and is_saas:
+        context['will_consume'] = True
 
     else:
         context['will_consume'] = False
 
     if context['will_consume']:
         context['time_of_life'] = mentorship_service.max_duration
+
+    if (mentor_profile.user.id == request.user.id and is_saas and (mentee := request.GET.get('mentee'))
+            and not mentee.isdigit()):
+        raise ValidationException(translation(lang,
+                                              en='mentee must be a number',
+                                              es='mentee debe ser un número'),
+                                  code=400)
+
+    if (mentor_profile.user.id == request.user.id and is_saas and mentee
+            and not (mentee := User.objects.filter(id=mentee).first())):
+        raise ValidationException(translation(lang,
+                                              en=f'Mentee not found with id {mentee}',
+                                              es=f'No se encontró el mentee con id {mentee}'),
+                                  code=400)
+
+    if (mentor_profile.user.id == request.user.id and is_saas and mentee
+            and not (consumable := Consumable.get(
+                lang=lang,
+                user=mentee,
+                permission=context['permission'],
+                extra={'mentorship_service_set__mentorship_services': mentorship_service},
+            ))):
+
+        raise ValidationException(translation(
+            lang,
+            en=f'Mentee do not have enough credits to access this service: {context["permission"]}',
+            es='El mentee no tiene suficientes créditos para acceder a este servicio: '
+            f'{context["permission"]}'),
+                                  slug='mentee-not-enough-consumables',
+                                  code=402)
+
+    if consumable:
+        session = ConsumptionSession.build_session(request, consumable, mentorship_service.max_duration,
+                                                   mentee)
+        session.will_consume(1)
 
     return (context, args, kwargs)

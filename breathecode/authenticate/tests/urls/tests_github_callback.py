@@ -68,6 +68,9 @@ def get_credentials_github_fields(data={}):
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
 
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__without_code(self):
         """Test /github/callback without auth"""
         url = reverse_lazy('authenticate:github_callback')
@@ -86,6 +89,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__user_not_exist(self):
         """Test /github/callback"""
 
@@ -119,6 +125,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__user_not_exist_but_waiting_list(self):
         """Test /github/callback"""
 
@@ -155,6 +164,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_user(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -185,6 +197,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_user__with_email_in_uppercase(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -213,6 +228,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_bad_user_in_querystring(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -244,6 +262,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_user(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -281,6 +302,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_user__profile_without_avatar_url(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -324,6 +348,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_user__profile_with_avatar_url(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -370,6 +397,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_user_different_email__without_credetials_of_github__without_cohort_user(
             self):
         """Test /github/callback"""
@@ -403,6 +433,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_user_different_email__without_credetials_of_github__with_cohort_user(self):
         """Test /github/callback"""
         user = {'email': 'FJOSE123@GMAIL.COM'}
@@ -435,6 +468,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_user_different_email__with_credentials_of_github__without_cohort_user(
             self):
         """Test /github/callback"""
@@ -476,6 +512,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
+    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
+                mock.MagicMock(return_value=None))
     def test_github_callback__with_user_different_email__with_credentials_of_github__with_cohort_user(self):
         """Test /github/callback"""
         users = [{'email': 'FJOSE123@GMAIL.COM'}, {'email': 'jdefreitaspinto@gmail.com'}]

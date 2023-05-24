@@ -45,6 +45,7 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
                 **self.bc.format.to_dict(model.user_invite),
                 'process_message': "Can't determine the user email",
                 'process_status': 'ERROR',
+                'status': 'ACCEPTED',
             },
         ])
 
@@ -135,6 +136,7 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
                 **self.bc.format.to_dict(model.user_invite),
                 'process_message': 'Registered as User with id 1',
                 'process_status': 'DONE',
+                'status': 'ACCEPTED',
             },
         ])
 
@@ -178,6 +180,7 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
                 **self.bc.format.to_dict(model.user_invite),
                 'process_message': 'User already exists with the id 1',
                 'process_status': 'DONE',
+                'status': 'ACCEPTED',
             },
         ])
 

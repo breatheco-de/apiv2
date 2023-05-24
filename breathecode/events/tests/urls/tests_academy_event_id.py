@@ -7,6 +7,51 @@ from breathecode.services import datetime_to_iso_format
 from unittest.mock import MagicMock, call, patch
 
 
+def user_serializer(user):
+    return {
+        'first_name': user.first_name,
+        'id': user.id,
+        'last_name': user.last_name,
+    }
+
+
+def get_serializer(event, academy, data={}):
+    return {
+        'id': event.id,
+        'author': user_serializer(event.author),
+        'host_user': user_serializer(event.host_user),
+        'capacity': event.capacity,
+        'description': event.description,
+        'excerpt': event.excerpt,
+        'title': event.title,
+        'lang': event.lang,
+        'url': event.url,
+        'banner': event.banner,
+        'tags': event.tags,
+        'slug': event.slug,
+        'host': event.host,
+        'starting_at': datetime_to_iso_format(event.starting_at),
+        'ending_at': datetime_to_iso_format(event.ending_at),
+        'status': event.status,
+        'event_type': event.event_type,
+        'online_event': event.online_event,
+        'venue': event.venue,
+        'academy': {
+            'id': 1,
+            'slug': academy.slug,
+            'name': academy.name,
+            'city': {
+                'name': event.academy.city.name
+            }
+        },
+        'sync_with_eventbrite': event.sync_with_eventbrite,
+        'live_stream_url': event.live_stream_url,
+        'eventbrite_sync_status': event.eventbrite_sync_status,
+        'eventbrite_sync_description': event.eventbrite_sync_description,
+        **data,
+    }
+
+
 class AcademyEventIdTestSuite(EventTestCase):
     cache = EventCache()
 
@@ -100,6 +145,13 @@ class AcademyEventIdTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'eventbrite_sync_description': None,
         }
+        expected = get_serializer(model.event,
+                                  model.academy,
+                                  data={
+                                      'sync_with_eventbrite': False,
+                                      'eventbrite_sync_status': 'PENDING',
+                                      'eventbrite_sync_description': None,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
@@ -465,6 +517,8 @@ class AcademyEventIdTestSuite(EventTestCase):
             'tags': '',
             'slug': None,
             'live_stream_url': None,
+            'host_user': 1,
+            'free_for_bootcamps': None,
             **data,
         }
 
@@ -477,6 +531,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'starting_at': current_date,
             'ending_at': current_date,
             'slug': None,
+            'free_for_bootcamps': None,
         }])
 
     """
@@ -663,6 +718,8 @@ class AcademyEventIdTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'live_stream_url': None,
+            'host_user': 1,
+            'free_for_bootcamps': None,
             **data,
         }
 
@@ -674,6 +731,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'organization_id': 1,
             'starting_at': current_date,
             'ending_at': current_date,
+            'free_for_bootcamps': None,
         }])
 
     """
@@ -752,6 +810,8 @@ class AcademyEventIdTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'live_stream_url': None,
+            'host_user': 1,
+            'free_for_bootcamps': None,
             **data,
         }
 
@@ -763,6 +823,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'organization_id': 1,
             'starting_at': current_date,
             'ending_at': current_date,
+            'free_for_bootcamps': None,
         }])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())

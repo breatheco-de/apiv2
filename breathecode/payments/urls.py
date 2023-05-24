@@ -1,20 +1,20 @@
 from django.urls import path
 
 from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, AcademyServiceView,
-                    AcademySubscriptionView, BagView, CardView, CheckingView, MeConsumableView, MeInvoiceView,
-                    AcademyInvoiceView, MeSubscriptionCancelView, MeSubscriptionChargeView, PayView,
+                    AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableCheckoutView,
+                    EventTypeSetView, MeConsumableView, MeInvoiceView, AcademyInvoiceView,
+                    MeSubscriptionCancelView, MeSubscriptionChargeView, MentorshipServiceSetView, PayView,
                     PlanOfferView, PlanView, ServiceItemView, ServiceView, MeSubscriptionView)
 
 # /v1/payment/offer
-
 app_name = 'payments'
 urlpatterns = [
     path('planoffer', PlanOfferView.as_view(), name='planoffer'),
     path('plan', PlanView.as_view(), name='plan'),
-    path('plan/<slug:plan_slug>', PlanView.as_view()),
-    path('academy/plan', AcademyPlanView.as_view()),
-    path('academy/plan/<int:plan_id>', AcademyPlanView.as_view()),
-    path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view()),
+    path('plan/<slug:plan_slug>', PlanView.as_view(), name='plan_slug'),
+    path('academy/plan', AcademyPlanView.as_view(), name='academy_plan'),
+    path('academy/plan/<int:plan_id>', AcademyPlanView.as_view(), name='academy_plan_id'),
+    path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view(), name='academy_plan_slug'),
     path('academy/plan/<int:plan_id>/cohort', AcademyPlanCohortView.as_view()),
     path('academy/plan/<slug:plan_slug>/cohort', AcademyPlanCohortView.as_view()),
     #FIXME
@@ -25,7 +25,14 @@ urlpatterns = [
     path('academy/service', AcademyServiceView.as_view()),
     path('academy/service/<slug:service_slug>', AcademyServiceView.as_view()),
     path('serviceitem', ServiceItemView.as_view(), name='serviceitem'),
+    path('mentorshipserviceset', MentorshipServiceSetView.as_view(), name='mentorshipserviceset'),
+    path('mentorshipserviceset/<int:mentorship_service_set_id>',
+         MentorshipServiceSetView.as_view(),
+         name='mentorshipserviceset_id'),
+    path('eventtypeset', EventTypeSetView.as_view(), name='eventtypeset'),
+    path('eventtypeset/<int:event_type_set_id>', EventTypeSetView.as_view(), name='eventtypeset_id'),
     path('me/service/consumable', MeConsumableView.as_view(), name='me_service_consumable'),
+    path('consumable/checkout', ConsumableCheckoutView.as_view(), name='consumable_checkout'),
     path('me/subscription', MeSubscriptionView.as_view(), name='me_subscription'),
     path('me/subscription/charge', MeSubscriptionChargeView.as_view(), name='me_subscription_charge'),
     path('me/subscription/<int:subscription_id>/cancel',

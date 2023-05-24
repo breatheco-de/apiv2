@@ -15,14 +15,14 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
-from breathecode.payments.models import (Bag, Consumable, EventTypeSet, FinancialReputation, Invoice,
-                                         MentorshipServiceSet, Plan, PlanFinancing, PlanOffer, Service,
-                                         ServiceItem, Subscription)
-from breathecode.payments.serializers import (GetBagSerializer, GetInvoiceSerializer,
-                                              GetInvoiceSmallSerializer, GetPlanFinancingSerializer,
-                                              GetPlanOfferSerializer, GetPlanSerializer,
-                                              GetServiceItemWithFeaturesSerializer, GetServiceSerializer,
-                                              GetSubscriptionSerializer, ServiceSerializer)
+from breathecode.payments.models import (AcademyService, Bag, Consumable, EventTypeSet, FinancialReputation,
+                                         Invoice, MentorshipServiceSet, Plan, PlanFinancing, PlanOffer,
+                                         Service, ServiceItem, Subscription)
+from breathecode.payments.serializers import (
+    GetBagSerializer, GetEventTypeSetSerializer, GetEventTypeSetSmallSerializer, GetInvoiceSerializer,
+    GetInvoiceSmallSerializer, GetMentorshipServiceSetSerializer, GetMentorshipServiceSetSmallSerializer,
+    GetPlanFinancingSerializer, GetPlanOfferSerializer, GetPlanSerializer,
+    GetServiceItemWithFeaturesSerializer, GetServiceSerializer, GetSubscriptionSerializer, ServiceSerializer)
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators.capable_of import capable_of
@@ -41,6 +41,13 @@ class PlanView(APIView):
     extensions = APIViewExtensions(sort='-id', paginate=True)
 
     def get(self, request, plan_slug=None, service_slug=None):
+
+        def is_onboarding(value: str):
+            if filtering:
+                return Q()
+
+            return Q(is_onboarding=value.lower() == 'true')
+
         handler = self.extensions(request)
         lang = get_user_language(request)
 
@@ -60,19 +67,23 @@ class PlanView(APIView):
             return handler.response(serializer.data)
 
         filtering = 'cohort' in request.GET or 'syllabus' in request.GET
-        if 'cohort' in request.GET or 'syllabus' in request.GET:
-            items = PlanFinder(request).get_plans_belongs_from_request()
+        query = handler.lookup.build(lang,
+                                     strings={
+                                         'exact': [
+                                             'service_items__service__slug',
+                                         ],
+                                     },
+                                     overwrite={
+                                         'service_slug': 'service_items__service__slug',
+                                     },
+                                     custom_fields={'is_onboarding': is_onboarding})
+
+        if filtering:
+            items = PlanFinder(request,
+                               query=query).get_plans_belongs_from_request().exclude(status='DELETED')
 
         else:
-            items = Plan.objects.filter()
-
-        if not filtering and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
-            items = items.filter(is_onboarding=is_onboarding == 'true')
-
-        items = items.exclude(status='DELETED')
-
-        if service_slug:
-            items = items.filter(services__slug=service_slug)
+            items = Plan.objects.filter(query).exclude(status='DELETED')
 
         items = handler.queryset(items)
         serializer = GetPlanSerializer(items,
@@ -88,13 +99,20 @@ class AcademyPlanView(APIView):
 
     @capable_of('read_plan')
     def get(self, request, plan_id=None, plan_slug=None, service_slug=None, academy_id=None):
+
+        def is_onboarding(value: str):
+            if filtering:
+                return Q()
+
+            return Q(is_onboarding=value.lower() == 'true')
+
         handler = self.extensions(request)
         lang = get_user_language(request)
 
-        if plan_slug or plan_slug:
-            item = Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
-                                       Q(owner__id=academy_id) | Q(owner=None),
-                                       slug=plan_slug).exclude(status='DELETED').first()
+        if plan_id or plan_slug:
+            item = Plan.objects.filter(
+                Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False),
+                Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED').first()
             if not item:
                 raise ValidationException(translation(lang,
                                                       en='Plan not found',
@@ -109,19 +127,27 @@ class AcademyPlanView(APIView):
             return handler.response(serializer.data)
 
         filtering = 'cohort' in request.GET or 'syllabus' in request.GET
-        if 'cohort' in request.GET or 'syllabus' in request.GET:
-            items = PlanFinder(request).get_plans_belongs_from_request()
+        query = handler.lookup.build(lang,
+                                     strings={
+                                         'exact': [
+                                             'service_items__service__slug',
+                                         ],
+                                     },
+                                     overwrite={
+                                         'service_slug': 'service_items__service__slug',
+                                     },
+                                     custom_fields={'is_onboarding': is_onboarding})
+
+        if filtering:
+            items = PlanFinder(
+                request,
+                query=query).get_plans_belongs_from_request().filter(Q(owner__id=academy_id)
+                                                                     | Q(owner=None)).exclude(
+                                                                         status='DELETED')
 
         else:
-            items = Plan.objects.filter()
-
-        if not filtering and (is_onboarding := request.GET.get('is_onboarding', '').lower()):
-            items = items.filter(is_onboarding=is_onboarding == 'true')
-
-        items = items.filter(Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED')
-
-        if service_slug:
-            items = items.filter(services__slug=service_slug).exclude(status='DELETED')
+            items = Plan.objects.filter(query,
+                                        Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED')
 
         items = handler.queryset(items)
         serializer = GetPlanSerializer(items,
@@ -411,6 +437,91 @@ class MeConsumableView(APIView):
         }
 
         return Response(balance)
+
+
+class MentorshipServiceSetView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def get(self, request, mentorship_service_set_id=None):
+        handler = self.extensions(request)
+
+        lang = get_user_language(request)
+
+        if mentorship_service_set_id:
+            item = MentorshipServiceSet.objects.filter(id=mentorship_service_set_id).first()
+            if not item:
+                raise ValidationException(translation(lang,
+                                                      en='Mentorship Service Set not found',
+                                                      es='No existe el Servicio de Mentoría',
+                                                      slug='not-found'),
+                                          code=404)
+
+            serializer = GetMentorshipServiceSetSerializer(item, many=False)
+
+            return handler.response(serializer.data)
+
+        query = handler.lookup.build(
+            lang,
+            slugs=[
+                '',
+                'academy',
+                'mentorship_services',
+            ],
+            overwrite={
+                'mentorship_service': 'mentorship_services',
+            },
+        )
+
+        items = MentorshipServiceSet.objects.filter(query)
+
+        items = handler.queryset(items)
+        serializer = GetMentorshipServiceSetSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class EventTypeSetView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def get(self, request, event_type_set_id=None):
+        handler = self.extensions(request)
+
+        lang = get_user_language(request)
+
+        if event_type_set_id:
+            item = EventTypeSet.objects.filter(id=event_type_set_id).first()
+            if not item:
+                raise ValidationException(translation(lang,
+                                                      en='Event type set not found',
+                                                      es='No existe el tipo de evento',
+                                                      slug='not-found'),
+                                          code=404)
+            serializer = GetEventTypeSetSerializer(item, many=False)
+
+            return handler.response(serializer.data)
+
+        query = handler.lookup.build(
+            lang,
+            strings={'exact': ['event_types__lang']},
+            slugs=[
+                '',
+                'academy',
+                'event_types',
+            ],
+            overwrite={
+                'event_type': 'event_types',
+                'lang': 'event_types__lang',
+            },
+        )
+
+        items = EventTypeSet.objects.filter(query)
+
+        items = handler.queryset(items)
+        serializer = GetEventTypeSetSmallSerializer(items, many=True)
+
+        return Response(serializer.data)
 
 
 class MeSubscriptionView(APIView):
@@ -965,6 +1076,203 @@ class CheckingView(APIView):
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
+
+
+class ConsumableCheckoutView(APIView):
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    def post(self, request):
+        lang = get_user_language(request)
+
+        service = request.data.get('service')
+        total_items = request.data.get('how_many')
+        academy = request.data.get('academy')
+
+        if not service:
+            raise ValidationException(translation(lang,
+                                                  en='Service is required',
+                                                  es='El servicio es requerido',
+                                                  slug='service-is-required'),
+                                      code=400)
+
+        if not (service := Service.objects.filter(id=service).first()):
+            raise ValidationException(
+                translation(lang,
+                            en='Service not found',
+                            es='El servicio no fue encontrado',
+                            slug='service-not-found'))
+
+        if not total_items:
+            raise ValidationException(translation(lang,
+                                                  en='How many is required',
+                                                  es='La cantidad es requerida',
+                                                  slug='how-many-is-required'),
+                                      code=400)
+
+        if not (isinstance(total_items, int) or isinstance(total_items, float)) or total_items <= 0:
+            raise ValidationException(translation(lang,
+                                                  en='How many is not valid',
+                                                  es='La cantidad de paquetes no es válida',
+                                                  slug='how-many-is-not-valid'),
+                                      code=400)
+
+        if not academy:
+            raise ValidationException(translation(lang,
+                                                  en='Academy is required',
+                                                  es='La academia es requerida',
+                                                  slug='academy-is-required'),
+                                      code=400)
+
+        if not Academy.objects.filter(id=academy).exists():
+            raise ValidationException(
+                translation(lang,
+                            en='Academy not found',
+                            es='La academia no fue encontrada',
+                            slug='academy-not-found'))
+
+        mentorship_service_set = request.data.get('mentorship_service_set')
+        event_type_set = request.data.get('event_type_set')
+
+        if [mentorship_service_set, event_type_set].count(None) != 1:
+            raise ValidationException(translation(
+                lang,
+                en='Just can pass Mentorship service set or event type set is required, not both',
+                es='Solo puede pasar Mentoría o tipo de evento, no ambos',
+                slug='mentorship-service-set-or-event-type-set-is-required'),
+                                      code=400)
+
+        if service.type == 'MENTORSHIP_SERVICE_SET' and not mentorship_service_set:
+            raise ValidationException(translation(
+                lang,
+                en='This service is type mentorship service set, but you provided other type of resource',
+                es='Este servicio es de tipo mentoría, pero usted proporcionó otro tipo de recurso',
+                slug='bad-service-type-mentorship-service-set'),
+                                      code=400)
+
+        elif service.type == 'EVENT_TYPE_SET' and not event_type_set:
+            raise ValidationException(translation(
+                lang,
+                en='This service is type event type set, but you provided other type of resource',
+                es='Este servicio es de tipo tipo de evento, pero usted proporcionó otro tipo de recurso',
+                slug='bad-service-type-event-type-set'),
+                                      code=400)
+
+        elif service.type not in ['MENTORSHIP_SERVICE_SET', 'EVENT_TYPE_SET']:
+            raise ValidationException(translation(lang,
+                                                  en='This service can\'t be bought here yet',
+                                                  es='Este servicio no se puede comprar aquí todavía',
+                                                  slug='service-type-no-implemented'),
+                                      code=400)
+
+        kwargs = {}
+        if mentorship_service_set:
+            kwargs['available_mentorship_service_sets'] = mentorship_service_set
+
+        elif event_type_set:
+            kwargs['available_event_type_sets'] = event_type_set
+
+        academy_service = AcademyService.objects.filter(academy_id=academy, service=service, **kwargs).first()
+        if not academy_service:
+            raise ValidationException(translation(lang,
+                                                  en='Academy service not found',
+                                                  es='Servicio de academia no encontrado',
+                                                  slug='academy-service-not-found'),
+                                      code=404)
+
+        currency = academy_service.currency
+
+        if total_items > academy_service.max_items:
+            raise ValidationException(translation(
+                lang,
+                en=f'The amount of items is too high (max {academy_service.max_items})',
+                es=f'La cantidad de elementos es demasiado alta (máx {academy_service.max_items})',
+                slug='the-amount-of-items-is-too-high'),
+                                      code=400)
+
+        amount = academy_service.get_discounted_price(total_items)
+
+        if amount <= 0.5:
+            raise ValidationException(translation(lang,
+                                                  en='The amount is too low',
+                                                  es='El monto es muy bajo',
+                                                  slug='the-amount-is-too-low'),
+                                      code=400)
+
+        if amount > academy_service.max_amount:
+            raise ValidationException(translation(
+                lang,
+                en=f'The amount is too high (max {academy_service.max_amount})',
+                es=f'El monto es demasiado alto (máx {academy_service.max_amount})',
+                slug='the-amount-is-too-high'),
+                                      code=400)
+
+        s = None
+        invoice = None
+        with transaction.atomic():
+            sid = transaction.savepoint()
+            try:
+                s = Stripe()
+                s.set_language(lang)
+                s.add_contact(request.user)
+                service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=total_items)
+
+                # keeps this inside a transaction
+                bag = Bag(type='CHARGE',
+                          status='PAID',
+                          was_delivered=True,
+                          user=request.user,
+                          currency=currency,
+                          academy_id=academy,
+                          is_recurrent=False)
+
+                bag.save()
+
+                if mentorship_service_set:
+                    mentorship_service_set = MentorshipServiceSet.objects.filter(
+                        id=mentorship_service_set).first()
+
+                if event_type_set:
+                    event_type_set = EventTypeSet.objects.filter(id=event_type_set).first()
+
+                if mentorship_service_set:
+                    bag.selected_mentorship_service_sets.add(mentorship_service_set)
+
+                else:
+                    bag.selected_event_type_sets.add(event_type_set)
+
+                bag.service_items.add(service_item)
+
+                if mentorship_service_set:
+                    description = f'Can join to {int(total_items)} mentorships'
+
+                else:
+                    description = f'Can join to {int(total_items)} events'
+
+                invoice = s.pay(request.user,
+                                bag,
+                                amount,
+                                currency=bag.currency.code,
+                                description=description)
+
+                consumable = Consumable(service_item=service_item,
+                                        user=request.user,
+                                        how_many=total_items,
+                                        mentorship_service_set=mentorship_service_set,
+                                        event_type_set=event_type_set)
+
+                consumable.save()
+
+            except Exception as e:
+                if invoice:
+                    s = Stripe()
+                    s.set_language(lang)
+                    s.refund_payment(invoice)
+
+                transaction.savepoint_rollback(sid)
+                raise e
+
+        serializer = GetInvoiceSerializer(invoice, many=False)
+        return Response(serializer.data, status=201)
 
 
 class PayView(APIView):

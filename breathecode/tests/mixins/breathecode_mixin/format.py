@@ -139,11 +139,7 @@ class Format:
         return Q(**query)
 
     # remove lang from args
-    def lookup(self,
-               lang: str,
-               custom_fields: dict = dict(),
-               overwrite: dict = dict(),
-               **kwargs: dict | tuple) -> dict[str, Any]:
+    def lookup(self, lang: str, overwrite: dict = dict(), **kwargs: dict | tuple) -> dict[str, Any]:
         """
         Generate from lookups the values in test side to be used in querystring.
 
@@ -210,10 +206,19 @@ class Format:
         # foreign
 
         for field in ids:
+            if field == '':
+                result['id'] = field.integer('exact')
+                continue
+
             name = overwrite.get(field, field)
             result[name] = Field.id('')
 
         for field in slugs:
+            if field == '':
+                result['id'] = Field.integer('exact')
+                result['slug'] = Field.string('exact')
+                continue
+
             name = overwrite.get(field, field)
             result[name] = Field.slug('')
 

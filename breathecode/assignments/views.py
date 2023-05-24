@@ -516,8 +516,14 @@ class TaskMeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+    extensions = APIViewExtensions(cache=TaskCache, cache_per_user=True, paginate=True)
 
     def get(self, request, task_id=None, user_id=None):
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
         if not user_id:
             user_id = request.user.id
 
@@ -553,8 +559,10 @@ class TaskMeView(APIView):
                 slugs = [x for x in cohorts if not x.isnumeric()]
                 items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
 
+        items = handler.queryset(items)
+
         serializer = TaskGETSerializer(items, many=True)
-        return Response(serializer.data)
+        return handler.response(serializer.data)
 
     def put(self, request, task_id=None):
 

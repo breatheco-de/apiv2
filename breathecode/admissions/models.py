@@ -348,6 +348,7 @@ class Cohort(models.Model):
                                          null=True,
                                          blank=True)
 
+    intro_video = models.URLField(null=True, blank=True, default=None)
     schedule = models.ForeignKey(SyllabusSchedule,
                                  on_delete=models.SET_NULL,
                                  default=None,
@@ -361,7 +362,10 @@ class Cohort(models.Model):
         help_text='Determines if the cohort will be shown in the dashboard if it\'s status is \'PREWORK\'')
 
     available_as_saas = models.BooleanField(
-        default=False, help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com')
+        default=False,
+        null=True,
+        blank=True,
+        help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com')
 
     language = models.CharField(max_length=2, default='en')
 
@@ -498,7 +502,7 @@ class CohortUser(models.Model):
         self.full_clean()
 
         edu_status_updated = False
-        if self.__old_edu_status != self.educational_status:
+        if self.pk is None or self.__old_edu_status != self.educational_status:
             edu_status_updated = True
 
         result = super().save(*args, **kwargs)  # Call the "real" save() method.

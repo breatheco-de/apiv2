@@ -184,14 +184,14 @@ def pick_mentorship_service(request, token, mentor_slug):
 
 class ForwardMeetUrl:
 
-    def __init__(self, request, mentor_slug, service_slug, token):
+    def __init__(self, request, mentor_profile, mentorship_service, token):
         self.request = request
-        self.mentor_slug = mentor_slug
-        self.service_slug = service_slug
         self.token = token
         self.baseUrl = request.get_full_path()
         self.now = timezone.now()
         self.query_params = self.querystring()
+        self.mentor = mentor_profile
+        self.service = mentorship_service
 
         if '?' not in self.baseUrl:
             self.baseUrl += '?'
@@ -225,13 +225,14 @@ class ForwardMeetUrl:
                 'baseUrl': self.baseUrl,
             })
 
-    def render_end_session(self, message, btn_url):
+    def render_end_session(self, message, btn_url, status=200):
         return render_message(
             self.request,
             message,
             btn_label='End Session',
             btn_url=btn_url,
             btn_target='_self',
+            status=status,
         )
 
     def get_user_name(self, user, default):
@@ -271,7 +272,8 @@ class ForwardMeetUrl:
             sessions = MentorshipSession.objects.filter(id=self.query_params['session'])
             if sessions.count() == 0:
                 return render_message(self.request,
-                                      f'Session with id {self.query_params["session"]} not found')
+                                      f'Session with id {self.query_params["session"]} not found',
+                                      status=404)
 
             # set service if is null
             sessions.filter(service__isnull=True).update(service=service)
@@ -297,19 +299,14 @@ class ForwardMeetUrl:
         if isinstance(self.token, HttpResponseRedirect):
             return self.token
 
-        mentor = MentorProfile.objects.filter(slug=self.mentor_slug).first()
-        if mentor is None:
-            return render_message(self.request, f'No mentor found with slug {self.mentor_slug}')
-
-        service = MentorshipService.objects.filter(slug=self.service_slug).first()
-        if service is None:
-            return render_message(self.request, f'No service found with slug {self.service_slug}')
+        mentor = self.mentor
+        service = self.service
 
         # add academy to session, will be available on html templates
         self.request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
         if mentor.status not in ['ACTIVE', 'UNLISTED']:
-            return render_message(self.request, f'This mentor is not active at the moment')
+            return render_message(self.request, f'This mentor is not active at the moment', status=400)
 
         try:
             actions.mentor_is_ready(mentor)
@@ -317,8 +314,8 @@ class ForwardMeetUrl:
         except:
             return render_message(
                 self.request,
-                f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.'
-            )
+                f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
+                status=400)
 
         is_token_of_mentee = mentor.user.id != self.token.user.id
 
@@ -335,7 +332,8 @@ class ForwardMeetUrl:
         if session is None:
             name = self.get_user_name(mentor.user, 'the mentor')
             return render_message(self.request,
-                                  f'Impossible to create or retrieve mentoring session with {name}.')
+                                  f'Impossible to create or retrieve mentoring session with {name}.',
+                                  status=400)
 
         is_mentee_params_set = bool(self.query_params['mentee'])
         is_mentee_params_undefined = self.query_params['mentee'] == 'undefined'
@@ -354,11 +352,10 @@ class ForwardMeetUrl:
 
         # session ended
         if session.status not in ['PENDING', 'STARTED']:
-            return render_message(
-                self.request,
-                f'This mentoring session has ended ({session.status}), would you like '
-                f'<a href="/mentor/meet/{mentor.slug}">to start a new one?</a>.',
-            )
+            return render_message(self.request,
+                                  f'This mentoring session has ended ({session.status}), would you like '
+                                  f'<a href="/mentor/meet/{mentor.slug}">to start a new one?</a>.',
+                                  status=400)
         # Who is joining? Set meeting join in dates
         if not is_token_of_mentee:
             # only reset the joined_at it has ben more than 5min and the session has not started yey
@@ -394,7 +391,9 @@ class ForwardMeetUrl:
 
                 except ExtendSessionException as e:
                     return self.render_end_session(
-                        str(e), btn_url=f'/mentor/session/{str(session.id)}?token={self.token.key}')
+                        str(e),
+                        btn_url=f'/mentor/session/{str(session.id)}?token={self.token.key}',
+                        status=400)
 
             extend_url = set_query_parameter(self.request.get_full_path(), 'extend', 'true')
             return self.render_end_session(
@@ -408,7 +407,7 @@ class ForwardMeetUrl:
                 self.request,
                 f'The mentoring session expired {timeago.format(session.ends_at, self.now)} and it '
                 'cannot be extended.',
-            )
+                status=400)
 
         # save progress so far, we are about to render the session below
         session.save()
@@ -423,9 +422,9 @@ class ForwardMeetUrl:
 
 
 @private_view()
-# @has_permission('join_mentorship', consumer=mentorship_service_by_url_param, format='html')
-def forward_meet_url(request, mentor_slug, service_slug, token):
-    handler = ForwardMeetUrl(request, mentor_slug, service_slug, token)
+@has_permission('join_mentorship', consumer=mentorship_service_by_url_param, format='html')
+def forward_meet_url(request, mentor_profile, mentorship_service, token):
+    handler = ForwardMeetUrl(request, mentor_profile, mentorship_service, token)
     return handler()
 
 

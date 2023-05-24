@@ -1,13 +1,13 @@
 from django.contrib import admin
 from breathecode.payments import tasks
 
-from breathecode.payments.models import (Bag, Consumable, Currency, EventTypeSet, EventTypeSetTranslation,
-                                         FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
-                                         MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing,
-                                         PlanOffer, PlanOfferTranslation, PlanServiceItem,
-                                         PlanServiceItemHandler, PlanTranslation, Service, ServiceItem,
-                                         ServiceItemFeature, ServiceStockScheduler, ServiceTranslation,
-                                         Subscription, SubscriptionServiceItem)
+from breathecode.payments.models import (Bag, Consumable, ConsumptionSession, Currency, EventTypeSet,
+                                         EventTypeSetTranslation, FinancialReputation, FinancingOption,
+                                         Invoice, MentorshipServiceSet, MentorshipServiceSetTranslation,
+                                         PaymentContact, Plan, PlanFinancing, PlanOffer, PlanOfferTranslation,
+                                         PlanServiceItem, PlanServiceItemHandler, PlanTranslation, Service,
+                                         ServiceItem, ServiceItemFeature, ServiceStockScheduler,
+                                         ServiceTranslation, Subscription, SubscriptionServiceItem)
 
 # Register your models here.
 
@@ -237,3 +237,15 @@ class PlanOfferTranslationAdmin(admin.ModelAdmin):
     list_filter = ['lang']
     search_fields = ['title']
     raw_id_fields = ['offer']
+
+
+@admin.register(ConsumptionSession)
+class ConsumptionSessionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'consumable', 'eta', 'duration', 'how_many', 'status', 'was_discounted',
+                    'path', 'related_id', 'related_slug')
+    list_filter = ['was_discounted', 'status', 'duration']
+    search_fields = [
+        'user__email', 'user__id', 'user__first_name', 'user__last_name', 'path', 'related_slug',
+        'related_id', 'consumable__service_item__service__slug'
+    ]
+    raw_id_fields = ['user', 'consumable']

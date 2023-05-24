@@ -291,7 +291,14 @@ class AcademyEventTestSuite(EventTestCase):
 
         del json['created_at']
         del json['updated_at']
-        expected = {'id': 1, 'academy': 1, 'allow_shared_creation': False, 'visibility_settings': [], **data}
+        expected = {
+            'id': 1,
+            'academy': 1,
+            'free_for_bootcamps': False,
+            'allow_shared_creation': False,
+            'visibility_settings': [],
+            **data,
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
@@ -300,5 +307,6 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 1,
             'academy_id': 1,
             'allow_shared_creation': False,
+            'free_for_bootcamps': False,
             **data
         }])

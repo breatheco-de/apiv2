@@ -49,6 +49,7 @@ def put_serializer(event_type, data={}):
         'lang': event_type.lang,
         'icon_url': event_type.icon_url,
         'allow_shared_creation': event_type.allow_shared_creation,
+        'free_for_bootcamps': event_type.free_for_bootcamps,
         'description': event_type.description,
         **data,
     }

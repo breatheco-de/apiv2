@@ -9,7 +9,7 @@ from .actions import (delete_tokens, generate_academy_token, set_gitpod_user_exp
 from django.utils.html import format_html
 from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy,
                      Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy,
-                     GitpodUser, GithubAcademyUser, AcademyAuthSettings)
+                     GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog)
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
 from breathecode.utils.datetime_interger import from_now
@@ -320,13 +320,50 @@ def mark_as_ignore(modeladmin, request, queryset):
     queryset.all().update(storage_status='SYNCHED', storage_action='IGNORE')
 
 
+def look_for_github_credentials(modeladmin, request, queryset):
+    users = queryset.all()
+    for u in users:
+        github = CredentialsGithub.objects.filter(user=u.user).first()
+        if github is None:
+            u.username = None
+        else:
+            u.username = github.username
+        u.save()
+
+
 @admin.register(GithubAcademyUser)
 class GithubAcademyUserAdmin(admin.ModelAdmin):
-    list_display = ('academy', 'user', 'username', 'storage_status', 'storage_action')
+    list_display = ('academy', 'user', 'github', 'storage_status', 'storage_action')
     search_fields = ['username', 'user__email', 'user__first_name', 'user__last_name']
-    actions = [mark_as_deleted, mark_as_add, mark_as_ignore]
+    actions = [mark_as_deleted, mark_as_add, mark_as_ignore, look_for_github_credentials]
     list_filter = ('academy', 'storage_status', 'storage_action')
     raw_id_fields = ['user']
+
+    def github(self, obj):
+        if obj.username is None:
+            return 'missing github connect'
+        else:
+            return obj.username
+
+
+@admin.register(GithubAcademyUserLog)
+class GithubAcademyUserLogAdmin(admin.ModelAdmin):
+    list_display = ('academy_name', 'user_info', 'storage_status', 'storage_action', 'created_at',
+                    'updated_at')
+    search_fields = [
+        'academy_user__username', 'academy_user__user__email', 'academy_user__user__first_name',
+        'academy_user__user__last_name'
+    ]
+    # actions = [mark_as_deleted, mark_as_add, mark_as_ignore]
+    list_filter = ('academy_user__academy__name', 'storage_status', 'storage_action')
+
+    def academy_name(self, obj):
+        return obj.academy_user.academy.name
+
+    def user_info(self, obj):
+        info = obj.academy_user.user.email
+        if obj.academy_user.username is not None:
+            info += ' -> ' + obj.academy_user.username
 
 
 def sync_github_members(modeladmin, request, queryset):

@@ -4,11 +4,8 @@ from typing import Any
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.priorities.mutator_order import MutatorOrder
 from breathecode.utils.api_view_extensions.priorities.response_order import ResponseOrder
-from breathecode.utils.cache import Cache
-from breathecode.utils.exceptions import ProgramingError
 from django.db.models import QuerySet
 from rest_framework.utils.urls import replace_query_param, remove_query_param
-from django.core.handlers.wsgi import WSGIRequest
 
 __all__ = ['PaginationExtension']
 

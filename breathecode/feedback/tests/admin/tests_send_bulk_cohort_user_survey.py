@@ -21,6 +21,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
     @patch('django.contrib.messages.api.add_message', MagicMock())
     @patch('breathecode.feedback.actions.send_question', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_zero_cohort_users(self):
         request = HttpRequest()
 
@@ -41,6 +43,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
     @patch('django.contrib.messages.api.add_message', MagicMock())
     @patch('breathecode.feedback.actions.send_question', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_two_cohort_users(self):
         request = HttpRequest()
         CohortUser = self.bc.database.get_model('admissions.CohortUser')
@@ -71,6 +75,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('django.contrib.messages.api.add_message', MagicMock())
     @patch('breathecode.feedback.actions.send_question', MagicMock(side_effect=Exception('qwerty')))
     @patch('logging.Logger.fatal', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_two_cohort_users__raises_exceptions__same_exception(self):
         request = HttpRequest()
         CohortUser = self.bc.database.get_model('admissions.CohortUser')
@@ -97,6 +103,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.feedback.actions.send_question',
            MagicMock(side_effect=[Exception('qwerty1'), Exception('qwerty2')]))
     @patch('logging.Logger.fatal', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_with_two_cohort_users__raises_exceptions__different_exceptions(self):
         request = HttpRequest()
         CohortUser = self.bc.database.get_model('admissions.CohortUser')

@@ -18,6 +18,7 @@ from breathecode.utils.decorators import task
 from breathecode.utils.i18n import translation
 
 from .models import AbstractIOweYou, Bag, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription, SubscriptionServiceItem
+from breathecode.payments.signals import reimburse_service_units
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,8 @@ def renew_consumables(self, scheduler_id: int):
 
     consumable = Consumable(service_item=service_item,
                             user=user,
+                            unit_type=service_item.unit_type,
+                            how_many=service_item.how_many,
                             valid_until=scheduler.valid_until,
                             **selected_lookup)
 
@@ -816,8 +819,96 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
         logger.error(f'ConsumptionSession with id {consumption_session_id} not found')
         return
 
+    if session.status != 'PENDING':
+        logger.error(f'ConsumptionSession with id {consumption_session_id} already processed')
+        return
+
     consumable = session.consumable
     consume_service.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
 
     session.was_discounted = True
     session.status = 'DONE'
+    session.save()
+
+
+# TODO: this task is not being used, if you will use this task, you need to take in consideration
+# you need fix the logic about the consumable valid until, maybe this must be removed
+@shared_task(bind=False, base=BaseTaskWithRetry)
+def build_consumables_from_bag(bag_id: int):
+    logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
+
+    if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
+        logger.error(f'Bag with id {bag_id} not found')
+        return
+
+    mentorship_service_set = bag.selected_mentorship_service_sets.first()
+    event_type_set = bag.selected_event_type_sets.first()
+
+    if [mentorship_service_set, event_type_set].count(None) != 1:
+        logger.error(f'Bag with id {bag_id} not have a resource associated')
+        return
+
+    consumables = []
+    for service_item in bag.service_items.all():
+        kwargs = {}
+        if service_item.service_item_type == 'MENTORSHIP_SERVICE_SET':
+            kwargs['mentorship_service_set'] = mentorship_service_set
+
+        if service_item.service_item_type == 'EVENT_TYPE_SET':
+            kwargs['event_type_set'] = event_type_set
+
+        if not kwargs:
+            logger.error(f'Bag with id {bag_id} have a resource associated opposite to the service item type')
+            return
+
+        consumables.append(
+            Consumable(service_item=service_item,
+                       unit_type=service_item.unit_type,
+                       how_many=service_item.how_many,
+                       user=bag.user,
+                       **kwargs))
+
+    for consumable in consumables:
+        consumable.save()
+
+    bag.was_delivered = True
+    bag.save()
+
+
+@shared_task(bind=False, base=BaseTaskWithRetry)
+def refund_mentoring_session(session_id: int):
+    from breathecode.mentorship.models import MentorshipSession
+
+    logger.info(f'Starting refund_mentoring_session for mentoring session {session_id}')
+
+    if not (mentorship_session := MentorshipSession.objects.filter(
+            id=session_id, mentee__isnull=False, service__isnull=False, status__in=['FAILED', 'IGNORED'
+                                                                                    ]).first()):
+        logger.error(f'MentoringSession with id {session_id} not found or is invalid')
+        return
+
+    mentee = mentorship_session.mentee
+    service = mentorship_session.service
+
+    consumption_session = ConsumptionSession.objects.filter(
+        consumable__user=mentee,
+        consumable__mentorship_service_set__mentorship_services=service).exclude(status='CANCELLED').first()
+
+    if not consumption_session:
+        logger.error(f'ConsumptionSession not found for mentorship session {session_id}')
+        return
+
+    if consumption_session.status == 'CANCELLED':
+        logger.error(f'ConsumptionSession already cancelled for mentorship session {session_id}')
+        return
+
+    consumption_session.status == 'CANCELLED'
+    consumption_session.save()
+
+    how_many = consumption_session.how_many
+    consumable = consumption_session.consumable
+
+    if consumption_session.status == 'DONE':
+        logger.info('Refunding consumption session because it was discounted')
+        reimburse_service_units.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
+        return

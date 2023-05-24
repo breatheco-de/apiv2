@@ -209,9 +209,18 @@ def compile_lookup(ids: tuple, slugs: tuple, ints: frozenset, strings: frozenset
     lookup = {}
 
     for key in ids:
+        if key == '':
+            lookup.update(CompileLookupField.integer({'exact': ('id', )}))
+            continue
+
         lookup[key] = Field.id
 
     for key in slugs:
+        if key == '':
+            lookup.update(CompileLookupField.integer({'exact': ('id', )}))
+            lookup.update(CompileLookupField.string({'exact': ('slug', )}))
+            continue
+
         lookup[key] = Field.slug
 
     lookup.update(CompileLookupField.string(dict(strings)))
@@ -270,8 +279,7 @@ class LookupExtension(ExtensionBase):
 
         return frozenset(result.items())
 
-    def build(self, lang: str, custom_fields: dict = dict(), overwrite: dict = dict(),
-              **kwargs: dict | tuple) -> tuple[tuple, dict]:
+    def build(self, lang: str, overwrite: dict = dict(), **kwargs: dict | tuple) -> tuple[tuple, dict]:
 
         # foreign
         ids = kwargs.get('ids', tuple())

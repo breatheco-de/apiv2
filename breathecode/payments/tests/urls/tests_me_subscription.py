@@ -129,6 +129,7 @@ def get_mentorship_service_set_serializer(mentorship_service_set, academy, mento
         ],
         'slug':
         mentorship_service_set.slug,
+        'academy_services': [],
     }
 
 
@@ -153,6 +154,7 @@ def get_event_type_set_serializer(event_type_set, academy, event_types=[]):
         'id': event_type_set.id,
         'event_types': [get_event_type_serializer(event_type, academy) for event_type in event_types],
         'slug': event_type_set.slug,
+        'academy_services': [],
     }
 
 
@@ -1409,10 +1411,6 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
 
-    ###########33
-    ##############3
-    ################3
-    ###################
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong EventTypeSet
     """

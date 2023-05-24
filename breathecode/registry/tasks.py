@@ -10,6 +10,7 @@ from celery import shared_task, Task
 from breathecode.services.seo import SEOAnalyzer
 from django.utils import timezone
 from bs4 import BeautifulSoup
+from django.db.models.query_utils import Q
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
@@ -32,7 +33,7 @@ img_regex = r'https?:(?:[/|.|\w|\s|-])*\.(?:jpg|gif|png|svg|jpeg)'
 
 
 def is_remote_image(_str):
-    if _str is None or _str == '' or asset_images_bucket() in _str:
+    if _str is None or _str == '' or asset_images_bucket('') in _str:
         return False
 
     match = re.search(img_regex, _str)
@@ -123,7 +124,6 @@ def async_create_asset_thumbnail(asset_slug: str):
         logger.error(f'Asset with slug {asset_slug} not found')
         return
 
-    print('aaaaaaaaaaaa', google_project_id())
     func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
 
     preview_url = asset.get_preview_generation_url()
@@ -132,7 +132,6 @@ def async_create_asset_thumbnail(asset_slug: str):
         return False
 
     name = asset.get_thumbnail_name()
-    print('preview_url', preview_url)
     url = set_query_parameter(preview_url, 'slug', asset_slug)
 
     response = None
@@ -347,6 +346,7 @@ def async_upload_image_to_bucket(id):
         raise Exception(f'Image with id {id} not found')
 
     img.download_status = 'PENDING'
+    # FIXME: undefined variable
     img.download_details = f'Downloading {link}'
     img.save()
 
@@ -369,7 +369,7 @@ def async_download_single_readme_image(asset_slug, link):
     if asset is None:
         raise Exception(f'Asset with slug {asset_slug} not found')
 
-    img = AssetImage.objects.filter(original_url=link).first()
+    img = AssetImage.objects.filter(Q(original_url=link) | Q(bucket_url=link)).first()
     if img is None:
         temp_filename = link.split('/')[-1].split('?')[0]
         img = AssetImage(name=temp_filename, original_url=link, last_download_at=timezone.now())
@@ -385,6 +385,7 @@ def async_download_single_readme_image(asset_slug, link):
         except Exception as e:
             img.download_details = str(e)
             img.download_status = 'ERROR'
+            img.save()
             logger.error(str(e))
             return False
 
