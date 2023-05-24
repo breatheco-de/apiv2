@@ -33,6 +33,7 @@ class PermissionContextType(TypedDict):
     consumables: QuerySet
     time_of_life: Optional[timedelta]
     will_consume: bool
+    is_consumption_session: bool
 
 
 HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple,
@@ -72,6 +73,20 @@ def has_permission(permission: str,
     def decorator(function: callable) -> callable:
 
         def wrapper(*args, **kwargs):
+
+            def build_context(**opts):
+                return {
+                    'utc_now': utc_now,
+                    'consumer': consumer,
+                    'permission': permission,
+                    'request': request,
+                    'consumables': Consumable.objects.none(),
+                    'time_of_life': None,
+                    'will_consume': True,
+                    'is_consumption_session': False,
+                    **opts,
+                }
+
             if isinstance(permission, str) == False:
                 raise ProgrammingError('Permission must be a string')
 
@@ -92,18 +107,13 @@ def has_permission(permission: str,
                 utc_now = timezone.now()
                 session = ConsumptionSession.get_session(request)
                 if session:
+                    context = build_context(is_consumption_session=True)
+
+                    context, args, kwargs = consumer(context, args, kwargs)
                     return function(*args, **kwargs)
 
                 if validate_permission(request.user, permission, consumer):
-                    context = {
-                        'utc_now': utc_now,
-                        'consumer': consumer,
-                        'permission': permission,
-                        'request': request,
-                        'consumables': Consumable.objects.none(),
-                        'time_of_life': None,
-                        'will_consume': True,
-                    }
+                    context = build_context()
 
                     if consumer:
                         items = Consumable.list(user=request.user, permission=permission)
