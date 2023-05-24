@@ -42,6 +42,17 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
                         es='No se encontró la URL de transmisión en vivo del evento',
                         slug='event-online-meeting-url-not-found'))
 
+    kwargs['event'] = event
+
+    if 'event_id' in kwargs:
+        del kwargs['event_id']
+
+    if 'event_slug' in kwargs:
+        del kwargs['event_slug']
+
+    if context['is_consumption_session']:
+        return (context, args, kwargs)
+
     event_type = event.event_type
 
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
@@ -57,14 +68,6 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     if not is_host and (not is_free_for_bootcamps or not user_with_available_as_saas_false):
         context['will_consume'] = True
-
-    kwargs['event'] = event
-
-    if 'event_id' in kwargs:
-        del kwargs['event_id']
-
-    if 'event_slug' in kwargs:
-        del kwargs['event_slug']
 
     utc_now = timezone.now()
     if event.ending_at < utc_now:
@@ -106,11 +109,14 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple,
                         es='No se encontró la URL de la reunión en línea del cohorte',
                         slug='cohort-online-meeting-url-not-found'))
 
-    context['consumables'] = context['consumables'].filter(cohort=live_class.cohort_time_slot.cohort)
-
     kwargs['live_class'] = live_class
     kwargs['lang'] = lang
     del kwargs['hash']
+
+    if context['is_consumption_session']:
+        return (context, args, kwargs)
+
+    context['consumables'] = context['consumables'].filter(cohort=live_class.cohort_time_slot.cohort)
 
     # avoid to be taken if the cohort is available as saas is not set
     cohort_available_as_saas = (live_class.cohort_time_slot.cohort.available_as_saas is not None

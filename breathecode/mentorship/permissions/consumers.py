@@ -41,6 +41,16 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
                                               es=f'No se encontró el servicio con slug {slug}'),
                                   code=404)
 
+    kwargs['mentor_profile'] = mentor_profile
+    kwargs['mentorship_service'] = mentorship_service
+
+    del kwargs['mentor_slug']
+    del kwargs['service_slug']
+
+    # avoid do more stuff if it's a consumption session
+    if context['is_consumption_session']:
+        return (context, args, kwargs)
+
     context['consumables'] = context['consumables'].filter(
         mentorship_service_set__mentorship_services=mentorship_service)
 
@@ -92,11 +102,5 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
         session = ConsumptionSession.build_session(request, consumable, mentorship_service.max_duration,
                                                    mentee)
         session.will_consume(1)
-
-    kwargs['mentor_profile'] = mentor_profile
-    kwargs['mentorship_service'] = mentorship_service
-
-    del kwargs['mentor_slug']
-    del kwargs['service_slug']
 
     return (context, args, kwargs)
