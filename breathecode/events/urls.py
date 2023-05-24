@@ -4,7 +4,8 @@ from .views import (AcademyEventJoinView, AcademyEventTypeView, AcademyLiveClass
                     MeLiveClassView, get_events, eventbrite_webhook, AcademyEventView, AcademyVenueView,
                     ICalCohortsView, ICalEventView, ICalStudentView, AcademyOrganizationView,
                     OrganizationWebhookView, AcademyOrganizerView, AcademyOrganizationOrganizerView,
-                    AcademyLiveClassJoinView, join_event, EventMeCheckinView, join_live_class)
+                    EventCheckinView, AcademyLiveClassJoinView, join_event, EventMeCheckinView,
+                    join_live_class)
 
 app_name = 'events'
 urlpatterns = [
@@ -22,6 +23,7 @@ urlpatterns = [
          name='academy_event_liveclass_join_hash'),
     path('all', get_events, name='all'),
     path('eventype', EventTypeView.as_view(), name='eventype'),
+    path('event/<int:event_id>/checkin', EventCheckinView.as_view(), name='event_checkin'),
     path('academy/event', AcademyEventView.as_view(), name='academy_event'),
     path('academy/event/<int:event_id>', AcademyEventView.as_view(), name='academy_event_id'),
     path('academy/event/<int:event_id>/join', AcademyEventJoinView.as_view(), name='academy_event_id_join'),
