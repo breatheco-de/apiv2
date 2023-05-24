@@ -996,12 +996,6 @@ class SubscriptionServiceItem(models.Model):
         return str(self.service_item)
 
 
-def show(name, data):
-    print(f'{name}: {data}')
-    logger.info(f'{name}: {data}')
-    return data
-
-
 class Consumable(AbstractServiceItem):
     """
     This model is used to represent the units of a service that can be consumed.
@@ -1095,9 +1089,6 @@ class Consumable(AbstractServiceItem):
 
         elif isinstance(permission, Permission):
             param['service_item__service__groups__permissions'] = permission
-
-        show('param', param)
-        show('extra', extra)
 
         return cls.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), **{
             **param,
