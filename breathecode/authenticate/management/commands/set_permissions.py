@@ -90,7 +90,7 @@ GROUPS = [
     },
     {
         'name': 'Mentor',
-        'permissions': ['get_my_mentoring_sessions'],
+        'permissions': ['join_mentorship', 'get_my_mentoring_sessions'],
         'inherit': []
     },
     {
