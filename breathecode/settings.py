@@ -380,6 +380,9 @@ heroku_redis_ssl_host = {
     'address': REDIS_URL,  # The 'rediss' schema denotes a SSL connection.
 }
 
+if IS_REDIS_WITH_SSL:
+    heroku_redis_ssl_host['address'] += '?ssl_cert_reqs=none'
+
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
