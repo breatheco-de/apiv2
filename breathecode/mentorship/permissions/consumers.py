@@ -1,5 +1,3 @@
-from datetime import timedelta
-from django.db.models import Q
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import User
 from breathecode.mentorship.models import MentorProfile, MentorshipService
@@ -7,8 +5,6 @@ from breathecode.payments.models import Consumable, ConsumptionSession
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-
-from .flags import api
 
 
 def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
