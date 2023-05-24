@@ -1,3 +1,4 @@
+import logging
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import User
 from breathecode.mentorship.models import MentorProfile, MentorshipService
@@ -5,6 +6,14 @@ from breathecode.payments.models import Consumable, ConsumptionSession
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
+
+logger = logging.getLogger(__name__)
+
+
+def show(name, data):
+    print(f'{name}: {data}')
+    logger.info(f'{name}: {data}')
+    return data
 
 
 def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
@@ -34,6 +43,8 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
 
     context['consumables'] = context['consumables'].filter(
         mentorship_service_set__mentorship_services=mentorship_service)
+
+    show("context['consumables']", context['consumables'])
 
     is_saas = mentorship_service and mentorship_service.academy.available_as_saas
 

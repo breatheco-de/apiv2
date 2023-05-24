@@ -56,6 +56,12 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
+def show(name, data):
+    print(f'{name}: {data}')
+    logger.info(f'{name}: {data}')
+    return data
+
+
 def has_permission(permission: str,
                    consumer: bool | HasPermissionCallback = False,
                    format='json') -> callable:
@@ -102,9 +108,14 @@ def has_permission(permission: str,
                     if consumer:
                         items = Consumable.list(user=request.user, permission=permission)
                         context['consumables'] = items
+                        show('context["consumables"]', context['consumables'])
 
                     if callable(consumer):
+                        show('args', args)
+                        show('kwargs', kwargs)
                         context, args, kwargs = consumer(context, args, kwargs)
+                        show('args', args)
+                        show('kwargs', kwargs)
 
                     if consumer and context['time_of_life']:
                         consumables = context['consumables']
@@ -117,6 +128,7 @@ def has_permission(permission: str,
                                 context['consumables'] = context['consumables'].exclude(id=item.id)
 
                     if consumer and context['will_consume'] and not context['consumables']:
+                        show('1111', 1111)
                         raise PaymentException(
                             f'You do not have enough credits to access this service: {permission}',
                             slug='with-consumer-not-enough-consumables')
@@ -155,6 +167,7 @@ def has_permission(permission: str,
                         slug='anonymous-user-not-enough-consumables')
 
                 else:
+                    show('2222', 2222)
                     raise PaymentException(
                         f'You do not have enough credits to access this service: {permission}',
                         slug='not-enough-consumables')
