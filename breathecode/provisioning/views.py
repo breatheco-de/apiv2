@@ -1,31 +1,17 @@
 import hashlib
 from io import StringIO
 import os
-import re
-from django.shortcuts import render, redirect
-from django.utils import timezone
-from django.db.models import Avg
-from django.http import HttpResponse
-from breathecode.admissions.models import CohortUser, Academy
+from django.shortcuts import redirect
+from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.monitoring.models import CSVUpload
 from breathecode.provisioning.tasks import upload
-from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.views import private_view, render_message, set_query_parameter
-from rest_framework import serializers
-from .serializers import (ContainerMeSmallSerializer, ContainerMeBigSerializer)
-from .actions import (
-    get_provisioning_vendor, )
-from .models import (
-    ProvisioningProfile, )
-from rest_framework.permissions import AllowAny
+from breathecode.utils.views import private_view, render_message
+from .actions import get_provisioning_vendor
+from .models import ProvisioningProfile
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
-from django.db.models import Q
-from django.db.models import QuerySet
+from breathecode.utils import capable_of, ValidationException
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 import pandas as pd
 

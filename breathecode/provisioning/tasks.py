@@ -23,12 +23,15 @@ def get_app_url():
     return os.getenv('APP_URL', '')
 
 
+PANDAS_ROWS_LIMIT = 50000
+
+
 @shared_task(bind=False, base=BaseTaskWithRetry)
 def upload(hash: str, page: int = 0):
     logger.info(f'Starting upload for hash {hash}')
 
-    limit = 100
-    start = page * 100
+    limit = PANDAS_ROWS_LIMIT
+    start = page * limit
     end = start + limit
     context = {}
 
@@ -43,24 +46,25 @@ def upload(hash: str, page: int = 0):
     csvStringIO = StringIO(s)
     df = pd.read_csv(csvStringIO, sep=',', header=None)
 
-    gitpod_fields = ['id', 'metadata', 'creditCents', 'effectiveTime', 'kind', 'metadata']
-    come_from_gitpod = len(df.keys().intersection(gitpod_fields)) == len(gitpod_fields)
+    handler = None
 
-    codespaces_fields = ['Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)']
-    come_from_codespaces = len(df.keys().intersection(codespaces_fields)) == len(codespaces_fields)
+    fields = ['id', 'metadata', 'creditCents', 'effectiveTime', 'kind', 'metadata']
+    if len(df.keys().intersection(fields)) == len(fields):
+        handler = actions.add_gitpod_activity
+
+    if not handler:
+        fields = ['Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)']
+
+    if not handler and len(df.keys().intersection(fields)) == len(fields):
+        handler = actions.add_codespaces_activity
+
+    if not handler:
+        logger.error(f'File {hash} has an unsupported origin or the provider had changed the file format')
+        return
 
     try:
-        if come_from_gitpod:
-            for i in range(start, end):
-                actions.add_gitpod_activity(context, df.iloc[i].to_dict())
-
-        elif come_from_codespaces:
-            for i in range(start, end):
-                actions.add_codespaces_activity(context, df.iloc[i].to_dict())
-
-        else:
-            logger.error(f'File {hash} has an invalid format')
-            return
+        for i in range(start, end):
+            handler(context, df.iloc[i].to_dict())
 
     except ValidationException as e:
         logger.error(f'File {hash} cannot be processed due to: {str(e)}')
