@@ -6,6 +6,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from .models import Event, EventType, LiveClass, Organization, EventbriteWebhook, EventCheckin
 from breathecode.admissions.models import Academy
+from breathecode.admissions.serializers import UserPublicSerializer
 from slugify import slugify
 from rest_framework import serializers
 import serpy, logging
@@ -430,6 +431,15 @@ class EventTypeSerializerMixin(serializers.ModelSerializer):
             del data['visibility_settings']
 
         return data
+
+
+class EventCheckinSmallSerializer(serpy.Serializer):
+    status = serpy.Field()
+    created_at = serpy.Field()
+    attendee = serpy.MethodField()
+
+    def get_attendee(self, obj):
+        return UserPublicSerializer(obj.attendee).data
 
 
 class PUTEventCheckinSerializer(serializers.ModelSerializer):
