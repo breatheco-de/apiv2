@@ -1,7 +1,7 @@
 import logging
 from django.dispatch import receiver
 from django.db.models import Avg
-from breathecode.authenticate.signals import invite_accepted
+from breathecode.authenticate.signals import invite_status_updated
 from breathecode.authenticate.models import UserInvite
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
@@ -94,10 +94,10 @@ def handle_asset_status_updated(sender, instance, **kwargs):
     HookManager.process_model_event(instance, model_label, 'asset_status_updated')
 
 
-@receiver(invite_accepted, sender=UserInvite)
+@receiver(invite_status_updated, sender=UserInvite)
 def handle_invite_accepted(sender, instance, **kwargs):
     model_label = get_model_label(instance)
-    HookManager.process_model_event(instance, model_label, 'invite_accepted')
+    HookManager.process_model_event(instance, model_label, 'invite_status_updated')
 
 
 @receiver(student_edu_status_updated, sender=CohortUser)

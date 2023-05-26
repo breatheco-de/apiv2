@@ -1,6 +1,6 @@
 import logging
 from django.dispatch import receiver
-from breathecode.authenticate.signals import invite_accepted
+from breathecode.authenticate.signals import academy_invite_accepted
 from breathecode.events.signals import event_saved
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.models import CohortUser, Cohort, Academy
@@ -15,12 +15,12 @@ from .tasks import add_downloadable_slug_as_acp_tag
 logger = logging.getLogger(__name__)
 
 
-@receiver(invite_accepted, sender=ProfileAcademy)
+@receiver(academy_invite_accepted, sender=ProfileAcademy)
 def post_save_profileacademy(sender, instance, **kwargs):
     # if a new ProfileAcademy is created on the authanticate app
     # look for the email on the formentry list and bind it
     logger.debug(
-        'Receiver for invite_accepted triggered, linking the new user to its respective form entries')
+        'Receiver for academy_invite_accepted triggered, linking the new user to its respective form entries')
     entries = FormEntry.objects.filter(email=instance.user.email, user__isnull=True)
     for entry in entries:
         entry.user = instance.user
