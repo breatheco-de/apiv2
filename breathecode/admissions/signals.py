@@ -4,6 +4,8 @@ from django.dispatch import Signal
 student_edu_status_updated = Signal()
 cohort_saved = Signal()
 cohort_log_saved = Signal()
+cohort_stage_updated = Signal()
+
 academy_saved = Signal()
 
 academy_saved = Signal()
