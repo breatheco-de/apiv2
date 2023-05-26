@@ -853,6 +853,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'intro_video': None,
                 'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': False
@@ -937,6 +938,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'intro_video': None,
                 'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': False
@@ -1021,6 +1023,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'intro_video': None,
                 'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': True
@@ -1105,6 +1108,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'intro_video': None,
                 'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': False
@@ -1188,6 +1192,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
             cohort_field({
                 'stage': stage,
+                'intro_video': None,
                 'accepts_enrollment_suggestions': True,
                 'kickoff_date': UTC_NOW,
                 'available_as_saas': model.academy.available_as_saas

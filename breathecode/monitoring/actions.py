@@ -4,6 +4,7 @@ import json, re, os, subprocess, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Academy
+from breathecode.utils.script_notification import WrongScriptConfiguration
 from .models import CSVUpload, Endpoint, CSVDownload, RepositoryWebhook
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
@@ -237,6 +238,7 @@ def run_script(script):
         sys.stdout = old
 
     content = None
+    exception = None
     if script.script_slug and script.script_slug != 'other':
         dir_path = os.path.dirname(os.path.realpath(__file__))
         header = SCRIPT_HEADER
@@ -247,14 +249,18 @@ def run_script(script):
         content = script.script_body
 
     else:
-        raise Exception(f'Script not found or its body is empty: {script.script_slug}')
+        exception = WrongScriptConfiguration(f'Script not found or its body is empty: {script.script_slug}')
 
-    if content:
+    if content or exception:
         local = {'result': {'status': 'OPERATIONAL'}}
         with stdoutIO() as s:
             try:
+                if exception:
+                    raise exception
+
                 if script.application is None:
                     raise Exception(f'Script {script.script_slug} does not belong to any application')
+
                 exec(
                     content, {
                         'academy': script.application.academy,
@@ -287,6 +293,15 @@ def run_script(script):
                     script.status = 'MINOR'
                     results['severity_level'] = 5
                 results['error_slug'] = e.slug
+
+            except WrongScriptConfiguration as e:
+                script.special_status_text = str(e)[:255]
+                script.response_text = str(e)
+                script.status_code = 1
+                script.status = 'CRITICAL'
+                results['error_slug'] = 'wrong-configuration'
+                results['btn'] = None
+                results['severity_level'] = 100
 
             except Exception as e:
                 import traceback

@@ -100,7 +100,7 @@ def get_discounted_price(academy_service, num_items) -> float:
     total_discount_ratio = 0
     current_discount_ratio = academy_service.discount_ratio
     discount_nerf = 0.1
-    max_discount = 0.8
+    max_discount = 0.2
 
     for _ in range(math.floor(num_items / academy_service.bundle_size)):
         total_discount_ratio += current_discount_ratio
@@ -588,7 +588,7 @@ class SignalTestSuite(PaymentsTestCase):
             'max_items': how_many,
             'bundle_size': 2,
             'max_amount': price_per_unit * how_many,
-            'discount_ratio': random.random() * 0.8,
+            'discount_ratio': random.random() * 0.2,
         }
 
         model = self.bc.database.create(user=1,
@@ -663,7 +663,7 @@ class SignalTestSuite(PaymentsTestCase):
             'bundle_size': 2,
             'max_amount': price_per_unit * how_many,
             'max_items': 11,
-            'discount_ratio': random.random() * 0.8,
+            'discount_ratio': random.random() * 0.2,
         }
 
         model = self.bc.database.create(user=1,

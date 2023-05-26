@@ -7,7 +7,12 @@ from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.authenticate.models import Token
 
-API_URL = os.getenv('API_URL', '')
+from breathecode.notify import actions
+
+
+def get_api_url():
+    return os.getenv('API_URL', '')
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,17 +34,20 @@ def async_slack_team_channel(team_id):
 def send_mentorship_starting_notification(session_id):
     logger.debug('Starting send_mentorship_starting_notification')
 
-    session = MentorshipSession.objects.filter(id=session_id).first()
+    session = MentorshipSession.objects.filter(id=session_id, mentee__isnull=False).first()
+    if not session:
+        logger.error(f'No mentorship session found for {session_id}')
+        return False
 
     token, created = Token.get_or_create(session.mentor.user, token_type='temporal', hours_length=2)
 
-    send_email_message(
+    actions.send_email_message(
         'message', session.mentor.user.email, {
             'SUBJECT': 'Mentorship session starting',
             'MESSAGE':
             f'Mentee {session.mentee.first_name} {session.mentee.last_name} is joining your session, please come back to this email when the session is over to marke it as completed',
             'BUTTON': f'Finish and review this session',
-            'LINK': f'{API_URL}/mentor/session/{session.id}?token={token.key}',
+            'LINK': f'{get_api_url()}/mentor/session/{session.id}?token={token.key}',
         })
 
     return True
@@ -97,8 +105,9 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
     instance:   a possibly null "trigger" instance
     hook:       the defining Hook object (useful for removing)
     """
+    encoded_payload = json.dumps(payload, cls=DjangoJSONEncoder)
     response = requests.post(url=target,
-                             data=json.dumps(payload, cls=DjangoJSONEncoder),
+                             data=encoded_payload,
                              headers={'Content-Type': 'application/json'},
                              timeout=2)
 

@@ -367,11 +367,14 @@ HOOK_EVENTS = {
     'profile_academy.changed': 'authenticate.ProfileAcademy.updated+',
     'cohort_user.added': 'admissions.CohortUser.created+',
     'cohort_user.changed': 'admissions.CohortUser.updated+',
+
+    # and custom events, make sure to trigger them at notify.receivers.py
     'cohort_user.edu_status_updated': 'admissions.CohortUser.edu_status_updated',
-    'cohort.added': 'admissions.Cohort.created+',
-    'cohort.changed': 'admissions.Cohort.updated+',
-    'cohort_user.edu_status_updated': 'admissions.CohortUser.cohort_stage_updated',
-    # and custom events, no extra meta data needed
+    'user_invite.invite_accepted': 'authenticate.UserInvite.invite_accepted',
+    'asset.asset_status_updated': 'registry.Asset.asset_status_updated',
+    'event.event_status_updated': 'events.Event.event_status_updated',
+    'event.new_order': 'events.Event.new_event_order',
+    'event.new_attendee': 'events.Event.new_event_attendee',
     'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
 }
 
@@ -379,16 +382,12 @@ HOOK_EVENTS = {
 ASGI_APPLICATION = 'breathecode.asgi.application'
 REDIS_URL_PATTERN = r'^redis://(.+):(\d+)$'
 
-ssl_context = ssl.SSLContext()
-ssl_context.check_hostname = False
-
 heroku_redis_ssl_host = {
     'address': REDIS_URL,  # The 'rediss' schema denotes a SSL connection.
-    'ssl': ssl_context
 }
 
-if not IS_REDIS_WITH_SSL:
-    del heroku_redis_ssl_host['ssl']
+if IS_REDIS_WITH_SSL:
+    heroku_redis_ssl_host['address'] += '?ssl_cert_reqs=none'
 
 CHANNEL_LAYERS = {
     'default': {

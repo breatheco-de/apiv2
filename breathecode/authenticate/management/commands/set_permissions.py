@@ -60,6 +60,11 @@ PERMISSIONS = [
         'description': 'Get provisioning containers',
         'codename': 'get_containers',
     },
+    {
+        'name': 'Add code reviews',
+        'description': 'Add code reviews',
+        'codename': 'add_code_review',
+    },
 ]
 
 GROUPS = [
@@ -80,12 +85,12 @@ GROUPS = [
     },
     {
         'name': 'Teacher',
-        'permissions': [],
+        'permissions': ['add_code_review'],
         'inherit': []
     },
     {
         'name': 'Mentor',
-        'permissions': ['get_my_mentoring_sessions'],
+        'permissions': ['join_mentorship', 'get_my_mentoring_sessions'],
         'inherit': []
     },
     {

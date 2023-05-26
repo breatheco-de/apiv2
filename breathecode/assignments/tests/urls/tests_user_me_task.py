@@ -4,9 +4,11 @@ Test /answer
 from django.utils import timezone
 from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
-from pytz import UTC
 from rest_framework import status
 import random
+from breathecode.assignments.caches import TaskCache
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import \
+    APIViewExtensionHandlers
 
 from breathecode.assignments import tasks
 
@@ -545,3 +547,24 @@ class MediaTestSuite(AssignmentsTestCase):
             # teardown
             self.bc.database.delete('assignments.Task')
             tasks.student_task_notification.delay.call_args_list = []
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test_with_data(self):
+        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+            model = self.bc.database.create(user=1, task=2, cohort=2)
+
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:user_me_task')
+        self.client.get(url)
+
+        self.bc.check.calls(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension']),
+        ])
+
+        self.bc.check.calls(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=TaskCache, cache_per_user=True, paginate=True),
+        ])

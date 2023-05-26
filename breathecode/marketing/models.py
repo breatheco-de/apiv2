@@ -628,7 +628,10 @@ WEBHOOK_STATUS = (
 class ActiveCampaignWebhook(models.Model):
 
     webhook_type = models.CharField(max_length=100, blank=True, null=True, default=None)
-    run_at = models.DateTimeField(help_text='Date/time that the webhook ran')
+    run_at = models.DateTimeField(help_text='Date/time that the webhook ran',
+                                  blank=True,
+                                  null=True,
+                                  default=None)
     initiated_by = models.CharField(
         max_length=100, help_text='Source/section of the software that triggered the webhook to run')
 

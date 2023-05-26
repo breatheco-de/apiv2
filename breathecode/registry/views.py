@@ -446,7 +446,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         if 'asset_type' in self.request.GET:
             param = self.request.GET.get('asset_type')
-            lookup['asset_type__iexact'] = param
+            lookup['asset_type__in'] = [p.upper() for p in param.split(',') if p]
 
         if 'category' in self.request.GET:
             param = self.request.GET.get('category')
@@ -519,6 +519,10 @@ class AssetView(APIView, GenerateLookupsMixin):
         need_translation = self.request.GET.get('need_translation', False)
         if need_translation == 'true':
             items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1)
+
+        if 'exclude_category' in self.request.GET:
+            param = self.request.GET.get('exclude_category')
+            items = items.exclude(category__slug__in=[p for p in param.split(',') if p])
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -1024,7 +1028,7 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
             raise ValidationException('This comment does not exist for this academy', 404)
 
         data = {**request.data}
-        if 'status' in request.data and request.data['status'] == 'UNASSIGNED':
+        if 'status' in request.data and request.data['status'] == 'NOT_STARTED':
             data['author'] = None
 
         serializer = PutAssetCommentSerializer(comment,
@@ -1225,7 +1229,7 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    extensions = APIViewExtensions(cache=KeywordClusterCache, sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_keywordcluster')
     def get(self, request, cluster_slug=None, academy_id=None):
@@ -1240,9 +1244,11 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+
+        # cache has been disabled because I cant get it to refresh then keywords are resigned to assets
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         items = KeywordCluster.objects.filter(academy__id=academy_id)
         lookup = {}

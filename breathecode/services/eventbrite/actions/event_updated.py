@@ -15,4 +15,8 @@ def event_updated(self, webhook, payload: dict):
     # two times
     time.sleep(6)
 
-    update_or_create_event(payload, org)
+    event = update_or_create_event(payload, org)
+
+    if event and event is not None:
+        webhook.event = event
+        webhook.save()

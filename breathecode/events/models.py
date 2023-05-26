@@ -2,6 +2,7 @@ import binascii
 import os
 from django.db import models
 from django.contrib.auth.models import User
+from .signals import event_status_updated, new_event_order, new_event_attendee
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Syllabus
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
@@ -116,6 +117,7 @@ class EventType(models.Model):
     icon_url = models.URLField(blank=False, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
     lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
+    free_for_bootcamps = models.BooleanField(default=True)
 
     visibility_settings = models.ManyToManyField(
         EventTypeVisibilitySetting,
@@ -140,10 +142,12 @@ class EventType(models.Model):
             raise e
 
 
+FINISHED = 'FINISHED'
 EVENT_STATUS = (
     (ACTIVE, 'Active'),
     (DRAFT, 'Draft'),
     (DELETED, 'Deleted'),
+    (FINISHED, 'Finished'),
 )
 
 USD = 'USD'  # United States dollar
@@ -161,6 +165,11 @@ CURRENCIES = (
 
 
 class Event(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(Event, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
+
     slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
@@ -172,6 +181,7 @@ class Event(models.Model):
                             validators=[validate_language_code])
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
+    free_for_bootcamps = models.BooleanField(default=None, blank=True, null=True)
 
     url = models.URLField(
         max_length=255,
@@ -195,7 +205,18 @@ class Event(models.Model):
     starting_at = models.DateTimeField(blank=False)
     ending_at = models.DateTimeField(blank=False)
 
-    host = models.CharField(max_length=100, blank=True, default=None, null=True)
+    host = models.CharField(max_length=100,
+                            blank=True,
+                            default=None,
+                            null=True,
+                            help_text='Host name that appear in Eventbrite')
+    host_user = models.ForeignKey(User,
+                                  on_delete=models.SET_NULL,
+                                  blank=True,
+                                  null=True,
+                                  related_name='event_host',
+                                  help_text='4geeks user that is the host of the event')
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
@@ -234,10 +255,16 @@ class Event(models.Model):
     def save(self, *args, **kwargs):
         from .signals import event_saved
 
+        status_updated = False
+        if self.__old_status != self.status:
+            status_updated = True
+
         created = not self.id
         super().save(*args, **kwargs)
 
         event_saved.send(instance=self, sender=self.__class__, created=created)
+
+        if status_updated: event_status_updated.send(instance=self, sender=Event)
 
 
 PENDING = 'PENDING'
@@ -249,6 +276,11 @@ CHECKIN_STATUS = (
 
 
 class EventCheckin(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(EventCheckin, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
+
     email = models.EmailField(max_length=150)
 
     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
@@ -261,6 +293,22 @@ class EventCheckin(models.Model):
 
     def __str__(self):
         return self.email
+
+    def save(self, *args, **kwargs):
+
+        creating = False
+        if self.pk is None:
+            creating = True
+
+        status_updated = False
+        if self.__old_status != self.status:
+            status_updated = True
+
+        super().save(*args, **kwargs)
+
+        if creating: new_event_order.send(instance=self, sender=EventCheckin)
+        elif status_updated and self.status == 'DONE':
+            new_event_attendee.send(instance=self, sender=EventCheckin)
 
 
 # PENDING = 'PENDING'
@@ -278,6 +326,10 @@ class EventbriteWebhook(models.Model):
     user_id = models.CharField(max_length=20, blank=True, null=True, default=None)
     action = models.CharField(max_length=15, blank=True, null=True, default=None)
     webhook_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+    payload = models.JSONField(blank=True, null=True, default=None, help_text='Will be set by async task')
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, blank=True, null=True, default=None)
+    attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
+
     organization_id = models.CharField(max_length=20, blank=True, null=True, default=None)
     endpoint_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 

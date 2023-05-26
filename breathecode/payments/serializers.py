@@ -213,6 +213,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     price_per_year = serpy.Field()
     currency = GetCurrencySmallSerializer()
     is_renewable = serpy.Field()
+    has_waiting_list = serpy.Field()
     owner = GetAcademySmallSerializer(required=False, many=False)
 
 

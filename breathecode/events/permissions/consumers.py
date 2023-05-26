@@ -1,6 +1,7 @@
 from datetime import timedelta
 import logging
 from django.db.models import Q
+from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.events.actions import get_my_event_types
 from breathecode.events.models import Event, EventType, LiveClass
@@ -23,9 +24,9 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     lang = get_user_language(request)
     items = get_my_event_types(request.user)
 
-    event = Event.objects.filter(Q(id=kwargs.get('event_id'))
-                                 | Q(slug=kwargs.get('event_slug'), slug__isnull=False),
-                                 event_type__in=items).first()
+    pk = Q(id=kwargs.get('event_id')) | Q(slug=kwargs.get('event_slug'), slug__isnull=False)
+    belongs_to_this_event = Q(event_type__in=items) | Q(host_user=request.user)
+    event = Event.objects.filter(pk, belongs_to_this_event).first()
 
     if not event:
         raise ValidationException(translation(lang,
@@ -41,14 +42,6 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
                         es='No se encontró la URL de transmisión en vivo del evento',
                         slug='event-online-meeting-url-not-found'))
 
-    event_type = event.event_type
-
-    context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
-
-    if event.academy and event.academy.available_as_saas:
-        context['will_consume'] = api.release.enable_consume_live_events(context['request'].user, event)
-        # context['will_consume'] = True
-
     kwargs['event'] = event
 
     if 'event_id' in kwargs:
@@ -56,6 +49,25 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     if 'event_slug' in kwargs:
         del kwargs['event_slug']
+
+    if context['is_consumption_session']:
+        return (context, args, kwargs)
+
+    event_type = event.event_type
+
+    context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
+
+    is_host = event.host_user == request.user
+    is_free_for_bootcamps = (event.free_for_bootcamps) or (event.free_for_bootcamps is None
+                                                           and event_type.free_for_bootcamps)
+
+    user_with_available_as_saas_false = CohortUser.objects.filter(
+        Q(cohort__available_as_saas=False)
+        | Q(cohort__available_as_saas=None, cohort__academy__available_as_saas=False),
+        user=request.user).exists()
+
+    if not is_host and (not is_free_for_bootcamps or not user_with_available_as_saas_false):
+        context['will_consume'] = True
 
     utc_now = timezone.now()
     if event.ending_at < utc_now:
@@ -97,11 +109,14 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple,
                         es='No se encontró la URL de la reunión en línea del cohorte',
                         slug='cohort-online-meeting-url-not-found'))
 
-    context['consumables'] = context['consumables'].filter(cohort=live_class.cohort_time_slot.cohort)
-
     kwargs['live_class'] = live_class
     kwargs['lang'] = lang
     del kwargs['hash']
+
+    if context['is_consumption_session']:
+        return (context, args, kwargs)
+
+    context['consumables'] = context['consumables'].filter(cohort=live_class.cohort_time_slot.cohort)
 
     # avoid to be taken if the cohort is available as saas is not set
     cohort_available_as_saas = (live_class.cohort_time_slot.cohort.available_as_saas is not None
@@ -113,8 +128,7 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple,
                                  and live_class.cohort_time_slot.cohort.academy.available_as_saas)
 
     if cohort_available_as_saas or academy_available_as_saas:
-        context['will_consume'] = api.release.enable_consume_live_classes(context['request'].user)
-        # context['will_consume'] = True
+        context['will_consume'] = True
 
     utc_now = timezone.now()
     if live_class.ending_at < utc_now:

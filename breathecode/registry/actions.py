@@ -56,8 +56,8 @@ def allowed_mimes():
     return ['image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'image/jpg']
 
 
-def asset_images_bucket():
-    return os.getenv('ASSET_IMAGES_BUCKET', None)
+def asset_images_bucket(default=None):
+    return os.getenv('ASSET_IMAGES_BUCKET', default)
 
 
 def generate_external_readme(a):
@@ -145,7 +145,6 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         return asset
     except Exception as e:
-#        raise e
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -153,6 +152,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
             message = str(e).replace('"', '\'')
 
         logger.error(f'Error updating {asset_slug} from github: ' + str(message))
+
         # if the exception triggered too early, the asset will be early
         if asset is not None:
             asset.status_text = str(message)
@@ -283,8 +283,10 @@ def push_github_asset(github, asset):
 
     # we commit the raw readme, we don't want images to be replaced in the original github
     decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
+    if decoded_readme is None or decoded_readme == "None" or decoded_readme == "":
+        raise Exception('The markdown content you are trying to push to Github is empty')
+        
     result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
-
     if 'commit' in result:
         asset.github_commit_hash = result['commit'].sha
 
@@ -312,8 +314,8 @@ def pull_github_lesson(github, asset, override_meta=False):
 
     blob_file = get_blob_content(repo, file_path, branch=branch_name)
     if blob_file is None:
-        raise Exception('Nothing was found under '+file_path)
-        
+        raise Exception('Nothing was found under ' + file_path)
+
     base64_readme = blob_file.content
     asset.readme_raw = base64_readme
 
@@ -820,9 +822,12 @@ def upload_image_to_bucket(img, asset):
     return img
 
 
-def add_syllabus_translations(_json):
+def add_syllabus_translations(_json: dict):
+    if not isinstance(_json, dict) or 'days' not in _json or not isinstance(_json['days'], list):
+        return _json
+
     day_count = -1
-    for day in _json['days']:
+    for day in _json.get('days', []):
         day_count += 1
         for asset_type in ['assignments', 'lessons', 'quizzes', 'replits']:
             index = -1

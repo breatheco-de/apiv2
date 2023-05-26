@@ -15,6 +15,7 @@ from django.contrib import messages
 
 from breathecode.mentorship.forms import CloseMentoringSessionForm
 from breathecode.mentorship.models import MentorshipSession
+from breathecode.notify import actions
 from ..mixins import MentorshipTestCase
 from django.core.handlers.wsgi import WSGIRequest
 
@@ -503,6 +504,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.contrib.messages.storage.fallback.FallbackStorage.add', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test__get__with_mentorship_session__without_mentee__(self):
         statuses = [
             'PENDING',
@@ -556,6 +558,24 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             # teardown
             self.bc.database.delete('mentorship.MentorshipSession')
+
+            Token = self.bc.database.get_model('authenticate.Token')
+            token = Token.objects.filter(user=model.user, token_type='temporal').last()
+
+            calls = [] if c != 'STARTED' else [
+                call(
+                    'message',
+                    model.mentor_profile.user.email,
+                    {
+                        'SUBJECT': 'Mentorship session starting',
+                        'MESSAGE':
+                        f'Mentee {model.user.first_name} {model.user.last_name} is joining your session, please come back to this email when the session is over to marke it as completed',
+                        'BUTTON': f'Finish and review this session',
+                        'LINK': f'/mentor/session/4?token={token.key}',
+                    },
+                )
+            ]
+            self.bc.check.calls(actions.send_email_message.call_args_list, calls)
 
     """
     🔽🔽🔽 POST without MentorshipSession, passing nothing

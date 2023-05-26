@@ -2439,7 +2439,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -2489,7 +2489,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])
@@ -2956,7 +2956,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -3008,7 +3008,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])
@@ -3471,7 +3471,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -3521,7 +3521,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])
@@ -3988,7 +3988,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -4040,7 +4040,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])
@@ -4508,7 +4508,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -4560,7 +4560,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])
@@ -6519,7 +6519,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -6569,7 +6569,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])
@@ -7004,7 +7004,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -7056,7 +7056,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])
@@ -7489,7 +7489,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -7539,7 +7539,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])
@@ -7976,7 +7976,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         Consumable = self.bc.database.get_model('payments.Consumable')
         consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -8028,7 +8028,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])
@@ -8463,7 +8463,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
@@ -8515,7 +8515,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 0)
+        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             self.bc.format.to_dict(model.consumption_session),
         ])

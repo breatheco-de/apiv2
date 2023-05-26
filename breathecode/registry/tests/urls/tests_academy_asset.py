@@ -60,7 +60,7 @@ def database_item(academy, category, data={}):
         'slug': '',
         'solution_url': None,
         'solution_video_url': None,
-        'status': 'UNASSIGNED',
+        'status': 'NOT_STARTED',
         'status_text': None,
         'sync_status': None,
         'test_status': None,
@@ -109,14 +109,14 @@ def post_serializer(academy, category, data={}):
         'slug': '',
         'solution_url': None,
         'solution_video_url': None,
-        'status': 'UNASSIGNED',
+        'status': 'NOT_STARTED',
         'status_text': None,
         'sync_status': None,
         'technologies': [],
         'test_status': None,
         'title': 'model_title',
         'translations': {
-            'null': 'model_slug'
+            'us': 'model_slug'
         },
         'url': None,
         'visibility': 'PUBLIC',
@@ -164,7 +164,7 @@ def put_serializer(academy, category, asset, data={}):
         'seo_keywords': [],
         'slug': asset.slug,
         'solution_video_url': None,
-        'status': 'UNASSIGNED',
+        'status': 'NOT_STARTED',
         'status_text': None,
         'sync_status': None,
         'technologies': [],
@@ -218,11 +218,11 @@ class RegistryTestAsset(RegistryTestCase):
         self.bc.request.authenticate(model.user)
         self.bc.request.set_headers(academy=1)
         url = reverse_lazy('registry:academy_asset')
-        data = {'slug': 'model_slug', 'asset_type': 'PROJECT'}
+        data = {'slug': 'model_slug', 'asset_type': 'PROJECT', 'lang': 'es'}
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
-            'detail': 'No category was specified and we could not retrieve it from any translation',
+            'detail': 'no-category',
             'status_code': 400,
         }
 
@@ -246,7 +246,13 @@ class RegistryTestAsset(RegistryTestCase):
         self.bc.request.set_headers(academy=1)
 
         url = reverse_lazy('registry:academy_asset')
-        data = {'slug': 'model_slug', 'asset_type': 'PROJECT', 'category': 1, 'title': 'model_slug'}
+        data = {
+            'slug': 'model_slug',
+            'asset_type': 'PROJECT',
+            'lang': 'us',
+            'category': 1,
+            'title': 'model_slug'
+        }
         response = self.client.post(url, data, format='json')
         json = response.json()
         del data['category']

@@ -1,12 +1,16 @@
 from __future__ import annotations
+import logging
 
 import math
 from datetime import timedelta
 import os
+from typing import Optional
 from django.contrib.auth.models import Group, User
 from django.db import models
 from django.utils import timezone
 from django.db.models import Q
+from django.contrib.auth.models import Permission
+from django.db.models import QuerySet
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
 from breathecode.authenticate.models import UserInvite
@@ -16,6 +20,7 @@ from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
 from django import forms
 from django.core.handlers.wsgi import WSGIRequest
+from breathecode.utils.validation_exception import ValidationException
 
 from breathecode.utils.validators.language import validate_language_code
 from breathecode.utils.i18n import translation
@@ -25,6 +30,8 @@ from breathecode.utils.i18n import translation
 # ⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇
 # ↕ Remember do not save the card info in the backend ↕
 # ⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆⬆
+
+logger = logging.getLogger(__name__)
 
 
 class Currency(models.Model):
@@ -1028,6 +1035,76 @@ class Consumable(AbstractServiceItem):
         default=None,
         help_text='Valid until, this is null if the consumable is valid until resources are exhausted')
 
+    @classmethod
+    def list(cls,
+             *,
+             user: User | str | int,
+             lang: str = 'en',
+             service: Optional[Service | str | int] = None,
+             permission: Optional[Permission | str | int] = None,
+             extra: dict = {}) -> QuerySet[Consumable]:
+
+        param = {}
+        utc_now = timezone.now()
+
+        # User
+        if isinstance(user, str) and not user.isdigit():
+            raise ValidationException(
+                translation(lang,
+                            en='Client user id must be an integer',
+                            es='El id del cliente debe ser un entero',
+                            slug='client-user-id-must-be-an-integer'))
+
+        if isinstance(user, str):
+            param['user__id'] = int(user)
+
+        elif isinstance(user, int):
+            param['user__id'] = user
+
+        elif isinstance(user, User):
+            param['user'] = user
+
+        # Service
+        if service and isinstance(service, str) and not service.isdigit():
+            param['service_item__service__slug'] = service
+
+        elif service and isinstance(service, str) and service.isdigit():
+            param['service_item__service__id'] = int(service)
+
+        elif service and isinstance(service, int):
+            param['service_item__service__id'] = service
+
+        elif isinstance(service, Service):
+            param['service_item__service'] = service
+
+        # Permission
+        if permission and isinstance(permission, str) and not permission.isdigit():
+            param['service_item__service__groups__permissions__codename'] = permission
+
+        elif permission and isinstance(permission, str) and permission.isdigit():
+            param['service_item__service__groups__permissions__id'] = int(permission)
+
+        elif permission and isinstance(permission, int):
+            param['service_item__service__groups__permissions__id'] = permission
+
+        elif isinstance(permission, Permission):
+            param['service_item__service__groups__permissions'] = permission
+
+        return cls.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), **{
+            **param,
+            **extra
+        }).exclude(how_many=0).order_by('id')
+
+    @classmethod
+    def get(cls,
+            *,
+            user: User | str | int,
+            lang: str = 'en',
+            service: Optional[Service | str | int] = None,
+            permission: Optional[Permission | str | int] = None,
+            extra: dict = {}) -> Consumable | None:
+        return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
+
     def clean(self) -> None:
         resources = [self.cohort]
 
@@ -1108,24 +1185,23 @@ class ConsumptionSession(models.Model):
         super().save(*args, **kwargs)
 
     @classmethod
-    def build_session(
-        cls,
-        request: WSGIRequest,
-        consumable: Consumable,
-        delta: timedelta,
-        # info: Optional[str] = None,
-    ) -> 'ConsumptionSession':
+    def build_session(cls,
+                      request: WSGIRequest,
+                      consumable: Consumable,
+                      delta: timedelta,
+                      user: Optional[User] = None) -> 'ConsumptionSession':
         assert request, 'You must provide a request'
         assert consumable, 'You must provide a consumable'
         assert delta, 'You must provide a delta'
 
         utc_now = timezone.now()
 
-        resource = consumable.cohort or consumable.mentorship_service_set or consumable.event_type_set
+        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort
         id = resource.id if resource else 0
         slug = resource.slug if resource else ''
 
         path = resource.__class__._meta.app_label + '.' + resource.__class__.__name__ if resource else ''
+        user = user or request.user
 
         if hasattr(request, 'parser_context'):
             args = request.parser_context['args']
@@ -1140,11 +1216,24 @@ class ConsumptionSession(models.Model):
             'headers': {
                 'academy': request.META.get('HTTP_ACADEMY')
             },
-            'user': request.user.id,
+            'user': user.id,
         }
 
         # assert path, 'You must provide a path'
         assert delta, 'You must provide a delta'
+
+        session = cls.objects.filter(
+            eta__gte=utc_now,
+            request=data,
+            path=path,
+            duration=delta,
+            related_id=id,
+            related_slug=slug,
+            #   related_info=info,
+            user=user).exclude(eta__lte=utc_now).first()
+
+        if session:
+            return session
 
         return cls.objects.create(
             request=data,
@@ -1155,7 +1244,7 @@ class ConsumptionSession(models.Model):
             related_id=id,
             related_slug=slug,
             #   related_info=info,
-            user=request.user)
+            user=user)
 
     @classmethod
     def get_session(cls, request: WSGIRequest) -> 'ConsumptionSession':

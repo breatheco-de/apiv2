@@ -8,6 +8,82 @@ from breathecode.services import datetime_to_iso_format
 from django.utils import timezone
 
 
+def post_serializer(data={}):
+    return {
+        'tags': '',
+        'url': '',
+        'banner': '',
+        'capacity': 0,
+        'starting_at': ...,
+        'ending_at': ...,
+        'academy': 0,
+        'author': None,
+        'description': None,
+        'free_for_bootcamps': None,
+        'event_type': None,
+        'eventbrite_id': None,
+        'eventbrite_organizer_id': None,
+        'eventbrite_status': None,
+        'eventbrite_url': None,
+        'slug': None,
+        'excerpt': None,
+        'host': None,
+        'id': 0,
+        'lang': None,
+        'online_event': False,
+        'organization': 0,
+        'published_at': None,
+        'status': 'DRAFT',
+        'eventbrite_sync_description': None,
+        'eventbrite_sync_status': 'PENDING',
+        'title': None,
+        'venue': None,
+        'sync_with_eventbrite': False,
+        'currency': 'USD',
+        'live_stream_url': None,
+        'host_user': None,
+        **data,
+    }
+
+
+def event_table(data={}):
+    return {
+        'academy_id': 0,
+        'author_id': None,
+        'banner': '',
+        'capacity': 0,
+        'description': None,
+        'ending_at': ...,
+        'event_type_id': None,
+        'eventbrite_id': None,
+        'eventbrite_organizer_id': None,
+        'eventbrite_status': None,
+        'eventbrite_url': None,
+        'free_for_bootcamps': None,
+        'excerpt': None,
+        'tags': '',
+        'slug': None,
+        'host': None,
+        'id': 0,
+        'lang': None,
+        'online_event': False,
+        'organization_id': 0,
+        'host_user_id': None,
+        'published_at': None,
+        'starting_at': ...,
+        'status': 'DRAFT',
+        'eventbrite_sync_description': None,
+        'eventbrite_sync_status': '',
+        'title': None,
+        'url': '',
+        'venue_id': None,
+        'live_stream_url': None,
+        'sync_with_eventbrite': False,
+        'currency': '',
+        **data,
+    }
+
+
 class AcademyEventTestSuite(EventTestCase):
     cache = EventCache()
 
@@ -564,71 +640,38 @@ class AcademyEventTestSuite(EventTestCase):
         del json['created_at']
         del json['updated_at']
 
-        expected = {
-            'academy': 1,
-            'author': None,
-            'description': None,
-            'event_type': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'tags': '',
-            'slug': None,
-            'excerpt': None,
-            'host': None,
-            'id': 1,
-            'slug': None,
-            'lang': None,
-            'online_event': False,
-            'organization': 1,
-            'published_at': None,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'venue': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
+        expected = post_serializer({
             **data,
-        }
+            'id': 1,
+            'slug': 'they-killed-kenny',
+            'academy': 1,
+            'organization': 1,
+            'eventbrite_sync_status': 'PENDING',
+            'tags': ','.join([x.slug for x in model.tag]),
+            'currency': 'USD',
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(self.all_event_dict(), [{
-            'academy_id': 1,
-            'author_id': None,
-            'banner': 'https://www.google.com/banner',
-            'capacity': 11,
-            'description': None,
-            'ending_at': current_date,
-            'event_type_id': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'excerpt': None,
-            'tags': '',
-            'slug': 'they-killed-kenny',
-            'host': None,
-            'id': 1,
-            'lang': None,
-            'online_event': False,
-            'organization_id': 1,
-            'published_at': None,
-            'starting_at': current_date,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'url': 'https://www.google.com/',
-            'venue_id': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
-            'tags': ','.join([x.slug for x in model.tag]),
-        }])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [
+            event_table(
+                data={
+                    'academy_id': 1,
+                    'banner': 'https://www.google.com/banner',
+                    'capacity': 11,
+                    'slug': 'they-killed-kenny',
+                    'ending_at': current_date,
+                    'tags': ','.join([x.slug for x in model.tag]),
+                    'id': 1,
+                    'organization_id': 1,
+                    'starting_at': current_date,
+                    'status': 'DRAFT',
+                    'eventbrite_sync_status': 'PENDING',
+                    'url': 'https://www.google.com/',
+                    'sync_with_eventbrite': False,
+                    'currency': 'USD',
+                }),
+        ])
 
     """
     🔽🔽🔽 Post
@@ -702,74 +745,43 @@ class AcademyEventTestSuite(EventTestCase):
         del json['created_at']
         del json['updated_at']
 
-        expected = {
-            'academy': 1,
-            'author': None,
-            'description': None,
-            'event_type': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'tags': '',
-            'slug': None,
-            'excerpt': None,
-            'host': None,
-            'id': 2,
-            'slug': None,
-            'lang': None,
-            'online_event': False,
-            'organization': 1,
-            'published_at': None,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'venue': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
+        expected = post_serializer({
             **data,
+            'id': 2,
             'slug': 'event-they-killed-kenny',
-        }
+            'academy': 1,
+            'organization': 1,
+            'tags': ','.join([x.slug for x in model.tag]),
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(self.all_event_dict(), [{
-            **self.bc.format.to_dict(model.event),
-            'eventbrite_id': None,
-        }, {
-            'academy_id': 1,
-            'author_id': None,
-            'banner': 'https://www.google.com/banner',
-            'capacity': 11,
-            'description': None,
-            'ending_at': current_date,
-            'event_type_id': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'excerpt': None,
-            'tags': ','.join([x.slug for x in model.tag]),
-            'slug': 'event-they-killed-kenny',
-            'host': None,
-            'id': 2,
-            'lang': None,
-            'online_event': False,
-            'organization_id': 1,
-            'published_at': None,
-            'starting_at': current_date,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'url': 'https://www.google.com/',
-            'venue_id': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
-        }])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [
+            {
+                **self.bc.format.to_dict(model.event),
+                'eventbrite_id': None,
+            },
+            event_table(
+                data={
+                    'academy_id': 1,
+                    'banner': 'https://www.google.com/banner',
+                    'capacity': 11,
+                    'slug': 'event-they-killed-kenny',
+                    'ending_at': current_date,
+                    'tags': data['tags'],
+                    'id': 2,
+                    'organization_id': 1,
+                    'starting_at': current_date,
+                    'status': 'DRAFT',
+                    'eventbrite_sync_status': 'PENDING',
+                    'url': 'https://www.google.com/',
+                    'sync_with_eventbrite': False,
+                    'currency': 'USD',
+                    'tags': ','.join([x.slug for x in model.tag]),
+                }),
+        ])
 
     def test_all_academy_events__post__tags_is_blank__slug_in_uppercase(self):
         self.headers(academy=1)
@@ -805,71 +817,39 @@ class AcademyEventTestSuite(EventTestCase):
         del json['created_at']
         del json['updated_at']
 
-        expected = {
-            'academy': 1,
-            'author': None,
-            'description': None,
-            'event_type': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'tags': '',
-            'slug': None,
-            'excerpt': None,
-            'host': None,
-            'id': 1,
-            'slug': None,
-            'lang': None,
-            'online_event': False,
-            'organization': 1,
-            'published_at': None,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'venue': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
+        expected = post_serializer({
             **data,
+            'id': 1,
             'slug': 'event-they-killed-kenny',
-        }
+            'academy': 1,
+            'organization': 1,
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
+            'tags': ','.join([x.slug for x in model.tag]),
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(self.all_event_dict(), [{
-            'academy_id': 1,
-            'author_id': None,
-            'banner': 'https://www.google.com/banner',
-            'capacity': 11,
-            'description': None,
-            'ending_at': current_date,
-            'event_type_id': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'excerpt': None,
-            'tags': ','.join([x.slug for x in model.tag]),
-            'slug': 'event-they-killed-kenny',
-            'host': None,
-            'id': 1,
-            'lang': None,
-            'online_event': False,
-            'organization_id': 1,
-            'published_at': None,
-            'starting_at': current_date,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'url': 'https://www.google.com/',
-            'venue_id': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
-        }])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [
+            event_table(
+                data={
+                    'academy_id': 1,
+                    'banner': 'https://www.google.com/banner',
+                    'capacity': 11,
+                    'slug': 'event-they-killed-kenny',
+                    'ending_at': current_date,
+                    'tags': data['tags'],
+                    'id': 1,
+                    'organization_id': 1,
+                    'starting_at': current_date,
+                    'status': 'DRAFT',
+                    'eventbrite_sync_status': 'PENDING',
+                    'url': 'https://www.google.com/',
+                    'sync_with_eventbrite': False,
+                    'currency': 'USD',
+                    'tags': ','.join([x.slug for x in model.tag]),
+                }),
+        ])
 
     def test_all_academy_events__post__with_tags__without_acp(self):
         self.headers(academy=1)
@@ -935,68 +915,37 @@ class AcademyEventTestSuite(EventTestCase):
         del json['updated_at']
         del json['created_at']
 
-        expected = {
-            'academy': 1,
-            'author': None,
-            'description': None,
-            'event_type': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'slug': None,
-            'excerpt': None,
-            'host': None,
-            'id': 1,
-            'lang': None,
-            'online_event': False,
-            'organization': 1,
-            'published_at': None,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'venue': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
-            'live_stream_url': None,
+        expected = post_serializer({
             **data,
-        }
+            'id': 1,
+            'academy': 1,
+            'organization': 1,
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
+            'tags': ','.join([x.slug for x in model.tag]),
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(self.all_event_dict(), [{
-            'academy_id': 1,
-            'author_id': None,
-            'banner': 'https://www.google.com/banner',
-            'capacity': 11,
-            'description': None,
-            'ending_at': current_date,
-            'event_type_id': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'excerpt': None,
-            'tags': data['tags'],
-            'slug': None,
-            'host': None,
-            'id': 1,
-            'lang': None,
-            'online_event': False,
-            'organization_id': 1,
-            'published_at': None,
-            'starting_at': current_date,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'url': 'https://www.google.com/',
-            'venue_id': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
-        }])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [
+            event_table(
+                data={
+                    'academy_id': 1,
+                    'banner': 'https://www.google.com/banner',
+                    'capacity': 11,
+                    'ending_at': current_date,
+                    'tags': data['tags'],
+                    'id': 1,
+                    'organization_id': 1,
+                    'starting_at': current_date,
+                    'status': 'DRAFT',
+                    'eventbrite_sync_status': 'PENDING',
+                    'url': 'https://www.google.com/',
+                    'sync_with_eventbrite': False,
+                    'currency': 'USD',
+                    'tags': ','.join([x.slug for x in model.tag]),
+                }),
+        ])
 
     """
     🔽🔽🔽 Put with duplicate tags
@@ -1045,68 +994,36 @@ class AcademyEventTestSuite(EventTestCase):
         del json['updated_at']
         del json['created_at']
 
-        expected = {
-            'academy': 1,
-            'author': None,
-            'description': None,
-            'event_type': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'slug': None,
-            'excerpt': None,
-            'host': None,
-            'id': 1,
-            'lang': None,
-            'online_event': False,
-            'organization': 1,
-            'published_at': None,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'venue': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
+        expected = post_serializer({
             **data,
-        }
+            'id': 1,
+            'academy': 1,
+            'organization': 1,
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(self.all_event_dict(), [{
-            'academy_id': 1,
-            'author_id': None,
-            'banner': 'https://www.google.com/banner',
-            'capacity': 11,
-            'description': None,
-            'ending_at': current_date,
-            'event_type_id': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'excerpt': None,
-            'tags': data['tags'],
-            'slug': None,
-            'host': None,
-            'id': 1,
-            'lang': None,
-            'online_event': False,
-            'organization_id': 1,
-            'published_at': None,
-            'starting_at': current_date,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'url': 'https://www.google.com/',
-            'venue_id': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
-        }])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [
+            event_table(
+                data={
+                    'academy_id': 1,
+                    'banner': 'https://www.google.com/banner',
+                    'capacity': 11,
+                    'ending_at': current_date,
+                    'tags': data['tags'],
+                    'id': 1,
+                    'organization_id': 1,
+                    'starting_at': current_date,
+                    'status': 'DRAFT',
+                    'eventbrite_sync_status': 'PENDING',
+                    'url': 'https://www.google.com/',
+                    'sync_with_eventbrite': False,
+                    'currency': 'USD',
+                    'tags': data['tags'],
+                }),
+        ])
 
     """
     🔽🔽🔽 Post bad slug
@@ -1155,71 +1072,42 @@ class AcademyEventTestSuite(EventTestCase):
         del json['created_at']
         del json['updated_at']
 
-        expected = {
-            'academy': 1,
-            'author': None,
-            'description': None,
-            'event_type': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'tags': '',
-            'slug': None,
-            'excerpt': None,
-            'host': None,
+        expected = post_serializer({
+            **data,
             'id': 1,
             'slug': None,
-            'lang': model.event_type.lang,
-            'online_event': False,
+            'academy': 1,
             'organization': 1,
-            'published_at': None,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
+            'event_type': 1,
             'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'venue': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
+            'lang': model.event_type.lang,
+            'tags': ','.join([x.slug for x in model.tag]),
             'currency': 'USD',
-            **data,
-        }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(self.all_event_dict(), [{
-            'academy_id': 1,
-            'author_id': None,
-            'banner': 'https://www.google.com/banner',
-            'capacity': 11,
-            'description': None,
-            'ending_at': current_date,
-            'event_type_id': 1,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'excerpt': None,
-            'tags': '',
-            'slug': None,
-            'host': None,
-            'id': 1,
-            'lang': model.event_type.lang,
-            'online_event': False,
-            'organization_id': 1,
-            'published_at': None,
-            'starting_at': current_date,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'url': 'https://www.google.com/',
-            'venue_id': None,
-            'live_stream_url': None,
-            'sync_with_eventbrite': False,
-            'currency': 'USD',
-            'tags': ','.join([x.slug for x in model.tag]),
-        }])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [
+            event_table(
+                data={
+                    'academy_id': 1,
+                    'banner': 'https://www.google.com/banner',
+                    'capacity': 11,
+                    'slug': None,
+                    'ending_at': current_date,
+                    'tags': ','.join([x.slug for x in model.tag]),
+                    'id': 1,
+                    'organization_id': 1,
+                    'event_type_id': 1,
+                    'starting_at': current_date,
+                    'status': 'DRAFT',
+                    'eventbrite_sync_status': 'PENDING',
+                    'url': 'https://www.google.com/',
+                    'sync_with_eventbrite': False,
+                    'lang': model.event_type.lang,
+                    'currency': 'USD',
+                }),
+        ])
 
     """
     🔽🔽🔽 Spy the extensions

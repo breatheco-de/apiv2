@@ -34,7 +34,36 @@ def visibility_settings_serializer(visibility_settings):
     return serialized_vs
 
 
-def get_serializer(self, event, event_type, user, academy=None, city=None, data={}):
+def profile_translation_serializer(profile_translation):
+    return {
+        'bio': profile_translation.bio,
+        'lang': profile_translation.lang,
+    }
+
+
+def profile_serializer(profile, profile_translations=[]):
+    return {
+        'avatar_url': profile.avatar_url,
+        'bio': profile.bio,
+        'blog': profile.blog,
+        'github_username': profile.github_username,
+        'linkedin_url': profile.linkedin_url,
+        'phone': profile.phone,
+        'portfolio_url': profile.portfolio_url,
+        'translations': [profile_translation_serializer(item) for item in profile_translations],
+        'twitter_username': profile.twitter_username,
+    }
+
+
+def get_serializer(self,
+                   event,
+                   event_type,
+                   user,
+                   academy=None,
+                   city=None,
+                   profile=None,
+                   profile_translations=[],
+                   data={}):
     academy_serialized = None
     city_serialized = None
 
@@ -57,6 +86,12 @@ def get_serializer(self, event, event_type, user, academy=None, city=None, data=
             'id': user.id,
             'first_name': user.first_name,
             'last_name': user.last_name,
+        },
+        'host_user': {
+            'id': user.id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'profile': profile_serializer(profile, profile_translations) if profile else None,
         },
         'banner': event.banner,
         'capacity': event.capacity,
@@ -305,7 +340,8 @@ class AcademyEventTestSuite(EventTestCase):
             self.bc.format.to_dict(model.event),
         ])
 
-    # Given: 1 Event, 1 EventType, 1 EventTypeSet, 1 User, 1 Academy and 1 PlanFinancing
+    # Given: 1 Event, 1 EventType, 1 EventTypeSet, 1 User, 1 Academy, 1 PlanFinancing,
+    #     -> 1 Profile and 2 ProfileTranslation
     # When: visible in this plan financing
     # Then: return 200
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
@@ -323,6 +359,8 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.bc.database.create(user=1,
                                         event=1,
                                         academy=1,
+                                        profile=1,
+                                        profile_translation=2,
                                         event_type={'icon_url': 'https://www.google.com'},
                                         event_type_set=1,
                                         plan_financing=plan_financing)
@@ -336,6 +374,8 @@ class AcademyEventTestSuite(EventTestCase):
                                   model.user,
                                   academy=model.academy,
                                   city=model.city,
+                                  profile=model.profile,
+                                  profile_translations=model.profile_translation,
                                   data={})
 
         self.assertEqual(json, expected)

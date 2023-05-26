@@ -5,3 +5,6 @@ declare a new variable here like this:
 from django.dispatch import Signal
 
 event_saved = Signal()
+event_status_updated = Signal()
+new_event_attendee = Signal()
+new_event_order = Signal()

@@ -13,7 +13,7 @@ from breathecode.utils.validation_exception import ValidationException
 from .models import AcademyAlias, FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
 from breathecode.monitoring.models import CSVUpload
 from .serializers import (PostFormEntrySerializer)
-from .actions import register_new_lead, save_get_geolocal, acp_ids
+from .actions import register_new_lead, save_get_geolocal, acp_ids, bind_formentry_with_webhook
 
 logger = getLogger(__name__)
 is_test_env = os.getenv('ENV') == 'test'
@@ -102,6 +102,8 @@ def async_activecampaign_webhook(self, webhook_id):
 
     webhook = ActiveCampaignWebhook.objects.filter(id=webhook_id).first()
     ac_academy = webhook.ac_academy
+
+    bind_formentry_with_webhook(webhook)
 
     if ac_academy is not None:
         try:

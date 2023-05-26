@@ -3,7 +3,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import CourseTranslation, FormEntry, AcademyAlias, ShortLink, Tag, ActiveCampaignAcademy, Automation
 from breathecode.monitoring.actions import test_link
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort
 from rest_framework import serializers
 from breathecode.utils.integer_to_base import to_base
 from breathecode.utils.validation_exception import ValidationException
@@ -89,6 +89,24 @@ class DownloadableSerializer(serpy.Serializer):
     preview_url = serpy.Field()
 
 
+class SyllabusScheduleHookSerializer(serpy.Serializer):
+    id = serpy.Field()
+    name = serpy.Field()
+    syllabus = serpy.MethodField(required=False)
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.name if obj.syllabus else None
+
+
+class CohortHookSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    schedule = SyllabusScheduleHookSerializer(required=False)
+
+
 class TagSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -125,6 +143,73 @@ class FormEntrySerializer(serpy.Serializer):
     academy = AcademySmallSerializer(required=False)
     client_comments = serpy.Field(required=False)
     created_at = serpy.Field()
+
+
+class FormEntryHookSerializer(serpy.Serializer):
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    ac_expected_cohort = serpy.Field()
+    ac_contact_id = serpy.Field()
+    ac_deal_id = serpy.Field()
+    sex = serpy.Field()
+    email = serpy.Field()
+    course = serpy.Field()
+    phone = serpy.Field()
+    deal_status = serpy.Field()
+    current_download = serpy.Field()
+    contact = serpy.Field()
+    client_comments = serpy.Field()
+    location = serpy.Field()
+    language = serpy.Field()
+    gclid = serpy.Field()
+    fb_ad_id = serpy.Field()
+    fb_adgroup_id = serpy.Field()
+    fb_form_id = serpy.Field()
+    fb_leadgen_id = serpy.Field()
+    fb_page_id = serpy.Field()
+    utm_url = serpy.Field()
+    utm_medium = serpy.Field()
+    utm_campaign = serpy.Field()
+    utm_source = serpy.Field()
+    utm_content = serpy.Field()
+    utm_placement = serpy.Field()
+    utm_term = serpy.Field()
+    utm_plan = serpy.Field()
+    custom_fields = serpy.Field()
+    referral_key = serpy.Field()
+    tags = serpy.Field()
+    automations = serpy.Field()
+    storage_status = serpy.Field()
+    storage_status_text = serpy.Field()
+    country = serpy.Field()
+    state = serpy.Field()
+    city = serpy.Field()
+    street_address = serpy.Field()
+    latitude = serpy.Field()
+    longitude = serpy.Field()
+    zip_code = serpy.Field()
+    ac_expected_cohort = serpy.Field()
+    browser_lang = serpy.Field()
+    lead_type = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    won_at = serpy.Field()
+    sentiment = serpy.Field()
+    ac_deal_location = serpy.Field()
+    ac_deal_course = serpy.Field()
+    ac_deal_owner_full_name = serpy.Field()
+    ac_deal_owner_id = serpy.Field()
+    ac_expected_cohort_date = serpy.Field()
+
+    cohort = serpy.MethodField(required=False)
+
+    def get_cohort(self, obj):
+        _cohort = Cohort.objects.filter(slug=obj.ac_expected_cohort).first()
+        if _cohort is None:
+            return _cohort
+
+        return CohortHookSerializer(_cohort).data
 
 
 class FormEntrySmallSerializer(serpy.Serializer):
