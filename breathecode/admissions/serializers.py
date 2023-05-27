@@ -406,6 +406,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     name = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
+    intro_video = serpy.Field()
     current_day = serpy.Field()
     current_module = serpy.Field()
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
