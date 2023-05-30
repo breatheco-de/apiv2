@@ -379,6 +379,10 @@ CAPABILITIES = [
         'slug': 'start_or_end_event',
         'description': 'Start or end event'
     },
+    {
+        'slug': 'crud_provisioning_activity',
+        'description': 'Create, update or delete provisioning activities'
+    },
 ]
 
 ROLES = [
