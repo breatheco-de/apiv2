@@ -26,10 +26,16 @@ def get_app_url():
 
 
 @shared_task(bind=False, base=BaseTaskWithRetry)
-def make_bills(hash: str):
-    logger.info(f'Starting make_bills for hash {hash}')
+def calculate_bill_amounts(hash: str, *, force: bool = False):
+    logger.info(f'Starting calculate_bill_amounts for hash {hash}')
 
-    bills = ProvisioningBill.objects.filter(hash=hash).exclude(status__in=['DISPUTED', 'IGNORED', 'PAID'])
+    bills = ProvisioningBill.objects.filter(hash=hash)
+
+    if force:
+        bills = bills.exclude(status='PAID')
+
+    else:
+        bills = bills.exclude(status__in=['DISPUTED', 'IGNORED', 'PAID'])
 
     if not bills.exists():
         logger.error(f'Does not exists bills for hash {hash}')
@@ -41,11 +47,11 @@ def make_bills(hash: str):
             amount += activity.price_per_unit * activity.quantity
 
         bill.total_amount = amount
-        bill.status = 'DUE'
+        bill.status = 'DUE' if amount else 'PAID'
         bill.save()
 
 
-PANDAS_ROWS_LIMIT = 50000
+PANDAS_ROWS_LIMIT = 100
 
 
 @shared_task(bind=False, base=BaseTaskWithRetry)
@@ -70,15 +76,15 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         logger.error(f'File {hash} not found')
         return
 
-    bills = ProvisioningBill.objects.filter(hash=hash)
+    bills = ProvisioningBill.objects.filter(hash=hash).exclude(status='PENDING')
     if bills.exists() and not force:
-        logger.info(f'File {hash} already processed')
+        logger.error(f'File {hash} already processed')
         return
 
     pending_bills = bills.exclude(status__in=['DISPUTED', 'IGNORED', 'PAID'])
 
     if force and pending_bills.count() != bills.count():
-        logger.warning(f'Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID')
+        logger.error(f'Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID')
         return
 
     if force:
@@ -120,8 +126,6 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
                 break
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         logger.error(f'File {hash} cannot be processed due to: {str(e)}')
         return
 
@@ -133,4 +137,4 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         upload.delay(hash, page + 1)
 
     else:
-        make_bills.delay(hash)
+        calculate_bill_amounts.delay(hash)

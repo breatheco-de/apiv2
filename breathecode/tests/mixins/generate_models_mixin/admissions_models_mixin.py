@@ -61,6 +61,9 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    live_class=False,
                                    course=False,
                                    course_translation=False,
+                                   provisioning_profile=False,
+                                   provisioning_academy=False,
+                                   provisioning_bill=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -102,7 +105,8 @@ class AdmissionsModelsMixin(ModelsMixin):
                 or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set)
                 or is_valid(course) or is_valid(course_translation) or is_valid(event_type_set)
                 or is_valid(event_type_set_translation) or is_valid(mentorship_service_set)
-                or is_valid(mentorship_service_set_translation)):
+                or is_valid(mentorship_service_set_translation) or is_valid(provisioning_profile)
+                or is_valid(provisioning_academy) or is_valid(provisioning_bill)):
             kargs = {}
 
             if 'country' in models:

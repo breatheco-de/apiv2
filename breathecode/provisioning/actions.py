@@ -273,21 +273,15 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
         raise Exception(f'Provisioning vendor Codespaces not found')
 
     pa = ProvisioningActivity()
-
-    # f"${df.iloc[i]['creditCents'] * 0.00036}",
-
     pa.bill = provisioning_bill
     pa.username = metadata['userName']
     pa.registered_at = iso_to_datetime(field['effectiveTime'])
     pa.product_name = field['kind']
     pa.sku = field['id']
-    # pa.quantity = (iso_to_datetime(field['metadata']['endTime']) -
-    #                iso_to_datetime(field['metadata']['startTime'])).seconds
     pa.quantity = field['creditCents']
     pa.unit_type = 'Credit cents'
     pa.price_per_unit = 0.00036
     pa.currency_code = 'USD'
-    # pa.multiplier = field['Multiplier']
     pa.repository_url = metadata['contextURL']
 
     pa.task_associated_slug = slug

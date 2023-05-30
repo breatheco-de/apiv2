@@ -39,7 +39,11 @@ class ProvisioningProfile(models.Model):
         blank=True,
         help_text='If set, only these members will be provisioned with this vendor in this academy')
 
+    def __str__(self):
+        return self.academy.name + ' on ' + self.vendor.name
 
+
+# FIXME: the model name is wrong, it should be ProvisioningMachineType
 class ProvisioningMachineTypes(models.Model):
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=80)
@@ -93,7 +97,7 @@ BILL_STATUS = (
 class ProvisioningBill(models.Model):
     total_amount = models.FloatField(default=0)
     hash = models.CharField(max_length=64, blank=True, null=True, default=None)
-    currency_code = models.CharField(max_length=3, default='usd')
+    currency_code = models.CharField(max_length=3, default='USD')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
     paid_at = models.DateTimeField(null=True, default=None, blank=True)
@@ -101,6 +105,16 @@ class ProvisioningBill(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self):
+        if self.status == PAID and self.paid_at is None:
+            self.paid_at = timezone.now()
+
+        self.currency_code = self.currency_code.upper()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return str(self.id) + ' ' + str(self.academy) + ' - ' + str(self.total_amount) + str(
