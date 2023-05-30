@@ -6,7 +6,7 @@ from breathecode.utils import ScriptNotification
 from breathecode.registry.models import AssetErrorLog
 from datetime import datetime, timedelta
 from django.utils import timezone
-from breathecode.utils.datetime_interger import from_now
+from breathecode.utils.datetime_integer import from_now
 
 errors = AssetErrorLog.objects.filter(status='ERROR')
 

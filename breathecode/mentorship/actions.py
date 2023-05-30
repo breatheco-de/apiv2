@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.shortcuts import render
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
-from breathecode.utils.datetime_interger import duration_to_str
+from breathecode.utils.datetime_integer import duration_to_str
 from django.db.models import QuerySet
 from .models import MentorshipSession, MentorshipBill
 from breathecode.utils.validation_exception import ValidationException

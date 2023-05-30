@@ -15,9 +15,9 @@ def get_serializer(self, syllabus_schedule_time_slot):
         'schedule':
         syllabus_schedule_time_slot.schedule.id,
         'starting_at':
-        self.interger_to_iso(syllabus_schedule_time_slot.timezone, syllabus_schedule_time_slot.starting_at),
+        self.integer_to_iso(syllabus_schedule_time_slot.timezone, syllabus_schedule_time_slot.starting_at),
         'ending_at':
-        self.interger_to_iso(syllabus_schedule_time_slot.timezone, syllabus_schedule_time_slot.ending_at),
+        self.integer_to_iso(syllabus_schedule_time_slot.timezone, syllabus_schedule_time_slot.ending_at),
         'recurrent':
         syllabus_schedule_time_slot.recurrent,
         'recurrency_type':

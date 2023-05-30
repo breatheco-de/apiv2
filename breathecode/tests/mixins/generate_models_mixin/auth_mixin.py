@@ -28,6 +28,7 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                              bag=False,
                              user_setting=False,
                              consumption_session=False,
+                             provisioning_container=False,
                              profile_academy='',
                              user_kwargs={},
                              group_kwargs={},
@@ -56,7 +57,7 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      or is_valid(task) or is_valid(slack_team) or is_valid(mentor_profile)
                                      or is_valid(consumable) or is_valid(invoice) or is_valid(subscription)
                                      or is_valid(bag) or is_valid(user_setting)
-                                     or is_valid(consumption_session)):
+                                     or is_valid(consumption_session) or is_valid(provisioning_container)):
             kargs = {}
 
             if 'group' in models:

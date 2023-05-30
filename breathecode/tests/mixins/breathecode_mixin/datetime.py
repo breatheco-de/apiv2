@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from rest_framework.test import APITestCase
 
-from breathecode.utils.datetime_interger import DatetimeInteger
+from breathecode.utils.datetime_integer import DatetimeInteger
 from . import interfaces
 
 from ..datetime_mixin import DatetimeMixin

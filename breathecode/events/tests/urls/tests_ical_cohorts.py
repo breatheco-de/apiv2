@@ -775,12 +775,12 @@ class AcademyCohortTestSuite(EventTestCase):
             'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         }
 
-        starting_datetime_interger = 202810080030
-        ending_datetime_interger = 202810080630
+        starting_datetime_integer = 202810080030
+        ending_datetime_integer = 202810080630
         cohort_time_slot_kwargs = {
             'timezone': 'Europe/Madrid',
-            'starting_at': starting_datetime_interger,
-            'ending_at': ending_datetime_interger,
+            'starting_at': starting_datetime_integer,
+            'ending_at': ending_datetime_integer,
         }
 
         model = self.generate_models(academy=True,
@@ -886,11 +886,11 @@ class AcademyCohortTestSuite(EventTestCase):
             'ending_date': datetime(year=2030, month=10, day=10, tzinfo=pytz.timezone('UTC')),
         }
 
-        starting_datetime_interger = 202510080030
-        ending_datetime_interger = 202510080630
+        starting_datetime_integer = 202510080030
+        ending_datetime_integer = 202510080630
         cohort_time_slot_kwargs = {
-            'starting_at': starting_datetime_interger,
-            'ending_at': ending_datetime_interger,
+            'starting_at': starting_datetime_integer,
+            'ending_at': ending_datetime_integer,
             'timezone': 'Europe/Madrid',
             'recurrent': False,
         }

@@ -1,26 +1,22 @@
-import re
-from django.shortcuts import render, redirect
-from django.utils import timezone
-from django.db.models import Avg
-from django.http import HttpResponse
-from breathecode.admissions.models import CohortUser, Academy
+import hashlib
+from io import StringIO
+import json
+import os
+from django.shortcuts import redirect
+from breathecode.admissions.models import CohortUser
+from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.views import private_view, render_message, set_query_parameter
-from rest_framework import serializers
-from .serializers import (ContainerMeSmallSerializer, ContainerMeBigSerializer)
-from .actions import (
-    get_provisioning_vendor, )
-from .models import (
-    ProvisioningProfile, )
-from rest_framework.permissions import AllowAny
+from breathecode.provisioning.tasks import upload
+from breathecode.utils.i18n import translation
+from breathecode.utils.views import private_view, render_message
+from .actions import get_provisioning_vendor
+from .models import ProvisioningProfile
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
-from django.db.models import Q
-from django.db.models import QuerySet
+from breathecode.utils import capable_of, ValidationException
+from rest_framework.parsers import FileUploadParser, MultiPartParser
+import pandas as pd
 
 
 @private_view()
@@ -82,6 +78,138 @@ def redirect_workspaces(request, token):
         return render_message(request, str(e))
 
     return redirect(vendor.workspaces_url)
+
+
+class UploadView(APIView):
+    """
+    put:
+        Upload a file to Google Cloud.
+    """
+    parser_classes = [MultiPartParser, FileUploadParser]
+
+    # permission_classes = [AllowAny]
+
+    # upload was separated because in one moment I think that the serializer
+    # not should get many create and update operations together
+    def upload(self, lang, file):
+        from ..services.google_cloud import Storage
+
+        # files validation below
+        if file.content_type != 'text/csv':
+            raise ValidationException(
+                translation(lang,
+                            en='You can upload only files on the following formats: application/csv',
+                            es='Solo puedes subir archivos en los siguientes formatos: application/csv',
+                            slug='bad-format'))
+
+        content_bytes = file.read()
+        content = content_bytes.decode('utf-8')
+        hash = hashlib.sha256(content_bytes).hexdigest()
+
+        file.seek(0)
+
+        csvStringIO = StringIO(content)
+        df = pd.read_csv(csvStringIO, sep=',')
+        df.reset_index()
+
+        format_error = True
+
+        # gitpod
+        fields = ['id', 'creditCents', 'effectiveTime', 'kind', 'metadata']
+        if (len(df.keys().intersection(fields)) == len(fields) and len(
+            {x
+             for x in json.loads(df.iloc[0]['metadata'])}.intersection({'userName', 'contextURL'})) == 2):
+            format_error = False
+
+        if format_error:
+            # codespaces
+            fields = [
+                'Username', 'Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)',
+                'Multiplier', 'Owner'
+            ]
+
+        if format_error and len(df.keys().intersection(fields)) == len(fields):
+            format_error = False
+
+        # Think about uploading correct files and leaving out incorrect ones
+        if format_error:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en='CSV file from unknown source or the format has changed and this code must be updated',
+                    es='Archivo CSV de fuente desconocida o el formato ha cambiado y este código debe ser '
+                    'actualizado',
+                    slug='csv-from-unknown-source'))
+
+        # upload file section
+        storage = Storage()
+        cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
+        created = not cloud_file.exists()
+        if created:
+            cloud_file.upload(file, content_type=file.content_type)
+
+        upload.delay(hash)
+
+        data = {'file_name': hash, 'status': 'PENDING', 'created': created}
+
+        return data
+
+    @capable_of('crud_provisioning_activity')
+    def put(self, request, academy_id=None):
+        files = request.data.getlist('file')
+        lang = get_user_language(request)
+
+        created = []
+        updated = []
+        errors = {}
+
+        result = {
+            'success': [],
+            'failure': [],
+        }
+
+        for i in range(len(files)):
+            file = files[i]
+
+            try:
+                data = self.upload(lang, file)
+                was_created = data.pop('created')
+
+                serialized = {
+                    'pk': data['file_name'],
+                    'display_field': 'index',
+                    'display_value': i + 1,
+                }
+
+                if was_created:
+                    created.append(serialized)
+                else:
+                    updated.append(serialized)
+            except ValidationException as e:
+                key = (e.status_code, e.detail)
+                if key not in errors:
+                    errors[key] = []
+
+                errors[key].append({
+                    'display_field': 'index',
+                    'display_value': i + 1,
+                })
+
+        if created:
+            result['success'].append({'status_code': 201, 'resources': created})
+
+        if updated:
+            result['success'].append({'status_code': 200, 'resources': updated})
+
+        if errors:
+            for ((status_code, detail), value) in errors.items():
+                result['failure'].append({
+                    'status_code': status_code,
+                    'detail': detail,
+                    'resources': value,
+                })
+
+        return Response(result, status=status.HTTP_207_MULTI_STATUS)
 
 
 # class ContainerMeView(APIView):

@@ -1,12 +1,16 @@
+from datetime import datetime
+import json
 import os, re, requests
+from typing import TypedDict
 from django.utils import timezone
+from breathecode.authenticate.models import CredentialsGithub, User
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 from breathecode.services.github import Github
 from breathecode.utils.i18n import translation
 from breathecode.authenticate.actions import get_user_language, get_user_settings
 from breathecode.admissions.models import CohortUser
-from .models import ProvisioningProfile
+from .models import ProvisioningActivity, ProvisioningBill, ProvisioningProfile, ProvisioningVendor
 
 logger = getLogger(__name__)
 
@@ -106,4 +110,181 @@ def create_container(user, task, fresh=False, lang='en'):
     machines = gb.get_machines_types(repo_name)
 
 
-#     print(machines)
+def iso_to_datetime(iso: str) -> datetime:
+    """
+    Transform a ISO 8601 format to datetime.
+
+    Usage:
+
+    ```py
+    utc_now = timezone.now()
+
+    # equals to datetime.datetime(2022, 3, 21, 2, 51, 55, 068)
+    self.bc.datetime.from_iso_string('2022-03-21T07:51:55.068Z')
+    ```
+    """
+    string = re.sub(r'Z$', '', iso)
+    date = datetime.fromisoformat(string)
+    return timezone.make_aware(date)
+
+
+class ActivityContext(TypedDict):
+    provisioning_bills: dict[str, ProvisioningBill]
+    provisioning_vendors: dict[str, ProvisioningVendor]
+    credentials_github: dict[str, CredentialsGithub]
+    users: dict[str, User]
+    http_github: dict[str, requests.Request]
+    hash: str
+
+
+def add_codespaces_activity(context: ActivityContext, field: dict):
+
+    user = None
+    c = None
+    if field['Username'] in context['credentials_github']:
+        c = context['credentials_github'].get(field['Username'])
+
+    else:
+        c = CredentialsGithub.objects.filter(username=field['Username']).first()
+        context['credentials_github'][field['Username']] = c
+
+    if c:
+        context['credentials_github'][field['Username']] = c
+        user = c.user
+
+    if not user:
+        response = context['http_github'].get(
+            field['Username'], requests.get(f'https://api.github.com/users/{field["Username"]}'))
+
+        if response.status_code == 200 and (json := response.json()) and 'email' in json:
+            user = User.objects.filter(email=json['email']).first()
+
+        context['http_github'][field['Username']] = response
+
+    if not user:
+        logger.error(f'User {field["Username"]} not found')
+        return
+
+    cohort_user = CohortUser.objects.filter(
+        user=user, cohort__syllabus_version__json__icontains=field['Repository Slug']).first()
+
+    if not cohort_user:
+        logger.error(f'User {field["Username"]} not found in any cohort')
+        return
+
+    academy = cohort_user.cohort.academy
+
+    provisioning_bill = context['provisioning_bills'].get(academy.id, None)
+    if not provisioning_bill:
+        provisioning_bill = ProvisioningBill.objects.filter(academy=academy, status='PENDING').first()
+
+    if not provisioning_bill:
+        provisioning_bill = ProvisioningBill()
+        provisioning_bill.academy = academy
+        provisioning_bill.status = 'PENDING'
+        provisioning_bill.hash = context['hash']
+        provisioning_bill.save()
+
+    provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
+    if not provisioning_vendor:
+        provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
+
+    if not provisioning_vendor:
+        raise Exception(f'Provisioning vendor Codespaces not found')
+
+    pa = ProvisioningActivity()
+
+    pa.bill = provisioning_bill
+    pa.username = field['Username']
+    pa.registered_at = datetime.strptime(field['Date'], '%Y-%m-%d')
+    pa.product_name = field['Product']
+    pa.sku = field['SKU']
+    pa.quantity = field['Quantity']
+    pa.unit_type = field['Unit Type']
+    pa.price_per_unit = field['Price Per Unit ($)']
+    pa.currency_code = 'USD'
+    pa.multiplier = field['Multiplier']
+    pa.repository_url = f"https://github.com/{field['Owner']}/{field['Repository Slug']}"
+    pa.task_associated_slug = field['Repository Slug']
+    pa.processed_at = timezone.now()
+    pa.status = 'PERSISTED'
+    pa.save()
+
+
+def add_gitpod_activity(context: ActivityContext, field: dict):
+
+    metadata = json.loads(field['metadata'])
+    user = None
+    c = None
+    if metadata['userName'] in context['credentials_github']:
+        c = context['credentials_github'].get(metadata['userName'])
+
+    else:
+        c = CredentialsGithub.objects.filter(username=metadata['userName']).first()
+        context['credentials_github'][metadata['userName']] = c
+
+    if c:
+        context['credentials_github'][metadata['userName']] = c
+        user = c.user
+
+    if not user:
+        response = context['http_github'].get(
+            metadata['userName'], requests.get(f'https://api.github.com/users/{metadata["userName"]}'))
+
+        if response.status_code == 200 and (j := response.json()) and 'email' in j:
+            user = User.objects.filter(email=j['email']).first()
+
+        context['http_github'][metadata['userName']] = response
+
+    if not user:
+        logger.error(f'User {metadata["userName"]} not found')
+        return
+
+    pattern = r'^https://github\.com/[^/]+/([^/]+)/'
+    if not (result := re.findall(pattern, metadata['contextURL'])):
+        raise Exception(f'Invalid repository URL {metadata["contextURL"]}')
+
+    slug = result[0]
+
+    cohort_user = CohortUser.objects.filter(user=user, cohort__syllabus_version__json__icontains=slug).first()
+
+    if not cohort_user:
+        logger.error(f'User {metadata["userName"]} not found in any cohort')
+        return
+
+    academy = cohort_user.cohort.academy
+
+    provisioning_bill = context['provisioning_bills'].get(academy.id, None)
+    if not provisioning_bill:
+        provisioning_bill = ProvisioningBill.objects.filter(academy=academy, status='PENDING').first()
+
+    if not provisioning_bill:
+        provisioning_bill = ProvisioningBill()
+        provisioning_bill.academy = academy
+        provisioning_bill.status = 'PENDING'
+        provisioning_bill.hash = context['hash']
+        provisioning_bill.save()
+
+    provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
+    if not provisioning_vendor:
+        provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
+
+    if not provisioning_vendor:
+        raise Exception(f'Provisioning vendor Codespaces not found')
+
+    pa = ProvisioningActivity()
+    pa.bill = provisioning_bill
+    pa.username = metadata['userName']
+    pa.registered_at = iso_to_datetime(field['effectiveTime'])
+    pa.product_name = field['kind']
+    pa.sku = field['id']
+    pa.quantity = field['creditCents']
+    pa.unit_type = 'Credit cents'
+    pa.price_per_unit = 0.00036
+    pa.currency_code = 'USD'
+    pa.repository_url = metadata['contextURL']
+
+    pa.task_associated_slug = slug
+    pa.processed_at = timezone.now()
+    pa.status = 'PERSISTED'
+    pa.save()

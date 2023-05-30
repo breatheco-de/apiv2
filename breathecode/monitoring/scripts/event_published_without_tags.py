@@ -6,7 +6,7 @@ import os
 from breathecode.events.models import Event
 from breathecode.utils import ScriptNotification
 from django.utils import timezone
-from breathecode.utils.datetime_interger import duration_to_str, from_now
+from breathecode.utils.datetime_integer import duration_to_str, from_now
 
 published_without_tags = Event.objects.filter(status='ACTIVE',
                                               academy__id=academy.id,

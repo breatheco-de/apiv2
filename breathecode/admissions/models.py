@@ -527,13 +527,13 @@ RECURRENCY_TYPE = (
 )
 
 # YYYYMMDDHHMM
-date_interger_description = ('The first 4 number are year, the next 2 number are month, the next 2 number '
-                             'are day, the next 2 number are hour and the last 2 number are second')
+date_integer_description = ('The first 4 number are year, the next 2 number are month, the next 2 number '
+                            'are day, the next 2 number are hour and the last 2 number are second')
 
 
 class TimeSlot(models.Model):
     starting_at = models.BigIntegerField(
-        help_text=date_interger_description,
+        help_text=date_integer_description,
         default=202101010000,
         validators=[
             MaxValueValidator(300000000000),  # year 3000
@@ -541,7 +541,7 @@ class TimeSlot(models.Model):
         ])
 
     ending_at = models.BigIntegerField(
-        help_text=date_interger_description,
+        help_text=date_integer_description,
         default=202101010000,
         validators=[
             MaxValueValidator(300000000000),  # year 3000

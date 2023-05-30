@@ -117,7 +117,7 @@ class ActivityViewMixin(APIView):
             try:
                 int(user_id)
             except ValueError:
-                raise ValidationException('user_id is not a interger', slug='bad-user-id')
+                raise ValidationException('user_id is not a integer', slug='bad-user-id')
 
         for user_id in user_ids:
             if not User.objects.filter(id=user_id).exists():
@@ -228,7 +228,7 @@ class ActivityMeView(APIView):
             try:
                 kwargs['user_id'] = int(user_id)
             except ValueError:
-                raise ValidationException('user_id is not a interger', slug='bad-user-id')
+                raise ValidationException('user_id is not a integer', slug='bad-user-id')
 
         email = request.GET.get('email')
         if email:
@@ -335,7 +335,7 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
             try:
                 kwargs['user_id'] = int(user_id)
             except ValueError:
-                raise ValidationException('user_id is not a interger', slug='bad-user-id')
+                raise ValidationException('user_id is not a integer', slug='bad-user-id')
 
         email = request.GET.get('email')
         if email:
@@ -445,7 +445,7 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
             try:
                 kwargs['user_id'] = int(student_id)
             except ValueError:
-                raise ValidationException('student_id is not a interger', slug='bad-student-id')
+                raise ValidationException('student_id is not a integer', slug='bad-student-id')
 
         email = request.GET.get('email')
         if email:
