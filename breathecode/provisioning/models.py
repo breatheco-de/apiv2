@@ -92,6 +92,7 @@ BILL_STATUS = (
 
 class ProvisioningBill(models.Model):
     total_amount = models.FloatField(default=0)
+    hash = models.CharField(max_length=64, blank=True, null=True, default=None)
     currency_code = models.CharField(max_length=3, default='usd')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
