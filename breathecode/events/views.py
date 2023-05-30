@@ -36,7 +36,7 @@ from .serializers import (EventBigSerializer, GetLiveClassSerializer, LiveClassJ
                           EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
                           EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
                           OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer,
-                          PUTEventCheckinSerializer)
+                          EventCheckinSmallSerializer, PUTEventCheckinSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -794,6 +794,25 @@ def join_event(request, token, event):
         checkin.save()
 
     return redirect(event.live_stream_url, permanent=True)
+
+
+class EventCheckinView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, event_id):
+        if event_id is None:
+            raise ValidationException(f'event_id must not be null', status.HTTP_404_NOT_FOUND)
+
+        try:
+            event_id = int(event_id)
+        except:
+            raise ValidationException(f'{event_id} must be am integer', slug='Event must be an integer')
+
+        event_checkins = EventCheckin.objects.filter(event=event_id)
+
+        serializer = EventCheckinSmallSerializer(event_checkins, many=True)
+
+        return Response(serializer.data)
 
 
 class EventMeCheckinView(APIView):

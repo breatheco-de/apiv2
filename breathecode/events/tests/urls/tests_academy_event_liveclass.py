@@ -7,7 +7,15 @@ from ..mixins.new_events_tests_case import EventTestCase
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
 
 
-def get_serializer(self, event_type, data={}):
+def cohort_serializer(cohort):
+    return {
+        'id': cohort.id,
+        'name': cohort.name,
+        'slug': cohort.slug,
+    }
+
+
+def get_serializer(self, event_type, cohort, data={}):
     ended_at = event_type.ended_at
     if ended_at:
         ended_at = self.bc.datetime.to_iso_string(event_type.ending_at)
@@ -20,6 +28,7 @@ def get_serializer(self, event_type, data={}):
         'id': event_type.id,
         'started_at': started_at,
         'ended_at': ended_at,
+        'cohort': cohort_serializer(cohort),
         'starting_at': self.bc.datetime.to_iso_string(event_type.starting_at),
         'ending_at': self.bc.datetime.to_iso_string(event_type.ending_at),
         'hash': event_type.hash,
@@ -91,7 +100,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         response = self.client.get(url)
         json = response.json()
-        expected = [get_serializer(self, model.live_class)]
+        expected = [get_serializer(self, model.live_class, model.cohort)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)

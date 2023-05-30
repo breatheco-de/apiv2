@@ -833,12 +833,12 @@ class AcademyEventTestSuite(EventTestCase):
             call(args=(1, 1), eta=UTC_NOW + delta),
         ])
 
-    #################################
-
-    # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group and Permission
+    # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group, Permission,
+    #     -> Cohort and CohortUser
     # When: Feature flag set to True and event end in the future,
-    #    -> event.free_for_bootcamps = None and event_type.free_for_bootcamps is random
-    #    -> academy.available_as_saas = True
+    #    -> event.free_for_bootcamps = True and event_type.free_for_bootcamps = True,
+    #    -> academy.available_as_saas is random,
+    #    -> cohort.available_as_saas = True
     # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
@@ -846,7 +846,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
-    def test_with_consumable__it_try_to_consume__with_live_event__in_the_future__academy_no_saas__free1(self):
+    def test_is_free_with_cohort_users_saas__cohort(self):
         permission = {'codename': 'event_join'}
         online_meeting_url = self.bc.fake.url()
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -859,7 +859,7 @@ class AcademyEventTestSuite(EventTestCase):
         }
         event_type = {
             'icon_url': self.bc.fake.url(),
-            'free_for_bootcamps': bool(random.randbytes(1)),
+            'free_for_bootcamps': True,
         }
 
         is_subscription = bool(random.randbytes(1))
@@ -871,7 +871,8 @@ class AcademyEventTestSuite(EventTestCase):
         if is_subscription and bool(random.randbytes(1)):
             i_owe_you['valid_until'] = None
 
-        academy = {'available_as_saas': False}
+        academy = {'available_as_saas': bool(random.randbytes(1))}
+        cohort = {'available_as_saas': True}
         extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
         model = self.bc.database.create(user=1,
                                         group=1,
@@ -880,6 +881,200 @@ class AcademyEventTestSuite(EventTestCase):
                                         event=event,
                                         event_type=event_type,
                                         event_type_set=1,
+                                        cohort=cohort,
+                                        cohort_user=1,
+                                        consumable=1,
+                                        token=1,
+                                        **extra)
+        querystring = self.bc.format.to_querystring({'token': model.token.key})
+
+        url = reverse_lazy('events:me_event_id_join', kwargs={'event_id': model.event.id}) + f'?{querystring}'
+
+        response = self.client.get(url)
+
+        content = self.bc.format.from_bytes(response.content)
+        expected = ''
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.url, online_meeting_url)
+
+        self.assertEqual(self.bc.database.list_of('events.Event'), [
+            self.bc.format.to_dict(model.event),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
+            self.bc.format.to_dict(model.consumable),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
+            consumption_session(model.event,
+                                model.event_type_set,
+                                model.user,
+                                model.consumable,
+                                data={
+                                    'id': 1,
+                                    'duration': delta,
+                                    'eta': UTC_NOW + delta,
+                                }),
+        ])
+        self.assertEqual(self.bc.database.list_of('events.EventCheckin'), [
+            event_checkin_serializer(1, model.event, model.user),
+        ])
+
+    # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group, Permission,
+    #     -> Cohort and CohortUser
+    # When: Feature flag set to True and event end in the future,
+    #    -> event.free_for_bootcamps = True and event_type.free_for_bootcamps = True,
+    #    -> academy.available_as_saas = True,
+    #    -> cohort.available_as_saas = None
+    # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
+           MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
+    def test_is_free_with_cohort_users_saas__academy(self):
+        permission = {'codename': 'event_join'}
+        online_meeting_url = self.bc.fake.url()
+        delta = timedelta(seconds=random.randint(1, 1000))
+        event = {
+            'host_user_id': None,
+            'starting_at': UTC_NOW - delta,
+            'ending_at': UTC_NOW + delta,
+            'live_stream_url': online_meeting_url,
+            'free_for_bootcamps': True,
+        }
+        event_type = {
+            'icon_url': self.bc.fake.url(),
+            'free_for_bootcamps': True,
+        }
+
+        is_subscription = bool(random.randbytes(1))
+        i_owe_you = {
+            'next_payment_at': UTC_NOW + timedelta(weeks=4),
+            'valid_until': UTC_NOW + timedelta(weeks=4),
+        }
+
+        if is_subscription and bool(random.randbytes(1)):
+            i_owe_you['valid_until'] = None
+
+        academy = {'available_as_saas': True}
+        cohort = {'available_as_saas': None}
+        extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
+        model = self.bc.database.create(user=1,
+                                        group=1,
+                                        academy=academy,
+                                        permission=permission,
+                                        event=event,
+                                        event_type=event_type,
+                                        event_type_set=1,
+                                        cohort=cohort,
+                                        cohort_user=1,
+                                        consumable=1,
+                                        token=1,
+                                        **extra)
+        querystring = self.bc.format.to_querystring({'token': model.token.key})
+
+        url = reverse_lazy('events:me_event_id_join', kwargs={'event_id': model.event.id}) + f'?{querystring}'
+
+        response = self.client.get(url)
+
+        content = self.bc.format.from_bytes(response.content)
+        expected = ''
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.url, online_meeting_url)
+
+        self.assertEqual(self.bc.database.list_of('events.Event'), [
+            self.bc.format.to_dict(model.event),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
+            self.bc.format.to_dict(model.consumable),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
+            consumption_session(model.event,
+                                model.event_type_set,
+                                model.user,
+                                model.consumable,
+                                data={
+                                    'id': 1,
+                                    'duration': delta,
+                                    'eta': UTC_NOW + delta,
+                                }),
+        ])
+        self.assertEqual(self.bc.database.list_of('events.EventCheckin'), [
+            event_checkin_serializer(1, model.event, model.user),
+        ])
+
+    # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group, Permission,
+    #     -> Cohort and CohortUser
+    # When: Feature flag set to True and event end in the future,
+    #    -> event.free_for_bootcamps = True and event_type.free_for_bootcamps = True,
+    #    -> academy.available_as_saas is random,
+    #    -> cohort.available_as_saas = False
+    # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
+           MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
+    def test_is_free_with_cohort_users_no_saas__cohort(self):
+        permission = {'codename': 'event_join'}
+        online_meeting_url = self.bc.fake.url()
+        delta = timedelta(seconds=random.randint(1, 1000))
+        event = {
+            'host_user_id': None,
+            'starting_at': UTC_NOW - delta,
+            'ending_at': UTC_NOW + delta,
+            'live_stream_url': online_meeting_url,
+            'free_for_bootcamps': True,
+        }
+        event_type = {
+            'icon_url': self.bc.fake.url(),
+            'free_for_bootcamps': True,
+        }
+
+        is_subscription = bool(random.randbytes(1))
+        i_owe_you = {
+            'next_payment_at': UTC_NOW + timedelta(weeks=4),
+            'valid_until': UTC_NOW + timedelta(weeks=4),
+        }
+
+        if is_subscription and bool(random.randbytes(1)):
+            i_owe_you['valid_until'] = None
+
+        academy = {'available_as_saas': bool(random.randbytes(1))}
+        cohort = {'available_as_saas': False}
+        extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
+        model = self.bc.database.create(user=1,
+                                        group=1,
+                                        academy=academy,
+                                        permission=permission,
+                                        event=event,
+                                        event_type=event_type,
+                                        event_type_set=1,
+                                        cohort=cohort,
+                                        cohort_user=1,
                                         consumable=1,
                                         token=1,
                                         **extra)
@@ -916,12 +1111,12 @@ class AcademyEventTestSuite(EventTestCase):
             event_checkin_serializer(1, model.event, model.user),
         ])
 
-        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
-
-    # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group and Permission
+    # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group, Permission,
+    #     -> Cohort and CohortUser
     # When: Feature flag set to True and event end in the future,
-    #    -> event.free_for_bootcamps = None and event_type.free_for_bootcamps = True
-    #    -> academy.available_as_saas = True
+    #    -> event.free_for_bootcamps = True and event_type.free_for_bootcamps = True,
+    #    -> academy.available_as_saas = False,
+    #    -> cohort.available_as_saas = None
     # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events',
@@ -929,7 +1124,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
-    def test_with_consumable__it_try_to_consume__with_live_event__in_the_future__academy_no_saas__free2(self):
+    def test_is_free_with_cohort_users_no_saas__academy(self):
         permission = {'codename': 'event_join'}
         online_meeting_url = self.bc.fake.url()
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -938,7 +1133,7 @@ class AcademyEventTestSuite(EventTestCase):
             'starting_at': UTC_NOW - delta,
             'ending_at': UTC_NOW + delta,
             'live_stream_url': online_meeting_url,
-            'free_for_bootcamps': None,
+            'free_for_bootcamps': True,
         }
         event_type = {
             'icon_url': self.bc.fake.url(),
@@ -955,6 +1150,7 @@ class AcademyEventTestSuite(EventTestCase):
             i_owe_you['valid_until'] = None
 
         academy = {'available_as_saas': False}
+        cohort = {'available_as_saas': None}
         extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
         model = self.bc.database.create(user=1,
                                         group=1,
@@ -963,6 +1159,8 @@ class AcademyEventTestSuite(EventTestCase):
                                         event=event,
                                         event_type=event_type,
                                         event_type_set=1,
+                                        cohort=cohort,
+                                        cohort_user=1,
                                         consumable=1,
                                         token=1,
                                         **extra)
@@ -998,8 +1196,6 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.bc.database.list_of('events.EventCheckin'), [
             event_checkin_serializer(1, model.event, model.user),
         ])
-
-        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
 
     # Given: with Consumable, Event, EventTypeSet, IOweYou, User have Group and Permission
     # When: Feature flag set to True and event start and end in the future
