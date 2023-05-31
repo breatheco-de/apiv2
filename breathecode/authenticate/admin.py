@@ -348,7 +348,7 @@ class GithubAcademyUserAdmin(admin.ModelAdmin):
 
 @admin.register(GithubAcademyUserLog)
 class GithubAcademyUserLogAdmin(admin.ModelAdmin):
-    list_display = ('academy_name', 'user_info', 'storage_status', 'storage_action', 'created_at',
+    list_display = ('academy_user', 'academy_name', 'storage_status', 'storage_action', 'created_at',
                     'updated_at')
     search_fields = [
         'academy_user__username', 'academy_user__user__email', 'academy_user__user__first_name',
@@ -361,9 +361,9 @@ class GithubAcademyUserLogAdmin(admin.ModelAdmin):
         return obj.academy_user.academy.name
 
     def user_info(self, obj):
-        info = obj.academy_user.user.email
-        if obj.academy_user.username is not None:
-            info += ' -> ' + obj.academy_user.username
+        return str(obj.academy_user)
+        # if obj.academy_user.username is not None:
+        #     info += ' -> ' + obj.academy_user.username
 
 
 def sync_github_members(modeladmin, request, queryset):
