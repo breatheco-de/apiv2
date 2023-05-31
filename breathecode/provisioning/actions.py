@@ -219,7 +219,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
     try:
         metadata = json.loads(field['metadata'])
     except:
-        logger.error(f'Skipped field with kind {field["kind"]}')
+        logger.warning(f'Skipped field with kind {field["kind"]}')
         return
 
     user = None
