@@ -78,8 +78,7 @@ class ProvisioningBillAdmin(admin.ModelAdmin):
             return ''
 
         return format_html(
-            f"<p class='{from_status(obj.storage_status)}'>{obj.storage_status}</p><small>{obj.storage_status_text}</small>"
-        )
+            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_details}</small>")
 
 
 @admin.register(ProvisioningContainer)
