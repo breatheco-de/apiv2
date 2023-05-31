@@ -166,7 +166,11 @@ def add_codespaces_activity(context: ActivityContext, field: dict):
         return
 
     cohort_user = CohortUser.objects.filter(
-        user=user, cohort__syllabus_version__json__icontains=field['Repository Slug']).first()
+        user=user, cohort__syllabus_version__json__icontains=field['Repository Slug']).order_by(
+            '-cohort__kickoff_date').first()
+
+    if not cohort_user:
+        cohort_user = CohortUser.objects.filter(user=user).order_by('-cohort__kickoff_date').first()
 
     if not cohort_user:
         logger.error(f'User {field["Username"]} not found in any cohort')
@@ -246,7 +250,11 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
 
     slug = result[0]
 
-    cohort_user = CohortUser.objects.filter(user=user, cohort__syllabus_version__json__icontains=slug).first()
+    cohort_user = CohortUser.objects.filter(
+        user=user, cohort__syllabus_version__json__icontains=slug).order_by('-cohort__kickoff_date').first()
+
+    if not cohort_user:
+        cohort_user = CohortUser.objects.filter(user=user).order_by('-cohort__kickoff_date').first()
 
     if not cohort_user:
         logger.error(f'User {metadata["userName"]} not found in any cohort')
