@@ -240,7 +240,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
         logger.error(f'User {metadata["userName"]} not found')
         return
 
-    pattern = r'^https://github\.com/[^/]+/([^/]+)/'
+    pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
     if not (result := re.findall(pattern, metadata['contextURL'])):
         raise Exception(f'Invalid repository URL {metadata["contextURL"]}')
 
