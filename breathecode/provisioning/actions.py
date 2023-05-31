@@ -216,8 +216,12 @@ def add_codespaces_activity(context: ActivityContext, field: dict):
 
 
 def add_gitpod_activity(context: ActivityContext, field: dict):
+    try:
+        metadata = json.loads(field['metadata'])
+    except:
+        logger.error(f'Skipped field with kind {field["kind"]}')
+        return
 
-    metadata = json.loads(field['metadata'])
     user = None
     c = None
     if metadata['userName'] in context['credentials_github']:
