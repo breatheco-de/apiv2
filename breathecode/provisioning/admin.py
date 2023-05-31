@@ -34,8 +34,8 @@ class ProvisioningAcademyAdmin(admin.ModelAdmin):
 
 @admin.register(ProvisioningActivity)
 class ProvisioningActivityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity')
-    search_fields = ['username', 'task_associated_slug']
+    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill')
+    search_fields = ['username', 'task_associated_slug', 'bill__hash']
     list_filter = ['bill__academy', 'status']
     actions = []
 
@@ -53,7 +53,7 @@ class ProvisioningActivityAdmin(admin.ModelAdmin):
             return ''
 
         return format_html(
-            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.storage_status_text}</small>")
+            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_text}</small>")
 
 
 @admin.register(ProvisioningBill)
