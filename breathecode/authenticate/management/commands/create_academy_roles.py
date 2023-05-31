@@ -474,6 +474,7 @@ ROLES = [
             'read_mentorship_mentor',
             'read_lead_gen_app',
             'read_technology',
+            'read_service',
         ],
     },
     {
