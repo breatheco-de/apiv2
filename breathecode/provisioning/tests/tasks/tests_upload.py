@@ -405,107 +405,11 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list,
-                            [call(f'User {slug} not found') for slug in csv['Username']])
+                            [call(f'User {slug} not found in any academy') for slug in csv['Username']])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
 
-    # Given: a csv with codespaces data and 10 User
-    # When: get emails from github and the email is registered
-    # Then: the task should not create any bill or activity
-    @patch.multiple('breathecode.services.google_cloud.Storage',
-                    __init__=MagicMock(return_value=None),
-                    client=PropertyMock(),
-                    create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
-    @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
-    @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_from_github__users_not_found_in_any_cohort(self):
-        csv = codespaces_csv(10)
-
-        model = self.bc.database.create(user=10)
-
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
-
-        slug = self.bc.fake.slug()
-        with patch('requests.get', response_mock(content=[{'email': x.email} for x in model.user])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
-
-                upload(slug)
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
-
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list,
-                            [call(f'User {slug} not found in any cohort') for slug in csv['Username']])
-
-        self.bc.check.calls(tasks.upload.delay.call_args_list, [])
-
-    # Given: a csv with codespaces data and 10 User, 10 CredentialsGithub
-    # When: user with github credentials saved
-    # Then: the task should not create any bill or activity
-    @patch.multiple('breathecode.services.google_cloud.Storage',
-                    __init__=MagicMock(return_value=None),
-                    client=PropertyMock(),
-                    create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
-    @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
-    @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_from_github_credentials__users_not_found_in_any_cohort(self):
-        csv = codespaces_csv(10)
-
-        credentials_github = [{
-            'username': csv['Username'][n],
-            'user_id': n + 1,
-        } for n in range(10)]
-        model = self.bc.database.create(user=10, credentials_github=credentials_github)
-
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
-
-        slug = self.bc.fake.slug()
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
-
-            upload(slug)
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
-
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list,
-                            [call(f'User {slug} not found in any cohort') for slug in csv['Username']])
-
-        self.bc.check.calls(tasks.upload.delay.call_args_list, [])
-
-    # Given: a csv with codespaces data and 10 User, 10 CohortUser, 10 Cohort, 10 CredentialsGithub and
-    #        1 SyllabusVersion
+    # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser and 10 GithubAcademyUserLog
     # When: vendor not found
     # Then: the task should not create any bill or activity
     @patch.multiple('breathecode.services.google_cloud.Storage',
@@ -531,16 +435,17 @@ class CodespacesTestSuite(ProvisioningTestCase):
     def test_from_github_credentials__vendor_not_found(self):
         csv = codespaces_csv(10)
 
-        credentials_github = [{
-            'username': csv['Username'][n],
-            'user_id': n + 1,
+        github_academy_users = [{
+            'username': x,
+        } for x in csv['Username']]
+        github_academy_user_logs = [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'academy_user_id': n + 1,
         } for n in range(10)]
-        cohort_users = [{'user_id': n + 1} for n in range(10)]
-        syllabus_version = {'json': {'tasks': [csv['Repository Slug'][n] for n in range(10)]}}
         model = self.bc.database.create(user=10,
-                                        credentials_github=credentials_github,
-                                        cohort_user=cohort_users,
-                                        syllabus_version=syllabus_version)
+                                        github_academy_user=github_academy_users,
+                                        github_academy_user_log=github_academy_user_logs)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -563,8 +468,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
 
-    # Given: a csv with codespaces data and 10 User, 10 CohortUser, 10 Cohort, 10 CredentialsGithub,
-    #        1 SyllabusVersion and 1 ProvisioningVendor of type codespaces
+    # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog
+    #     -> and 1 ProvisioningVendor of type codespaces
     # When: all the data is correct
     # Then: the task should create 1 bills and 10 activities
     @patch.multiple('breathecode.services.google_cloud.Storage',
@@ -590,18 +495,19 @@ class CodespacesTestSuite(ProvisioningTestCase):
     def test_from_github_credentials__generate_anything(self):
         csv = codespaces_csv(10)
 
-        credentials_github = [{
-            'username': csv['Username'][n],
-            'user_id': n + 1,
+        github_academy_users = [{
+            'username': x,
+        } for x in csv['Username']]
+        github_academy_user_logs = [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'academy_user_id': n + 1,
         } for n in range(10)]
-        cohort_users = [{'user_id': n + 1} for n in range(10)]
-        syllabus_version = {'json': {'tasks': [csv['Repository Slug'][n] for n in range(10)]}}
         provisioning_vendor = {'name': 'Codespaces'}
         model = self.bc.database.create(user=10,
-                                        credentials_github=credentials_github,
-                                        cohort_user=cohort_users,
-                                        provisioning_vendor=provisioning_vendor,
-                                        syllabus_version=syllabus_version)
+                                        github_academy_user=github_academy_users,
+                                        github_academy_user_log=github_academy_user_logs,
+                                        provisioning_vendor=provisioning_vendor)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -642,8 +548,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
 
-    # Given: a csv with codespaces data and 10 User, 10 CohortUser, 10 Cohort, 10 CredentialsGithub,
-    #        1 SyllabusVersion and 1 ProvisioningVendor of type codespaces
+    # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog,
+    #     -> and 1 ProvisioningVendor of type codespaces
     # When: all the data is correct, and the amount of rows is greater than the limit
     # Then: the task should create 1 bills and 10 activities
     @patch.multiple('breathecode.services.google_cloud.Storage',
@@ -673,18 +579,19 @@ class CodespacesTestSuite(ProvisioningTestCase):
         limit = tasks.PANDAS_ROWS_LIMIT
         tasks.PANDAS_ROWS_LIMIT = 3
 
-        credentials_github = [{
-            'username': csv['Username'][n],
-            'user_id': n + 1,
+        github_academy_users = [{
+            'username': x,
+        } for x in csv['Username']]
+        github_academy_user_logs = [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'academy_user_id': n + 1,
         } for n in range(10)]
-        cohort_users = [{'user_id': n + 1} for n in range(10)]
-        syllabus_version = {'json': {'tasks': [csv['Repository Slug'][n] for n in range(10)]}}
         provisioning_vendor = {'name': 'Codespaces'}
         model = self.bc.database.create(user=10,
-                                        credentials_github=credentials_github,
-                                        cohort_user=cohort_users,
-                                        provisioning_vendor=provisioning_vendor,
-                                        syllabus_version=syllabus_version)
+                                        github_academy_user=github_academy_users,
+                                        github_academy_user_log=github_academy_user_logs,
+                                        provisioning_vendor=provisioning_vendor)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -732,8 +639,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         tasks.PANDAS_ROWS_LIMIT = limit
 
-    # Given: a csv with codespaces data and 10 User, 10 CohortUser, 10 Cohort, 10 CredentialsGithub,
-    #        1 SyllabusVersion and 1 ProvisioningVendor of type codespaces
+    # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog
+    #     -> and 1 ProvisioningVendor of type codespaces
     # When: all the data is correct, force = True
     # Then: the task should create 1 bills and 10 activities
     @patch.multiple('breathecode.services.google_cloud.Storage',
@@ -760,19 +667,20 @@ class CodespacesTestSuite(ProvisioningTestCase):
         csv = codespaces_csv(10)
 
         slug = self.bc.fake.slug()
-        credentials_github = [{
-            'username': csv['Username'][n],
-            'user_id': n + 1,
+        github_academy_users = [{
+            'username': x,
+        } for x in csv['Username']]
+        github_academy_user_logs = [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'academy_user_id': n + 1,
         } for n in range(10)]
-        cohort_users = [{'user_id': n + 1} for n in range(10)]
-        syllabus_version = {'json': {'tasks': [csv['Repository Slug'][n] for n in range(10)]}}
         provisioning_vendor = {'name': 'Codespaces'}
         provisioning_bill = {'hash': slug}
         model = self.bc.database.create(user=10,
-                                        credentials_github=credentials_github,
-                                        cohort_user=cohort_users,
+                                        github_academy_user=github_academy_users,
+                                        github_academy_user_log=github_academy_user_logs,
                                         provisioning_vendor=provisioning_vendor,
-                                        syllabus_version=syllabus_version,
                                         provisioning_bill=provisioning_bill)
 
         logging.Logger.info.call_args_list = []
@@ -855,110 +763,13 @@ class GitpodTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list,
-                            [call(f'User {parse(x)["userName"]} not found') for x in csv['metadata']])
-
-        self.bc.check.calls(tasks.upload.delay.call_args_list, [])
-
-    # Given: a csv with codespaces data and 10 User
-    # When: get emails from github and the email is registered
-    # Then: the task should not create any bill or activity
-    @patch.multiple('breathecode.services.google_cloud.Storage',
-                    __init__=MagicMock(return_value=None),
-                    client=PropertyMock(),
-                    create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
-    @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
-    @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_from_github__users_not_found_in_any_cohort(self):
-        csv = gitpod_csv(10)
-
-        model = self.bc.database.create(user=10)
-
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
-
-        slug = self.bc.fake.slug()
-        with patch('requests.get', response_mock(content=[{'email': x.email} for x in model.user])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
-
-                upload(slug)
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
-
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(
             logging.Logger.error.call_args_list,
-            [call(f'User {parse(x)["userName"]} not found in any cohort') for x in csv['metadata']])
+            [call(f'User {parse(x)["userName"]} not found in any academy') for x in csv['metadata']])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
 
-    # Given: a csv with codespaces data and 10 User, 10 CredentialsGithub
-    # When: user with github credentials saved
-    # Then: the task should not create any bill or activity
-    @patch.multiple('breathecode.services.google_cloud.Storage',
-                    __init__=MagicMock(return_value=None),
-                    client=PropertyMock(),
-                    create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
-    @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
-    @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_from_github_credentials__users_not_found_in_any_cohort(self):
-        csv = gitpod_csv(10)
-
-        credentials_github = [{
-            'username': parse(csv['metadata'][n])['userName'],
-            'user_id': n + 1,
-        } for n in range(10)]
-        model = self.bc.database.create(user=10, credentials_github=credentials_github)
-
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
-
-        slug = self.bc.fake.slug()
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
-
-            upload(slug)
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
-
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
-        self.bc.check.calls(
-            logging.Logger.error.call_args_list,
-            [call(f'User {parse(x)["userName"]} not found in any cohort') for x in csv['metadata']])
-
-        self.bc.check.calls(tasks.upload.delay.call_args_list, [])
-
-    # Given: a csv with codespaces data and 10 User, 10 CohortUser, 10 Cohort, 10 CredentialsGithub and
-    #        1 SyllabusVersion
+    # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser and 10 GithubAcademyUserLog
     # When: vendor not found
     # Then: the task should not create any bill or activity
     @patch.multiple('breathecode.services.google_cloud.Storage',
@@ -984,20 +795,17 @@ class GitpodTestSuite(ProvisioningTestCase):
     def test_from_github_credentials__vendor_not_found(self):
         csv = gitpod_csv(10)
 
-        credentials_github = [{
-            'username': parse(csv['metadata'][n])['userName'],
-            'user_id': n + 1,
+        github_academy_users = [{
+            'username': parse(x)['userName'],
+        } for x in csv['metadata']]
+        github_academy_user_logs = [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'academy_user_id': n + 1,
         } for n in range(10)]
-        cohort_users = [{'user_id': n + 1} for n in range(10)]
-        syllabus_version = {
-            'json': {
-                'tasks': [repo_name(parse(csv['metadata'][n])['contextURL']) for n in range(10)]
-            }
-        }
         model = self.bc.database.create(user=10,
-                                        credentials_github=credentials_github,
-                                        cohort_user=cohort_users,
-                                        syllabus_version=syllabus_version)
+                                        github_academy_user=github_academy_users,
+                                        github_academy_user_log=github_academy_user_logs)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -1020,8 +828,8 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
 
-    # Given: a csv with codespaces data and 10 User, 10 CohortUser, 10 Cohort, 10 CredentialsGithub,
-    #        1 SyllabusVersion and 1 ProvisioningVendor of type codespaces
+    # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog
+    #     -> and 1 ProvisioningVendor of type codespaces
     # When: all the data is correct
     # Then: the task should create 1 bills and 10 activities
     @patch.multiple('breathecode.services.google_cloud.Storage',
@@ -1047,22 +855,19 @@ class GitpodTestSuite(ProvisioningTestCase):
     def test_from_github_credentials__generate_anything(self):
         csv = gitpod_csv(10)
 
-        credentials_github = [{
-            'username': parse(csv['metadata'][n])['userName'],
-            'user_id': n + 1,
+        github_academy_users = [{
+            'username': parse(x)['userName'],
+        } for x in csv['metadata']]
+        github_academy_user_logs = [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'academy_user_id': n + 1,
         } for n in range(10)]
-        cohort_users = [{'user_id': n + 1} for n in range(10)]
-        syllabus_version = {
-            'json': {
-                'tasks': [repo_name(parse(csv['metadata'][n])['contextURL']) for n in range(10)]
-            }
-        }
         provisioning_vendor = {'name': 'Codespaces'}
         model = self.bc.database.create(user=10,
-                                        credentials_github=credentials_github,
-                                        cohort_user=cohort_users,
-                                        provisioning_vendor=provisioning_vendor,
-                                        syllabus_version=syllabus_version)
+                                        github_academy_user=github_academy_users,
+                                        github_academy_user_log=github_academy_user_logs,
+                                        provisioning_vendor=provisioning_vendor)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -1102,8 +907,8 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
 
-    # Given: a csv with codespaces data and 10 User, 10 CohortUser, 10 Cohort, 10 CredentialsGithub,
-    #        1 SyllabusVersion and 1 ProvisioningVendor of type codespaces
+    # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog
+    #     -> and 1 ProvisioningVendor of type codespaces
     # When: all the data is correct, and the amount of rows is greater than the limit
     # Then: the task should create 1 bills and 10 activities
     @patch.multiple('breathecode.services.google_cloud.Storage',
@@ -1133,22 +938,19 @@ class GitpodTestSuite(ProvisioningTestCase):
         limit = tasks.PANDAS_ROWS_LIMIT
         tasks.PANDAS_ROWS_LIMIT = 3
 
-        credentials_github = [{
-            'username': parse(csv['metadata'][n])['userName'],
-            'user_id': n + 1,
-        } for n in range(10)]
-        cohort_users = [{'user_id': n + 1} for n in range(10)]
-        syllabus_version = {
-            'json': {
-                'tasks': [repo_name(parse(csv['metadata'][n])['contextURL']) for n in range(10)]
-            }
-        }
         provisioning_vendor = {'name': 'Codespaces'}
+        github_academy_users = [{
+            'username': parse(x)['userName'],
+        } for x in csv['metadata']]
+        github_academy_user_logs = [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'academy_user_id': n + 1,
+        } for n in range(10)]
         model = self.bc.database.create(user=10,
-                                        credentials_github=credentials_github,
-                                        cohort_user=cohort_users,
-                                        provisioning_vendor=provisioning_vendor,
-                                        syllabus_version=syllabus_version)
+                                        github_academy_user=github_academy_users,
+                                        github_academy_user_log=github_academy_user_logs,
+                                        provisioning_vendor=provisioning_vendor)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -1195,8 +997,8 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         tasks.PANDAS_ROWS_LIMIT = limit
 
-    # Given: a csv with codespaces data and 10 User, 10 CohortUser, 10 Cohort, 10 CredentialsGithub,
-    #        1 SyllabusVersion and 1 ProvisioningVendor of type codespaces
+    # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog
+    #     -> and 1 ProvisioningVendor of type codespaces
     # When: all the data is correct, force = True
     # Then: the task should create 1 bills and 10 activities
     @patch.multiple('breathecode.services.google_cloud.Storage',
@@ -1223,23 +1025,20 @@ class GitpodTestSuite(ProvisioningTestCase):
         csv = gitpod_csv(10)
 
         slug = self.bc.fake.slug()
-        credentials_github = [{
-            'username': parse(csv['metadata'][n])['userName'],
-            'user_id': n + 1,
+        github_academy_users = [{
+            'username': parse(x)['userName'],
+        } for x in csv['metadata']]
+        github_academy_user_logs = [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'academy_user_id': n + 1,
         } for n in range(10)]
-        cohort_users = [{'user_id': n + 1} for n in range(10)]
-        syllabus_version = {
-            'json': {
-                'tasks': [repo_name(parse(csv['metadata'][n])['contextURL']) for n in range(10)]
-            }
-        }
         provisioning_vendor = {'name': 'Codespaces'}
         provisioning_bill = {'hash': slug}
         model = self.bc.database.create(user=10,
-                                        credentials_github=credentials_github,
-                                        cohort_user=cohort_users,
+                                        github_academy_user=github_academy_users,
+                                        github_academy_user_log=github_academy_user_logs,
                                         provisioning_vendor=provisioning_vendor,
-                                        syllabus_version=syllabus_version,
                                         provisioning_bill=provisioning_bill)
 
         logging.Logger.info.call_args_list = []

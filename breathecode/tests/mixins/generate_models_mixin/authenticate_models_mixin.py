@@ -28,6 +28,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      token=False,
                                      device_id=False,
                                      user_setting=False,
+                                     github_academy_user_log=False,
                                      profile_kwargs={},
                                      device_id_kwargs={},
                                      capability_kwargs={},
@@ -203,7 +204,8 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 **cohort_user_kwargs
             })
 
-        if not 'github_academy_user' in models and is_valid(github_academy_user):
+        if not 'github_academy_user' in models and (is_valid(github_academy_user)
+                                                    or is_valid(github_academy_user_log)):
             kargs = {}
 
             if 'user' in models:
@@ -217,6 +219,15 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                                               **kargs,
                                                               **github_academy_user_kwargs
                                                           })
+
+        if not 'github_academy_user_log' in models and is_valid(github_academy_user_log):
+            kargs = {}
+
+            if 'github_academy_user' in models:
+                kargs['academy_user'] = just_one(models['github_academy_user'])
+
+            models['github_academy_user_log'] = create_models(github_academy_user_log,
+                                                              'authenticate.GithubAcademyUserLog', **kargs)
 
         if not 'credentials_quick_books' in models and is_valid(credentials_quick_books):
             kargs = {}

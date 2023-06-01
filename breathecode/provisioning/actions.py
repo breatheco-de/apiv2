@@ -1,16 +1,17 @@
 from datetime import datetime
 import json
-import os, re, requests
+import re
+import random
 from typing import TypedDict
 from django.utils import timezone
-from breathecode.authenticate.models import CredentialsGithub, User
+from breathecode.authenticate.models import CredentialsGithub, GithubAcademyUserLog, User
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 from breathecode.services.github import Github
 from breathecode.utils.i18n import translation
-from breathecode.authenticate.actions import get_user_language, get_user_settings
 from breathecode.admissions.models import CohortUser
 from .models import ProvisioningActivity, ProvisioningBill, ProvisioningProfile, ProvisioningVendor
+from django.db.models import QuerySet
 
 logger = getLogger(__name__)
 
@@ -131,52 +132,31 @@ def iso_to_datetime(iso: str) -> datetime:
 class ActivityContext(TypedDict):
     provisioning_bills: dict[str, ProvisioningBill]
     provisioning_vendors: dict[str, ProvisioningVendor]
-    credentials_github: dict[str, CredentialsGithub]
-    users: dict[str, User]
-    http_github: dict[str, requests.Request]
+    github_academy_user_logs: dict[QuerySet[GithubAcademyUserLog]]
     hash: str
 
 
 def add_codespaces_activity(context: ActivityContext, field: dict):
 
-    user = None
-    c = None
-    if field['Username'] in context['credentials_github']:
-        c = context['credentials_github'].get(field['Username'])
+    github_academy_user_log = context['github_academy_user_logs'].get(field['Username'], None)
+
+    if github_academy_user_log is None:
+        github_academy_user_log = GithubAcademyUserLog.objects.filter(
+            academy_user__username=field['Username'], storage_status='SYNCHED', storage_action='ADD')
+
+        context['github_academy_user_logs'][field['Username']] = github_academy_user_log
+
+    if (how_many := github_academy_user_log.count()) == 0:
+        logger.error(f'User {field["Username"]} not found in any academy')
+        return
+
+    if how_many == 1:
+        github_academy_user_log = github_academy_user_log.first()
 
     else:
-        c = CredentialsGithub.objects.filter(username=field['Username']).first()
-        context['credentials_github'][field['Username']] = c
+        github_academy_user_log = github_academy_user_log[random.randint(0, how_many - 1)]
 
-    if c:
-        context['credentials_github'][field['Username']] = c
-        user = c.user
-
-    if not user:
-        response = context['http_github'].get(
-            field['Username'], requests.get(f'https://api.github.com/users/{field["Username"]}'))
-
-        if response.status_code == 200 and (json := response.json()) and 'email' in json:
-            user = User.objects.filter(email=json['email']).first()
-
-        context['http_github'][field['Username']] = response
-
-    if not user:
-        logger.error(f'User {field["Username"]} not found')
-        return
-
-    cohort_user = CohortUser.objects.filter(
-        user=user, cohort__syllabus_version__json__icontains=field['Repository Slug']).order_by(
-            '-cohort__kickoff_date').first()
-
-    if not cohort_user:
-        cohort_user = CohortUser.objects.filter(user=user).order_by('-cohort__kickoff_date').first()
-
-    if not cohort_user:
-        logger.error(f'User {field["Username"]} not found in any cohort')
-        return
-
-    academy = cohort_user.cohort.academy
+    academy = github_academy_user_log.academy_user.academy
 
     provisioning_bill = context['provisioning_bills'].get(academy.id, None)
     if not provisioning_bill:
@@ -222,49 +202,31 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
         logger.warning(f'Skipped field with kind {field["kind"]}')
         return
 
-    user = None
-    c = None
-    if metadata['userName'] in context['credentials_github']:
-        c = context['credentials_github'].get(metadata['userName'])
+    github_academy_user_log = context['github_academy_user_logs'].get(metadata['userName'], None)
+
+    if github_academy_user_log is None:
+        github_academy_user_log = GithubAcademyUserLog.objects.filter(
+            academy_user__username=metadata['userName'], storage_status='SYNCHED', storage_action='ADD')
+
+        context['github_academy_user_logs'][metadata['userName']] = github_academy_user_log
+
+    if (how_many := github_academy_user_log.count()) == 0:
+        logger.error(f'User {metadata["userName"]} not found in any academy')
+        return
+
+    if how_many == 1:
+        github_academy_user_log = github_academy_user_log.first()
 
     else:
-        c = CredentialsGithub.objects.filter(username=metadata['userName']).first()
-        context['credentials_github'][metadata['userName']] = c
+        github_academy_user_log = github_academy_user_log[random.randint(0, how_many - 1)]
 
-    if c:
-        context['credentials_github'][metadata['userName']] = c
-        user = c.user
-
-    if not user:
-        response = context['http_github'].get(
-            metadata['userName'], requests.get(f'https://api.github.com/users/{metadata["userName"]}'))
-
-        if response.status_code == 200 and (j := response.json()) and 'email' in j:
-            user = User.objects.filter(email=j['email']).first()
-
-        context['http_github'][metadata['userName']] = response
-
-    if not user:
-        logger.error(f'User {metadata["userName"]} not found')
-        return
+    academy = github_academy_user_log.academy_user.academy
 
     pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
     if not (result := re.findall(pattern, metadata['contextURL'])):
         raise Exception(f'Invalid repository URL {metadata["contextURL"]}')
 
     slug = result[0]
-
-    cohort_user = CohortUser.objects.filter(
-        user=user, cohort__syllabus_version__json__icontains=slug).order_by('-cohort__kickoff_date').first()
-
-    if not cohort_user:
-        cohort_user = CohortUser.objects.filter(user=user).order_by('-cohort__kickoff_date').first()
-
-    if not cohort_user:
-        logger.error(f'User {metadata["userName"]} not found in any cohort')
-        return
-
-    academy = cohort_user.cohort.academy
 
     provisioning_bill = context['provisioning_bills'].get(academy.id, None)
     if not provisioning_bill:
