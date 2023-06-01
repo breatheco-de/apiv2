@@ -64,9 +64,7 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
     context = {
         'provisioning_bills': {},
         'provisioning_vendors': {},
-        'credentials_github': {},
-        'users': {},
-        'http_github': {},
+        'github_academy_user_logs': {},
         'hash': hash,
     }
 
@@ -126,6 +124,8 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
                 break
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         logger.error(f'File {hash} cannot be processed due to: {str(e)}')
         return
 
