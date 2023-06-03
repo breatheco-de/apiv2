@@ -91,6 +91,7 @@ def handle_event_status_updated(sender, instance, **kwargs):
 
 @receiver(asset_status_updated, sender=Asset)
 def handle_asset_status_updated(sender, instance, **kwargs):
+    logger.debug('Sending asset to hook with new status')
     model_label = get_model_label(instance)
     serializer = AssetHookSerializer(instance)
     HookManager.process_model_event(instance,
@@ -108,9 +109,11 @@ def handle_invite_accepted(sender, instance, **kwargs):
 @receiver(student_edu_status_updated, sender=CohortUser)
 def edu_status_updated(sender, instance, **kwargs):
     logger.debug('Sending student to hook with new edu status')
+    academy = instance.cohort.academy if instance.cohort is not None else None
     model_label = get_model_label(instance)
     serializer = CohortUserHookSerializer(instance)
     HookManager.process_model_event(instance,
                                     model_label,
                                     'edu_status_updated',
-                                    payload_override=serializer.data)
+                                    payload_override=serializer.data,
+                                    academy_override=academy)
