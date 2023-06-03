@@ -132,6 +132,7 @@ class AssetHookSerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
+    academy = serpy.Field()
     category = AssetCategorySmallSerializer(required=False)
     asset_type = serpy.Field()
     visibility = serpy.Field()
