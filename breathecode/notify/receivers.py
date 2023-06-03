@@ -11,6 +11,7 @@ from breathecode.marketing.serializers import FormEntryHookSerializer
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.registry.models import Asset
 from breathecode.registry.signals import asset_status_updated
+from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.events.models import EventCheckin, Event
 from breathecode.events.signals import new_event_attendee, new_event_order, event_status_updated
 from breathecode.admissions.models import CohortUser
@@ -91,7 +92,11 @@ def handle_event_status_updated(sender, instance, **kwargs):
 @receiver(asset_status_updated, sender=Asset)
 def handle_asset_status_updated(sender, instance, **kwargs):
     model_label = get_model_label(instance)
-    HookManager.process_model_event(instance, model_label, 'asset_status_updated')
+    serializer = AssetHookSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'asset_status_updated',
+                                    payload_override=serializer.data)
 
 
 @receiver(invite_status_updated, sender=UserInvite)

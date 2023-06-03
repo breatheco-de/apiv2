@@ -87,6 +87,7 @@ class AcademySmallSerializer(serpy.Serializer):
 class AssetCategorySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
+    title = serpy.Field()
 
 
 class KeywordClusterSmallSerializer(serpy.Serializer):
@@ -124,6 +125,29 @@ class AcademyCommentSerializer(serpy.Serializer):
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
     created_at = serpy.Field()
+
+
+class AssetHookSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    category = AssetCategorySmallSerializer(required=False)
+    asset_type = serpy.Field()
+    visibility = serpy.Field()
+    url = serpy.Field()
+    readme_url = serpy.Field()
+    difficulty = serpy.Field()
+    duration = serpy.Field()
+    description = serpy.Field()
+    status = serpy.Field()
+    graded = serpy.Field()
+    gitpod = serpy.Field()
+    preview = serpy.Field()
+    external = serpy.Field()
+    solution_video_url = serpy.Field()
+    intro_video_url = serpy.Field()
+    published_at = serpy.Field()
 
 
 class AssetSerializer(serpy.Serializer):
