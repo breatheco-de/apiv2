@@ -367,8 +367,14 @@ HOOK_EVENTS = {
     'profile_academy.changed': 'authenticate.ProfileAcademy.updated+',
     'cohort_user.added': 'admissions.CohortUser.created+',
     'cohort_user.changed': 'admissions.CohortUser.updated+',
-    'cohort_user.edu_status_updated': 'admissions.cohort_user.edu_status_updated',
-    # and custom events, no extra meta data needed
+
+    # and custom events, make sure to trigger them at notify.receivers.py
+    'cohort_user.edu_status_updated': 'admissions.CohortUser.edu_status_updated',
+    'user_invite.invite_status_updated': 'authenticate.UserInvite.invite_status_updated',
+    'asset.asset_status_updated': 'registry.Asset.asset_status_updated',
+    'event.event_status_updated': 'events.Event.event_status_updated',
+    'event.new_order': 'events.Event.new_event_order',
+    'event.new_attendee': 'events.Event.new_event_attendee',
     'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
 }
 

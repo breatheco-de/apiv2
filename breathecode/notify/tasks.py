@@ -105,8 +105,9 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
     instance:   a possibly null "trigger" instance
     hook:       the defining Hook object (useful for removing)
     """
+    encoded_payload = json.dumps(payload, cls=DjangoJSONEncoder)
     response = requests.post(url=target,
-                             data=json.dumps(payload, cls=DjangoJSONEncoder),
+                             data=encoded_payload,
                              headers={'Content-Type': 'application/json'},
                              timeout=2)
 

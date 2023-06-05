@@ -523,8 +523,10 @@ def publish_event_from_eventbrite(data, org: Organization) -> None:
             'eventbrite_sync_status': 'PERSISTED'
         }
 
-        Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).update(**kwargs)
+        query = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id)
+        query.update(**kwargs)
         logger.debug(f'The event with the eventbrite id `{data["id"]}` was saved')
+        return query.first()
 
     except Warning as e:
         logger.error(f'{now} => {e}')

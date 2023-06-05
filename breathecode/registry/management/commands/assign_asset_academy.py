@@ -17,4 +17,4 @@ class Command(BaseCommand):
         miami = Academy.objects.filter(slug='downtown-miami').first()
         Asset.objects.filter(academy__isnull=True).update(academy=miami)
         Asset.objects.filter(status='OK').update(status='PUBLISHED')
-        Asset.objects.filter(status='UNNASIGNED').update(status='UNASSIGNED')
+        Asset.objects.filter(status='UNASSIGNED').update(status='NOT_STARTED')

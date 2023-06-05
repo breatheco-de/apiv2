@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 status = {
     'Won': 'WON',
     'Lost': 'LOST',
+    '0': None,
     '1': 'WON',
     '2': 'LOST',
 }
@@ -17,12 +18,14 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
     # prevent circular dependency import between thousand modules previuosly loaded and cached
     from breathecode.marketing.models import FormEntry
 
-    entry = FormEntry.objects.filter(ac_deal_id=payload['deal[id]']).order_by('-created_at').first()
+    entry = FormEntry.objects.filter(ac_deal_id=payload['deal[id]'],
+                                     storage_status='PERSISTED').order_by('-created_at').first()
     if entry is None and 'deal[contactid]' in payload:
-        entry = FormEntry.objects.filter(
-            ac_contact_id=payload['deal[contactid]']).order_by('-created_at').first()
+        entry = FormEntry.objects.filter(ac_contact_id=payload['deal[contactid]'],
+                                         storage_status='PERSISTED').order_by('-created_at').first()
     if entry is None and 'deal[contact_email]' in payload:
-        entry = FormEntry.objects.filter(email=payload['deal[contact_email]']).order_by('-created_at').first()
+        entry = FormEntry.objects.filter(email=payload['deal[contact_email]'],
+                                         storage_status='PERSISTED').order_by('-created_at').first()
     if entry is None:
         raise Exception(
             f'Impossible to find formentry with deal {payload["deal[id]"]} for webhook {webhook.id} -> '
@@ -46,7 +49,7 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
         entry.ac_deal_owner_full_name = payload['deal[owner_firstname]'] + ' ' + payload[
             'deal[owner_lastname]']
 
-        entry.ac_deal_amount = float(payload['deal[value]'])
+        entry.ac_deal_amount = float(payload['deal[value_raw]'])
         entry.ac_deal_currency_code = payload['deal[currency]']
 
     # lets get the custom fields and use them to update some local fields
@@ -58,6 +61,10 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
     entry = update_course(AC, entry, acp_ids, deal_custom_fields)
 
     entry.save()
+
+    # update entry on the webhook
+    webhook.form_entry = entry
+    webhook.save()
 
     logger.debug(f"Form Entry successfuly updated with deal {str(payload['deal[id]'])} information")
     return True

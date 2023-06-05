@@ -14,4 +14,7 @@ def event_created(self, webhook, payload: dict):
     # prevent receive a event.created before save the event in the first time
     time.sleep(3)
 
-    update_or_create_event(payload, org)
+    event = update_or_create_event(payload, org)
+    if event and event is not None:
+        webhook.event = event
+        webhook.save()

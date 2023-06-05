@@ -92,7 +92,12 @@ class HookManagerClass(object):
                         "HOOK_CUSTOM_MODEL refers to model '%s' that cannot be imported" % model_label)
             return
 
-    def find_and_fire_hook(self, event_name, instance, user_override=None, payload_override=None):
+    def find_and_fire_hook(self,
+                           event_name,
+                           instance,
+                           user_override=None,
+                           payload_override=None,
+                           academy_override=None):
         """
         Look up Hooks that apply
         """
@@ -108,7 +113,10 @@ class HookManagerClass(object):
         filters = {'event': event_name}
 
         # only process hooks from instances from the same academy
-        if hasattr(instance, 'academy') and instance.academy is not None:
+        if academy_override is not None:
+            superadmins = User.objects.filter(is_superuser=True).values_list('username', flat=True)
+            filters['user__username__in'] = [academy_override.slug] + list(superadmins)
+        elif hasattr(instance, 'academy') and instance.academy is not None:
             superadmins = User.objects.filter(is_superuser=True).values_list('username', flat=True)
             filters['user__username__in'] = [instance.academy.slug] + list(superadmins)
         else:
@@ -132,7 +140,10 @@ class HookManagerClass(object):
         HookModel = self.get_hook_model()
         hooks = HookModel.objects.filter(**filters)
         for hook in hooks:
-            self.deliver_hook(hook, instance, payload_override=payload_override)
+            self.deliver_hook(hook,
+                              instance,
+                              payload_override=payload_override,
+                              academy_override=academy_override)
 
     def process_model_event(
         self,
@@ -143,6 +154,7 @@ class HookManagerClass(object):
         event_name=False,
         trust_event_name=False,
         payload_override=None,
+        academy_override=None,
     ):
         """
         Take `event_name` or determine it using action and model
@@ -187,9 +199,10 @@ class HookManagerClass(object):
             self.find_and_fire_hook(event_name,
                                     instance,
                                     user_override=user_override,
-                                    payload_override=payload_override)
+                                    payload_override=payload_override,
+                                    academy_override=academy_override)
 
-    def deliver_hook(self, hook, instance, payload_override=None):
+    def deliver_hook(self, hook, instance, payload_override=None, academy_override=None):
         """
         Deliver the payload to the target URL.
         By default it serializes to JSON and POSTs.

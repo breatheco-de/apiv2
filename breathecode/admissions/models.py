@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
-from .signals import student_edu_status_updated, academy_saved, syllabus_version_json_updated
+from .signals import student_edu_status_updated, academy_saved, syllabus_version_json_updated, cohort_stage_updated
 from . import signals
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
@@ -375,6 +375,7 @@ class Cohort(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._current_history_log = self.history_log
+        self.__old_stage = self.stage
 
     def clean(self):
         if self.stage:
@@ -394,6 +395,7 @@ class Cohort(models.Model):
         assert self.id
 
         self.full_clean()
+
         super().save(*args, **kwargs)
 
         signals.cohort_saved.send(instance=self, sender=self.__class__, created=False)
@@ -405,12 +407,20 @@ class Cohort(models.Model):
         created = not self.id
 
         self.full_clean()
+
+        stage_updated = False
+        if self.pk is None or self.__old_stage != self.stage:
+            stage_updated = True
+
         super().save(*args, **kwargs)
 
         signals.cohort_saved.send(instance=self, sender=self.__class__, created=created)
 
         if self.history_log and self.history_log != self._current_history_log:
             signals.cohort_log_saved.send(instance=self, sender=self.__class__, created=created)
+
+        if stage_updated:
+            signals.cohort_stage_updated.send(instance=self, sender=self.__class__)
 
         self._current_history_log = self.history_log
 

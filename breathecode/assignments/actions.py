@@ -19,6 +19,7 @@ NOTIFICATION_STRINGS = {
             'PENDING': 'Your task has been marked as pending',
             'APPROVED': 'Your task has been marked as approved',
             'REJECTED': 'Your task has been marked as rejected',
+            'IGNORED': 'Your task has been marked as ignored',
         },
     },
     'es': {
@@ -31,6 +32,7 @@ NOTIFICATION_STRINGS = {
             'PENDING': 'Tu tarea se ha marcado como pendiente',
             'APPROVED': 'Tu tarea se ha marcado como aprobada',
             'REJECTED': 'Tu tarea se ha marcado como rechazada',
+            'IGNORED': 'Tu tarea se ha marcado como ignorada',
         },
     },
 }

@@ -418,6 +418,7 @@ ROLES = [
             'read_nps_answers',
             'read_won_lead',
             'read_asset',
+            'read_category',
             'read_cohort_log',
             'read_lead_gen_app',
             'read_mentorship_service',
