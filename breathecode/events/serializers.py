@@ -462,6 +462,21 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
         return event_type
 
 
+class POSTEventCheckinSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = EventCheckin
+        exclude = ()
+
+    def validate(self, data: dict[str, Any]):
+        return data
+
+    def create(self, validated_data):
+        event_checkin = super().create(validated_data)
+
+        return event_checkin
+
+
 class PostEventTypeSerializer(EventTypeSerializerMixin):
 
     class Meta:
