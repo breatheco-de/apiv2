@@ -5,11 +5,14 @@ import os
 
 from celery import Task, shared_task
 import pandas as pd
+from breathecode.admissions.models import CohortUser
+from breathecode.authenticate.models import CredentialsGithub, PendingGithubUser
 
 from breathecode.provisioning import actions
 from breathecode.provisioning.models import ProvisioningActivity, ProvisioningBill
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.validation_exception import ValidationException
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +22,6 @@ class BaseTaskWithRetry(Task):
     #                                           seconds
     retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
     retry_backoff = True
-
-
-def get_app_url():
-    return os.getenv('APP_URL', '')
 
 
 @shared_task(bind=False, base=BaseTaskWithRetry)
@@ -55,6 +54,32 @@ PANDAS_ROWS_LIMIT = 100
 
 
 @shared_task(bind=False, base=BaseTaskWithRetry)
+def link_pending_github_users_to_bills(hash):
+    logger.info(f'Starting link_pending_github_users_to_bills for hash {hash}')
+    bills = ProvisioningBill.objects.filter(hash=hash).exclude(status__in=['DISPUTED', 'IGNORED', 'PAID'])
+
+    if not bills.exists():
+        logger.warning(f'Does not exists bills for hash {hash}')
+        return
+
+    pending_github_users = PendingGithubUser.objects.filter(hashes__icontains=hash, status='PENDING')
+    if not pending_github_users.exists():
+        logger.warning(f'Does not exists pending github users for hash {hash}')
+        return
+
+    no_academies = pending_github_users.filter(academy__isnull=True)
+    with_academies = pending_github_users.filter(academy__isnull=False)
+
+    for bill in bills:
+        belongs_to_bill = with_academies.filter(academy=bill.academy)
+
+        bill.pending_users.clear()
+        bill.pending_users.add(*no_academies, *belongs_to_bill)
+
+    logger.error('There are pending github users that cannot be linked to a academy bill')
+
+
+@shared_task(bind=False, base=BaseTaskWithRetry)
 def upload(hash: str, page: int = 0, *, force: bool = False):
     logger.info(f'Starting upload for hash {hash}')
 
@@ -66,6 +91,8 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         'provisioning_vendors': {},
         'github_academy_user_logs': {},
         'hash': hash,
+        'limit': timezone.now(),
+        'logs': {},
     }
 
     storage = Storage()
@@ -116,6 +143,10 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         logger.error(f'File {hash} has an unsupported origin or the provider had changed the file format')
         return
 
+    prev_bill = ProvisioningBill.objects.filter(hash=hash).first()
+    if prev_bill:
+        context['limit'] = prev_bill.created_at
+
     try:
         for i in range(start, end):
             try:
@@ -135,6 +166,9 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
 
     if len(df.iloc[start:end]) == limit:
         upload.delay(hash, page + 1)
+
+    elif PendingGithubUser.objects.filter(hashes__icontains=hash).exists():
+        link_pending_github_users_to_bills.delay(hash)
 
     else:
         calculate_bill_amounts.delay(hash)

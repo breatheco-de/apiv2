@@ -199,6 +199,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -215,6 +216,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
@@ -222,6 +224,8 @@ class RandomFileTestSuite(ProvisioningTestCase):
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
     # When: random csv is uploaded and the file exists
     # Then: the task should not create any bill or activity
@@ -240,6 +244,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -256,6 +261,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
@@ -263,6 +269,8 @@ class RandomFileTestSuite(ProvisioningTestCase):
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
     # Given: a csv and 1 ProvisioningBill
     # When: random csv is uploaded and the file exists
@@ -282,6 +290,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -305,6 +314,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
             self.bc.format.to_dict(model.provisioning_bill),
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
@@ -312,6 +322,8 @@ class RandomFileTestSuite(ProvisioningTestCase):
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
     # Given: a csv and 1 ProvisioningBill
     # When: random csv is uploaded and the file exists
@@ -331,6 +343,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -357,6 +370,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
             self.bc.format.to_dict(model.provisioning_bill),
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
@@ -364,6 +378,8 @@ class RandomFileTestSuite(ProvisioningTestCase):
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
 
 class CodespacesTestSuite(ProvisioningTestCase):
@@ -386,6 +402,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -402,12 +419,21 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'),
+                         [{
+                             'id': x + 1,
+                             'username': csv['Username'][x],
+                             'status': 'PENDING',
+                             'hashes': [slug]
+                         } for x in range(10)])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list,
                             [call(f'User {slug} not found in any academy') for slug in csv['Username']])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [call(slug)])
 
     # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser and 10 GithubAcademyUserLog
     # When: vendor not found
@@ -427,6 +453,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -459,7 +486,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({'hash': slug}),
         ])
+
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(
@@ -467,6 +496,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
             [call(f'File {slug} cannot be processed due to: Provisioning vendor Codespaces not found')])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
     # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog
     #     -> and 1 ProvisioningVendor of type codespaces
@@ -487,6 +518,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -543,10 +575,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 }) for n in range(10)
         ])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
+
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
     # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog,
     #     -> and 1 ProvisioningVendor of type codespaces
@@ -567,6 +603,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -627,6 +664,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 }) for n in range(10)
         ])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
+
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Starting upload for hash {slug}') for _ in range(4)])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
@@ -636,6 +675,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
             call(slug, 2),
             call(slug, 3),
         ])
+
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
         tasks.PANDAS_ROWS_LIMIT = limit
 
@@ -658,6 +700,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -719,10 +762,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 }) for n in range(10)
         ])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
+
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
 
 class GitpodTestSuite(ProvisioningTestCase):
@@ -745,6 +792,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -761,6 +809,13 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'),
+                         [{
+                             'id': x + 1,
+                             'username': parse(csv['metadata'][x])['userName'],
+                             'status': 'PENDING',
+                             'hashes': [slug]
+                         } for x in range(10)])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(
@@ -768,6 +823,8 @@ class GitpodTestSuite(ProvisioningTestCase):
             [call(f'User {parse(x)["userName"]} not found in any academy') for x in csv['metadata']])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [call(slug)])
 
     # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser and 10 GithubAcademyUserLog
     # When: vendor not found
@@ -787,6 +844,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -819,7 +877,9 @@ class GitpodTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({'hash': slug}),
         ])
+
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(
@@ -827,6 +887,8 @@ class GitpodTestSuite(ProvisioningTestCase):
             [call(f'File {slug} cannot be processed due to: Provisioning vendor Codespaces not found')])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
     # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog
     #     -> and 1 ProvisioningVendor of type codespaces
@@ -847,6 +909,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -902,10 +965,14 @@ class GitpodTestSuite(ProvisioningTestCase):
                 }) for n in range(10)
         ])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
+
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
     # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog
     #     -> and 1 ProvisioningVendor of type codespaces
@@ -926,6 +993,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -985,6 +1053,8 @@ class GitpodTestSuite(ProvisioningTestCase):
                 }) for n in range(10)
         ])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
+
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Starting upload for hash {slug}') for _ in range(4)])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
@@ -994,6 +1064,9 @@ class GitpodTestSuite(ProvisioningTestCase):
             call(slug, 2),
             call(slug, 3),
         ])
+
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])
 
         tasks.PANDAS_ROWS_LIMIT = limit
 
@@ -1016,6 +1089,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('breathecode.provisioning.tasks.link_pending_github_users_to_bills.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -1076,7 +1150,11 @@ class GitpodTestSuite(ProvisioningTestCase):
                 }) for n in range(10)
         ])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.PendingGithubUser'), [])
+
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
+        self.bc.check.calls(tasks.link_pending_github_users_to_bills.delay.call_args_list, [])

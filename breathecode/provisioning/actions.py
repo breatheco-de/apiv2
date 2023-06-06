@@ -2,16 +2,18 @@ from datetime import datetime
 import json
 import re
 import random
-from typing import TypedDict
+from typing import Optional, TypedDict
 from django.utils import timezone
-from breathecode.authenticate.models import CredentialsGithub, GithubAcademyUserLog, User
+from breathecode.authenticate.models import (CredentialsGithub, GithubAcademyUser, GithubAcademyUserLog,
+                                             PendingGithubUser, User)
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 from breathecode.services.github import Github
 from breathecode.utils.i18n import translation
-from breathecode.admissions.models import CohortUser
+from breathecode.admissions.models import Academy, CohortUser
 from .models import ProvisioningActivity, ProvisioningBill, ProvisioningProfile, ProvisioningVendor
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Q
+from dateutil.relativedelta import relativedelta
 
 logger = getLogger(__name__)
 
@@ -129,34 +131,140 @@ def iso_to_datetime(iso: str) -> datetime:
     return timezone.make_aware(date)
 
 
+class GithubAcademyUserObject(TypedDict):
+    storage_status: str
+    storage_action: str
+    created_at: datetime
+    ended_at: datetime
+
+
+def get_github_academy_user_logs(academy: Academy, username: str,
+                                 limit: datetime) -> list[GithubAcademyUserObject]:
+    ret = []
+    logs = GithubAcademyUserLog.objects.filter(academy_user__username=username,
+                                               academy_user__academy=academy,
+                                               created_at__lte=limit).order_by('created_at')
+
+    for n in range(len(logs)):
+        log = logs[n]
+
+        if n != 0:
+            logs[n - 1]['ending_at'] = log.created_at
+
+        obj = {
+            'starting_at': log.created_at,
+            'ending_at': limit,
+            'storage_status': log.storage_status,
+            'storage_action': log.storage_action,
+        }
+
+        ret.append(obj)
+
+    starts_limit = limit - relativedelta(months=1, weeks=1)
+    ret = [x for x in ret if x['ending_at'] < starts_limit]
+
+    return ret
+
+
 class ActivityContext(TypedDict):
     provisioning_bills: dict[str, ProvisioningBill]
     provisioning_vendors: dict[str, ProvisioningVendor]
     github_academy_user_logs: dict[QuerySet[GithubAcademyUserLog]]
     hash: str
+    limit: datetime
+    logs: dict[str, list[GithubAcademyUserObject]]
+
+
+def handle_pending_github_user(username: str, hash: str) -> list[GithubAcademyUser]:
+    github_academy_users = []
+    now = timezone.now()
+    credentials = CredentialsGithub.objects.filter(username=username).first()
+
+    if credentials:
+        cohort_users = CohortUser.objects.filter(
+            Q(cohort__never_ends=True)
+            | Q(cohort__never_ends=False, cohort__ending_date__gte=now),
+            cohort__kickoff_date__lte=now,
+            user=credentials.user).exclude(stage__in=['ENDED', 'DELETED'])
+
+        academies = {cohort_user.cohort.academy for cohort_user in cohort_users}
+
+    else:
+        academies = set()
+
+    if not academies:
+        source = 'LINKED' if credentials else 'UNLINKED'
+        pending, _ = PendingGithubUser.objects.get_or_create(username=username,
+                                                             source=source,
+                                                             defaults={
+                                                                 'status': 'PENDING',
+                                                                 'hashes': [hash]
+                                                             })
+
+        if hash not in pending.hashes:
+            pending.hashes.append(hash)
+            pending.save()
+
+    else:
+        for academy in academies:
+            pending, _ = PendingGithubUser.objects.get_or_create(username=username,
+                                                                 academy=academy,
+                                                                 source='COHORT',
+                                                                 defaults={
+                                                                     'status': 'PENDING',
+                                                                     'hashes': [hash]
+                                                                 })
+
+            if hash not in pending.hashes:
+                pending.hashes.append(hash)
+                pending.save()
+        # for academy in academies:
+        #     github_user, _ = GithubAcademyUser.objects.get_or_create(username=username,
+        #                                                              academy=academy,
+        #                                                              user=credentials.user,
+        #                                                              defaults={
+        #                                                                  'storage_status': 'PENDING',
+        #                                                                  'storage_action': 'ADD',
+        #                                                              })
+
+        #     if github_user.storage_status in ['PENDING', 'SYNCHED'] and github_user.storage_action == 'ADD':
+        #         github_academy_users.append(github_user)
+
+    return github_academy_users
 
 
 def add_codespaces_activity(context: ActivityContext, field: dict):
-
     github_academy_user_log = context['github_academy_user_logs'].get(field['Username'], None)
 
     if github_academy_user_log is None:
+        # sort by created at
         github_academy_user_log = GithubAcademyUserLog.objects.filter(
-            academy_user__username=field['Username'], storage_status='SYNCHED', storage_action='ADD')
+            academy_user__username=field['Username'],
+            storage_status='SYNCHED',
+            storage_action='ADD',
+            created_at__lte=context['limit']).order_by('-created_at')
 
         context['github_academy_user_logs'][field['Username']] = github_academy_user_log
 
-    if (how_many := github_academy_user_log.count()) == 0:
+    if not github_academy_user_log:
+        academy = handle_pending_github_user(field['Username'], context['hash'])
+
+    if (how_many := len(github_academy_user_log)) == 0:
         logger.error(f'User {field["Username"]} not found in any academy')
         return
 
     if how_many == 1:
-        github_academy_user_log = github_academy_user_log.first()
+        github_academy_user_log = github_academy_user_log[0]
 
     else:
         github_academy_user_log = github_academy_user_log[random.randint(0, how_many - 1)]
 
     academy = github_academy_user_log.academy_user.academy
+
+    logs = context['logs'].get(field['Username'], None)
+    if logs is None:
+        logs = get_github_academy_user_logs(academy, field['Username'], context['limit'])
+        context['logs'][field['Username']] = logs
 
     provisioning_bill = context['provisioning_bills'].get(academy.id, None)
     if not provisioning_bill:
@@ -176,11 +284,18 @@ def add_codespaces_activity(context: ActivityContext, field: dict):
     if not provisioning_vendor:
         raise Exception(f'Provisioning vendor Codespaces not found')
 
+    date = datetime.strptime(field['Date'], '%Y-%m-%d')
+    for log in logs:
+        if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
+                and log['starting_at'] <= date <= log['ending_at']):
+            logger.error(f'User {field["Username"]} was deleted from the academy during this event at {date}')
+            return
+
     pa = ProvisioningActivity()
 
     pa.bill = provisioning_bill
     pa.username = field['Username']
-    pa.registered_at = datetime.strptime(field['Date'], '%Y-%m-%d')
+    pa.registered_at = date
     pa.product_name = field['Product']
     pa.sku = field['SKU']
     pa.quantity = field['Quantity']
@@ -210,17 +325,25 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
 
         context['github_academy_user_logs'][metadata['userName']] = github_academy_user_log
 
-    if (how_many := github_academy_user_log.count()) == 0:
+    if not github_academy_user_log:
+        academy = handle_pending_github_user(metadata['userName'], context['hash'])
+
+    if (how_many := len(github_academy_user_log)) == 0:
         logger.error(f'User {metadata["userName"]} not found in any academy')
         return
 
     if how_many == 1:
-        github_academy_user_log = github_academy_user_log.first()
+        github_academy_user_log = github_academy_user_log[0]
 
     else:
         github_academy_user_log = github_academy_user_log[random.randint(0, how_many - 1)]
 
     academy = github_academy_user_log.academy_user.academy
+
+    logs = context['logs'].get(metadata['userName'], None)
+    if logs is None:
+        logs = get_github_academy_user_logs(academy, metadata['userName'], context['limit'])
+        context['logs'][metadata['userName']] = logs
 
     pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
     if not (result := re.findall(pattern, metadata['contextURL'])):
@@ -246,10 +369,17 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
     if not provisioning_vendor:
         raise Exception(f'Provisioning vendor Codespaces not found')
 
+    date = iso_to_datetime(field['effectiveTime'])
+    for log in logs:
+        if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
+                and log['starting_at'] <= date <= log['ending_at']):
+            logger.error(f'User {field["Username"]} was deleted from the academy during this event at {date}')
+            return
+
     pa = ProvisioningActivity()
     pa.bill = provisioning_bill
     pa.username = metadata['userName']
-    pa.registered_at = iso_to_datetime(field['effectiveTime'])
+    pa.registered_at = date
     pa.product_name = field['kind']
     pa.sku = field['id']
     pa.quantity = field['creditCents']

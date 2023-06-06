@@ -29,6 +29,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      device_id=False,
                                      user_setting=False,
                                      github_academy_user_log=False,
+                                     pending_github_user=False,
                                      profile_kwargs={},
                                      device_id_kwargs={},
                                      capability_kwargs={},
@@ -219,6 +220,12 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                                               **kargs,
                                                               **github_academy_user_kwargs
                                                           })
+
+        if not 'pending_github_user' in models and is_valid(pending_github_user):
+            kargs = {}
+
+            models['pending_github_user'] = create_models(pending_github_user,
+                                                          'authenticate.PendingGithubUser', **kargs)
 
         if not 'github_academy_user_log' in models and is_valid(github_academy_user_log):
             kargs = {}
