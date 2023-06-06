@@ -827,10 +827,10 @@ class EventMeCheckinView(APIView):
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
         if event is None:
             raise ValidationException(translation(lang,
-                                                      en='Event not found or you dont have access',
-                                                      es='Evento no encontrado o no tienes acceso',
-                                                      slug='event-not-found'),
-                                          code=404)
+                                                  en='Event not found or you dont have access',
+                                                  es='Evento no encontrado o no tienes acceso',
+                                                  slug='event-not-found'),
+                                      code=404)
 
         serializer = PUTEventCheckinSerializer(event, request.data)
         if serializer.is_valid():
@@ -845,10 +845,10 @@ class EventMeCheckinView(APIView):
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
         if event is None:
             raise ValidationException(translation(lang,
-                                                      en='Event not found or you dont have access',
-                                                      es='Evento no encontrado o no tienes acceso',
-                                                      slug='event-not-found'),
-                                          code=404)
+                                                  en='Event not found or you dont have access',
+                                                  es='Evento no encontrado o no tienes acceso',
+                                                  slug='event-not-found'),
+                                      code=404)
 
         serializer = POSTEventCheckinSerializer(data={
             **request.data, 'email': request.user.email,

@@ -386,7 +386,7 @@ CAPABILITIES = [
     {
         'slug': 'read_service',
         'description': 'Read service details'
-    }
+    },
 ]
 
 ROLES = [
