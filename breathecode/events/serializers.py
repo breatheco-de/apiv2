@@ -464,6 +464,13 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
         return event_type
 
 
+class POSTEventCheckinSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = EventCheckin
+        exclude = ('created_at', 'updated_at', 'attended_at', 'status')
+
+
 class PostEventTypeSerializer(EventTypeSerializerMixin):
 
     class Meta:
