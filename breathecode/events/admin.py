@@ -105,6 +105,7 @@ class EventCheckinAdmin(admin.ModelAdmin):
     list_display = ('email', 'attendee', 'event', 'status', 'created_at', 'attended_at')
     list_filter = ['status']
     search_fields = ['email', 'event__title', 'event__slug']
+    raw_id_fields = ['event', 'attendee']
 
 
 def reattempt_eventbrite_webhook(modeladmin, request, queryset):
