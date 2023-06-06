@@ -439,6 +439,8 @@ class EventCheckinSmallSerializer(serpy.Serializer):
     attendee = serpy.MethodField()
 
     def get_attendee(self, obj):
+        if obj.attendee is None:
+            return None
         return UserPublicSerializer(obj.attendee).data
 
 
