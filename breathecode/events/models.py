@@ -117,13 +117,16 @@ class EventType(models.Model):
     icon_url = models.URLField(blank=False, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
     lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
-    free_for_bootcamps = models.BooleanField(default=True, help_text="Users that belong to other no-saas academies will be able to join without consuming")
+    free_for_bootcamps = models.BooleanField(
+        default=True,
+        help_text='Users that belong to other no-saas academies will be able to join without consuming')
 
     visibility_settings = models.ManyToManyField(
         EventTypeVisibilitySetting,
         blank=True,
         help_text='Visibility has to be configured every academy separately')
-    allow_shared_creation = models.BooleanField(default=True, help_text="Other academies are allowed to create events of this type")
+    allow_shared_creation = models.BooleanField(
+        default=True, help_text='Other academies are allowed to create events of this type')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

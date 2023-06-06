@@ -6,388 +6,297 @@ from django.core.management.base import BaseCommand, CommandError
 from ...actions import delete_tokens
 from ...models import Capability, Role
 
-CAPABILITIES = [
-    {
-        'slug': 'read_my_academy',
-        'description': 'Read your academy information'
-    },
-    {
-        'slug': 'crud_my_academy',
-        'description': 'Read, or update your academy information (very high level, almost the academy admin)'
-    },
-    {
-        'slug': 'crud_member',
-        'description': 'Create, update or delete academy members (very high level, almost the academy admin)'
-    },
-    {
-        'slug': 'read_member',
-        'description': 'Read academy staff member information'
-    },
-    {
-        'slug': 'crud_student',
-        'description': 'Create, update or delete students'
-    },
-    {
-        'slug': 'read_student',
-        'description': 'Read student information'
-    },
-    {
-        'slug': 'read_invite',
-        'description': 'Read invites from users'
-    },
-    {
-        'slug': 'crud_invite',
-        'description': 'Create, update or delete invites from users'
-    },
-    {
-        'slug': 'invite_resend',
-        'description': 'Resent invites for user academies'
-    },
-    {
-        'slug': 'read_assignment',
-        'description': 'Read assignment information'
-    },
-    {
-        'slug':
-        'read_assignment_sensitive_details',
-        'description':
-        'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"'
-    },
-    {
-        'slug': 'read_shortlink',
-        'description': 'Access the list of marketing shortlinks'
-    },
-    {
-        'slug': 'crud_shortlink',
-        'description': 'Create, update and delete marketing short links'
-    },
-    {
-        'slug': 'crud_assignment',
-        'description': 'Update assignments'
-    },
-    {
-        'slug': 'task_delivery_details',
-        'description': 'Get delivery URL for a task, that url can be sent to students for delivery'
-    },
-    {
-        'slug': 'read_certificate',
-        'description': 'List and read all academy certificates'
-    },
-    {
-        'slug': 'crud_certificate',
-        'description': 'Create, update or delete student certificates'
-    },
-    {
-        'slug': 'read_layout',
-        'description': 'Read layouts to generate new certificates'
-    },
-    {
-        'slug': 'read_syllabus',
-        'description': 'List and read syllabus information'
-    },
-    {
-        'slug': 'crud_syllabus',
-        'description': 'Create, update or delete syllabus versions'
-    },
-    {
-        'slug': 'read_organization',
-        'description': 'Read academy organization details'
-    },
-    {
-        'slug': 'crud_organization',
-        'description': 'Update, create or delete academy organization details'
-    },
-    {
-        'slug': 'read_event',
-        'description': 'List and retrieve event information'
-    },
-    {
-        'slug': 'crud_event',
-        'description': 'Create, update or delete event information'
-    },
-    {
-        'slug': 'read_event_type',
-        'description': 'List and retrieve event type information'
-    },
-    {
-        'slug': 'crud_event_type',
-        'description': 'Create, update or delete event type information'
-    },
-    {
-        'slug': 'read_all_cohort',
-        'description': 'List all the cohorts or single cohort information'
-    },
-    {
-        'slug': 'read_single_cohort',
-        'description': 'single cohort information related to a user'
-    },
-    {
-        'slug': 'crud_cohort',
-        'description': 'Create, update or delete cohort info'
-    },
-    {
-        'slug': 'read_eventcheckin',
-        'description': 'List and read all the event_checkins'
-    },
-    {
-        'slug': 'read_survey',
-        'description': 'List all the nps answers'
-    },
-    {
-        'slug': 'crud_survey',
-        'description': 'Create, update or delete surveys'
-    },
-    {
-        'slug': 'read_nps_answers',
-        'description': 'List all the nps answers'
-    },
-    {
-        'slug': 'read_lead',
-        'description': 'List all the leads'
-    },
-    {
-        'slug': 'read_won_lead',
-        'description': 'List all the won leads'
-    },
-    {
-        'slug': 'crud_lead',
-        'description': 'Create, update or delete academy leads'
-    },
-    {
-        'slug': 'read_review',
-        'description': 'Read review for a particular academy'
-    },
-    {
-        'slug': 'crud_review',
-        'description': 'Create, update or delete academy reviews'
-    },
-    {
-        'slug': 'read_media',
-        'description': 'List all the medias'
-    },
-    {
-        'slug': 'crud_media',
-        'description': 'Create, update or delete academy medias'
-    },
-    {
-        'slug': 'read_media_resolution',
-        'description': 'List all the medias resolutions'
-    },
-    {
-        'slug': 'crud_media_resolution',
-        'description': 'Create, update or delete academy media resolutions'
-    },
-    {
-        'slug': 'read_cohort_activity',
-        'description': 'Read low level activity in a cohort (attendancy, etc.)'
-    },
-    {
-        'slug': 'generate_academy_token',
-        'description': 'Create a new token only to be used by the academy'
-    },
-    {
-        'slug': 'get_academy_token',
-        'description': 'Read the academy token'
-    },
-    {
-        'slug': 'send_reset_password',
-        'description': 'Generate a temporal token and resend forgot password link'
-    },
-    {
-        'slug': 'read_activity',
-        'description': 'List all the user activities'
-    },
-    {
-        'slug': 'crud_activity',
-        'description': 'Create, update or delete a user activities'
-    },
-    {
-        'slug': 'read_assignment',
-        'description': 'List all the assignments'
-    },
-    {
-        'slug': 'crud_assignment',
-        'description': 'Create, update or delete a assignment'
-    },
-    {
-        'slug':
-        'classroom_activity',
-        'description':
-        'To report student activities during the classroom or cohorts (Specially meant for teachers)'
-    },
-    {
-        'slug': 'academy_reporting',
-        'description': 'Get detailed reports about the academy activity'
-    },
-    {
-        'slug': 'generate_temporal_token',
-        'description': 'Generate a temporal token to reset github credential or forgot password'
-    },
-    {
-        'slug': 'read_mentorship_service',
-        'description': 'Get all mentorship services from one academy'
-    },
-    {
-        'slug': 'crud_mentorship_service',
-        'description': 'Create, delete or update all mentorship services from one academy'
-    },
-    {
-        'slug': 'read_mentorship_agent',
-        'description': 'Get all mentorship agents from one academy'
-    },
-    {
-        'slug': 'read_mentorship_mentor',
-        'description': 'Get all mentorship mentors from one academy'
-    },
-    {
-        'slug': 'crud_mentorship_mentor',
-        'description': 'Create, delete or update all mentorship mentors from one academy'
-    },
-    {
-        'slug': 'read_mentorship_session',
-        'description': 'Get all session from one academy'
-    },
-    {
-        'slug': 'crud_mentorship_session',
-        'description': 'Create, delete or update all session from one academy'
-    },
-    {
-        'slug': 'crud_freelancer_bill',
-        'description': 'Create, delete or update all freelancer bills from one academy'
-    },
-    {
-        'slug': 'read_freelancer_bill',
-        'description': 'Read all all freelancer bills from one academy'
-    },
-    {
-        'slug': 'crud_mentorship_bill',
-        'description': 'Create, delete or update all mentroship bills from one academy'
-    },
-    {
-        'slug': 'read_mentorship_bill',
-        'description': 'Read all mentroship bills from one academy'
-    },
-    {
-        'slug': 'read_asset',
-        'description': 'Read all academy registry assets'
-    },
-    {
-        'slug': 'crud_asset',
-        'description': 'Update, create and delete registry assets'
-    },
-    {
-        'slug': 'read_tag',
-        'description': 'Read marketing tags and their details'
-    },
-    {
-        'slug': 'crud_tag',
-        'description': 'Update, create and delete a marketing tag and its details'
-    },
-    {
-        'slug': 'get_gitpod_user',
-        'description': 'List gitpod user the academy is consuming'
-    },
-    {
-        'slug': 'update_gitpod_user',
-        'description': 'Update gitpod user expiration based on available information'
-    },
-    {
-        'slug': 'get_github_user',
-        'description': 'List github user the academy is consuming'
-    },
-    {
-        'slug': 'update_github_user',
-        'description': 'Update github user expiration based on available information'
-    },
-    {
-        'slug': 'sync_organization_users',
-        'description': 'Calls for the github API and brings all org users, then tries to synch them'
-    },
-    {
-        'slug': 'read_technology',
-        'description': 'Read asset technologies'
-    },
-    {
-        'slug': 'crud_technology',
-        'description': 'Update, create and delete asset technologies'
-    },
-    {
-        'slug': 'read_keyword',
-        'description': 'Read SEO keywords'
-    },
-    {
-        'slug': 'crud_keyword',
-        'description': 'Update, create and delete SEO keywords'
-    },
-    {
-        'slug': 'read_keywordcluster',
-        'description': 'Update, create and delete asset technologies'
-    },
-    {
-        'slug': 'crud_keywordcluster',
-        'description': 'Update, create and delete asset technologies'
-    },
-    {
-        'slug': 'read_cohort_log',
-        'description': 'Read the cohort logo that contains attendance and other info logged each day'
-    },
-    {
-        'slug': 'crud_cohort_log',
-        'description': 'Update and delete things like the cohort attendance, teacher comments, etc'
-    },
-    {
-        'slug': 'read_category',
-        'description': 'Read categories from the content registry'
-    },
-    {
-        'slug': 'crud_category',
-        'description': 'Update and delete categories from the content registry'
-    },
-    {
-        'slug': 'read_project_invoice',
-        'description': 'Read the financial status of a project and invoices'
-    },
-    {
-        'slug': 'crud_project_invoice',
-        'description': 'Create, Update and delete project invoices'
-    },
-    {
-        'slug': 'read_freelance_projects',
-        'description': 'Read project details without financials'
-    },
-    {
-        'slug': 'read_lead_gen_app',
-        'description': 'Read lead generation apps'
-    },
-    {
-        'slug': 'chatbot_message',
-        'description': 'Speak with a chatbot'
-    },
-    {
-        'slug': 'start_or_end_class',
-        'description': 'start or end a class'
-    },
-    {
-        'slug': 'get_academy_auth_settings',
-        'description': 'Settings related to authentication, for example the github auth integration'
-    },
-    {
-        'slug': 'crud_academy_auth_settings',
-        'description': 'Settings related to authentication, for example the github auth integration'
-    },
-    {
-        'slug': 'start_or_end_event',
-        'description': 'Start or end event'
-    },
-    {
-        'slug': 'crud_provisioning_activity',
-        'description': 'Create, update or delete provisioning activities'
-    },
-    {
-        'slug': 'read_service',
-        'description': 'Read service details'
-    }
-]
+CAPABILITIES = [{
+    'slug': 'read_my_academy',
+    'description': 'Read your academy information'
+}, {
+    'slug':
+    'crud_my_academy',
+    'description':
+    'Read, or update your academy information (very high level, almost the academy admin)'
+}, {
+    'slug':
+    'crud_member',
+    'description':
+    'Create, update or delete academy members (very high level, almost the academy admin)'
+}, {
+    'slug': 'read_member',
+    'description': 'Read academy staff member information'
+}, {
+    'slug': 'crud_student',
+    'description': 'Create, update or delete students'
+}, {
+    'slug': 'read_student',
+    'description': 'Read student information'
+}, {
+    'slug': 'read_invite',
+    'description': 'Read invites from users'
+}, {
+    'slug': 'crud_invite',
+    'description': 'Create, update or delete invites from users'
+}, {
+    'slug': 'invite_resend',
+    'description': 'Resent invites for user academies'
+}, {
+    'slug': 'read_assignment',
+    'description': 'Read assignment information'
+}, {
+    'slug':
+    'read_assignment_sensitive_details',
+    'description':
+    'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"'
+}, {
+    'slug': 'read_shortlink',
+    'description': 'Access the list of marketing shortlinks'
+}, {
+    'slug': 'crud_shortlink',
+    'description': 'Create, update and delete marketing short links'
+}, {
+    'slug': 'crud_assignment',
+    'description': 'Update assignments'
+}, {
+    'slug': 'task_delivery_details',
+    'description': 'Get delivery URL for a task, that url can be sent to students for delivery'
+}, {
+    'slug': 'read_certificate',
+    'description': 'List and read all academy certificates'
+}, {
+    'slug': 'crud_certificate',
+    'description': 'Create, update or delete student certificates'
+}, {
+    'slug': 'read_layout',
+    'description': 'Read layouts to generate new certificates'
+}, {
+    'slug': 'read_syllabus',
+    'description': 'List and read syllabus information'
+}, {
+    'slug': 'crud_syllabus',
+    'description': 'Create, update or delete syllabus versions'
+}, {
+    'slug': 'read_organization',
+    'description': 'Read academy organization details'
+}, {
+    'slug': 'crud_organization',
+    'description': 'Update, create or delete academy organization details'
+}, {
+    'slug': 'read_event',
+    'description': 'List and retrieve event information'
+}, {
+    'slug': 'crud_event',
+    'description': 'Create, update or delete event information'
+}, {
+    'slug': 'read_event_type',
+    'description': 'List and retrieve event type information'
+}, {
+    'slug': 'crud_event_type',
+    'description': 'Create, update or delete event type information'
+}, {
+    'slug': 'read_all_cohort',
+    'description': 'List all the cohorts or single cohort information'
+}, {
+    'slug': 'read_single_cohort',
+    'description': 'single cohort information related to a user'
+}, {
+    'slug': 'crud_cohort',
+    'description': 'Create, update or delete cohort info'
+}, {
+    'slug': 'read_eventcheckin',
+    'description': 'List and read all the event_checkins'
+}, {
+    'slug': 'read_survey',
+    'description': 'List all the nps answers'
+}, {
+    'slug': 'crud_survey',
+    'description': 'Create, update or delete surveys'
+}, {
+    'slug': 'read_nps_answers',
+    'description': 'List all the nps answers'
+}, {
+    'slug': 'read_lead',
+    'description': 'List all the leads'
+}, {
+    'slug': 'read_won_lead',
+    'description': 'List all the won leads'
+}, {
+    'slug': 'crud_lead',
+    'description': 'Create, update or delete academy leads'
+}, {
+    'slug': 'read_review',
+    'description': 'Read review for a particular academy'
+}, {
+    'slug': 'crud_review',
+    'description': 'Create, update or delete academy reviews'
+}, {
+    'slug': 'read_media',
+    'description': 'List all the medias'
+}, {
+    'slug': 'crud_media',
+    'description': 'Create, update or delete academy medias'
+}, {
+    'slug': 'read_media_resolution',
+    'description': 'List all the medias resolutions'
+}, {
+    'slug': 'crud_media_resolution',
+    'description': 'Create, update or delete academy media resolutions'
+}, {
+    'slug': 'read_cohort_activity',
+    'description': 'Read low level activity in a cohort (attendancy, etc.)'
+}, {
+    'slug': 'generate_academy_token',
+    'description': 'Create a new token only to be used by the academy'
+}, {
+    'slug': 'get_academy_token',
+    'description': 'Read the academy token'
+}, {
+    'slug': 'send_reset_password',
+    'description': 'Generate a temporal token and resend forgot password link'
+}, {
+    'slug': 'read_activity',
+    'description': 'List all the user activities'
+}, {
+    'slug': 'crud_activity',
+    'description': 'Create, update or delete a user activities'
+}, {
+    'slug': 'read_assignment',
+    'description': 'List all the assignments'
+}, {
+    'slug': 'crud_assignment',
+    'description': 'Create, update or delete a assignment'
+}, {
+    'slug':
+    'classroom_activity',
+    'description':
+    'To report student activities during the classroom or cohorts (Specially meant for teachers)'
+}, {
+    'slug': 'academy_reporting',
+    'description': 'Get detailed reports about the academy activity'
+}, {
+    'slug': 'generate_temporal_token',
+    'description': 'Generate a temporal token to reset github credential or forgot password'
+}, {
+    'slug': 'read_mentorship_service',
+    'description': 'Get all mentorship services from one academy'
+}, {
+    'slug': 'crud_mentorship_service',
+    'description': 'Create, delete or update all mentorship services from one academy'
+}, {
+    'slug': 'read_mentorship_agent',
+    'description': 'Get all mentorship agents from one academy'
+}, {
+    'slug': 'read_mentorship_mentor',
+    'description': 'Get all mentorship mentors from one academy'
+}, {
+    'slug': 'crud_mentorship_mentor',
+    'description': 'Create, delete or update all mentorship mentors from one academy'
+}, {
+    'slug': 'read_mentorship_session',
+    'description': 'Get all session from one academy'
+}, {
+    'slug': 'crud_mentorship_session',
+    'description': 'Create, delete or update all session from one academy'
+}, {
+    'slug': 'crud_freelancer_bill',
+    'description': 'Create, delete or update all freelancer bills from one academy'
+}, {
+    'slug': 'read_freelancer_bill',
+    'description': 'Read all all freelancer bills from one academy'
+}, {
+    'slug': 'crud_mentorship_bill',
+    'description': 'Create, delete or update all mentroship bills from one academy'
+}, {
+    'slug': 'read_mentorship_bill',
+    'description': 'Read all mentroship bills from one academy'
+}, {
+    'slug': 'read_asset',
+    'description': 'Read all academy registry assets'
+}, {
+    'slug': 'crud_asset',
+    'description': 'Update, create and delete registry assets'
+}, {
+    'slug': 'read_tag',
+    'description': 'Read marketing tags and their details'
+}, {
+    'slug': 'crud_tag',
+    'description': 'Update, create and delete a marketing tag and its details'
+}, {
+    'slug': 'get_gitpod_user',
+    'description': 'List gitpod user the academy is consuming'
+}, {
+    'slug': 'update_gitpod_user',
+    'description': 'Update gitpod user expiration based on available information'
+}, {
+    'slug': 'get_github_user',
+    'description': 'List github user the academy is consuming'
+}, {
+    'slug': 'update_github_user',
+    'description': 'Update github user expiration based on available information'
+}, {
+    'slug': 'sync_organization_users',
+    'description': 'Calls for the github API and brings all org users, then tries to synch them'
+}, {
+    'slug': 'read_technology',
+    'description': 'Read asset technologies'
+}, {
+    'slug': 'crud_technology',
+    'description': 'Update, create and delete asset technologies'
+}, {
+    'slug': 'read_keyword',
+    'description': 'Read SEO keywords'
+}, {
+    'slug': 'crud_keyword',
+    'description': 'Update, create and delete SEO keywords'
+}, {
+    'slug': 'read_keywordcluster',
+    'description': 'Update, create and delete asset technologies'
+}, {
+    'slug': 'crud_keywordcluster',
+    'description': 'Update, create and delete asset technologies'
+}, {
+    'slug': 'read_cohort_log',
+    'description': 'Read the cohort logo that contains attendance and other info logged each day'
+}, {
+    'slug': 'crud_cohort_log',
+    'description': 'Update and delete things like the cohort attendance, teacher comments, etc'
+}, {
+    'slug': 'read_category',
+    'description': 'Read categories from the content registry'
+}, {
+    'slug': 'crud_category',
+    'description': 'Update and delete categories from the content registry'
+}, {
+    'slug': 'read_project_invoice',
+    'description': 'Read the financial status of a project and invoices'
+}, {
+    'slug': 'crud_project_invoice',
+    'description': 'Create, Update and delete project invoices'
+}, {
+    'slug': 'read_freelance_projects',
+    'description': 'Read project details without financials'
+}, {
+    'slug': 'read_lead_gen_app',
+    'description': 'Read lead generation apps'
+}, {
+    'slug': 'chatbot_message',
+    'description': 'Speak with a chatbot'
+}, {
+    'slug': 'start_or_end_class',
+    'description': 'start or end a class'
+}, {
+    'slug': 'get_academy_auth_settings',
+    'description': 'Settings related to authentication, for example the github auth integration'
+}, {
+    'slug': 'crud_academy_auth_settings',
+    'description': 'Settings related to authentication, for example the github auth integration'
+}, {
+    'slug': 'start_or_end_event',
+    'description': 'Start or end event'
+}, {
+    'slug': 'crud_provisioning_activity',
+    'description': 'Create, update or delete provisioning activities'
+}, {
+    'slug': 'read_service',
+    'description': 'Read service details'
+}]
 
 ROLES = [
     {

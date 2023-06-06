@@ -126,6 +126,7 @@ class AcademyCommentSerializer(serpy.Serializer):
     owner = UserSerializer(required=False)
     created_at = serpy.Field()
 
+
 class AssetHookSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()

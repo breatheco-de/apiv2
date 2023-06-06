@@ -65,7 +65,7 @@ class ActiveCampaign:
 
         if not webhook.webhook_type:
             raise Exception('Impossible to webhook_type')
-            
+
         webhook.run_at = timezone.now()
 
         action = webhook.webhook_type
