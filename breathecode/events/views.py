@@ -783,7 +783,7 @@ def join_event(request, token, event):
         })
 
     # if the event is happening right now and I have not joined yet
-    checkin = EventCheckin.objects.filter(event=event, attendee=token.user).first()
+    checkin = EventCheckin.objects.filter(Q(email=token.user.email) | Q(attendee=token.user), event=event).first()
     if checkin is None:
         checkin = EventCheckin(event=event, attendee=token.user, email=token.user.email)
 
