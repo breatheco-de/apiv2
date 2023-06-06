@@ -821,12 +821,16 @@ class EventMeCheckinView(APIView):
     """
 
     def put(self, request, event_id):
-
+        lang = get_user_language(request)
         items = get_my_event_types(request.user)
 
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
         if event is None:
-            raise ValidationException('Event not found or you dont have access', slug='event-not-found')
+            raise ValidationException(translation(lang,
+                                                      en='Event not found or you dont have access',
+                                                      es='Evento no encontrado o no tienes acceso',
+                                                      slug='event-not-found'),
+                                          code=404)
 
         serializer = PUTEventCheckinSerializer(event, request.data)
         if serializer.is_valid():
@@ -835,7 +839,7 @@ class EventMeCheckinView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request, event_id):
-
+        lang = get_user_language(request)
         items = get_my_event_types(request.user)
 
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
