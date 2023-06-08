@@ -492,6 +492,14 @@ class AssetView(APIView, GenerateLookupsMixin):
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
             lookup['status__in'] = [p.upper() for p in param.split(',')]
+            
+        try:
+            if 'academy' in self.request.GET:
+                param = self.request.GET.get('academy')
+                lookup['academy__in'] = [int(p) for p in param.split(',')]
+        except:
+            raise ValidationException(f'academy filter value should be an integer', status.HTTP_404_NOT_FOUND)
+        
 
         if 'video' in self.request.GET:
             param = self.request.GET.get('video')
