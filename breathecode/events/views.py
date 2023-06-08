@@ -783,7 +783,8 @@ def join_event(request, token, event):
         })
 
     # if the event is happening right now and I have not joined yet
-    checkin = EventCheckin.objects.filter(Q(email=token.user.email) | Q(attendee=token.user), event=event).first()
+    checkin = EventCheckin.objects.filter(Q(email=token.user.email) | Q(attendee=token.user),
+                                          event=event).first()
     if checkin is None:
         checkin = EventCheckin(event=event, attendee=token.user, email=token.user.email)
 
@@ -848,6 +849,26 @@ class EventMeCheckinView(APIView):
                                                   en='Event not found or you dont have access',
                                                   es='Evento no encontrado o no tienes acceso',
                                                   slug='event-not-found'),
+                                      code=404)
+
+        event_checkin = EventCheckin.objects.filter(event=event_id, attendee=request.user.id).first()
+        if event_checkin is not None:
+            raise ValidationException(translation(
+                lang,
+                en='This user already has an event checkin associated to this event',
+                es='Este usuario ya esta registrado en este evento',
+                slug='eventcheckin-found'),
+                                      code=404)
+
+        event_checkin = EventCheckin.objects.filter(event=event_id, email=request.user.email).first()
+        if event_checkin is not None:
+            event_checkin.attendee = request.user
+            event_checkin.save()
+            raise ValidationException(translation(
+                lang,
+                en='This user already has an event checkin with this email associated to this event',
+                es='Este usuario ya esta registrado en este evento',
+                slug='eventcheckin-found'),
                                       code=404)
 
         serializer = POSTEventCheckinSerializer(data={

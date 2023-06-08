@@ -449,7 +449,7 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventCheckin
-        exclude = ('event', 'created_at', 'updated_at', 'attendee')
+        exclude = ('event', 'created_at', 'updated_at')
 
     def validate(self, data: dict[str, Any]):
         return data
@@ -460,8 +460,8 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
         # if "attended_at" not in data and self.instance.attended_at is None:
         #     new_data['attended_at'] = timezone.now()
 
-        event_type = super().update(instance, {**validated_data, **new_data})
-        return event_type
+        event_checkin = super().update(instance, {**validated_data, **new_data})
+        return event_checkin
 
 
 class POSTEventCheckinSerializer(serializers.ModelSerializer):
