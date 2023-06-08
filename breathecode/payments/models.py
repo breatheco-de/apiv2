@@ -129,7 +129,7 @@ PAY_EVERY_UNIT = [
 ]
 
 
-class AbstractAsset(AbstractPriceByUnit):
+class AbstractAsset(models.Model):
     """
     This model represents a product or a service that can be sold.
     """
@@ -372,7 +372,7 @@ class AcademyService(models.Model):
         help_text='Minimum unit size allowed to be bought, example: bundle_size=5, then you are '
         'allowed to buy a minimum of 5 units. Related to the discount ratio')
     max_items = models.FloatField(
-        default=1, help_text="How many items can be bought in total, it doens't matter the bundle size")
+        default=1, help_text="How many items can be bought in total, it doesn't matter the bundle size")
     max_amount = models.FloatField(default=1,
                                    help_text="Limit total amount, it doesn't matter the bundle size")
     discount_ratio = models.FloatField(default=1, help_text='Will be used when calculated by the final price')

@@ -67,9 +67,6 @@ class GetServiceSmallSerializer(serpy.Serializer):
     # title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
-
-    price_per_unit = serpy.Field()
-
     # owner = GetAcademySmallSerializer(many=False)
     private = serpy.Field()
     groups = serpy.MethodField()
@@ -82,8 +79,6 @@ class GetServiceSerializer(custom_serpy.Serializer):
     # title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
-
-    price_per_unit = serpy.Field()
     currency = GetCurrencySmallSerializer(many=False)
 
     owner = GetAcademySmallSerializer(many=False)
@@ -281,6 +276,27 @@ class GetAcademyServiceSmallSerializer(serpy.Serializer):
     service = GetServiceSmallSerializer()
     currency = GetCurrencySmallSerializer()
     price_per_unit = serpy.Field()
+    bundle_size = serpy.Field()
+    max_items = serpy.Field()
+    max_amount = serpy.Field()
+    discount_ratio = serpy.Field()
+
+
+class POSTAcademyServiceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AcademyService
+        exclude = ()
+
+
+class PUTAcademyServiceSerializer(serializers.ModelSerializer):
+    currency = serializers.PrimaryKeyRelatedField(read_only=True)
+    academy = serializers.PrimaryKeyRelatedField(read_only=True)
+    service = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = AcademyService
+        fields = '__all__'
 
 
 class GetMentorshipServiceSetSmallSerializer(serpy.Serializer):

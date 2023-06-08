@@ -1,13 +1,12 @@
 from django.contrib import admin
 from breathecode.payments import tasks
 
-from breathecode.payments.models import (Bag, Consumable, ConsumptionSession, Currency, EventTypeSet,
-                                         EventTypeSetTranslation, FinancialReputation, FinancingOption,
-                                         Invoice, MentorshipServiceSet, MentorshipServiceSetTranslation,
-                                         PaymentContact, Plan, PlanFinancing, PlanOffer, PlanOfferTranslation,
-                                         PlanServiceItem, PlanServiceItemHandler, PlanTranslation, Service,
-                                         ServiceItem, ServiceItemFeature, ServiceStockScheduler,
-                                         ServiceTranslation, Subscription, SubscriptionServiceItem)
+from breathecode.payments.models import (
+    Bag, Consumable, ConsumptionSession, Currency, EventTypeSet, EventTypeSetTranslation, FinancialReputation,
+    FinancingOption, Invoice, MentorshipServiceSet, MentorshipServiceSetTranslation, PaymentContact, Plan,
+    PlanFinancing, PlanOffer, PlanOfferTranslation, PlanServiceItem, PlanServiceItemHandler, PlanTranslation,
+    Service, ServiceItem, ServiceItemFeature, ServiceStockScheduler, ServiceTranslation, Subscription,
+    SubscriptionServiceItem, AcademyService)
 
 # Register your models here.
 
@@ -237,6 +236,14 @@ class PlanOfferTranslationAdmin(admin.ModelAdmin):
     list_filter = ['lang']
     search_fields = ['title']
     raw_id_fields = ['offer']
+
+
+@admin.register(AcademyService)
+class AcademyServiceAdmin(admin.ModelAdmin):
+    list_display = ('service', 'academy', 'price_per_unit', 'currency', 'bundle_size', 'max_amount')
+    list_filter = ['academy', 'currency']
+    search_fields = ['service']
+    raw_id_fields = ['service', 'academy']
 
 
 @admin.register(ConsumptionSession)

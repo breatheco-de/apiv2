@@ -387,6 +387,14 @@ CAPABILITIES = [
         'slug': 'read_service',
         'description': 'Read service details'
     },
+    {
+        'slug': 'read_academyservice',
+        'description': 'Read Academy Service details'
+    },
+    {
+        'slug': 'crud_academyservice',
+        'description': 'Crud Academy Service details'
+    },
 ]
 
 ROLES = [
@@ -425,6 +433,7 @@ ROLES = [
             'read_mentorship_mentor',
             'read_freelancer_bill',
             'read_keywordcluster',
+            'crud_academyservice',
         ],
     },
     {
@@ -484,18 +493,9 @@ ROLES = [
         'name':
         'Student',
         'caps': [
-            'crud_assignment',
-            'chatbot_message',
-            'read_syllabus',
-            'read_assignment',
-            'read_single_cohort',
-            'read_my_academy',
-            'read_all_cohort',
-            'crud_activity',
-            'read_mentorship_service',
-            'read_mentorship_mentor',
-            'read_cohort_log',
-            'read_service',
+            'crud_assignment', 'chatbot_message', 'read_syllabus', 'read_assignment', 'read_single_cohort',
+            'read_my_academy', 'read_all_cohort', 'crud_activity', 'read_mentorship_service',
+            'read_mentorship_mentor', 'read_cohort_log', 'read_service', 'read_academyservice'
         ],
     },
 ]
