@@ -867,7 +867,7 @@ class EventMeCheckinView(APIView):
             raise ValidationException(translation(
                 lang,
                 en='This user already has an event checkin with this email associated to this event',
-                es='Este usuario ya esta registrado en este evento',
+                es='Este usuario ya esta registrado en este evento con este email',
                 slug='eventcheckin-found'),
                                       code=404)
 
