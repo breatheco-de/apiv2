@@ -143,6 +143,7 @@ class FormEntrySerializer(serpy.Serializer):
     academy = AcademySmallSerializer(required=False)
     client_comments = serpy.Field(required=False)
     created_at = serpy.Field()
+    custom_fields = serpy.Field()
 
 
 class FormEntryHookSerializer(serpy.Serializer):
