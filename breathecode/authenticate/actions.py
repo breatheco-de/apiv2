@@ -491,12 +491,12 @@ def sync_organization_members(academy_id, only_status=[]):
             if github.username in remaining_usernames:
                 _member.log('User was already added to github')
                 _member.storage_status = 'SYNCHED'
-                # chage action to ADD just in case it was INVITE (its a confirmation)
+                # change action to ADD just in case it was INVITE (its a confirmation)
                 _member.storage_action = 'ADD'
                 _member.storage_synch_at = now
                 _member.save()
-            else:
 
+            else:
                 teams = []
                 if settings.github_default_team_ids != '':
                     teams = [int(id) for id in settings.github_default_team_ids.split(',')]
@@ -520,11 +520,11 @@ def sync_organization_members(academy_id, only_status=[]):
                 _member.save()
             else:
                 # we should not delete if another academy from the same org wants to keep it
-                added_elsewere = GithubAcademyUser.objects.filter(
+                added_elsewhere = GithubAcademyUser.objects.filter(
                     Q(user=_member.user)
                     | Q(username=github.username)).filter(academy__slug__in=academy_slugs).exclude(
                         storage_status__in=['DELETE']).exclude(id=_member.id).first()
-                if added_elsewere is None:
+                if added_elsewhere is None:
                     try:
                         gb.delete_org_member(github.username)
                     except Exception as e:
@@ -533,7 +533,7 @@ def sync_organization_members(academy_id, only_status=[]):
                     _member.log('Successfully deleted in github organization')
                 else:
                     _member.log(
-                        f"User belongs to another academy '{added_elsewere.academy.slug}', it will have to be marked as deleted there before it can be deleted from github organization"
+                        f"User belongs to another academy '{added_elsewhere.academy.slug}', it will have to be marked as deleted there before it can be deleted from github organization"
                     )
                 _member.storage_status = 'SYNCHED'
                 _member.storage_synch_at = now
@@ -556,35 +556,35 @@ def sync_organization_members(academy_id, only_status=[]):
         _query = GithubAcademyUser.objects.filter(academy=settings.academy).filter(username=u)
         if _user is not None:
             _query = _query.filter(user=_user)
-        uknown_user = _query.first()
+        unknown_user = _query.first()
 
-        if uknown_user is None:
-            uknown_user = GithubAcademyUser(academy=settings.academy,
-                                            user=_user,
-                                            username=u,
-                                            storage_status='UNKNOWN',
-                                            storage_action='IGNORE',
-                                            storage_synch_at=now)
-            uknown_user.save()
+        if unknown_user is None:
+            unknown_user = GithubAcademyUser(academy=settings.academy,
+                                             user=_user,
+                                             username=u,
+                                             storage_status='UNKNOWN',
+                                             storage_action='IGNORE',
+                                             storage_synch_at=now)
+            unknown_user.save()
 
-        uknown_user.storage_status = 'UNKNOWN'
-        uknown_user.storage_action = 'IGNORE'
-        uknown_user.storage_synch_at = now
-        uknown_user.log(
+        unknown_user.storage_status = 'UNKNOWN'
+        unknown_user.storage_action = 'IGNORE'
+        unknown_user.storage_synch_at = now
+        unknown_user.log(
             "This user is coming from github, we don't know if its a student from your academy or if it should be added or deleted, keep it as IGNORED to avoid deletion",
             reset=True)
-        uknown_user.save()
+        unknown_user.save()
 
     return True
 
 
 # def schedule_org_members_to_delete():
 
-#     uknown_users = GithubAcademyUser.objects.filter(
+#     unknown_users = GithubAcademyUser.objects.filter(
 #                                 deletion_scheduled_at__isnull=True,
 #                                 storage_status='UNKNOWN',
 #                                 storage_action='IGNORE')
-#     for uknown in uknown_users:
+#     for uknown in unknown_users:
 #         added_elsewhere = GithubAcademyUser.objects.filter(storage_action='ADD', academyauthsettings__github_username=uknown.academyauthsettings.github_username).exists()
 #         if not added_elsewhere:
 #             uknown.deletion_scheduled_at = timezone.now() + datetime.timedelta(days=3)

@@ -85,12 +85,14 @@ DISPUTED = 'DISPUTED'
 PAID = 'PAID'
 IGNORED = 'IGNORED'
 PENDING = 'PENDING'
+ERROR = 'ERROR'
 BILL_STATUS = (
     (DUE, 'Due'),
     (DISPUTED, 'Disputed'),
     (IGNORED, 'Ignored'),
     (PENDING, 'Pending'),
     (PAID, 'Paid'),
+    (ERROR, 'Error'),
 )
 
 
@@ -123,7 +125,6 @@ class ProvisioningBill(models.Model):
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
-ERROR = 'ERROR'
 ACTIVITY_STATUS = (
     (PENDING, 'Pending'),
     (PERSISTED, 'Persisted'),
@@ -134,6 +135,7 @@ ACTIVITY_STATUS = (
 class ProvisioningActivity(models.Model):
     username = models.CharField(
         max_length=80, help_text='Native username in the provisioning platform, E.g: github username')
+    hash = models.CharField(max_length=64, blank=True, null=True, default=None)
     registered_at = models.DateTimeField(
         null=True,
         default=None,
