@@ -36,11 +36,8 @@ class ProvisioningAcademyAdmin(admin.ModelAdmin):
 class ProvisioningActivityAdmin(admin.ModelAdmin):
     list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill')
     search_fields = ['username', 'task_associated_slug', 'bill__hash']
-    list_filter = ['bill__academy', 'status', 'has_bill']
+    list_filter = ['bill__academy', 'status', ('bill', admin.EmptyFieldListFilter)]
     actions = []
-
-    def has_bill(self, obj):
-        return obj.bill is not None
 
     def _status(self, obj):
         colors = {
