@@ -84,7 +84,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         model = self.generate_models(authenticate=True,
                                      group=1,
-                                     permission={'codename': 'crud_provisioning_activity'})
+                                     permission={'codename': 'upload_provisioning_activity'})
         url = reverse_lazy('provisioning:admin_upload')
 
         response = self.client.put(url, {})
@@ -122,7 +122,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         model = self.generate_models(authenticate=True,
                                      group=1,
-                                     permission={'codename': 'crud_provisioning_activity'})
+                                     permission={'codename': 'upload_provisioning_activity'})
 
         url = reverse_lazy('provisioning:admin_upload')
 
@@ -183,7 +183,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         model = self.generate_models(authenticate=True,
                                      group=1,
-                                     permission={'codename': 'crud_provisioning_activity'})
+                                     permission={'codename': 'upload_provisioning_activity'})
 
         url = reverse_lazy('provisioning:admin_upload')
 
@@ -268,7 +268,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         model = self.generate_models(authenticate=True,
                                      group=1,
-                                     permission={'codename': 'crud_provisioning_activity'})
+                                     permission={'codename': 'upload_provisioning_activity'})
 
         url = reverse_lazy('provisioning:admin_upload')
 
@@ -372,7 +372,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         model = self.generate_models(authenticate=True,
                                      group=1,
-                                     permission={'codename': 'crud_provisioning_activity'})
+                                     permission={'codename': 'upload_provisioning_activity'})
 
         url = reverse_lazy('provisioning:admin_upload')
 
@@ -469,7 +469,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         model = self.generate_models(authenticate=True,
                                      group=1,
-                                     permission={'codename': 'crud_provisioning_activity'})
+                                     permission={'codename': 'upload_provisioning_activity'})
 
         url = reverse_lazy('provisioning:admin_upload')
 
@@ -576,7 +576,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         model = self.generate_models(authenticate=True,
                                      group=1,
-                                     permission={'codename': 'crud_provisioning_activity'})
+                                     permission={'codename': 'upload_provisioning_activity'})
 
         url = reverse_lazy('provisioning:admin_upload')
 
