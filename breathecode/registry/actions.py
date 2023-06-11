@@ -283,8 +283,10 @@ def push_github_asset(github, asset):
 
     # we commit the raw readme, we don't want images to be replaced in the original github
     decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
-    result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
+    if decoded_readme is None or decoded_readme == 'None' or decoded_readme == '':
+        raise Exception('The markdown content you are trying to push to Github is empty')
 
+    result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
     if 'commit' in result:
         asset.github_commit_hash = result['commit'].sha
 

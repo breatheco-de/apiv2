@@ -4,7 +4,7 @@ from typing import Type
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import post_delete, post_save, pre_delete
-from breathecode.admissions.signals import student_edu_status_updated
+from breathecode.admissions.signals import student_edu_status_updated, cohort_stage_updated
 from breathecode.admissions.models import CohortUser
 from django.dispatch import receiver
 from .tasks import async_remove_from_organization, async_add_to_organization
@@ -83,12 +83,25 @@ def unset_user_group(sender, instance, **kwargs):
 
 @receiver(pre_delete, sender=CohortUser)
 def post_delete_cohort_user(sender, instance, **kwargs):
+
+    # never ending cohorts cannot be in synch with github
+    if instance.cohort.never_ends:
+        return None
+
     logger.debug('Cohort user deleted, removing from organization')
-    async_remove_from_organization(instance.cohort.id, instance.user.id, force=True)
+    try:
+        async_remove_from_organization(instance.cohort.id, instance.user.id, force=True)
+    except Exception as e:
+        logger.debug(str(e))
 
 
 @receiver(student_edu_status_updated, sender=CohortUser)
 def post_save_cohort_user(sender, instance, **kwargs):
+
+    # never ending cohorts cannot be in synch with github
+    if instance.cohort.never_ends:
+        return None
+
     logger.debug('User educational status updated to: ' + str(instance.educational_status))
     if instance.educational_status == 'ACTIVE':
         async_add_to_organization(instance.cohort.id, instance.user.id)

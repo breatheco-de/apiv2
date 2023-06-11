@@ -4,6 +4,7 @@ import json
 import logging
 import breathecode.services.activecampaign.actions as actions
 from breathecode.utils import APIException
+from django.utils import timezone
 from slugify import slugify
 from activecampaign.client import Client
 
@@ -65,6 +66,8 @@ class ActiveCampaign:
         if not webhook.webhook_type:
             raise Exception('Impossible to webhook_type')
 
+        webhook.run_at = timezone.now()
+
         action = webhook.webhook_type
         logger.debug(f'Executing ActiveCampaign Webhook => {action}')
         if hasattr(actions, action):
@@ -113,7 +116,6 @@ class ActiveCampaign:
 
         webhook = ActiveCampaignWebhook()
         webhook.webhook_type = context['type']
-        webhook.run_at = context['date_time']
         webhook.initiated_by = context['initiated_by']
         webhook.ac_academy = ac_academy
         webhook.status = 'PENDING'

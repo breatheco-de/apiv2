@@ -1,5 +1,7 @@
 from django import dispatch
 
-# When a new breathecode invite has been accepted
-invite_accepted = dispatch.Signal(providing_args=['task_id'])
+# UserInvite accepted
+invite_status_updated = dispatch.Signal()
+# ProfileAcademy accepted
+academy_invite_accepted = dispatch.Signal()
 profile_academy_saved = dispatch.Signal()

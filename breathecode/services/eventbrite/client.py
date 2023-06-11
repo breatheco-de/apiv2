@@ -114,6 +114,7 @@ class Eventbrite:
         if hasattr(actions, action):
             response = requests.get(api_url, headers=self.headers, timeout=2)
             json = response.json()
+            webhook.payload = json
 
             # logger.debug("Eventbrite response")
             # logger.debug(json)

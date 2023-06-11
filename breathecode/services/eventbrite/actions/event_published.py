@@ -10,4 +10,7 @@ def event_published(self, webhook, payload: dict):
 
     org = Organization.objects.filter(id=webhook.organization_id).first()
 
-    publish_event_from_eventbrite(payload, org)
+    event = publish_event_from_eventbrite(payload, org)
+    if event and event is not None:
+        webhook.event = event
+        webhook.save()

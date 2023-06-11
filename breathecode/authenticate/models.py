@@ -15,7 +15,7 @@ from django import forms
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
 from breathecode.utils.validators import validate_language_code
-from .signals import invite_accepted, profile_academy_saved
+from .signals import invite_status_updated, profile_academy_saved, academy_invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
 __all__ = [
@@ -133,6 +133,10 @@ PROCESS_STATUS = (
 
 class UserInvite(models.Model):
 
+    def __init__(self, *args, **kwargs):
+        super(UserInvite, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
+
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
@@ -168,6 +172,17 @@ class UserInvite(models.Model):
 
     def __str__(self):
         return f'Invite for {self.email}'
+
+    def save(self, *args, **kwargs):
+
+        status_updated = False
+        if self.pk is None or self.__old_status != self.status:
+            status_updated = True
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+
+        if status_updated:
+            invite_status_updated.send(instance=self, sender=UserInvite)
 
 
 INVITED = 'INVITED'
@@ -211,7 +226,7 @@ class ProfileAcademy(models.Model):
     def save(self, *args, **kwargs):
 
         if self.__old_status != self.status and self.status == 'ACTIVE':
-            invite_accepted.send(instance=self, sender=ProfileAcademy)
+            academy_invite_accepted.send(instance=self, sender=ProfileAcademy)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 

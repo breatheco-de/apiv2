@@ -383,6 +383,10 @@ CAPABILITIES = [
         'slug': 'crud_provisioning_activity',
         'description': 'Create, update or delete provisioning activities'
     },
+    {
+        'slug': 'read_service',
+        'description': 'Read service details'
+    },
 ]
 
 ROLES = [
@@ -414,6 +418,7 @@ ROLES = [
             'read_nps_answers',
             'read_won_lead',
             'read_asset',
+            'read_category',
             'read_cohort_log',
             'read_lead_gen_app',
             'read_mentorship_service',
@@ -470,6 +475,7 @@ ROLES = [
             'read_mentorship_mentor',
             'read_lead_gen_app',
             'read_technology',
+            'read_service',
         ],
     },
     {
@@ -489,6 +495,7 @@ ROLES = [
             'read_mentorship_service',
             'read_mentorship_mentor',
             'read_cohort_log',
+            'read_service',
         ],
     },
 ]

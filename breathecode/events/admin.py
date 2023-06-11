@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
-
+from django.utils.html import format_html
 import breathecode.events.tasks as tasks
 from .models import Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
 from .actions import sync_org_venues, sync_org_events
@@ -56,11 +56,19 @@ reattempt_add_event_slug_as_acp_tag.short_description = 'Reattempt add event slu
 # Register your models here.
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    list_display = ('slug', 'eventbrite_sync_status', 'title', 'eventbrite_status', 'starting_at',
+    list_display = ('slug', 'eventbrite_sync_status', 'title', 'status', 'eventbrite_status', 'starting_at',
                     'ending_at', 'eventbrite_sync_description', 'sync_with_eventbrite')
     list_filter = [
-        'eventbrite_status', 'eventbrite_sync_status', 'sync_with_eventbrite', 'currency', 'lang', 'academy',
-        'organization', 'online_event', 'event_type', 'status'
+        'status',
+        'eventbrite_status',
+        'eventbrite_sync_status',
+        'sync_with_eventbrite',
+        'currency',
+        'lang',
+        'academy',
+        'organization',
+        'online_event',
+        'event_type',
     ]
     search_fields = ['slug', 'title', 'eventbrite_id', 'eventbrite_organizer_id']
     actions = ['export_as_csv', reattempt_add_event_slug_as_acp_tag]
@@ -97,6 +105,7 @@ class EventCheckinAdmin(admin.ModelAdmin):
     list_display = ('email', 'attendee', 'event', 'status', 'created_at', 'attended_at')
     list_filter = ['status']
     search_fields = ['email', 'event__title', 'event__slug']
+    raw_id_fields = ['event', 'attendee']
 
 
 def reattempt_eventbrite_webhook(modeladmin, request, queryset):
@@ -108,14 +117,34 @@ def reattempt_eventbrite_webhook(modeladmin, request, queryset):
 
 @admin.register(EventbriteWebhook)
 class EventbriteWebhookAdmin(admin.ModelAdmin):
-    list_display = ('api_url', 'user_id', 'action', 'webhook_id', 'organization', 'endpoint_url', 'status',
-                    'status_text', 'created_at')
+    list_display = ('id', 'current_status', 'action', 'organization', 'user_attendee', 'event', 'created_at')
     list_filter = ['organization_id', 'status', 'action']
-    search_fields = ['organization_id', 'status']
+    search_fields = [
+        'organization_id', 'status', 'event__title', 'event__slug', 'attendee__email', 'attendee__first_name',
+        'attendee__last_name'
+    ]
+    raw_id_fields = ['event', 'attendee']
     actions = [reattempt_eventbrite_webhook]
 
     def organization(self, obj):
         return Organization.objects.filter(eventbrite_id=obj.organization_id).first()
+
+    def current_status(self, obj):
+        colors = {
+            'DONE': 'bg-success',
+            'ERROR': 'bg-error',
+            'PENDING': 'bg-warning',
+        }
+        if obj.status == 'DONE':
+            return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(
+            f"<div><span class='badge {colors[obj.status]}'>{obj.status}</span></div><small>{obj.status_text}</small>"
+        )
+
+    def user_attendee(self, obj):
+        if obj.attendee is None:
+            return '-'
+        return format_html(f"<a href='/admin/auth/user/{obj.attendee.id}/change/'>{str(obj.attendee)}</a>")
 
 
 @admin.register(EventTypeVisibilitySetting)
