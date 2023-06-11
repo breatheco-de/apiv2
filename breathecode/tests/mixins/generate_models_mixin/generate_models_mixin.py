@@ -74,7 +74,8 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
 
         for key in kwargs:
             kwarg = kwargs[key]
-            if isinstance(kwarg, Model):
+            if isinstance(kwarg, Model) or (isinstance(kwarg, list)
+                                            and len([x for x in kwarg if isinstance(x, Model)])):
                 models[key] = kwarg
 
         return models

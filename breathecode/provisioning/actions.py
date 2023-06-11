@@ -4,8 +4,8 @@ import re
 import random
 from typing import Optional, TypedDict
 from django.utils import timezone
-from breathecode.authenticate.models import (CredentialsGithub, GithubAcademyUser, GithubAcademyUserLog,
-                                             PendingGithubUser, User)
+from breathecode.authenticate.models import (AcademyAuthSettings, CredentialsGithub, GithubAcademyUser,
+                                             GithubAcademyUserLog, ProfileAcademy)
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 from breathecode.services.github import Github
@@ -141,9 +141,10 @@ class GithubAcademyUserObject(TypedDict):
 def get_github_academy_user_logs(academy: Academy, username: str,
                                  limit: datetime) -> list[GithubAcademyUserObject]:
     ret = []
-    logs = GithubAcademyUserLog.objects.filter(academy_user__username=username,
-                                               academy_user__academy=academy,
-                                               created_at__lte=limit).order_by('created_at')
+    logs = GithubAcademyUserLog.objects.filter(Q(valid_until__isnull=True)
+                                               | Q(valid_until__gte=limit - relativedelta(months=1, weeks=1)),
+                                               academy_user__username=username,
+                                               academy_user__academy=academy).order_by('created_at')
 
     for n in range(len(logs)):
         log = logs[n]
@@ -169,226 +170,230 @@ def get_github_academy_user_logs(academy: Academy, username: str,
 class ActivityContext(TypedDict):
     provisioning_bills: dict[str, ProvisioningBill]
     provisioning_vendors: dict[str, ProvisioningVendor]
-    github_academy_user_logs: dict[QuerySet[GithubAcademyUserLog]]
+    github_academy_user_logs: dict[str, QuerySet[GithubAcademyUserLog]]
     hash: str
     limit: datetime
     logs: dict[str, list[GithubAcademyUserObject]]
+    profile_academies: dict[str, QuerySet[ProfileAcademy]]
 
 
-def handle_pending_github_user(username: str, hash: str) -> list[GithubAcademyUser]:
-    github_academy_users = []
-    now = timezone.now()
-    credentials = CredentialsGithub.objects.filter(username=username).first()
+def handle_pending_github_user(organization: str, username: str) -> list[Academy]:
+    orgs = AcademyAuthSettings.objects.filter(github_username__iexact=organization)
+    if not orgs:
+        logger.error(f'Organization {organization} not found')
+        return []
 
-    if credentials:
-        cohort_users = CohortUser.objects.filter(
-            Q(cohort__never_ends=True)
-            | Q(cohort__never_ends=False, cohort__ending_date__gte=now),
-            cohort__kickoff_date__lte=now,
-            user=credentials.user).exclude(stage__in=['ENDED', 'DELETED'])
+    for org in orgs:
+        pending, created = GithubAcademyUser.objects.get_or_create(username=username,
+                                                                   academy=org.academy,
+                                                                   defaults={
+                                                                       'storage_status': 'PAYMENT_CONFLICT',
+                                                                       'storage_action': 'IGNORE',
+                                                                   })
 
-        academies = {cohort_user.cohort.academy for cohort_user in cohort_users}
-
-    else:
-        academies = set()
-
-    if not academies:
-        source = 'LINKED' if credentials else 'UNLINKED'
-        pending, _ = PendingGithubUser.objects.get_or_create(username=username,
-                                                             source=source,
-                                                             defaults={
-                                                                 'status': 'PENDING',
-                                                                 'hashes': [hash]
-                                                             })
-
-        if hash not in pending.hashes:
-            pending.hashes.append(hash)
+        if not created:
+            pending.storage_status = 'PAYMENT_CONFLICT'
+            pending.storage_action = 'IGNORE'
             pending.save()
 
-    else:
-        for academy in academies:
-            pending, _ = PendingGithubUser.objects.get_or_create(username=username,
-                                                                 academy=academy,
-                                                                 source='COHORT',
-                                                                 defaults={
-                                                                     'status': 'PENDING',
-                                                                     'hashes': [hash]
-                                                                 })
-
-            if hash not in pending.hashes:
-                pending.hashes.append(hash)
-                pending.save()
-        # for academy in academies:
-        #     github_user, _ = GithubAcademyUser.objects.get_or_create(username=username,
-        #                                                              academy=academy,
-        #                                                              user=credentials.user,
-        #                                                              defaults={
-        #                                                                  'storage_status': 'PENDING',
-        #                                                                  'storage_action': 'ADD',
-        #                                                              })
-
-        #     if github_user.storage_status in ['PENDING', 'SYNCHED'] and github_user.storage_action == 'ADD':
-        #         github_academy_users.append(github_user)
-
-    return github_academy_users
+    return [org.academy for org in orgs]
 
 
-def add_codespaces_activity(context: ActivityContext, field: dict):
+def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
+
+    def write_activity(academy: Optional[Academy] = None) -> None:
+        errors = []
+        provisioning_bill = None
+
+        if academy:
+            logs = context['logs'].get(field['Username'], None)
+            if logs is None:
+                logs = get_github_academy_user_logs(academy, field['Username'], context['limit'])
+                context['logs'][field['Username']] = logs
+
+        if academy:
+            provisioning_bill = context['provisioning_bills'].get(academy.id, None)
+            if not provisioning_bill:
+                provisioning_bill = ProvisioningBill.objects.filter(academy=academy, status='PENDING').first()
+
+            if not provisioning_bill:
+                provisioning_bill = ProvisioningBill()
+                provisioning_bill.academy = academy
+                provisioning_bill.status = 'PENDING'
+                provisioning_bill.hash = context['hash']
+                provisioning_bill.save()
+
+        provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
+        if not provisioning_vendor:
+            provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
+
+        if not provisioning_vendor:
+            errors.append(f'Provisioning vendor Codespaces not found')
+
+        date = datetime.strptime(field['Date'], '%Y-%m-%d')
+        if academy:
+            for log in logs:
+                if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
+                        and log['starting_at'] <= date <= log['ending_at']):
+                    errors.append(
+                        f'User {field["Username"]} was deleted from the academy during this event at {date}')
+
+        else:
+            errors.append(f'User {field["Username"]} not found in any academy')
+
+        pa = ProvisioningActivity()
+
+        pa.bill = provisioning_bill
+        pa.hash = context['hash']
+        pa.username = field['Username']
+        pa.registered_at = date
+        pa.product_name = field['Product']
+        pa.sku = field['SKU']
+        pa.quantity = field['Quantity']
+        pa.unit_type = field['Unit Type']
+        pa.price_per_unit = field['Price Per Unit ($)']
+        pa.currency_code = 'USD'
+        pa.multiplier = field['Multiplier']
+        pa.repository_url = f"https://github.com/{field['Owner']}/{field['Repository Slug']}"
+        pa.task_associated_slug = field['Repository Slug']
+        pa.processed_at = timezone.now()
+        pa.status = 'PERSISTED' if not errors else 'ERROR'
+        pa.status_text = ', '.join(errors)
+        pa.save()
+
     github_academy_user_log = context['github_academy_user_logs'].get(field['Username'], None)
+    not_found = False
+    academies = []
 
     if github_academy_user_log is None:
-        # sort by created at
         github_academy_user_log = GithubAcademyUserLog.objects.filter(
+            Q(valid_until__isnull=True)
+            | Q(valid_until__gte=context['limit'] - relativedelta(months=1, weeks=1)),
+            created_at__lte=context['limit'],
             academy_user__username=field['Username'],
             storage_status='SYNCHED',
-            storage_action='ADD',
-            created_at__lte=context['limit']).order_by('-created_at')
+            storage_action='ADD').order_by('-created_at')
 
         context['github_academy_user_logs'][field['Username']] = github_academy_user_log
 
-    if not github_academy_user_log:
-        academy = handle_pending_github_user(field['Username'], context['hash'])
+    if github_academy_user_log:
+        academies = [x.academy_user.academy for x in github_academy_user_log]
 
-    if (how_many := len(github_academy_user_log)) == 0:
-        logger.error(f'User {field["Username"]} not found in any academy')
+    if not academies:
+        not_found = True
+        github_academy_users = GithubAcademyUser.objects.filter(username=field['Username'],
+                                                                storage_status='PAYMENT_CONFLICT',
+                                                                storage_action='IGNORE')
+
+        academies = [x.academy for x in github_academy_users]
+
+    if not academies:
+        academies = handle_pending_github_user(field['Owner'], field['Username'])
+
+    if not not_found:
+        academies = random.choices(academies, k=1)
+
+    if not academies:
+        write_activity()
         return
 
-    if how_many == 1:
-        github_academy_user_log = github_academy_user_log[0]
-
-    else:
-        github_academy_user_log = github_academy_user_log[random.randint(0, how_many - 1)]
-
-    academy = github_academy_user_log.academy_user.academy
-
-    logs = context['logs'].get(field['Username'], None)
-    if logs is None:
-        logs = get_github_academy_user_logs(academy, field['Username'], context['limit'])
-        context['logs'][field['Username']] = logs
-
-    provisioning_bill = context['provisioning_bills'].get(academy.id, None)
-    if not provisioning_bill:
-        provisioning_bill = ProvisioningBill.objects.filter(academy=academy, status='PENDING').first()
-
-    if not provisioning_bill:
-        provisioning_bill = ProvisioningBill()
-        provisioning_bill.academy = academy
-        provisioning_bill.status = 'PENDING'
-        provisioning_bill.hash = context['hash']
-        provisioning_bill.save()
-
-    provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
-    if not provisioning_vendor:
-        provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
-
-    if not provisioning_vendor:
-        raise Exception(f'Provisioning vendor Codespaces not found')
-
-    date = datetime.strptime(field['Date'], '%Y-%m-%d')
-    for log in logs:
-        if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
-                and log['starting_at'] <= date <= log['ending_at']):
-            logger.error(f'User {field["Username"]} was deleted from the academy during this event at {date}')
-            return
-
-    pa = ProvisioningActivity()
-
-    pa.bill = provisioning_bill
-    pa.username = field['Username']
-    pa.registered_at = date
-    pa.product_name = field['Product']
-    pa.sku = field['SKU']
-    pa.quantity = field['Quantity']
-    pa.unit_type = field['Unit Type']
-    pa.price_per_unit = field['Price Per Unit ($)']
-    pa.currency_code = 'USD'
-    pa.multiplier = field['Multiplier']
-    pa.repository_url = f"https://github.com/{field['Owner']}/{field['Repository Slug']}"
-    pa.task_associated_slug = field['Repository Slug']
-    pa.processed_at = timezone.now()
-    pa.status = 'PERSISTED'
-    pa.save()
+    for academy in academies:
+        write_activity(academy)
 
 
 def add_gitpod_activity(context: ActivityContext, field: dict):
+
+    def write_activity(academy: Optional[Academy] = None):
+        errors = []
+        if academy:
+            logs = context['logs'].get(metadata['userName'], None)
+            if logs is None:
+                logs = get_github_academy_user_logs(academy, metadata['userName'], context['limit'])
+                context['logs'][metadata['userName']] = logs
+
+        else:
+            errors.append(f'User {metadata["userName"]} not found in any academy')
+
+        pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
+        if not (result := re.findall(pattern, metadata['contextURL'])):
+            errors.append(f'Invalid repository URL {metadata["contextURL"]}')
+            slug = 'unknown'
+
+        else:
+            slug = result[0]
+
+        provisioning_bill = None
+        if academy:
+            provisioning_bill = context['provisioning_bills'].get(academy.id, None)
+
+        if academy and not provisioning_bill:
+            provisioning_bill = ProvisioningBill.objects.filter(academy=academy, status='PENDING').first()
+
+        if academy and not provisioning_bill:
+            provisioning_bill = ProvisioningBill()
+            provisioning_bill.academy = academy
+            provisioning_bill.status = 'PENDING'
+            provisioning_bill.hash = context['hash']
+            provisioning_bill.save()
+
+        provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
+        if not provisioning_vendor:
+            provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
+
+        if not provisioning_vendor:
+            errors.append(f'Provisioning vendor Codespaces not found')
+
+        date = iso_to_datetime(field['effectiveTime'])
+        if academy:
+            for log in logs:
+                if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
+                        and log['starting_at'] <= date <= log['ending_at']):
+                    errors.append(
+                        f'User {field["Username"]} was deleted from the academy during this event at {date}')
+
+        pa = ProvisioningActivity()
+        pa.bill = provisioning_bill
+        pa.hash = context['hash']
+        pa.username = metadata['userName']
+        pa.registered_at = date
+        pa.product_name = field['kind']
+        pa.sku = field['id']
+        pa.quantity = field['creditCents']
+        pa.unit_type = 'Credit cents'
+        pa.price_per_unit = 0.00036
+        pa.currency_code = 'USD'
+        pa.repository_url = metadata['contextURL']
+
+        pa.task_associated_slug = slug
+        pa.processed_at = timezone.now()
+        pa.status = 'PERSISTED' if not errors else 'ERROR'
+        pa.status_text = ', '.join(errors)
+        pa.save()
+
     try:
         metadata = json.loads(field['metadata'])
     except:
         logger.warning(f'Skipped field with kind {field["kind"]}')
         return
 
-    github_academy_user_log = context['github_academy_user_logs'].get(metadata['userName'], None)
+    profile_academies = context['profile_academies'].get(metadata['userName'], None)
+    if profile_academies is None:
+        profile_academies = ProfileAcademy.objects.filter(
+            user__credentialsgithub__username=metadata['userName'], status='ACTIVE')
 
-    if github_academy_user_log is None:
-        github_academy_user_log = GithubAcademyUserLog.objects.filter(
-            academy_user__username=metadata['userName'], storage_status='SYNCHED', storage_action='ADD')
+        context['profile_academies'][metadata['userName']] = profile_academies
 
-        context['github_academy_user_logs'][metadata['userName']] = github_academy_user_log
-
-    if not github_academy_user_log:
-        academy = handle_pending_github_user(metadata['userName'], context['hash'])
-
-    if (how_many := len(github_academy_user_log)) == 0:
-        logger.error(f'User {metadata["userName"]} not found in any academy')
-        return
-
-    if how_many == 1:
-        github_academy_user_log = github_academy_user_log[0]
+    if profile_academies:
+        academies = random.choices(list({profile.academy for profile in profile_academies}), k=1)
 
     else:
-        github_academy_user_log = github_academy_user_log[random.randint(0, how_many - 1)]
+        if 'academies' not in context:
+            context['academies'] = Academy.objects.filter()
+        academies = list(context['academies'])
 
-    academy = github_academy_user_log.academy_user.academy
+    if not academies:
+        write_activity()
+        return
 
-    logs = context['logs'].get(metadata['userName'], None)
-    if logs is None:
-        logs = get_github_academy_user_logs(academy, metadata['userName'], context['limit'])
-        context['logs'][metadata['userName']] = logs
-
-    pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
-    if not (result := re.findall(pattern, metadata['contextURL'])):
-        raise Exception(f'Invalid repository URL {metadata["contextURL"]}')
-
-    slug = result[0]
-
-    provisioning_bill = context['provisioning_bills'].get(academy.id, None)
-    if not provisioning_bill:
-        provisioning_bill = ProvisioningBill.objects.filter(academy=academy, status='PENDING').first()
-
-    if not provisioning_bill:
-        provisioning_bill = ProvisioningBill()
-        provisioning_bill.academy = academy
-        provisioning_bill.status = 'PENDING'
-        provisioning_bill.hash = context['hash']
-        provisioning_bill.save()
-
-    provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
-    if not provisioning_vendor:
-        provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
-
-    if not provisioning_vendor:
-        raise Exception(f'Provisioning vendor Codespaces not found')
-
-    date = iso_to_datetime(field['effectiveTime'])
-    for log in logs:
-        if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
-                and log['starting_at'] <= date <= log['ending_at']):
-            logger.error(f'User {field["Username"]} was deleted from the academy during this event at {date}')
-            return
-
-    pa = ProvisioningActivity()
-    pa.bill = provisioning_bill
-    pa.username = metadata['userName']
-    pa.registered_at = date
-    pa.product_name = field['kind']
-    pa.sku = field['id']
-    pa.quantity = field['creditCents']
-    pa.unit_type = 'Credit cents'
-    pa.price_per_unit = 0.00036
-    pa.currency_code = 'USD'
-    pa.repository_url = metadata['contextURL']
-
-    pa.task_associated_slug = slug
-    pa.processed_at = timezone.now()
-    pa.status = 'PERSISTED'
-    pa.save()
+    for academy in academies:
+        write_activity(academy)

@@ -282,69 +282,15 @@ class AcademyAuthSettings(models.Model):
 
 
 PENDING = 'PENDING'
-REJECTED = 'REJECTED'
-ACCEPTED = 'ACCEPTED'
-PENDING_GITHUB_STATUS = (
-    (PENDING, 'Pending'),
-    (REJECTED, 'Rejected'),
-    (ACCEPTED, 'Accepted'),
-)
-
-UNLINKED = 'UNLINKED'
-LINKED = 'LINKED'
-COHORT = 'COHORT'
-PENDING_GITHUB_SOURCE = (
-    (UNLINKED, 'Unlinked'),
-    (LINKED, 'Linked'),
-    (COHORT, 'Cohort'),
-)
-
-
-class PendingGithubUser(models.Model):
-    username = models.SlugField(max_length=40,
-                                help_text='Only used when the username has not been found on 4Geeks')
-
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
-
-    status = models.CharField(max_length=7, choices=PENDING_GITHUB_STATUS, default=PENDING)
-    source = models.CharField(max_length=8, choices=PENDING_GITHUB_SOURCE, default=LINKED)
-    hashes = models.JSONField(default=list(), blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    def clean(self) -> None:
-        if self.hashes and not isinstance(self.hashes, list):
-            raise forms.ValidationError('Hashes must be a list')
-
-        if self.hashes:
-            for h in self.hashes:
-                if not isinstance(h, str):
-                    raise forms.ValidationError('Hashes must be a list of strings')
-
-        if self.academy is None and self.source == COHORT:
-            raise forms.ValidationError('Academy is required when source is COHORT')
-
-        if self.academy and self.source != COHORT:
-            raise forms.ValidationError('Academy must be null when source is not COHORT')
-
-        return super().clean()
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        return super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.username
-
-
-PENDING = 'PENDING'
 SYNCHED = 'SYNCHED'
 UNKNOWN = 'UNKNOWN'
+PAYMENT_CONFLICT = 'PAYMENT_CONFLICT'
 STORAGE_STATUS = (
     (PENDING, 'Pending'),
     (SYNCHED, 'Synched'),
     (ERROR, 'Error'),
     (UNKNOWN, 'Unknown'),
+    (PAYMENT_CONFLICT, 'Payment conflict'),
 )
 
 ADD = 'ADD'
@@ -400,7 +346,6 @@ class GithubAcademyUser(models.Model):
         self.storage_log.append(GithubAcademyUser.create_log(msg))
 
     def save(self, *args, **kwargs):
-        was_created = not self.pk
         has_mutated = False
 
         if self.__old_status != self.storage_status:
@@ -408,18 +353,27 @@ class GithubAcademyUser(models.Model):
         if self.__old_action != self.storage_action:
             has_mutated = True
 
+        if not self.user and (credentials :=
+                              CredentialsGithub.objects.filter(username=self.username).first()):
+            self.user = credentials.user
+
         exit_op = super().save(*args, **kwargs)
 
         if has_mutated and self.storage_status == 'SYNCHED':
+            prev = GithubAcademyUserLog.objects.filter(
+                academy_user=self, storage_status=self.storage_status,
+                storage_action=self.storage_action).order_by('-created_at').first()
+
             user_log = GithubAcademyUserLog(
                 academy_user=self,
                 storage_status=self.storage_status,
                 storage_action=self.storage_action,
             )
             user_log.save()
-            if was_created:
-                PendingGithubUser.objects.filter(Q(academy=self.academy) | Q(academy__isnull=True),
-                                                 username=self.username).delete()
+
+            if prev:
+                prev.valid_until = user_log.created_at
+                prev.save()
 
         return exit_op
 
@@ -428,6 +382,7 @@ class GithubAcademyUserLog(models.Model):
     academy_user = models.ForeignKey(GithubAcademyUser, on_delete=models.CASCADE)
     storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
     storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
+    valid_until = models.DateTimeField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

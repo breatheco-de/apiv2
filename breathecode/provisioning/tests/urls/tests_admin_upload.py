@@ -37,7 +37,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         self.headers(content_disposition='attachment; filename="filename.csv"')
 
-        url = reverse_lazy('provisioning:academy_upload')
+        url = reverse_lazy('provisioning:admin_upload')
         data = {}
         response = self.client.put(url, data)
         json = response.json()
@@ -53,15 +53,12 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         self.headers(academy=1, content_disposition='attachment; filename="filename.csv"')
 
-        url = reverse_lazy('provisioning:academy_upload')
+        url = reverse_lazy('provisioning:admin_upload')
         self.generate_models(authenticate=True)
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {
-            'detail': "You (user: 1) don't have this capability: crud_provisioning_activity for academy 1",
-            'status_code': 403
-        }
+        expected = {'detail': 'without-permission', 'status_code': 403}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -86,10 +83,9 @@ class MarketingTestSuite(ProvisioningTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_provisioning_activity',
-                                     role='potato')
-        url = reverse_lazy('provisioning:academy_upload')
+                                     group=1,
+                                     permission={'codename': 'crud_provisioning_activity'})
+        url = reverse_lazy('provisioning:admin_upload')
 
         response = self.client.put(url, {})
         json = response.json()
@@ -125,11 +121,10 @@ class MarketingTestSuite(ProvisioningTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_provisioning_activity',
-                                     role='potato')
+                                     group=1,
+                                     permission={'codename': 'crud_provisioning_activity'})
 
-        url = reverse_lazy('provisioning:academy_upload')
+        url = reverse_lazy('provisioning:admin_upload')
 
         file = tempfile.NamedTemporaryFile(suffix='.txt', delete=False, mode='w+')
 
@@ -187,11 +182,10 @@ class MarketingTestSuite(ProvisioningTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_provisioning_activity',
-                                     role='potato')
+                                     group=1,
+                                     permission={'codename': 'crud_provisioning_activity'})
 
-        url = reverse_lazy('provisioning:academy_upload')
+        url = reverse_lazy('provisioning:admin_upload')
 
         file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w+')
 
@@ -273,11 +267,10 @@ class MarketingTestSuite(ProvisioningTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_provisioning_activity',
-                                     role='potato')
+                                     group=1,
+                                     permission={'codename': 'crud_provisioning_activity'})
 
-        url = reverse_lazy('provisioning:academy_upload')
+        url = reverse_lazy('provisioning:admin_upload')
 
         file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w+')
 
@@ -378,11 +371,10 @@ class MarketingTestSuite(ProvisioningTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_provisioning_activity',
-                                     role='potato')
+                                     group=1,
+                                     permission={'codename': 'crud_provisioning_activity'})
 
-        url = reverse_lazy('provisioning:academy_upload')
+        url = reverse_lazy('provisioning:admin_upload')
 
         file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w+')
 
@@ -476,11 +468,10 @@ class MarketingTestSuite(ProvisioningTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_provisioning_activity',
-                                     role='potato')
+                                     group=1,
+                                     permission={'codename': 'crud_provisioning_activity'})
 
-        url = reverse_lazy('provisioning:academy_upload')
+        url = reverse_lazy('provisioning:admin_upload')
 
         file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w+')
 
@@ -584,11 +575,10 @@ class MarketingTestSuite(ProvisioningTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_provisioning_activity',
-                                     role='potato')
+                                     group=1,
+                                     permission={'codename': 'crud_provisioning_activity'})
 
-        url = reverse_lazy('provisioning:academy_upload')
+        url = reverse_lazy('provisioning:admin_upload')
 
         file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w+')
 

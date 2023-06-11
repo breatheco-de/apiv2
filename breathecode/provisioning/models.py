@@ -2,7 +2,7 @@ import logging
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.models import PendingGithubUser, ProfileAcademy
+from breathecode.authenticate.models import ProfileAcademy
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -85,12 +85,14 @@ DISPUTED = 'DISPUTED'
 PAID = 'PAID'
 IGNORED = 'IGNORED'
 PENDING = 'PENDING'
+ERROR = 'ERROR'
 BILL_STATUS = (
     (DUE, 'Due'),
     (DISPUTED, 'Disputed'),
     (IGNORED, 'Ignored'),
     (PENDING, 'Pending'),
     (PAID, 'Paid'),
+    (ERROR, 'Error'),
 )
 
 
@@ -102,7 +104,6 @@ class ProvisioningBill(models.Model):
     status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
     paid_at = models.DateTimeField(null=True, default=None, blank=True)
     status_details = models.TextField(default=None, null=True, blank=True)
-    pending_users = models.ManyToManyField(PendingGithubUser, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -124,7 +125,6 @@ class ProvisioningBill(models.Model):
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
-ERROR = 'ERROR'
 ACTIVITY_STATUS = (
     (PENDING, 'Pending'),
     (PERSISTED, 'Persisted'),
@@ -135,6 +135,7 @@ ACTIVITY_STATUS = (
 class ProvisioningActivity(models.Model):
     username = models.CharField(
         max_length=80, help_text='Native username in the provisioning platform, E.g: github username')
+    hash = models.CharField(max_length=64, blank=True, null=True, default=None)
     registered_at = models.DateTimeField(
         null=True,
         default=None,

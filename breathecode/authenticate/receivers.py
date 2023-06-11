@@ -8,7 +8,7 @@ from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.admissions.models import CohortUser
 from django.dispatch import receiver
 from .tasks import async_remove_from_organization, async_add_to_organization
-from breathecode.authenticate.models import CredentialsGithub, GithubAcademyUser, PendingGithubUser, ProfileAcademy
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.mentorship.models import MentorProfile
 from django.db.models import Q
 from django.utils import timezone
@@ -94,35 +94,3 @@ def post_save_cohort_user(sender, instance, **kwargs):
         async_add_to_organization(instance.cohort.id, instance.user.id)
     else:
         async_remove_from_organization(instance.cohort.id, instance.user.id)
-
-
-@receiver(post_save, sender=PendingGithubUser)
-def post_save_pending_github_user(sender: Type[PendingGithubUser], instance: PendingGithubUser, **kwargs):
-    logger.info(f'Starting post_save_pending_github_user for {instance.username} ({instance.id})')
-
-    now = timezone.now()
-
-    if not (instance.academy and instance.source == 'COHORT' and instance.status == 'ACCEPTED'):
-        return
-
-    credentials = CredentialsGithub.objects.filter(username=instance.username).first()
-    if not credentials:
-        return
-
-    cohort_users = CohortUser.objects.filter(Q(cohort__never_ends=True)
-                                             | Q(cohort__never_ends=False, cohort__ending_date__gte=now),
-                                             cohort__kickoff_date__lte=now,
-                                             cohort__academy=instance.academy,
-                                             user=credentials.user).exclude(stage__in=['ENDED', 'DELETED'])
-
-    if not cohort_users.exists():
-        return
-
-    academy = instance.academy
-    GithubAcademyUser.objects.get_or_create(username=instance.username,
-                                            academy=academy,
-                                            user=credentials.user,
-                                            defaults={
-                                                'storage_status': 'PENDING',
-                                                'storage_action': 'ADD',
-                                            })

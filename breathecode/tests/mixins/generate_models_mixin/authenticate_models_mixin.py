@@ -143,7 +143,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['academy_auth_settings'] = create_models(credentials_github,
+            models['academy_auth_settings'] = create_models(academy_auth_settings,
                                                             'authenticate.AcademyAuthSettings', **{
                                                                 **kargs,
                                                                 **academy_auth_settings_kwargs
