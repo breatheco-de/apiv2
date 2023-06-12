@@ -473,9 +473,9 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        event_checkin = EventCheckin.objects.filter(
-            Q(event=data['event'], attendee=data['attendee'])
-            | Q(event=data['event'], email=data['email'])).first()
+        event_checkin = EventCheckin.objects.filter(Q(attendee=data['attendee'])
+                                                    | Q(email=data['email']),
+                                                    event=data['event']).first()
         if event_checkin is not None:
             if event_checkin.attendee is None:
                 event_checkin.attendee = self.context['user']
