@@ -183,9 +183,15 @@ def handle_pending_github_user(organization: str, username: str) -> list[Academy
         logger.error(f'Organization {organization} not found')
         return []
 
+    user = None
+    credentials = CredentialsGithub.objects.filter(username__iexact=username).first()
+    if credentials:
+        user = credentials.user
+
     for org in orgs:
         pending, created = GithubAcademyUser.objects.get_or_create(username=username,
                                                                    academy=org.academy,
+                                                                   user=user,
                                                                    defaults={
                                                                        'storage_status': 'PAYMENT_CONFLICT',
                                                                        'storage_action': 'IGNORE',
