@@ -383,11 +383,11 @@ class AcademyAcademyServiceView(APIView):
         items = AcademyService.objects.filter(academy__id=academy_id)
         print(items, academy_id)
 
-        if mentorship_service_set_id := request.GET.get('mentorship_service_set_id'):
-            items = items.filter(mentorship_service_set_id in available_mentorship_service_sets)
+        if mentorship_service_set := request.GET.get('mentorship_service_set'):
+            items = items.filter(mentorship_service_set in available_mentorship_service_sets)
 
-        if event_type_set_id := request.GET.get('event_type_set_id'):
-            items = items.filter(event_type_set_id in available_event_type_sets)
+        if event_type_set := request.GET.get('event_type_set'):
+            items = items.filter(event_type_set in available_event_type_sets)
 
         items = handler.queryset(items)
         serializer = GetAcademyServiceSmallSerializer(items, many=True)
@@ -400,13 +400,6 @@ class AcademyAcademyServiceView(APIView):
         lang = get_user_language(request)
 
         data['academy'] = academy_id
-
-        if 'price_per_unit' not in request.data:
-            raise ValidationException(translation(lang,
-                                                  en='You must specify a price per unit',
-                                                  es='debes especificar un precio por unidad',
-                                                  slug='missing-price_per_unit'),
-                                      code=404)
 
         serializer = POSTAcademyServiceSerializer(data=request.data)
         if serializer.is_valid():

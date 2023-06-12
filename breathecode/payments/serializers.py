@@ -1,9 +1,9 @@
 import logging
 import serpy
-from breathecode.admissions.models import Cohort
+from breathecode.admissions.models import Cohort, Academy
 from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature, Subscription
 from django.db.models.query_utils import Q
-
+from rest_framework.exceptions import ValidationError
 from breathecode.utils import serializers, custom_serpy
 from django.utils import timezone
 
@@ -288,6 +288,17 @@ class POSTAcademyServiceSerializer(serializers.ModelSerializer):
         model = AcademyService
         exclude = ()
 
+    def validate(self, data):
+        if 'price_per_unit' not in data:
+            raise ValidationError('You must specify a price per unit')
+
+        return data
+
+    def create(self, validated_data):
+        academy_service = super().create(validated_data)
+
+        return academy_service
+
 
 class PUTAcademyServiceSerializer(serializers.ModelSerializer):
     currency = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -297,6 +308,16 @@ class PUTAcademyServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = AcademyService
         fields = '__all__'
+
+    def validate(self, data):
+
+        return data
+
+    def update(self, instance, validated_data):
+
+        academy_service = super().update(instance, validated_data)
+
+        return academy_service
 
 
 class GetMentorshipServiceSetSmallSerializer(serpy.Serializer):
