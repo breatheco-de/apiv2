@@ -60,6 +60,7 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
     entry = update_location(AC, entry, acp_ids, deal_custom_fields)
     entry = update_course(AC, entry, acp_ids, deal_custom_fields)
 
+    entry.custom_fields = deal_custom_fields
     entry.save()
 
     # update entry on the webhook
