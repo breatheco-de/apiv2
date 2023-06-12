@@ -851,31 +851,15 @@ class EventMeCheckinView(APIView):
                                                   slug='event-not-found'),
                                       code=404)
 
-        event_checkin = EventCheckin.objects.filter(event=event_id, attendee=request.user.id).first()
-        if event_checkin is not None:
-            raise ValidationException(translation(
-                lang,
-                en='This user already has an event checkin associated to this event',
-                es='Este usuario ya esta registrado en este evento',
-                slug='eventcheckin-found'),
-                                      code=404)
-
-        event_checkin = EventCheckin.objects.filter(event=event_id, email=request.user.email).first()
-        if event_checkin is not None:
-            event_checkin.attendee = request.user
-            event_checkin.save()
-            raise ValidationException(translation(
-                lang,
-                en='This user already has an event checkin with this email associated to this event',
-                es='Este usuario ya esta registrado en este evento con este email',
-                slug='eventcheckin-found'),
-                                      code=404)
-
         serializer = POSTEventCheckinSerializer(data={
             **request.data, 'email': request.user.email,
             'attendee': request.user.id,
             'event': event.id
-        })
+        },
+                                                context={
+                                                    'lang': lang,
+                                                    'user': request.user
+                                                })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
