@@ -417,7 +417,7 @@ class AcademyAcademyServiceView(APIView):
             raise ValidationException(translation(lang,
                                                   en='Service not found',
                                                   es='No existe el Servicio',
-                                                  slug='not-found'),
+                                                  slug='service-not-found'),
                                       code=404)
 
         academyservice = AcademyService.objects.filter(service=service.id, academy__id=academy_id).first()
@@ -426,7 +426,7 @@ class AcademyAcademyServiceView(APIView):
             raise ValidationException(translation(lang,
                                                   en='Academy Service not found',
                                                   es='No existe el Academy Service',
-                                                  slug='not-found'),
+                                                  slug='academyservice-not-found'),
                                       code=404)
 
         serializer = PUTAcademyServiceSerializer(academyservice, data=request.data)
