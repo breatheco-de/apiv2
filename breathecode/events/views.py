@@ -93,10 +93,10 @@ def get_events(request):
     else:
         lookup['status'] = 'ACTIVE'
 
-    lookup['starting_at__gte'] = timezone.now()
+    lookup['ending_at__gte'] = timezone.now()
     if 'past' in request.GET:
         if request.GET.get('past') == 'true':
-            lookup.pop('starting_at__gte')
+            lookup.pop('ending_at__gte')
             lookup['starting_at__lte'] = timezone.now()
 
     items = items.filter(**lookup).order_by('starting_at')

@@ -1,4 +1,5 @@
 import logging
+from typing import Type
 
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist
@@ -9,6 +10,8 @@ from django.dispatch import receiver
 from .tasks import async_remove_from_organization, async_add_to_organization
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.mentorship.models import MentorProfile
+from django.db.models import Q
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 

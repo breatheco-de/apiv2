@@ -65,6 +65,11 @@ PERMISSIONS = [
         'description': 'Add code reviews',
         'codename': 'add_code_review',
     },
+    {
+        'name': 'Upload provisioning activity',
+        'description': 'Upload provisioning activity',
+        'codename': 'upload_provisioning_activity',
+    },
 ]
 
 GROUPS = [

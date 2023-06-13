@@ -7,6 +7,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.provisioning.tasks import upload
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import private_view, render_message
 from .actions import get_provisioning_vendor
@@ -154,7 +155,7 @@ class UploadView(APIView):
 
         return data
 
-    @capable_of('crud_provisioning_activity')
+    @has_permission('upload_provisioning_activity')
     def put(self, request, academy_id=None):
         files = request.data.getlist('file')
         lang = get_user_language(request)

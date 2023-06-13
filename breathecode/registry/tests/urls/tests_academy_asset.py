@@ -84,7 +84,8 @@ def post_serializer(academy, category, data={}):
         'author': None,
         'category': {
             'id': category.id,
-            'slug': category.slug
+            'slug': category.slug,
+            'title': category.title,
         },
         'delivery_formats': 'url',
         'delivery_instructions': None,
@@ -134,7 +135,8 @@ def put_serializer(academy, category, asset, data={}):
         'authors_username': None,
         'category': {
             'id': category.id,
-            'slug': category.slug
+            'slug': category.slug,
+            'title': category.title
         },
         'cleaning_status': asset.cleaning_status,
         'cleaning_status_details': None,

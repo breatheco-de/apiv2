@@ -9,7 +9,7 @@ import pandas as pd
 from breathecode.provisioning import actions
 from breathecode.provisioning.models import ProvisioningActivity, ProvisioningBill
 from breathecode.services.google_cloud.storage import Storage
-from breathecode.utils.validation_exception import ValidationException
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +19,6 @@ class BaseTaskWithRetry(Task):
     #                                           seconds
     retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
     retry_backoff = True
-
-
-def get_app_url():
-    return os.getenv('APP_URL', '')
 
 
 @shared_task(bind=False, base=BaseTaskWithRetry)
@@ -65,7 +61,10 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         'provisioning_bills': {},
         'provisioning_vendors': {},
         'github_academy_user_logs': {},
+        'profile_academies': {},
         'hash': hash,
+        'limit': timezone.now(),
+        'logs': {},
     }
 
     storage = Storage()
@@ -116,6 +115,10 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         logger.error(f'File {hash} has an unsupported origin or the provider had changed the file format')
         return
 
+    prev_bill = ProvisioningBill.objects.filter(hash=hash).first()
+    if prev_bill:
+        context['limit'] = prev_bill.created_at
+
     try:
         for i in range(start, end):
             try:
@@ -136,5 +139,5 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
     if len(df.iloc[start:end]) == limit:
         upload.delay(hash, page + 1)
 
-    else:
+    elif not ProvisioningActivity.objects.filter(hash=hash, status='ERROR').exists():
         calculate_bill_amounts.delay(hash)
