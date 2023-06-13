@@ -78,6 +78,7 @@ class FinalProjectTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_final_project_members_from_different_cohort(self):
 
         self.bc.request.set_headers(academy=1)
@@ -122,6 +123,7 @@ class FinalProjectTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_final_project(self):
 
         self.bc.request.set_headers(academy=1)
