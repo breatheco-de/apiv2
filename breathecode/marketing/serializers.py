@@ -104,6 +104,8 @@ class CohortHookSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    kickoff_date = serpy.Field()
+    ending_date = serpy.Field()
     schedule = SyllabusScheduleHookSerializer(required=False)
 
 
@@ -143,6 +145,7 @@ class FormEntrySerializer(serpy.Serializer):
     academy = AcademySmallSerializer(required=False)
     client_comments = serpy.Field(required=False)
     created_at = serpy.Field()
+    custom_fields = serpy.Field()
 
 
 class FormEntryHookSerializer(serpy.Serializer):
