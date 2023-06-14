@@ -1171,11 +1171,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     def get_access_token(self, obj: UserInvite):
         lang = self.context.get('lang', 'en')
 
-        without_cohort = not self.cohort or not self.cohort.academy or self.cohort.academy.available_as_saas != True
-        without_syllabus = not self.syllabus or not Cohort.objects.filter(
-            academy__available_as_saas=True, syllabus_version__syllabus=self.syllabus).exists()
-
-        if without_cohort and without_syllabus and not self.plan:
+        if obj.status != 'ACCEPTED':
             return None
 
         if not self.user:
