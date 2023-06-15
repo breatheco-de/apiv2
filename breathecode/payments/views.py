@@ -376,12 +376,24 @@ class AcademyAcademyServiceView(APIView):
     extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('read_academyservice')
-    def get(self, request, academy_id=None):
+    def get(self, request, academy_id=None, service_slug=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
+        if service_slug is not None:
+            item = AcademyService.objects.filter(academy__id=academy_id, service__slug=service_slug).first()
+            if item is None:
+                raise ValidationException(translation(
+                    lang,
+                    en='There is no Academy Service with that service slug',
+                    es='No existe ningún Academy Service con ese slug de Service',
+                    slug='academy-service-not-found'),
+                                          code=404)
+
+            serializer = GetAcademyServiceSmallSerializer(item)
+            return handler.response(serializer.data)
+
         items = AcademyService.objects.filter(academy__id=academy_id)
-        print(items, academy_id)
 
         if mentorship_service_set := request.GET.get('mentorship_service_set'):
             items = items.filter(mentorship_service_set in available_mentorship_service_sets)
