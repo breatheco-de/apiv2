@@ -70,14 +70,14 @@ class DatetimeInteger:
         self.hour = str(hour)
         self.minute = str(minute)
 
-    def get_interger(self):
+    def get_integer(self):
         return int(self.year + self.month + self.day + self.hour + self.minute)
 
     def get_datetime(self, timezone: str):
-        self.__class__.to_datetime(timezone, self.get_interger())
+        self.__class__.to_datetime(timezone, self.get_integer())
 
     def get_utc_datetime(self, timezone: str):
-        self.__class__.to_utc_datetime(timezone, self.get_interger())
+        self.__class__.to_utc_datetime(timezone, self.get_integer())
 
     @staticmethod
     def from_datetime(timezone: str, date: datetime) -> int:
@@ -91,9 +91,9 @@ class DatetimeInteger:
         return int(date.astimezone(tzutc()).astimezone(tz).strftime('%Y%m%d%H%M'))
 
     @staticmethod
-    def to_iso_string(timezone: str, interger: int) -> str:
+    def to_iso_string(timezone: str, integer: int) -> str:
         tz = gettz(timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(interger))
+        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
         if not matches:
             return None
 
@@ -108,9 +108,9 @@ class DatetimeInteger:
         return re.sub(r'\+00:00', 'Z', date.astimezone(tzutc()).isoformat())
 
     @staticmethod
-    def to_datetime(timezone: str, interger: int) -> datetime:
+    def to_datetime(timezone: str, integer: int) -> datetime:
         tz = pytz.timezone(timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(interger))
+        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
         if not matches:
             return None
 

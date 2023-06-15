@@ -207,7 +207,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].available_as_saas,
                 'timeslots': [{
                     'ending_at':
-                    self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
+                    self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
                     'id':
                     cohort_time_slot['id'],
                     'recurrency_type':
@@ -215,7 +215,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                     'recurrent':
                     cohort_time_slot['recurrent'],
                     'starting_at':
-                    self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
+                    self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
                 }] if cohort_time_slots and model.cohort.id != 1 else [],
                 'schedule': {
                     'id': model['cohort'].schedule.id,
@@ -336,7 +336,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].available_as_saas,
                 'timeslots': [{
                     'ending_at':
-                    self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
+                    self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
                     'id':
                     cohort_time_slot['id'],
                     'recurrency_type':
@@ -344,7 +344,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                     'recurrent':
                     cohort_time_slot['recurrent'],
                     'starting_at':
-                    self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
+                    self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
                 }] if cohort_time_slots and model.cohort.id != 1 else [],
                 'schedule': {
                     'id': model['cohort'].schedule.id,

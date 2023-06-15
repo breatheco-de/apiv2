@@ -14,7 +14,7 @@ TIMEZONES = [
 ]
 
 
-def random_datetime_interger():
+def random_datetime_integer():
     year = '{:04d}'.format(randint(2021, 2999))
     month = '{:02d}'.format(randint(1, 12))
     day = '{:02d}'.format(randint(1, 28))
@@ -61,6 +61,11 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    live_class=False,
                                    course=False,
                                    course_translation=False,
+                                   provisioning_profile=False,
+                                   provisioning_academy=False,
+                                   provisioning_bill=False,
+                                   github_academy_user=False,
+                                   github_academy_user_log=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -102,7 +107,9 @@ class AdmissionsModelsMixin(ModelsMixin):
                 or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set)
                 or is_valid(course) or is_valid(course_translation) or is_valid(event_type_set)
                 or is_valid(event_type_set_translation) or is_valid(mentorship_service_set)
-                or is_valid(mentorship_service_set_translation)):
+                or is_valid(mentorship_service_set_translation) or is_valid(provisioning_profile)
+                or is_valid(provisioning_academy) or is_valid(provisioning_bill)
+                or is_valid(github_academy_user) or is_valid(github_academy_user_log)):
             kargs = {}
 
             if 'country' in models:
@@ -185,8 +192,8 @@ class AdmissionsModelsMixin(ModelsMixin):
 
         if not 'syllabus_schedule_time_slot' in models and is_valid(syllabus_schedule_time_slot):
             kargs = {
-                'starting_at': random_datetime_interger(),
-                'ending_at': random_datetime_interger(),
+                'starting_at': random_datetime_integer(),
+                'ending_at': random_datetime_integer(),
                 'timezone': choice(TIMEZONES),
             }
 
@@ -204,8 +211,8 @@ class AdmissionsModelsMixin(ModelsMixin):
 
         if not 'cohort_time_slot' in models and (is_valid(cohort_time_slot) or is_valid(live_class)):
             kargs = {
-                'starting_at': random_datetime_interger(),
-                'ending_at': random_datetime_interger(),
+                'starting_at': random_datetime_integer(),
+                'ending_at': random_datetime_integer(),
                 'timezone': choice(TIMEZONES),
             }
 

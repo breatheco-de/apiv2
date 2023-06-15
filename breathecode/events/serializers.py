@@ -439,6 +439,8 @@ class EventCheckinSmallSerializer(serpy.Serializer):
     attendee = serpy.MethodField()
 
     def get_attendee(self, obj):
+        if obj.attendee is None:
+            return None
         return UserPublicSerializer(obj.attendee).data
 
 
@@ -460,6 +462,13 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
 
         event_type = super().update(instance, {**validated_data, **new_data})
         return event_type
+
+
+class POSTEventCheckinSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = EventCheckin
+        exclude = ('created_at', 'updated_at', 'attended_at', 'status')
 
 
 class PostEventTypeSerializer(EventTypeSerializerMixin):

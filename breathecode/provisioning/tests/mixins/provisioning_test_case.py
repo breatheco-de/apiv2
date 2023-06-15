@@ -8,6 +8,8 @@ from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, Breathecod
 class ProvisioningTestCase(APITestCase, GenerateModelsMixin, CacheMixin, BreathecodeMixin):
     """FeedbackTestCase with auth methods"""
 
+    maxDiff = None
+
     def tearDown(self):
         self.clear_cache()
 

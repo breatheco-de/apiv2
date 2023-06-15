@@ -8,7 +8,7 @@ from django.db.models.query_utils import Q
 from django.utils import timezone
 from breathecode.admissions.models import Cohort, CohortTimeSlot, TimeSlot, CohortUser
 from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
-from breathecode.utils.datetime_interger import DatetimeInteger
+from breathecode.utils.datetime_integer import DatetimeInteger
 from django.db.models import QuerySet
 
 from .models import EventTypeVisibilitySetting, Organization, Venue, Event, Organizer, EventType

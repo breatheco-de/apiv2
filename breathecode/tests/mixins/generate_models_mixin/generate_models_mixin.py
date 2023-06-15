@@ -23,7 +23,7 @@ from .monitoring_models_mixin import MonitoringModelsMixin
 from .notify_models_mixin import NotifyModelsMixin
 from .payments_models_mixin import PaymentsModelsMixin
 from .registry_models_mixin import RegistryModelsMixin
-from .provisioning_models_mixin import ProvisioningMixin
+from .provisioning_models_mixin import ProvisioningModelsMixin
 
 __all__ = ['GenerateModelsMixin']
 
@@ -32,7 +32,8 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
                           CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
                           AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin,
                           MonitoringModelsMixin, MediaModelsMixin, MentorshipModelsMixin, CareerModelsMixin,
-                          ContentTypesMixin, RegistryModelsMixin, PaymentsModelsMixin, ProvisioningMixin):
+                          ContentTypesMixin, RegistryModelsMixin, PaymentsModelsMixin,
+                          ProvisioningModelsMixin):
 
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
@@ -73,7 +74,8 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
 
         for key in kwargs:
             kwarg = kwargs[key]
-            if isinstance(kwarg, Model):
+            if isinstance(kwarg, Model) or (isinstance(kwarg, list)
+                                            and len([x for x in kwarg if isinstance(x, Model)])):
                 models[key] = kwarg
 
         return models

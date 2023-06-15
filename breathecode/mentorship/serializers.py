@@ -5,7 +5,7 @@ import breathecode.mentorship.actions as actions
 from .actions import generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
-from breathecode.utils.datetime_interger import duration_to_str
+from breathecode.utils.datetime_integer import duration_to_str
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils.i18n import translation
 

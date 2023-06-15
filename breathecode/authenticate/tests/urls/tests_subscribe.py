@@ -118,10 +118,17 @@ class SubscribeTestSuite(AuthTestCase):
             'last_name': 'valdomero',
             'phone': '+123123123'
         }
-        response = self.client.post(url, data, format='json')
+
+        access_token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+            response = self.client.post(url, data, format='json')
 
         json = response.json()
-        expected = post_serializer(data={'id': 1, **data})
+        expected = post_serializer(data={
+            'id': 1,
+            'access_token': access_token,
+            **data,
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -133,11 +140,11 @@ class SubscribeTestSuite(AuthTestCase):
                              'id': 1,
                              'role_id': None,
                              'sent_at': None,
-                             'status': 'WAITING_LIST',
+                             'status': 'ACCEPTED',
                              'token': hashlib.sha1(
                                  (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                              'process_message': '',
-                             'process_status': 'PENDING',
+                             'process_status': 'DONE',
                              'syllabus_id': None,
                              **data,
                          }])
@@ -149,7 +156,7 @@ class SubscribeTestSuite(AuthTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
-    def test_task__post__with_user_invite__already_exists(self):
+    def test_task__post__with_user_invite__already_exists__status_waiting_list(self):
         """
         Descriptions of models are being generated:
 
@@ -165,6 +172,58 @@ class SubscribeTestSuite(AuthTestCase):
 
         json = response.json()
         expected = {'detail': 'user-invite-exists', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            self.bc.format.to_dict(model.user_invite),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=now))
+    def test_task__post__with_user_invite__already_exists__status_pending(self):
+        """
+        Descriptions of models are being generated:
+
+          UserInvite(id=1): {}
+        """
+
+        user_invite = {'email': 'pokemon@potato.io', 'status': 'PENDING'}
+        model = self.bc.database.create(user_invite=user_invite)
+
+        url = reverse_lazy('authenticate:subscribe')
+        data = {'email': 'pokemon@potato.io'}
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'user-invite-exists-status-pending', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            self.bc.format.to_dict(model.user_invite),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=now))
+    def test_task__post__with_user_invite__already_exists__status_accepted(self):
+        """
+        Descriptions of models are being generated:
+
+          UserInvite(id=1): {}
+        """
+
+        user_invite = {'email': 'pokemon@potato.io', 'status': 'ACCEPTED'}
+        model = self.bc.database.create(user_invite=user_invite)
+
+        url = reverse_lazy('authenticate:subscribe')
+        data = {'email': 'pokemon@potato.io'}
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'user-invite-exists-status-accepted', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -208,6 +267,8 @@ class SubscribeTestSuite(AuthTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
+    @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
+    @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
     def test_task__post__with_user_invite(self):
         """
         Descriptions of models are being generated:
@@ -225,10 +286,17 @@ class SubscribeTestSuite(AuthTestCase):
             'last_name': 'valdomero',
             'phone': '+123123123'
         }
-        response = self.client.post(url, data, format='json')
+
+        access_token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+            response = self.client.post(url, data, format='json')
 
         json = response.json()
-        expected = post_serializer(data={'id': 2, **data})
+        expected = post_serializer(data={
+            'id': 2,
+            'access_token': access_token,
+            **data,
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -240,16 +308,49 @@ class SubscribeTestSuite(AuthTestCase):
                 'id': 2,
                 'role_id': None,
                 'sent_at': None,
-                'status': 'WAITING_LIST',
+                'status': 'ACCEPTED',
                 'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                 'process_message': '',
-                'process_status': 'PENDING',
+                'process_status': 'DONE',
                 'syllabus_id': None,
                 **data,
             }
         ])
 
+        user_db = self.bc.database.list_of('auth.User')
+        for item in user_db:
+            self.assertTrue(isinstance(item['date_joined'], datetime))
+            del item['date_joined']
+
+        self.assertEqual(user_db, [{
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'id': 1,
+            'is_active': True,
+            'is_staff': False,
+            'is_superuser': False,
+            'last_login': None,
+            'last_name': 'valdomero',
+            'password': '',
+            'username': 'pokemon@potato.io',
+        }])
+
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
+
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+            call(
+                'pick_password', 'pokemon@potato.io', {
+                    'SUBJECT':
+                    'Set your password at 4Geeks',
+                    'LINK': ('http://localhost:8000/v1/auth/password/' + hashlib.sha1(
+                        (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest())
+                })
+        ])
+
+        user = self.bc.database.get('auth.User', 1, dict=False)
+        self.assertEqual(Token.get_or_create.call_args_list, [
+            call(user=user, token_type='login'),
+        ])
 
     """
     🔽🔽🔽 Post does not get in waiting list using a plan
@@ -283,19 +384,33 @@ class SubscribeTestSuite(AuthTestCase):
 
         del data['plan']
         json = response.json()
-        expected = {'detail': 'plan-has-waiting-list', 'status_code': 400}
+        expected = put_serializer(model.user_invite, plans=[model.plan], data={
+            'id': 2,
+            **data,
+        })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            self.bc.format.to_dict(model.user_invite),
+            self.bc.format.to_dict(model.user_invite), {
+                'academy_id': None,
+                'author_id': None,
+                'cohort_id': None,
+                'id': 2,
+                'role_id': None,
+                'sent_at': None,
+                'status': 'WAITING_LIST',
+                'process_message': '',
+                'process_status': 'PENDING',
+                'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                'syllabus_id': None,
+                **data,
+            }
         ])
 
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [plan_db_item(model.plan, data={})])
-        self.bc.check.queryset_with_pks(model.plan.invites.all(), [])
-
-        token = hashlib.sha1((str(now) + data['email']).encode('UTF-8')).hexdigest()
-
+        self.bc.check.queryset_with_pks(model.plan.invites.all(), [2])
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [])
         self.bc.check.calls(Token.get_or_create.call_args_list, [])
 
@@ -331,7 +446,11 @@ class SubscribeTestSuite(AuthTestCase):
 
         del data['plan']
         json = response.json()
-        expected = post_serializer(plans=[model.plan], data={'id': 2, 'access_token': access_token, **data})
+        expected = post_serializer(plans=[model.plan], data={
+            'id': 2,
+            'access_token': access_token,
+            **data,
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -346,7 +465,7 @@ class SubscribeTestSuite(AuthTestCase):
                 'status': 'ACCEPTED',
                 'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                 'process_message': '',
-                'process_status': 'PENDING',
+                'process_status': 'DONE',
                 'syllabus_id': None,
                 **data,
             }
@@ -418,7 +537,10 @@ class SubscribeTestSuite(AuthTestCase):
             'phone': '+123123123',
             'token': token,
         }
-        response = self.client.put(url, data, format='json')
+
+        access_token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+            response = self.client.put(url, data, format='json')
 
         del data['token']
 
@@ -426,11 +548,12 @@ class SubscribeTestSuite(AuthTestCase):
 
         expected = put_serializer(model.user_invite, data={
             'id': 1,
+            'access_token': access_token,
             **data,
         })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
                              'academy_id': None,
@@ -439,21 +562,48 @@ class SubscribeTestSuite(AuthTestCase):
                              'id': 1,
                              'role_id': None,
                              'sent_at': None,
-                             'status': 'WAITING_LIST',
+                             'status': 'ACCEPTED',
                              'token': hashlib.sha1(
                                  (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                              'process_message': '',
-                             'process_status': 'PENDING',
+                             'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': None,
                              **data,
                          }])
 
-        self.assertEqual(self.bc.database.list_of('auth.User'), [])
+        user_db = self.bc.database.list_of('auth.User')
+        for item in user_db:
+            self.assertTrue(isinstance(item['date_joined'], datetime))
+            del item['date_joined']
+
+        self.assertEqual(user_db, [{
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'id': 1,
+            'is_active': True,
+            'is_staff': False,
+            'is_superuser': False,
+            'last_login': None,
+            'last_name': 'valdomero',
+            'password': '',
+            'username': 'pokemon@potato.io',
+        }])
+
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
-        self.assertEqual(Token.get_or_create.call_args_list, [])
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+            call(
+                'pick_password', 'pokemon@potato.io', {
+                    'SUBJECT': 'Set your password at 4Geeks',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
+        ])
+
+        user = self.bc.database.get('auth.User', 1, dict=False)
+        self.assertEqual(Token.get_or_create.call_args_list, [
+            call(user=user, token_type='login'),
+        ])
 
     """
     🔽🔽🔽 Put with UserInvite, passing Cohort not found
@@ -539,18 +689,22 @@ class SubscribeTestSuite(AuthTestCase):
             'cohort': 1,
             'token': token,
         }
-        response = self.client.put(url, data, format='json')
+
+        access_token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+            response = self.client.put(url, data, format='json')
 
         del data['token']
 
         json = response.json()
         expected = put_serializer(model.user_invite, data={
             'id': 1,
+            'access_token': access_token,
             **data,
         })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         del data['cohort']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
@@ -561,21 +715,48 @@ class SubscribeTestSuite(AuthTestCase):
                              'id': 1,
                              'role_id': None,
                              'sent_at': None,
-                             'status': 'WAITING_LIST',
+                             'status': 'ACCEPTED',
                              'token': hashlib.sha1(
                                  (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                              'process_message': '',
-                             'process_status': 'PENDING',
+                             'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': None,
                              **data,
                          }])
 
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
-        self.assertEqual(self.bc.database.list_of('auth.User'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
-        self.assertEqual(Token.get_or_create.call_args_list, [])
+        user_db = self.bc.database.list_of('auth.User')
+        for item in user_db:
+            self.assertTrue(isinstance(item['date_joined'], datetime))
+            del item['date_joined']
+
+        self.assertEqual(user_db, [{
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'id': 1,
+            'is_active': True,
+            'is_staff': False,
+            'is_superuser': False,
+            'last_login': None,
+            'last_name': 'valdomero',
+            'password': '',
+            'username': 'pokemon@potato.io',
+        }])
+
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+            call(
+                'pick_password', 'pokemon@potato.io', {
+                    'SUBJECT': 'Set your password at 4Geeks',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
+        ])
+
+        user = self.bc.database.get('auth.User', 1, dict=False)
+        self.assertEqual(Token.get_or_create.call_args_list, [
+            call(user=user, token_type='login'),
+        ])
 
     """
     🔽🔽🔽 Put with UserInvite, passing Cohort and it found, Academy available as saas, User does not exists
@@ -616,7 +797,7 @@ class SubscribeTestSuite(AuthTestCase):
         })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         del data['cohort']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
@@ -631,7 +812,7 @@ class SubscribeTestSuite(AuthTestCase):
                              'token': hashlib.sha1(
                                  (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                              'process_message': '',
-                             'process_status': 'PENDING',
+                             'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': None,
                              **data,
@@ -710,7 +891,7 @@ class SubscribeTestSuite(AuthTestCase):
         })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         del data['cohort']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
@@ -725,7 +906,7 @@ class SubscribeTestSuite(AuthTestCase):
                              'token': hashlib.sha1(
                                  (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                              'process_message': '',
-                             'process_status': 'PENDING',
+                             'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': None,
                              **data,
@@ -824,18 +1005,23 @@ class SubscribeTestSuite(AuthTestCase):
             'syllabus': 1,
             'token': token,
         }
-        response = self.client.put(url, data, format='json')
+
+        access_token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+            response = self.client.put(url, data, format='json')
 
         del data['token']
 
         json = response.json()
+
         expected = put_serializer(model.user_invite, data={
             'id': 1,
+            'access_token': access_token,
             **data,
         })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         del data['syllabus']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
@@ -846,10 +1032,10 @@ class SubscribeTestSuite(AuthTestCase):
                 'id': 1,
                 'role_id': None,
                 'sent_at': None,
-                'status': 'WAITING_LIST',
+                'status': 'ACCEPTED',
                 'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                 'process_message': '',
-                'process_status': 'PENDING',
+                'process_status': 'DONE',
                 'token': token,
                 'syllabus_id': 1,
                 **data,
@@ -857,10 +1043,37 @@ class SubscribeTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
-        self.assertEqual(self.bc.database.list_of('auth.User'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
-        self.assertEqual(Token.get_or_create.call_args_list, [])
+        user_db = self.bc.database.list_of('auth.User')
+        for item in user_db:
+            self.assertTrue(isinstance(item['date_joined'], datetime))
+            del item['date_joined']
+
+        self.assertEqual(user_db, [{
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'id': 1,
+            'is_active': True,
+            'is_staff': False,
+            'is_superuser': False,
+            'last_login': None,
+            'last_name': 'valdomero',
+            'password': '',
+            'username': 'pokemon@potato.io',
+        }])
+
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+            call(
+                'pick_password', 'pokemon@potato.io', {
+                    'SUBJECT': 'Set your password at 4Geeks',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
+        ])
+
+        user = self.bc.database.get('auth.User', 1, dict=False)
+        self.assertEqual(Token.get_or_create.call_args_list, [
+            call(user=user, token_type='login'),
+        ])
 
     """
     🔽🔽🔽 Put with UserInvite, passing Syllabus and it found, Academy available as saas, User does not exists
@@ -906,7 +1119,7 @@ class SubscribeTestSuite(AuthTestCase):
         })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         del data['syllabus']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
@@ -921,7 +1134,7 @@ class SubscribeTestSuite(AuthTestCase):
                              'token': hashlib.sha1(
                                  (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                              'process_message': '',
-                             'process_status': 'PENDING',
+                             'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': 1,
                              **data,
@@ -1006,7 +1219,7 @@ class SubscribeTestSuite(AuthTestCase):
         })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         del data['syllabus']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
@@ -1021,7 +1234,7 @@ class SubscribeTestSuite(AuthTestCase):
                              'token': hashlib.sha1(
                                  (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
                              'process_message': '',
-                             'process_status': 'PENDING',
+                             'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': 1,
                              **data,
@@ -1123,7 +1336,7 @@ class SubscribeTestSuite(AuthTestCase):
         }
         academy = {'available_as_saas': True}
         plan = {'time_of_life': None, 'time_of_life_unit': None, 'has_waiting_list': True, 'invites': []}
-        model = self.bc.database.create(user_invite=user_invite, cohort=1, academy=academy, plan=plan)
+        model = self.bc.database.create(user_invite=user_invite, academy=academy, plan=plan)
         url = reverse_lazy('authenticate:subscribe')
         data = {
             'email': 'pokemon@potato.io',
@@ -1138,42 +1351,36 @@ class SubscribeTestSuite(AuthTestCase):
             response = self.client.put(url, data, format='json')
 
         del data['token']
+        del data['plan']
 
         json = response.json()
-        expected = {'detail': 'plan-has-waiting-list', 'status_code': 400}
+        expected = put_serializer(model.user_invite, plans=[model.plan], data={
+            'id': 1,
+            **data,
+        })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
-                         [{
-                             'academy_id': 1,
-                             'author_id': None,
-                             'cohort_id': 1,
-                             'id': 1,
-                             'role_id': None,
-                             'sent_at': None,
-                             'status': 'WAITING_LIST',
-                             'email': 'pokemon@potato.io',
-                             'first_name': None,
-                             'last_name': None,
-                             'phone': '',
-                             'token': hashlib.sha1(
-                                 (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
-                             'process_message': '',
-                             'process_status': 'PENDING',
-                             'token': token,
-                             'syllabus_id': None,
-                         }])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [{
+            'academy_id': 1,
+            'author_id': None,
+            'cohort_id': None,
+            'id': 1,
+            'role_id': None,
+            'sent_at': None,
+            'status': 'WAITING_LIST',
+            'process_message': '',
+            'process_status': 'PENDING',
+            'token': token,
+            'syllabus_id': None,
+            **data,
+        }])
 
-        user_db = self.bc.database.list_of('auth.User')
-        for item in user_db:
-            self.assertTrue(isinstance(item['date_joined'], datetime))
-            del item['date_joined']
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
 
-        self.assertEqual(user_db, [])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [plan_db_item(model.plan, data={})])
-        self.bc.check.queryset_with_pks(model.plan.invites.all(), [])
+        self.bc.check.queryset_with_pks(model.plan.invites.all(), [1])
 
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [])
@@ -1223,7 +1430,7 @@ class SubscribeTestSuite(AuthTestCase):
                                   })
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [{
             'academy_id': 1,
@@ -1234,7 +1441,7 @@ class SubscribeTestSuite(AuthTestCase):
             'sent_at': None,
             'status': 'ACCEPTED',
             'process_message': '',
-            'process_status': 'PENDING',
+            'process_status': 'DONE',
             'token': token,
             'syllabus_id': None,
             **data,

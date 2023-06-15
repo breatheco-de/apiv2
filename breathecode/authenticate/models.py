@@ -10,6 +10,7 @@ import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
 from django.contrib.contenttypes.models import ContentType
+from django import forms
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
@@ -298,11 +299,13 @@ class AcademyAuthSettings(models.Model):
 PENDING = 'PENDING'
 SYNCHED = 'SYNCHED'
 UNKNOWN = 'UNKNOWN'
+PAYMENT_CONFLICT = 'PAYMENT_CONFLICT'
 STORAGE_STATUS = (
     (PENDING, 'Pending'),
     (SYNCHED, 'Synched'),
     (ERROR, 'Error'),
     (UNKNOWN, 'Unknown'),
+    (PAYMENT_CONFLICT, 'Payment conflict'),
 )
 
 ADD = 'ADD'
@@ -365,15 +368,27 @@ class GithubAcademyUser(models.Model):
         if self.__old_action != self.storage_action:
             has_mutated = True
 
+        if not self.user and (credentials :=
+                              CredentialsGithub.objects.filter(username=self.username).first()):
+            self.user = credentials.user
+
         exit_op = super().save(*args, **kwargs)
 
         if has_mutated and self.storage_status == 'SYNCHED':
+            prev = GithubAcademyUserLog.objects.filter(
+                academy_user=self, storage_status=self.storage_status,
+                storage_action=self.storage_action).order_by('-created_at').first()
+
             user_log = GithubAcademyUserLog(
                 academy_user=self,
                 storage_status=self.storage_status,
                 storage_action=self.storage_action,
             )
             user_log.save()
+
+            if prev:
+                prev.valid_until = user_log.created_at
+                prev.save()
 
         return exit_op
 
@@ -382,6 +397,7 @@ class GithubAcademyUserLog(models.Model):
     academy_user = models.ForeignKey(GithubAcademyUser, on_delete=models.CASCADE)
     storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
     storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
+    valid_until = models.DateTimeField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
