@@ -148,6 +148,19 @@ class AssetHookSerializer(serpy.Serializer):
     solution_video_url = serpy.Field()
     intro_video_url = serpy.Field()
     published_at = serpy.Field()
+    
+    technologies = serpy.Field()
+    seo_keywords = serpy.Field()
+    
+    def get_technologies(self, obj):
+        _s = list(
+            map(lambda t: t.slug,
+                obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
+        return ",".join(_s)
+    
+    def get_seo_keywords(self, obj):
+        _s = list(map(lambda t: t.slug, obj.seo_keywords.all()))
+        return ",".join(_s)
 
 
 class AssetSerializer(serpy.Serializer):
