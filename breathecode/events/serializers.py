@@ -11,6 +11,7 @@ from slugify import slugify
 from rest_framework import serializers
 import serpy, logging
 from django.utils import timezone
+from django.db.models.query_utils import Q
 
 logger = logging.getLogger(__name__)
 
@@ -449,7 +450,7 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventCheckin
-        exclude = ('event', 'created_at', 'updated_at', 'attendee')
+        exclude = ('event', 'created_at', 'updated_at')
 
     def validate(self, data: dict[str, Any]):
         return data
@@ -460,8 +461,8 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
         # if "attended_at" not in data and self.instance.attended_at is None:
         #     new_data['attended_at'] = timezone.now()
 
-        event_type = super().update(instance, {**validated_data, **new_data})
-        return event_type
+        event_checkin = super().update(instance, {**validated_data, **new_data})
+        return event_checkin
 
 
 class POSTEventCheckinSerializer(serializers.ModelSerializer):
@@ -469,6 +470,25 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventCheckin
         exclude = ('created_at', 'updated_at', 'attended_at', 'status')
+
+    def validate(self, data):
+
+        event_checkin = EventCheckin.objects.filter(Q(attendee=data['attendee'])
+                                                    | Q(email=data['email']),
+                                                    event=data['event']).first()
+        if event_checkin is not None:
+            if event_checkin.attendee is None:
+                event_checkin.attendee = self.context['user']
+                event_checkin.save()
+
+            raise ValidationException(translation(
+                self.context['lang'],
+                en='This user already has an event checkin associated to this event',
+                es='Este usuario ya esta registrado en este evento',
+                slug='user-registered-in-event'),
+                                      code=400)
+
+        return data
 
 
 class PostEventTypeSerializer(EventTypeSerializerMixin):

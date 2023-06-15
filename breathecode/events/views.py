@@ -855,7 +855,11 @@ class EventMeCheckinView(APIView):
             **request.data, 'email': request.user.email,
             'attendee': request.user.id,
             'event': event.id
-        })
+        },
+                                                context={
+                                                    'lang': lang,
+                                                    'user': request.user
+                                                })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
