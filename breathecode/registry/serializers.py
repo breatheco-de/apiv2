@@ -150,8 +150,8 @@ class AssetHookSerializer(serpy.Serializer):
     intro_video_url = serpy.Field()
     published_at = serpy.Field()
     
-    technologies = serpy.Field()
-    seo_keywords = serpy.Field()
+    technologies = serpy.MethodField()
+    seo_keywords = serpy.MethodField()
     
     def get_technologies(self, obj):
         _s = list(
