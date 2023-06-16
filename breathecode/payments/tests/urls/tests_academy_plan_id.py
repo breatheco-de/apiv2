@@ -22,7 +22,6 @@ def service_item_serializer(service_item, service):
         'how_many': service_item.how_many,
         'service': {
             'groups': [],
-            'price_per_unit': service.price_per_unit,
             'private': service.private,
             'slug': service.slug,
         },

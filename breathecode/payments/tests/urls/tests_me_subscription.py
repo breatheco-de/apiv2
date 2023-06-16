@@ -64,7 +64,6 @@ def group_serializer(group, permissions=[]):
 
 def service_serializer(service, groups=[], permissions=[]):
     return {
-        'price_per_unit': service.price_per_unit,
         'private': service.private,
         'slug': service.slug,
         'groups': [group_serializer(group, permissions) for group in groups],
