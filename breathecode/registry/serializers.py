@@ -138,6 +138,7 @@ class AssetHookSerializer(serpy.Serializer):
     visibility = serpy.Field()
     url = serpy.Field()
     readme_url = serpy.Field()
+    readme = serpy.Field()
     difficulty = serpy.Field()
     duration = serpy.Field()
     description = serpy.Field()
