@@ -60,7 +60,6 @@ def plan_serializer(plan, service_items, service, cohorts=[], financing_options=
 def service_serializer(service, cohorts=[], data={}):
     return {
         'groups': [],
-        'price_per_unit': service.price_per_unit,
         'private': service.private,
         'slug': service.slug,
         **data,

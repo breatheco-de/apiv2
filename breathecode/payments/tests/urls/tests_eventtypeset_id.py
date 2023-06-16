@@ -31,7 +31,6 @@ def event_type_serializer(event_type, academy):
 def service_serializer(service):
     return {
         'groups': [],
-        'price_per_unit': service.price_per_unit,
         'private': service.private,
         'slug': service.slug,
     }
@@ -50,6 +49,10 @@ def academy_service_serialize(academy_service, academy, currency, service):
         'currency': currency_serializer(currency),
         'id': academy_service.id,
         'price_per_unit': academy_service.price_per_unit,
+        'max_items': academy_service.max_items,
+        'bundle_size': academy_service.bundle_size,
+        'max_amount': academy_service.max_amount,
+        'discount_ratio': academy_service.discount_ratio,
         'service': service_serializer(service),
     }
 

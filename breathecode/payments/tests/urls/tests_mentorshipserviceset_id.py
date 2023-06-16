@@ -35,7 +35,6 @@ def mentorship_service_serializer(self, mentorship_service, academy):
 def service_serializer(service):
     return {
         'groups': [],
-        'price_per_unit': service.price_per_unit,
         'private': service.private,
         'slug': service.slug,
     }
@@ -53,6 +52,10 @@ def academy_service_serialize(academy_service, academy, currency, service):
         'academy': academy_serializer(academy),
         'currency': currency_serializer(currency),
         'id': academy_service.id,
+        'max_items': academy_service.max_items,
+        'bundle_size': academy_service.bundle_size,
+        'max_amount': academy_service.max_amount,
+        'discount_ratio': academy_service.discount_ratio,
         'price_per_unit': academy_service.price_per_unit,
         'service': service_serializer(service),
     }
