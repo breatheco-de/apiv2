@@ -54,7 +54,6 @@ def get_serializer(service_item, service, service_item_features=[], data={}):
         'how_many': service_item.how_many,
         'service': {
             'groups': [],
-            'price_per_unit': service.price_per_unit,
             'private': service.private,
             'slug': service.slug,
         },
