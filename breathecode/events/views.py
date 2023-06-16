@@ -30,13 +30,14 @@ from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibil
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (EventBigSerializer, GetLiveClassSerializer, LiveClassJoinSerializer,
-                          LiveClassSerializer, EventSerializer, EventSmallSerializer, EventTypeSerializer,
-                          EventTypeBigSerializer, EventCheckinSerializer, EventSmallSerializerNoAcademy,
-                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
-                          EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
-                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer,
-                          EventCheckinSmallSerializer, PUTEventCheckinSerializer, POSTEventCheckinSerializer)
+from .serializers import (EventBigSerializer, EventPublicBigSerializer, GetLiveClassSerializer,
+                          LiveClassJoinSerializer, LiveClassSerializer, EventSerializer, EventSmallSerializer,
+                          EventTypeSerializer, EventTypeBigSerializer, EventCheckinSerializer,
+                          EventSmallSerializerNoAcademy, EventTypeVisibilitySettingSerializer,
+                          PostEventTypeSerializer, EventTypePutSerializer, VenueSerializer,
+                          OrganizationBigSerializer, OrganizationSerializer, EventbriteWebhookSerializer,
+                          OrganizerSmallSerializer, EventCheckinSmallSerializer, PUTEventCheckinSerializer,
+                          POSTEventCheckinSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -105,12 +106,26 @@ def get_events(request):
     return Response(serializer.data)
 
 
+@permission_classes([AllowAny])
 class EventView(APIView):
     """
     List all snippets, or create a new snippet.
     """
 
-    def get(self, request, format=None):
+    def get(self, request, event_id=None):
+
+        if event_id is not None:
+            event = Event.objects.get(id=event_id)
+
+            if not event:
+                raise ValidationException(translation(lang,
+                                                      en='Event not found',
+                                                      es='Evento no encontrado',
+                                                      slug='event-not-found'),
+                                          code=404)
+
+            serializer = EventPublicBigSerializer(event, many=False)
+            return Response(serializer.data)
 
         items = Event.objects.all()
         lookup = {}

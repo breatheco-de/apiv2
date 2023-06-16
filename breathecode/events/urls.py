@@ -23,6 +23,7 @@ urlpatterns = [
          name='academy_event_liveclass_join_hash'),
     path('all', get_events, name='all'),
     path('eventype', EventTypeView.as_view(), name='eventype'),
+    path('event/<int:event_id>', EventView.as_view(), name='event_id'),
     path('event/<int:event_id>/checkin', EventCheckinView.as_view(), name='event_checkin'),
     path('academy/event', AcademyEventView.as_view(), name='academy_event'),
     path('academy/event/<int:event_id>', AcademyEventView.as_view(), name='academy_event_id'),
