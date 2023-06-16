@@ -71,6 +71,7 @@ class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'event_type',
     ]
     search_fields = ['slug', 'title', 'eventbrite_id', 'eventbrite_organizer_id']
+    raw_id_fields = ['host_user']
     actions = ['export_as_csv', reattempt_add_event_slug_as_acp_tag]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
