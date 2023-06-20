@@ -179,14 +179,15 @@ class GetProfileSerializer(serpy.Serializer):
     blog = serpy.Field()
 
 
-class UserInviteSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
+class UserInviteShortSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     email = serpy.Field()
     sent_at = serpy.Field()
     created_at = serpy.Field()
+
+
+class UserInviteNoUrlSerializer(UserInviteShortSerializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
@@ -194,6 +195,8 @@ class UserInviteSerializer(serpy.Serializer):
     cohort = CohortTinySerializer(required=False)
     role = RoleSmallSerializer(required=False)
 
+
+class UserInviteSerializer(UserInviteNoUrlSerializer):
     invite_url = serpy.MethodField()
 
     def get_invite_url(self, _invite):
@@ -1021,6 +1024,18 @@ class AuthSerializer(serializers.Serializer):
         else:
             msg = 'Must include "username" and "password".'
             raise serializers.ValidationError(msg, code=403)
+
+        if user and not UserInvite.objects.filter(
+                email__iexact=email, status='ACCEPTED', is_email_validated=True).exists():
+            invites = UserInvite.objects.filter(email__iexact=email,
+                                                status='ACCEPTED',
+                                                is_email_validated=False).order_by('-id')
+
+            data = UserInviteNoUrlSerializer(invites, many=True).data
+            raise ValidationException('You need to validate your email first',
+                                      slug='email-not-validated',
+                                      code=403,
+                                      data=data)
 
         attrs['user'] = user
         return attrs

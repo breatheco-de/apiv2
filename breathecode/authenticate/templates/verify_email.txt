@@ -1,0 +1,8 @@
+{% extends "base.txt" %}
+{% block content %}
+Hello! Please click on the following button confirm your email:
+
+{{ LINK }}
+
+If you didn't register in 4Geeks academy ignore this message
+{% endblock %}

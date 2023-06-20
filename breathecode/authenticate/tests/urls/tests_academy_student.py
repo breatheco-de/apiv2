@@ -25,6 +25,7 @@ def generate_user_invite(data: dict) -> dict:
         'author_id': None,
         'cohort_id': None,
         'email': None,
+        'is_email_validated': False,
         'first_name': None,
         'id': 0,
         'last_name': None,

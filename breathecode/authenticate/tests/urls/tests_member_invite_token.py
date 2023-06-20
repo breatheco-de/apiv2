@@ -448,6 +448,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          [{
                              **self.bc.format.to_dict(model.user_invite),
                              'status': 'ACCEPTED',
+                             'is_email_validated': True,
                          }])
 
         user_db = [
@@ -508,6 +509,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          [{
                              **self.bc.format.to_dict(model.user_invite),
                              'status': 'ACCEPTED',
+                             'is_email_validated': True,
                          }])
 
         user_db = [
@@ -566,6 +568,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          [{
                              **self.bc.format.to_dict(model.user_invite),
                              'status': 'ACCEPTED',
+                             'is_email_validated': True,
                          }])
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [
@@ -629,6 +632,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          [{
                              **self.bc.format.to_dict(model.user_invite),
                              'status': 'ACCEPTED',
+                             'is_email_validated': True,
                          }])
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [
@@ -686,6 +690,7 @@ class AuthenticateTestSuite(AuthTestCase):
             {
                 **self.bc.format.to_dict(model.user_invite[0]),
                 'status': 'ACCEPTED',
+                'is_email_validated': True,
             },
             self.bc.format.to_dict(model.user_invite[1]),
         ])
@@ -741,6 +746,7 @@ class AuthenticateTestSuite(AuthTestCase):
             {
                 **self.bc.format.to_dict(model.user_invite[1]),
                 'status': 'ACCEPTED',
+                'is_email_validated': True,
             },
         ])
 
@@ -798,6 +804,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          [{
                              **self.bc.format.to_dict(model.user_invite),
                              'status': 'ACCEPTED',
+                             'is_email_validated': True,
                          }])
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [
