@@ -1,6 +1,6 @@
 {% extends "base.txt" %}
 {% block content %}
-Hello! Please click on the following button confirm your email:
+Hello! Please click on the following button to confirm your email:
 
 {{ LINK }}
 
