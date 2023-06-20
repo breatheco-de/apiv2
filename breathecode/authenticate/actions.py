@@ -7,6 +7,7 @@ import string
 import urllib.parse
 from random import randint
 from django.core.handlers.wsgi import WSGIRequest
+import breathecode.notify.actions as notify_actions
 
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -88,7 +89,7 @@ def resend_invite(token=None, email=None, first_name=None):
     params = {'callback': 'https://admin.4geeks.com'}
     querystr = urllib.parse.urlencode(params)
     url = os.getenv('API_URL', '') + '/v1/auth/member/invite/' + str(token) + '?' + querystr
-    send_email_message('welcome_academy', email, {
+    notify_actions.send_email_message('welcome_academy', email, {
         'email': email,
         'subject': 'Invitation to join 4Geeks',
         'LINK': url,
