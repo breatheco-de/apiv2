@@ -22,7 +22,7 @@ urlpatterns = [
          AcademyLiveClassJoinView.as_view(),
          name='academy_event_liveclass_join_hash'),
     path('all', get_events, name='all'),
-    path('event/<int:event_id>', EventPublicView.as_view(), name='event'),
+    path('event/<slug:event_slug>', EventPublicView.as_view(), name='event'),
     path('eventype', EventTypeView.as_view(), name='eventype'),
     path('event/<int:event_id>/checkin', EventCheckinView.as_view(), name='event_checkin'),
     path('academy/event', AcademyEventView.as_view(), name='academy_event'),

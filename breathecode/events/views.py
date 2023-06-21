@@ -112,11 +112,11 @@ class EventPublicView(APIView):
     """
     permission_classes = [AllowAny]
 
-    def get(self, request, event_id=None, format=None):
+    def get(self, request, event_slug=None, format=None):
         lang = get_user_language(request)
 
-        if event_id is not None:
-            event = Event.objects.filter(id=event_id).first()
+        if event_slug is not None:
+            event = Event.objects.filter(slug=event_slug).first()
 
             if not event:
                 raise ValidationException(translation(lang,
