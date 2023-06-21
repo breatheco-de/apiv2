@@ -242,6 +242,30 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     tags = serpy.Field()
 
 
+class EventPublicBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    description = serpy.Field()
+    excerpt = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    currency = serpy.Field()
+    banner = serpy.Field()
+    capacity = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    host = serpy.Field()
+    academy = AcademySerializer(required=False)
+    host_user = UserBigSerializer(required=False)
+    online_event = serpy.Field()
+    venue = VenueSerializer(required=False)
+    event_type = EventTypeBigSerializer(required=False)
+    status = serpy.Field()
+    published_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
 class EventBigSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
