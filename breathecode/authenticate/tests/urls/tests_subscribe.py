@@ -68,6 +68,7 @@ def user_invite_db_item(data={}):
         'role_id': None,
         'sent_at': None,
         'status': 'PENDING',
+        'is_email_validated': False,
         'token': '',
         'process_message': '',
         'process_status': 'PENDING',
