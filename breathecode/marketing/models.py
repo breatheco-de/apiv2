@@ -4,6 +4,8 @@ from django.db import models
 from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth.models import User
+
+from breathecode.authenticate.models import UserInvite
 from .signals import form_entry_won_or_lost
 from breathecode.admissions.models import Academy, Cohort
 from django.core.validators import RegexValidator
@@ -750,6 +752,12 @@ class Course(models.Model):
 
     icon_url = models.URLField(help_text='Image icon to show on website')
     technologies = models.CharField(max_length=150, blank=False)
+    has_waiting_list = models.BooleanField(default=False, help_text='Has waiting list?')
+
+    invites = models.ManyToManyField(UserInvite,
+                                     blank=True,
+                                     help_text='Plan\'s invites',
+                                     related_name='courses')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

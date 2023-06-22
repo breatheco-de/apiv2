@@ -1068,6 +1068,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
     def validate(self, data: dict[str, str]):
         from breathecode.payments.models import Plan
+        from breathecode.marketing.models import Course
 
         lang = self.context.get('lang', 'en')
 
@@ -1108,23 +1109,70 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                             es='El usuario ya existe, inicie sesión en su lugar.',
                             slug='user-exists'))
 
-        plan_id = self.context.get('plan')
         plan = None
-        if plan_id and not (plan := Plan.objects.filter(id=plan_id).first()):
-            raise ValidationException(
-                translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
+        if plan_pk := self.context.get('plan'):
+            try:
+                kwargs = {}
+                if isinstance(plan_pk, int):
+                    kwargs['id'] = plan_pk
+                else:
+                    kwargs['slug'] = plan_pk
+
+                plan = Plan.objects.filter(**kwargs).get()
+
+            except:
+                raise ValidationException(
+                    translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
+
+        course = None
+        if course_pk := self.context.get('course'):
+            try:
+                kwargs = {}
+                if isinstance(course_pk, int):
+                    kwargs['id'] = course_pk
+                else:
+                    kwargs['slug'] = course_pk
+
+                course = Course.objects.filter(**kwargs).get()
+
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='Course not found',
+                                es='Curso no encontrado',
+                                slug='course-not-found'))
 
         self.user = user
         self.plan = plan
+        self.course = course
 
         cohort = data.get('cohort')
         syllabus = data.get('syllabus')
+
+        if course and syllabus and not course.syllabus.filter(id=syllabus.id).exists():
+            raise ValidationException(
+                translation(lang,
+                            en='The syllabus does not belong to the course',
+                            es='El syllabus no pertenece al curso',
+                            slug='syllabus-not-belong-to-course'))
 
         if plan and plan.has_waiting_list == True:
             data['status'] = 'WAITING_LIST'
             data['process_status'] = 'PENDING'
 
         elif plan and plan.has_waiting_list == False:
+            data['status'] = 'ACCEPTED'
+            data['process_status'] = 'DONE'
+
+        elif course and course.has_waiting_list == True:
+            data['academy'] = course.academy
+            data['syllabus'] = syllabus
+            data['status'] = 'WAITING_LIST'
+            data['process_status'] = 'PENDING'
+
+        elif course and course.has_waiting_list == False:
+            data['academy'] = course.academy
+            data['syllabus'] = syllabus
             data['status'] = 'ACCEPTED'
             data['process_status'] = 'DONE'
 
@@ -1158,6 +1206,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if self.plan:
             self.plan.invites.add(instance)
 
+        if self.course:
+            self.course.invites.add(instance)
+
         return instance
 
     def update(self, *args, **kwargs):
@@ -1165,6 +1216,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if self.plan:
             self.plan.invites.add(instance)
+
+        if self.course:
+            self.course.invites.add(instance)
 
         return instance
 
