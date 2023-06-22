@@ -379,6 +379,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'role_id': model['user_invite'].role_id,
             'first_name': model['user_invite'].first_name,
             'last_name': model['user_invite'].last_name,
+            'is_email_validated': model['user_invite'].is_email_validated,
             'token': model['user_invite'].token,
             'author_id': model['user_invite'].author_id,
             'status': model['user_invite'].status,

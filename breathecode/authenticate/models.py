@@ -132,12 +132,16 @@ PROCESS_STATUS = (
 
 
 class UserInvite(models.Model):
+    _old_status: str
+    _email: str
 
     def __init__(self, *args, **kwargs):
         super(UserInvite, self).__init__(*args, **kwargs)
-        self.__old_status = self.status
+        self._old_status = self.status
+        self._email = self.email
 
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
+    is_email_validated = models.BooleanField(default=False)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
     syllabus = models.ForeignKey('admissions.Syllabus',
@@ -176,13 +180,19 @@ class UserInvite(models.Model):
     def save(self, *args, **kwargs):
 
         status_updated = False
-        if self.pk is None or self.__old_status != self.status:
+        if self.pk is None or self._old_status != self.status:
             status_updated = True
+
+        if self.pk and self._email and self.email != self._email:
+            raise forms.ValidationError('Email is readonly')
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
+        self._email = self.email
+
         if status_updated:
             invite_status_updated.send(instance=self, sender=UserInvite)
+            self._old_status = self.status
 
 
 INVITED = 'INVITED'

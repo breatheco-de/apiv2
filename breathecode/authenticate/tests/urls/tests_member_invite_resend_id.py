@@ -405,6 +405,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'academy_id': model['user_invite'].academy_id,
             'cohort_id': model['user_invite'].cohort_id,
             'role_id': model['user_invite'].role_id,
+            'is_email_validated': model['user_invite'].is_email_validated,
             'first_name': model['user_invite'].first_name,
             'last_name': model['user_invite'].last_name,
             'token': model['user_invite'].token,

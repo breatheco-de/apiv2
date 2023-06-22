@@ -15,18 +15,20 @@ Including another URLconf
 """
 from django.urls import path
 
-from .views import (AcademyInviteView, AcademyTokenView, GithubMeView, GitpodUserView, LoginView, LogoutView,
-                    MeInviteView, MemberView, PasswordResetView, ProfileInviteMeView, ProfileMePictureView,
-                    ProfileMeView, StudentView, TemporalTokenView, TokenTemporalView, UserMeView,
-                    WaitingListView, get_facebook_token, get_github_token, get_google_token, get_roles,
-                    get_slack_token, get_token_info, get_user_by_id_or_email, get_users, login_html_view,
-                    pick_password, render_academy_invite, render_invite, render_user_invite,
-                    reset_password_view, save_facebook_token, save_github_token, save_google_token,
-                    save_slack_token, sync_gitpod_users_view, GithubUserView, AcademyGithubSyncView,
-                    AcademyAuthSettingsView)
+from .views import (AcademyInviteView, AcademyTokenView, ConfirmEmailView, GithubMeView, GitpodUserView,
+                    LoginView, LogoutView, MeInviteView, MemberView, PasswordResetView, ProfileInviteMeView,
+                    ProfileMePictureView, ProfileMeView, ResendInviteView, StudentView, TemporalTokenView,
+                    TokenTemporalView, UserMeView, WaitingListView, get_facebook_token, get_github_token,
+                    get_google_token, get_roles, get_slack_token, get_token_info, get_user_by_id_or_email,
+                    get_users, login_html_view, pick_password, render_academy_invite, render_invite,
+                    render_user_invite, reset_password_view, save_facebook_token, save_github_token,
+                    save_google_token, save_slack_token, sync_gitpod_users_view, GithubUserView,
+                    AcademyGithubSyncView, AcademyAuthSettingsView)
 
 app_name = 'authenticate'
 urlpatterns = [
+    path('confirmation/<str:token>', ConfirmEmailView.as_view(), name='confirmation_token'),
+    path('invite/resend/<int:invite_id>', ResendInviteView.as_view(), name='invite_resend_id'),
     path('member/invite/resend/<int:invite_id>', AcademyInviteView.as_view(), name='member_invite_resend_id'),
     path('subscribe/', WaitingListView.as_view(), name='subscribe'),
     path('user/', get_users, name='user'),
@@ -67,7 +69,7 @@ urlpatterns = [
     # get token from email and password
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    # get a another token (temporal), from a logged in user
+    # get an another token (temporal), from a logged in user
     path('academy/token/', AcademyTokenView.as_view(), name='academy_token'),
     path('token/me', TemporalTokenView.as_view(), name='token_me'),
     path('token/<str:token>', get_token_info, name='token'),  # get token information
