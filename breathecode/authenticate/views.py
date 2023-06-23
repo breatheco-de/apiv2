@@ -160,35 +160,36 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
     permission_classes = [AllowAny]
 
     def post(self, request):
-        from breathecode.payments.models import Plan
-
         data = {**request.data}
         lang = get_user_language(request)
 
-        if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
+        syllabus = None
+        if (v := data.pop('syllabus', None)):
             try:
-                data['syllabus'] = Syllabus.objects.filter(slug=syllabus).values_list('id', flat=True).first()
-            except:
+                args = {}
+                if isinstance(v, int):
+                    args['id'] = v
+                else:
+                    args['slug'] = v
+
+                syllabus = Syllabus.objects.filter(**args).get()
+
+            except Exception as e:
                 raise ValidationException(
                     translation(lang,
                                 en='The syllabus does not exist',
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
 
-        if (plan := data.get('plan')) and isinstance(plan, str):
-            try:
-                data['plan'] = Plan.objects.filter(slug=plan).values_list('id', flat=True).first()
-            except:
-                raise ValidationException(
-                    translation(lang,
-                                en='The plan does not exist',
-                                es='El plan no existe',
-                                slug='plan-not-found'))
+        if syllabus:
+            data['syllabus'] = syllabus.id
 
         serializer = UserInviteWaitingListSerializer(data=data,
                                                      context={
                                                          'lang': lang,
                                                          'plan': data.get('plan'),
+                                                         'course': data.get('course'),
+                                                         'syllabus': syllabus,
                                                      })
         if serializer.is_valid():
             serializer.save()
@@ -196,8 +197,6 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request):
-        from breathecode.payments.models import Plan
-
         lang = get_user_language(request)
 
         invite = UserInvite.objects.filter(email=request.data.get('email'),
@@ -212,31 +211,34 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
         data = {**request.data}
 
-        if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
+        syllabus = None
+        if (v := data.pop('syllabus', None)):
             try:
-                data['syllabus'] = Syllabus.objects.filter(slug=syllabus).values_list('id', flat=True).first()
-            except:
+                args = {}
+                if isinstance(v, int):
+                    args['id'] = v
+                else:
+                    args['slug'] = v
+
+                syllabus = Syllabus.objects.filter(**args).get()
+
+            except Exception as e:
                 raise ValidationException(
                     translation(lang,
                                 en='The syllabus does not exist',
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
 
-        if (plan := data.get('plan')) and isinstance(plan, str):
-            try:
-                data['plan'] = Plan.objects.filter(slug=plan).values_list('id', flat=True).first()
-            except:
-                raise ValidationException(
-                    translation(lang,
-                                en='The plan does not exist',
-                                es='El plan no existe',
-                                slug='plan-not-found'))
+        if syllabus:
+            data['syllabus'] = syllabus.id
 
         serializer = UserInviteWaitingListSerializer(invite,
-                                                     data=request.data,
+                                                     data=data,
                                                      context={
                                                          'lang': lang,
                                                          'plan': data.get('plan'),
+                                                         'course': data.get('course'),
+                                                         'syllabus': syllabus,
                                                      })
         if serializer.is_valid():
             serializer.save()
