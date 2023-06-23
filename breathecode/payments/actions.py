@@ -468,9 +468,9 @@ class BagHandler:
         self._add_resources_to_bag()
         self._validate_just_select_one_resource_per_type()
         self._get_plans_that_not_found()
-        self._report_items_not_found()  #2
+        self._report_items_not_found()
         self._add_service_items_to_bag()
-        self._add_plans_to_bag()  #1
+        self._add_plans_to_bag()
         self._validate_just_one_plan()
 
         self._validate_buy_plans_or_service_items()
