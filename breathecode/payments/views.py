@@ -1099,6 +1099,26 @@ class CheckingView(APIView):
                         cohort = Cohort.objects.filter(academy__main_currency__isnull=False, **kwargs).first()
                         if cohort:
                             academy = cohort.academy
+                            request.data['cohort'] = cohort.id
+
+                    if not academy and (plans := request.data.get('plans')) and len(plans) == 1:
+                        kwargs = {}
+                        pk = plans[0]
+                        if isinstance(pk, int):
+                            kwargs['id'] = int(pk)
+
+                        else:
+                            kwargs['slug'] = pk
+
+                        plan = Plan.objects.filter(owner__main_currency__isnull=False, **kwargs).first()
+
+                        # auto select cohort if just have a cohort available
+                        if plan and (x := plan.available_cohorts.filter()) and len(
+                                plan.available_cohorts.filter()) == 1:
+                            request.data['cohort'] = x[0].id
+
+                        if plan:
+                            academy = plan.owner
 
                     if not academy:
                         raise ValidationException(translation(
