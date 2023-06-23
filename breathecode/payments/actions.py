@@ -384,17 +384,24 @@ class BagHandler:
         if isinstance(self.plans, list):
             for plan in self.plans:
                 kwargs = {}
+                exclude = {}
 
                 if plan and (isinstance(plan, int) or plan.isnumeric()):
                     kwargs['id'] = int(plan)
                 else:
                     kwargs['slug'] = plan
 
-                if not Plan.objects.filter(**kwargs, available_cohorts=self.selected_cohort):
+                if self.selected_cohort:
+                    kwargs['available_cohorts'] = self.selected_cohort
+
+                else:
+                    exclude['available_cohorts__id__gte'] = 1
+
+                if not Plan.objects.filter(**kwargs).exclude(**exclude):
                     self.plans_not_found.add(plan)
 
     def _report_items_not_found(self):
-        if self.service_items_not_found or self.plans_not_found or self.plans_not_found:
+        if self.service_items_not_found or self.plans_not_found or self.cohorts_not_found:
             raise ValidationException(translation(
                 self.lang,
                 en=f'Items not found: services={self.service_items_not_found}, plans={self.plans_not_found}, '
@@ -421,7 +428,7 @@ class BagHandler:
 
                 args, kwargs = self._lookups(plan)
 
-                p = Plan.objects.filter(*args, **kwargs, available_cohorts=self.selected_cohort).first()
+                p = Plan.objects.filter(*args, **kwargs).first()
 
                 if p and p not in self.bag.plans.filter():
                     self.bag.plans.add(p)
@@ -461,9 +468,9 @@ class BagHandler:
         self._add_resources_to_bag()
         self._validate_just_select_one_resource_per_type()
         self._get_plans_that_not_found()
-        self._report_items_not_found()
+        self._report_items_not_found()  #2
         self._add_service_items_to_bag()
-        self._add_plans_to_bag()
+        self._add_plans_to_bag()  #1
         self._validate_just_one_plan()
 
         self._validate_buy_plans_or_service_items()

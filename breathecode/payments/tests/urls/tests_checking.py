@@ -1714,3 +1714,534 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
+
+    # When: Passing just the plan in the body without academy
+    #    -> and the academy have a currency
+    # Then: It should infer the academy from the plan to fill the bag
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    def test__inferring_academy_from_plan__no_linked(self):
+        bag = {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'service_items': [],
+        }
+
+        currency = {'code': 'USD', 'name': 'United States dollar'}
+
+        plan = {
+            'price_per_month': 0,
+            'price_per_quarter': 0,
+            'price_per_half': 0,
+            'price_per_year': 0,
+            'is_renewable': False,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'trial_duration': random.randint(1, 10),
+        }
+
+        service = {
+            'price_per_unit': random.random() * 100,
+        }
+
+        how_many1 = random.randint(1, 5)
+        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        service_item = {'how_many': how_many1}
+        subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        subscription=subscription,
+                                        skip_cohort=1,
+                                        service_item=service_item,
+                                        service=service,
+                                        plan=plan,
+                                        plan_service_item=1,
+                                        financing_option=1,
+                                        currency=currency)
+        self.bc.request.authenticate(model.user)
+
+        service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
+        service_item.how_many = how_many2
+
+        url = reverse_lazy('payments:checking')
+        data = {
+            'type': 'PREVIEW',
+            'plans': random.choices([model.plan.id, model.plan.slug], k=1),
+        }
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+            response = self.client.put(url, data, format='json')
+
+        json = response.json()
+
+        price_per_month = model.plan.price_per_month
+        price_per_quarter = model.plan.price_per_quarter
+        price_per_half = model.plan.price_per_half
+        price_per_year = model.plan.price_per_year
+        expected = get_serializer(
+            model.bag,
+            [model.plan],
+            [model.service_item],
+            [],
+            model.service,
+            [],
+            [model.financing_option],
+            model.currency,
+            data={
+                'amount_per_month': price_per_month,
+                'amount_per_quarter': price_per_quarter,
+                'amount_per_half': price_per_half,
+                'amount_per_year': price_per_year,
+                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+                'token': token,
+            },
+        )
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'amount_per_month': price_per_month,
+                'amount_per_quarter': price_per_quarter,
+                'amount_per_half': price_per_half,
+                'amount_per_year': price_per_year,
+                'expires_at': UTC_NOW + timedelta(minutes=60),
+                'token': token,
+            },
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({
+                'lang': 'en',
+                'id': model.user.id,
+                'user_id': model.user.id,
+            }),
+        ])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
+
+    # When: Passing just the plan in the body without academy
+    #    -> and the academy have a currency
+    #    -> this plan have a EventTypeSet
+    # Then: It should infer the academy from the plan to fill the bag
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    def test__inferring_academy_from_plan__linked_to_event_type_set(self):
+        bag = {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'service_items': [],
+        }
+
+        currency = {'code': 'USD', 'name': 'United States dollar'}
+
+        plan = {
+            'price_per_month': 0,
+            'price_per_quarter': 0,
+            'price_per_half': 0,
+            'price_per_year': 0,
+            'is_renewable': False,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'trial_duration': random.randint(1, 10),
+        }
+
+        service = {
+            'price_per_unit': random.random() * 100,
+        }
+
+        how_many1 = random.randint(1, 5)
+        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        service_item = {'how_many': how_many1}
+        subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        event_type_set=1,
+                                        subscription=subscription,
+                                        skip_cohort=1,
+                                        service_item=service_item,
+                                        service=service,
+                                        plan=plan,
+                                        plan_service_item=1,
+                                        financing_option=1,
+                                        currency=currency)
+        self.bc.request.authenticate(model.user)
+
+        service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
+        service_item.how_many = how_many2
+
+        url = reverse_lazy('payments:checking')
+        data = {
+            'type': 'PREVIEW',
+            'plans': random.choices([model.plan.id, model.plan.slug], k=1),
+        }
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+            response = self.client.put(url, data, format='json')
+
+        json = response.json()
+
+        price_per_month = model.plan.price_per_month
+        price_per_quarter = model.plan.price_per_quarter
+        price_per_half = model.plan.price_per_half
+        price_per_year = model.plan.price_per_year
+        expected = get_serializer(
+            model.bag,
+            [model.plan],
+            [model.service_item],
+            [],
+            model.service,
+            [],
+            [model.financing_option],
+            model.currency,
+            data={
+                'amount_per_month': price_per_month,
+                'amount_per_quarter': price_per_quarter,
+                'amount_per_half': price_per_half,
+                'amount_per_year': price_per_year,
+                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+                'token': token,
+            },
+        )
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'amount_per_month': price_per_month,
+                'amount_per_quarter': price_per_quarter,
+                'amount_per_half': price_per_half,
+                'amount_per_year': price_per_year,
+                'expires_at': UTC_NOW + timedelta(minutes=60),
+                'token': token,
+            },
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({
+                'lang': 'en',
+                'id': model.user.id,
+                'user_id': model.user.id,
+            }),
+        ])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
+
+    # When: Passing just the plan in the body without academy
+    #    -> and the academy have a currency
+    # Then: It should infer the academy from the plan to fill the bag,
+    #    -> but the plan have a cohort linked, take it as selected cohort
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    def test__inferring_academy_from_plan__linked_to_1_cohort(self):
+        bag = {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'service_items': [],
+        }
+
+        currency = {'code': 'USD', 'name': 'United States dollar'}
+
+        plan = {
+            'price_per_month': 0,
+            'price_per_quarter': 0,
+            'price_per_half': 0,
+            'price_per_year': 0,
+            'is_renewable': False,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'trial_duration': random.randint(1, 10),
+        }
+
+        service = {
+            'price_per_unit': random.random() * 100,
+        }
+
+        how_many1 = random.randint(1, 5)
+        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        service_item = {'how_many': how_many1}
+        subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        subscription=subscription,
+                                        cohort=1,
+                                        service_item=service_item,
+                                        service=service,
+                                        plan=plan,
+                                        plan_service_item=1,
+                                        financing_option=1,
+                                        currency=currency)
+        self.bc.request.authenticate(model.user)
+
+        service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
+        service_item.how_many = how_many2
+
+        url = reverse_lazy('payments:checking')
+        data = {
+            'type': 'PREVIEW',
+            'plans': random.choices([model.plan.id, model.plan.slug], k=1),
+        }
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+            response = self.client.put(url, data, format='json')
+
+        json = response.json()
+
+        price_per_month = model.plan.price_per_month
+        price_per_quarter = model.plan.price_per_quarter
+        price_per_half = model.plan.price_per_half
+        price_per_year = model.plan.price_per_year
+        expected = get_serializer(
+            model.bag,
+            [model.plan],
+            [model.service_item],
+            [],
+            model.service,
+            [],
+            [model.financing_option],
+            model.currency,
+            data={
+                'amount_per_month': price_per_month,
+                'amount_per_quarter': price_per_quarter,
+                'amount_per_half': price_per_half,
+                'amount_per_year': price_per_year,
+                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+                'token': token,
+            },
+        )
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'amount_per_month': price_per_month,
+                'amount_per_quarter': price_per_quarter,
+                'amount_per_half': price_per_half,
+                'amount_per_year': price_per_year,
+                'expires_at': UTC_NOW + timedelta(minutes=60),
+                'token': token,
+            },
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({
+                'lang': 'en',
+                'id': model.user.id,
+                'user_id': model.user.id,
+            }),
+        ])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
+
+    # When: Passing just the plan in the body without academy
+    #    -> and the academy have a currency
+    # Then: It should infer the academy from the plan to fill the bag,
+    #    -> but the plan have c cohorts linked, emit a error
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    def test__inferring_academy_from_plan__linked_to_x_cohorts(self):
+        bag = {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'service_items': [],
+        }
+
+        currency = {'code': 'USD', 'name': 'United States dollar'}
+
+        plan = {
+            'price_per_month': 0,
+            'price_per_quarter': 0,
+            'price_per_half': 0,
+            'price_per_year': 0,
+            'is_renewable': False,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'trial_duration': random.randint(1, 10),
+        }
+
+        service = {
+            'price_per_unit': random.random() * 100,
+        }
+
+        how_many1 = random.randint(1, 5)
+        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        service_item = {'how_many': how_many1}
+        subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        subscription=subscription,
+                                        cohort=random.randint(2, 5),
+                                        service_item=service_item,
+                                        service=service,
+                                        plan=plan,
+                                        plan_service_item=1,
+                                        financing_option=1,
+                                        currency=currency)
+        self.bc.request.authenticate(model.user)
+
+        service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
+        service_item.how_many = how_many2
+
+        url = reverse_lazy('payments:checking')
+        data = {
+            'type': 'PREVIEW',
+            'plans': random.choices([model.plan.id, model.plan.slug], k=1),
+        }
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+            response = self.client.put(url, data, format='json')
+
+        json = response.json()
+
+        expected = {'detail': 'some-items-not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({
+                'lang': 'en',
+                'id': model.user.id,
+                'user_id': model.user.id,
+            }),
+        ])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
+
+    # When: Passing just the cohort in the body without academy
+    #    -> and the academy have a currency
+    # Then: It should infer the academy from the cohort to fill the bag
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    def test__inferring_academy_from_cohort(self):
+        bag = {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'service_items': [],
+        }
+
+        currency = {'code': 'USD', 'name': 'United States dollar'}
+
+        plan = {
+            'price_per_month': 0,
+            'price_per_quarter': 0,
+            'price_per_half': 0,
+            'price_per_year': 0,
+            'is_renewable': False,
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'trial_duration': random.randint(1, 10),
+        }
+
+        service = {
+            'price_per_unit': random.random() * 100,
+        }
+
+        how_many1 = random.randint(1, 5)
+        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        service_item = {'how_many': how_many1}
+        subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+
+        model = self.bc.database.create(user=1,
+                                        bag=bag,
+                                        academy=1,
+                                        subscription=subscription,
+                                        cohort=1,
+                                        service_item=service_item,
+                                        service=service,
+                                        plan=plan,
+                                        plan_service_item=1,
+                                        financing_option=1,
+                                        currency=currency)
+        self.bc.request.authenticate(model.user)
+
+        service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
+        service_item.how_many = how_many2
+
+        url = reverse_lazy('payments:checking')
+        data = {
+            'type': 'PREVIEW',
+            'plans': random.choices([model.plan.id, model.plan.slug], k=1),
+            'cohort': random.choice([model.cohort.id, model.cohort.slug]),
+        }
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+            response = self.client.put(url, data, format='json')
+
+        json = response.json()
+
+        price_per_month = model.plan.price_per_month
+        price_per_quarter = model.plan.price_per_quarter
+        price_per_half = model.plan.price_per_half
+        price_per_year = model.plan.price_per_year
+        expected = get_serializer(
+            model.bag,
+            [model.plan],
+            [model.service_item],
+            [],
+            model.service,
+            [],
+            [model.financing_option],
+            model.currency,
+            data={
+                'amount_per_month': price_per_month,
+                'amount_per_quarter': price_per_quarter,
+                'amount_per_half': price_per_half,
+                'amount_per_year': price_per_year,
+                'expires_at': self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+                'token': token,
+            },
+        )
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'amount_per_month': price_per_month,
+                'amount_per_quarter': price_per_quarter,
+                'amount_per_half': price_per_half,
+                'amount_per_year': price_per_year,
+                'expires_at': UTC_NOW + timedelta(minutes=60),
+                'token': token,
+            },
+        ])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
+            format_user_setting({
+                'lang': 'en',
+                'id': model.user.id,
+                'user_id': model.user.id,
+            }),
+        ])
+        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
+        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
