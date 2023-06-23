@@ -1117,11 +1117,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         user = User.objects.filter(email=data['email']).first()
 
         if not self.instance and user:
-            raise ValidationException(
-                translation(lang,
-                            en='User already exists, go ahead and log in instead.',
-                            es='El usuario ya existe, inicie sesión en su lugar.',
-                            slug='user-exists'))
+            raise ValidationException(translation(lang,
+                                                  en='User already exists, go ahead and log in instead.',
+                                                  es='El usuario ya existe, inicie sesión en su lugar.'),
+                                      slug='user-exists',
+                                      silent=True)
 
         plan_id = self.context.get('plan')
         plan = None
