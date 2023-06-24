@@ -1,10 +1,11 @@
 from django.urls import path
 
 from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, AcademyServiceView,
-                    AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableCheckoutView,
-                    EventTypeSetView, MeConsumableView, MeInvoiceView, AcademyInvoiceView,
-                    MeSubscriptionCancelView, MeSubscriptionChargeView, MentorshipServiceSetView, PayView,
-                    PlanOfferView, PlanView, ServiceItemView, ServiceView, MeSubscriptionView)
+                    AcademyAcademyServiceView, AcademySubscriptionView, BagView, CardView, CheckingView,
+                    ConsumableCheckoutView, EventTypeSetView, MeConsumableView, MeInvoiceView,
+                    AcademyInvoiceView, MeSubscriptionCancelView, MeSubscriptionChargeView,
+                    MentorshipServiceSetView, PayView, PlanOfferView, PlanView, ServiceItemView, ServiceView,
+                    MeSubscriptionView)
 
 # /v1/payment/offer
 app_name = 'payments'
@@ -24,6 +25,8 @@ urlpatterns = [
     path('service/<slug:service_slug>/items', ServiceItemView.as_view()),
     path('academy/service', AcademyServiceView.as_view()),
     path('academy/service/<slug:service_slug>', AcademyServiceView.as_view()),
+    path('academy/academyservice', AcademyAcademyServiceView.as_view()),
+    path('academy/academyservice/<slug:service_slug>', AcademyAcademyServiceView.as_view()),
     path('serviceitem', ServiceItemView.as_view(), name='serviceitem'),
     path('mentorshipserviceset', MentorshipServiceSetView.as_view(), name='mentorshipserviceset'),
     path('mentorshipserviceset/<int:mentorship_service_set_id>',

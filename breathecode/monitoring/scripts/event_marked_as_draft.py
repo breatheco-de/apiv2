@@ -5,7 +5,7 @@ There are draft events that need to be publised or deleted
 import os
 from breathecode.events.models import Event
 from breathecode.utils import ScriptNotification
-from breathecode.utils.datetime_interger import duration_to_str, from_now
+from breathecode.utils.datetime_integer import duration_to_str, from_now
 
 pendings = Event.objects.filter(status='DRAFT', academy__id=academy.id)
 total_pendings = pendings.count()

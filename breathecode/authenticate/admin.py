@@ -12,7 +12,7 @@ from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, Cre
                      GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog)
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
-from breathecode.utils.datetime_interger import from_now
+from breathecode.utils.datetime_integer import from_now
 from django.db.models import QuerySet
 from . import tasks
 

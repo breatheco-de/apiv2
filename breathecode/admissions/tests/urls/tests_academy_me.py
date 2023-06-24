@@ -10,7 +10,7 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
-from breathecode.utils.datetime_interger import DatetimeInteger
+from breathecode.utils.datetime_integer import DatetimeInteger
 from ..mixins import AdmissionsTestCase
 
 

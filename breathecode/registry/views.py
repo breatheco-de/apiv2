@@ -416,6 +416,8 @@ class AssetView(APIView, GenerateLookupsMixin):
     def get(self, request, asset_slug=None):
         handler = self.extensions(request)
         cache = handler.cache.get()
+        lang = get_user_language(request)
+        
         if cache is not None:
             return Response(cache, status=status.HTTP_200_OK)
 
@@ -492,6 +494,19 @@ class AssetView(APIView, GenerateLookupsMixin):
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
             lookup['status__in'] = [p.upper() for p in param.split(',')]
+            
+        try:
+            if 'academy' in self.request.GET:
+                param = self.request.GET.get('academy')
+                lookup['academy__in'] = [int(p) for p in param.split(',')]
+        except:
+            raise ValidationException(translation(
+                lang,
+                en='The academy filter value should be an integer',
+                es='El valor del filtro de academy debería ser un entero',
+                slug='academy-id-must-be-integer'),
+                                      code=400)
+        
 
         if 'video' in self.request.GET:
             param = self.request.GET.get('video')

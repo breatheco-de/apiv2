@@ -36,7 +36,7 @@ from .serializers import (EventBigSerializer, GetLiveClassSerializer, LiveClassJ
                           EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
                           EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
                           OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer,
-                          EventCheckinSmallSerializer, PUTEventCheckinSerializer)
+                          EventCheckinSmallSerializer, PUTEventCheckinSerializer, POSTEventCheckinSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -93,10 +93,10 @@ def get_events(request):
     else:
         lookup['status'] = 'ACTIVE'
 
-    lookup['starting_at__gte'] = timezone.now()
+    lookup['ending_at__gte'] = timezone.now()
     if 'past' in request.GET:
         if request.GET.get('past') == 'true':
-            lookup.pop('starting_at__gte')
+            lookup.pop('ending_at__gte')
             lookup['starting_at__lte'] = timezone.now()
 
     items = items.filter(**lookup).order_by('starting_at')
@@ -783,7 +783,8 @@ def join_event(request, token, event):
         })
 
     # if the event is happening right now and I have not joined yet
-    checkin = EventCheckin.objects.filter(event=event, attendee=token.user).first()
+    checkin = EventCheckin.objects.filter(Q(email=token.user.email) | Q(attendee=token.user),
+                                          event=event).first()
     if checkin is None:
         checkin = EventCheckin(event=event, attendee=token.user, email=token.user.email)
 
@@ -821,14 +822,44 @@ class EventMeCheckinView(APIView):
     """
 
     def put(self, request, event_id):
-
+        lang = get_user_language(request)
         items = get_my_event_types(request.user)
 
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
         if event is None:
-            raise ValidationException('Event not found or you dont have access', slug='event-not-found')
+            raise ValidationException(translation(lang,
+                                                  en='Event not found or you dont have access',
+                                                  es='Evento no encontrado o no tienes acceso',
+                                                  slug='event-not-found'),
+                                      code=404)
 
         serializer = PUTEventCheckinSerializer(event, request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request, event_id):
+        lang = get_user_language(request)
+        items = get_my_event_types(request.user)
+
+        event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        if event is None:
+            raise ValidationException(translation(lang,
+                                                  en='Event not found or you dont have access',
+                                                  es='Evento no encontrado o no tienes acceso',
+                                                  slug='event-not-found'),
+                                      code=404)
+
+        serializer = POSTEventCheckinSerializer(data={
+            **request.data, 'email': request.user.email,
+            'attendee': request.user.id,
+            'event': event.id
+        },
+                                                context={
+                                                    'lang': lang,
+                                                    'user': request.user
+                                                })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

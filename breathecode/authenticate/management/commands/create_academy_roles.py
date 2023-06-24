@@ -379,6 +379,22 @@ CAPABILITIES = [
         'slug': 'start_or_end_event',
         'description': 'Start or end event'
     },
+    {
+        'slug': 'crud_provisioning_activity',
+        'description': 'Create, update or delete provisioning activities'
+    },
+    {
+        'slug': 'read_service',
+        'description': 'Read service details'
+    },
+    {
+        'slug': 'read_academyservice',
+        'description': 'Read Academy Service details'
+    },
+    {
+        'slug': 'crud_academyservice',
+        'description': 'Crud Academy Service details'
+    },
 ]
 
 ROLES = [
@@ -417,6 +433,7 @@ ROLES = [
             'read_mentorship_mentor',
             'read_freelancer_bill',
             'read_keywordcluster',
+            'crud_academyservice',
         ],
     },
     {
@@ -467,6 +484,7 @@ ROLES = [
             'read_mentorship_mentor',
             'read_lead_gen_app',
             'read_technology',
+            'read_service',
         ],
     },
     {
@@ -475,17 +493,9 @@ ROLES = [
         'name':
         'Student',
         'caps': [
-            'crud_assignment',
-            'chatbot_message',
-            'read_syllabus',
-            'read_assignment',
-            'read_single_cohort',
-            'read_my_academy',
-            'read_all_cohort',
-            'crud_activity',
-            'read_mentorship_service',
-            'read_mentorship_mentor',
-            'read_cohort_log',
+            'crud_assignment', 'chatbot_message', 'read_syllabus', 'read_assignment', 'read_single_cohort',
+            'read_my_academy', 'read_all_cohort', 'crud_activity', 'read_mentorship_service',
+            'read_mentorship_mentor', 'read_cohort_log', 'read_service', 'read_academyservice'
         ],
     },
 ]
@@ -579,7 +589,7 @@ def extend_roles(roles: list[RoleType]) -> None:
     roles.append({
         'slug': 'career_support_head',
         'name': 'Career Support Head',
-        'caps': extend(roles, ['career_support', 'content_writer']) + []
+        'caps': extend(roles, ['career_support', 'content_writer']) + ['crud_syllabus']
     })
     roles.append({
         'slug':

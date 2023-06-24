@@ -22,7 +22,8 @@ from breathecode.payments.serializers import (
     GetBagSerializer, GetEventTypeSetSerializer, GetEventTypeSetSmallSerializer, GetInvoiceSerializer,
     GetInvoiceSmallSerializer, GetMentorshipServiceSetSerializer, GetMentorshipServiceSetSmallSerializer,
     GetPlanFinancingSerializer, GetPlanOfferSerializer, GetPlanSerializer,
-    GetServiceItemWithFeaturesSerializer, GetServiceSerializer, GetSubscriptionSerializer, ServiceSerializer)
+    GetServiceItemWithFeaturesSerializer, GetServiceSerializer, GetSubscriptionSerializer, ServiceSerializer,
+    GetAcademyServiceSmallSerializer, POSTAcademyServiceSerializer, PUTAcademyServiceSerializer)
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators.capable_of import capable_of
@@ -364,6 +365,83 @@ class AcademyServiceView(APIView):
             data['owner'] = academy_id
 
         serializer = ServiceSerializer(service, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyAcademyServiceView(APIView):
+    extensions = APIViewExtensions(sort='-id', paginate=True)
+
+    @capable_of('read_academyservice')
+    def get(self, request, academy_id=None, service_slug=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if service_slug is not None:
+            item = AcademyService.objects.filter(academy__id=academy_id, service__slug=service_slug).first()
+            if item is None:
+                raise ValidationException(translation(
+                    lang,
+                    en='There is no Academy Service with that service slug',
+                    es='No existe ningún Academy Service con ese slug de Service',
+                    slug='academy-service-not-found'),
+                                          code=404)
+
+            serializer = GetAcademyServiceSmallSerializer(item)
+            return handler.response(serializer.data)
+
+        items = AcademyService.objects.filter(academy__id=academy_id)
+
+        if mentorship_service_set := request.GET.get('mentorship_service_set'):
+            items = items.filter(mentorship_service_set in available_mentorship_service_sets)
+
+        if event_type_set := request.GET.get('event_type_set'):
+            items = items.filter(event_type_set in available_event_type_sets)
+
+        items = handler.queryset(items)
+        serializer = GetAcademyServiceSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of('crud_academyservice')
+    def post(self, request, academy_id=None):
+        data = request.data
+        lang = get_user_language(request)
+
+        data['academy'] = academy_id
+
+        serializer = POSTAcademyServiceSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_academyservice')
+    def put(self, request, service_slug=None, academy_id=None):
+        service = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None), slug=service_slug).first()
+        lang = get_user_language(request)
+
+        if not service:
+            raise ValidationException(translation(lang,
+                                                  en='Service not found',
+                                                  es='No existe el Servicio',
+                                                  slug='service-not-found'),
+                                      code=404)
+
+        academyservice = AcademyService.objects.filter(service=service.id, academy__id=academy_id).first()
+
+        if not academyservice:
+            raise ValidationException(translation(lang,
+                                                  en='Academy Service not found',
+                                                  es='No existe el Academy Service',
+                                                  slug='academyservice-not-found'),
+                                      code=404)
+
+        serializer = PUTAcademyServiceSerializer(academyservice, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

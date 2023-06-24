@@ -1075,13 +1075,29 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             raise ValidationException(
                 translation(lang, en='Email is required', es='El email es requerido', slug='without-email'))
 
-        if not self.instance and UserInvite.objects.filter(email=data['email'],
-                                                           status='WAITING_LIST').exists():
+        invites = UserInvite.objects.filter(email=data['email'])
+
+        if not self.instance and invites.filter(status='WAITING_LIST').exists():
             raise ValidationException(
                 translation(lang,
                             en='User already exists in the waiting list',
                             es='El usuario ya existe en la lista de espera',
                             slug='user-invite-exists'))
+
+        if not self.instance and invites.filter(status='PENDING').exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en='Check your email! You have a pending invitation link that needs to be accepted',
+                    es='¡Revisa tu correo! Tienes un link con una invitación pendiente que debe ser aceptada',
+                    slug='user-invite-exists-status-pending'))
+
+        if not self.instance and invites.filter(status='ACCEPTED').exists():
+            raise ValidationException(
+                translation(lang,
+                            en='You are already a member of 4Geeks.com, go ahead and log in',
+                            es='Ya eres miembro de 4Geeks.com, inicia sesión en su lugar',
+                            slug='user-invite-exists-status-accepted'))
 
         user = User.objects.filter(email=data['email']).first()
 
@@ -1098,38 +1114,38 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             raise ValidationException(
                 translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
 
-        if plan and plan.has_waiting_list == True:
-            raise ValidationException(
-                translation(lang,
-                            en='This plan has a waiting list',
-                            es='Este plan tiene una lista de espera',
-                            slug='plan-has-waiting-list'))
-
         self.user = user
         self.plan = plan
 
-        now = str(timezone.now())
-
         cohort = data.get('cohort')
         syllabus = data.get('syllabus')
-        if cohort and cohort.academy and cohort.academy.available_as_saas == True:
+
+        if plan and plan.has_waiting_list == True:
+            data['status'] = 'WAITING_LIST'
+            data['process_status'] = 'PENDING'
+
+        elif plan and plan.has_waiting_list == False:
+            data['status'] = 'ACCEPTED'
+            data['process_status'] = 'DONE'
+
+        elif cohort:
             data['academy'] = cohort.academy
             data['cohort'] = cohort
             data['status'] = 'ACCEPTED'
+            data['process_status'] = 'DONE'
 
-        elif syllabus and Cohort.objects.filter(academy__available_as_saas=True,
-                                                syllabus_version__syllabus=syllabus).exists():
+        elif syllabus and Cohort.objects.filter(syllabus_version__syllabus=syllabus).exists():
             data['syllabus'] = syllabus
             data['status'] = 'ACCEPTED'
-
-        elif plan:
-            data['status'] = 'ACCEPTED'
+            data['process_status'] = 'DONE'
 
         else:
-            data['status'] = 'WAITING_LIST'
+            data['status'] = 'ACCEPTED'
+            data['process_status'] = 'DONE'
 
         self.cohort = cohort
         self.syllabus = syllabus
+        now = str(timezone.now())
 
         if not self.instance:
             data['token'] = hashlib.sha1((now + data['email']).encode('UTF-8')).hexdigest()
@@ -1155,11 +1171,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     def get_access_token(self, obj: UserInvite):
         lang = self.context.get('lang', 'en')
 
-        without_cohort = not self.cohort or not self.cohort.academy or self.cohort.academy.available_as_saas != True
-        without_syllabus = not self.syllabus or not Cohort.objects.filter(
-            academy__available_as_saas=True, syllabus_version__syllabus=self.syllabus).exists()
-
-        if without_cohort and without_syllabus and not self.plan:
+        if obj.status != 'ACCEPTED':
             return None
 
         if not self.user:

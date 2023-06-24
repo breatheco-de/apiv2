@@ -34,9 +34,9 @@ class ProvisioningAcademyAdmin(admin.ModelAdmin):
 
 @admin.register(ProvisioningActivity)
 class ProvisioningActivityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity')
-    search_fields = ['username', 'task_associated_slug']
-    list_filter = ['bill__academy', 'status']
+    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill')
+    search_fields = ['username', 'task_associated_slug', 'bill__hash']
+    list_filter = ['bill__academy', 'status', ('bill', admin.EmptyFieldListFilter)]
     actions = []
 
     def _status(self, obj):
@@ -53,7 +53,7 @@ class ProvisioningActivityAdmin(admin.ModelAdmin):
             return ''
 
         return format_html(
-            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.storage_status_text}</small>")
+            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_text}</small>")
 
 
 @admin.register(ProvisioningBill)
@@ -78,8 +78,7 @@ class ProvisioningBillAdmin(admin.ModelAdmin):
             return ''
 
         return format_html(
-            f"<p class='{from_status(obj.storage_status)}'>{obj.storage_status}</p><small>{obj.storage_status_text}</small>"
-        )
+            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_details}</small>")
 
 
 @admin.register(ProvisioningContainer)
