@@ -14,6 +14,7 @@ from breathecode.registry.signals import asset_status_updated
 from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.events.models import EventCheckin, Event
 from breathecode.events.signals import new_event_attendee, new_event_order, event_status_updated
+from breathecode.events.serializers import EventHookSerializer
 from breathecode.admissions.models import CohortUser
 from breathecode.admissions.serializers import CohortUserHookSerializer
 from .tasks import send_mentorship_starting_notification
@@ -85,8 +86,13 @@ def handle_new_event_order(sender, instance, **kwargs):
 
 @receiver(event_status_updated, sender=Event)
 def handle_event_status_updated(sender, instance, **kwargs):
+    # logger.debug('Sending event_status_updated hook with new event status')
     model_label = get_model_label(instance)
-    HookManager.process_model_event(instance, model_label, 'event_status_updated')
+    serializer = EventHookSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'event_status_updated',
+                                    payload_override=serializer.data)
 
 
 @receiver(asset_status_updated, sender=Asset)

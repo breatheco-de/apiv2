@@ -512,21 +512,18 @@ def publish_event_from_eventbrite(data, org: Organization) -> None:
     now = get_current_iso_string()
 
     try:
-        if not Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).count():
-            raise Warning(f'The event with the eventbrite id `{data["id"]}` doesn\'t exist in breathecode '
-                          'yet')
+        events = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id)
+        if events.count() == 0:
+            raise Warning(f'The event with the eventbrite id `{data["id"]}` doesn\'t exist')
 
-        kwargs = {
-            'status': 'ACTIVE',
-            'eventbrite_status': data['status'],
-            'eventbrite_sync_description': now,
-            'eventbrite_sync_status': 'PERSISTED'
-        }
-
-        query = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id)
-        query.update(**kwargs)
-        logger.debug(f'The event with the eventbrite id `{data["id"]}` was saved')
-        return query.first()
+        for event in events:
+            event.status = 'ACTIVE'
+            event.eventbrite_status = data['status']
+            event.eventbrite_sync_description = now
+            event.eventbrite_sync_status = 'PERSISTED'
+            event.save()
+            logger.debug(f'The events with the eventbrite id `{data["id"]}` were saved')
+        return events.first()
 
     except Warning as e:
         logger.error(f'{now} => {e}')

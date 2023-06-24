@@ -225,6 +225,11 @@ class LeadGenerationApp(models.Model):
                                          null=True,
                                          blank=True,
                                          help_text='Incomig payload from the last request')
+    last_call_log = models.TextField(max_length=450,
+                                     default=None,
+                                     null=True,
+                                     blank=True,
+                                     help_text='Incomig payload from the last request')
 
     last_call_status = models.CharField(max_length=9,
                                         choices=LAST_CALL_STATUS,

@@ -199,6 +199,33 @@ class EventSmallSerializer(serpy.Serializer):
     author = UserSerializer(required=False)
 
 
+class EventHookSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    excerpt = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    url = serpy.Field()
+    banner = serpy.Field()
+    description = serpy.Field()
+    capacity = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    status = serpy.Field()
+    host = serpy.Field()
+    event_type = EventTypeSmallSerializer(required=False)
+    online_event = serpy.Field()
+    venue = VenueSerializer(required=False)
+    academy = AcademySerializer(required=False)
+    sync_with_eventbrite = serpy.Field()
+    eventbrite_sync_status = serpy.Field()
+    eventbrite_sync_description = serpy.Field()
+    live_stream_url = serpy.Field()
+    tags = serpy.Field()
+    host_user = UserSerializer(required=False)
+    author = UserSerializer(required=False)
+
+
 class LiveClassJoinSerializer(serpy.Serializer):
     id = serpy.Field()
     starting_at = serpy.Field()

@@ -87,7 +87,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         organization = {'eventbrite_id': 1}
         model = self.bc.database.create(organization=organization)
-        exception_message = 'The event with the eventbrite id `1` doesn\'t exist in breathecode yet'
+        exception_message = 'The event with the eventbrite id `1` doesn\'t exist'
 
         with self.assertRaisesMessage(Warning, exception_message):
             publish_event_from_eventbrite({'id': '1'}, model.organization)
@@ -117,7 +117,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         organization = {'eventbrite_id': 1}
         model = self.bc.database.create(organization=organization, event=1)
-        exception_message = 'The event with the eventbrite id `1` doesn\'t exist in breathecode yet'
+        exception_message = 'The event with the eventbrite id `1` doesn\'t exist'
 
         with self.assertRaisesMessage(Warning, exception_message):
             publish_event_from_eventbrite({'id': '1'}, model.organization)
