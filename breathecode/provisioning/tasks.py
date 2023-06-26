@@ -1,10 +1,12 @@
 from io import StringIO
 import json
 import logging
+import math
 import os
 
 from celery import Task, shared_task
 import pandas as pd
+from breathecode.payments.services.stripe import Stripe
 
 from breathecode.provisioning import actions
 from breathecode.provisioning.models import ProvisioningActivity, ProvisioningBill
@@ -12,6 +14,14 @@ from breathecode.services.google_cloud.storage import Storage
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+
+def get_provisioning_credit_price():
+    return float(os.getenv('PROVISIONING_CREDIT_PRICE', 10))
+
+
+def get_stripe_price_id():
+    return os.getenv('STRIPE_PRICE_ID', None)
 
 
 class BaseTaskWithRetry(Task):
@@ -44,6 +54,14 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
 
         bill.total_amount = amount
         bill.status = 'DUE' if amount else 'PAID'
+
+        if amount:
+            credit_price = get_provisioning_credit_price()
+            quantity = math.ceil(amount / credit_price)
+
+            s = Stripe()
+            bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
+
         bill.save()
 
 

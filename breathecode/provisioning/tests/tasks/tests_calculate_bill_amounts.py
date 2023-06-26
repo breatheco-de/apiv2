@@ -1,15 +1,27 @@
 """
 Test /answer/:id
 """
+import math
 import random
 from django.utils import timezone
 from breathecode.provisioning.tasks import calculate_bill_amounts
 import logging
 from unittest.mock import patch, MagicMock, call
+from breathecode.payments.services.stripe import Stripe
 
 from ..mixins import ProvisioningTestCase
 
 UTC_NOW = timezone.now()
+STRIPE_PRICE_ID = f'price_{random.randint(1000, 9999)}'
+CREDIT_PRICE = random.randint(1, 20)
+
+
+def apply_get_env(configuration={}):
+
+    def get_env(key, value=None):
+        return configuration.get(key, value)
+
+    return get_env
 
 
 class MakeBillsTestSuite(ProvisioningTestCase):
@@ -146,6 +158,11 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'PROVISIONING_CREDIT_PRICE': CREDIT_PRICE,
+               'STRIPE_PRICE_ID': STRIPE_PRICE_ID,
+           })))
     def test_bill_exists_and_activities_with_random_amounts__bill_amount_is_override(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {'hash': slug, 'total_amount': random.random() * 1000}
@@ -161,8 +178,13 @@ class MakeBillsTestSuite(ProvisioningTestCase):
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
+        stripe_url = self.bc.fake.url()
+        with patch('breathecode.payments.services.stripe.Stripe.create_payment_link',
+                   MagicMock(return_value=stripe_url)):
+            calculate_bill_amounts(slug)
 
-        calculate_bill_amounts(slug)
+            quantity = math.ceil(amount / CREDIT_PRICE)
+            self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
@@ -170,6 +192,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'status': 'DUE',
                 'total_amount': amount,
                 'paid_at': None,
+                'stripe_url': stripe_url,
             },
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
@@ -240,6 +263,11 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'PROVISIONING_CREDIT_PRICE': CREDIT_PRICE,
+               'STRIPE_PRICE_ID': STRIPE_PRICE_ID,
+           })))
     def test_academy_reacted_to_bill__no_paid__force(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {
@@ -260,7 +288,13 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        calculate_bill_amounts(slug, force=True)
+        stripe_url = self.bc.fake.url()
+        with patch('breathecode.payments.services.stripe.Stripe.create_payment_link',
+                   MagicMock(return_value=stripe_url)):
+            calculate_bill_amounts(slug, force=True)
+
+            quantity = math.ceil(amount / CREDIT_PRICE)
+            self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
@@ -268,6 +302,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'status': 'DUE',
                 'total_amount': amount,
                 'paid_at': None,
+                'stripe_url': stripe_url,
             },
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [

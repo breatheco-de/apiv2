@@ -6,18 +6,23 @@ from django.shortcuts import redirect
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.provisioning.serializers import ProvisioningActivitySerializer
 from breathecode.provisioning.tasks import upload
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import private_view, render_message
 from .actions import get_provisioning_vendor
-from .models import ProvisioningProfile
+from .models import ProvisioningActivity, ProvisioningProfile
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 import pandas as pd
+
+from rest_framework_csv.renderers import CSVRenderer
+from rest_framework.renderers import JSONRenderer
 
 
 @private_view()
@@ -79,6 +84,42 @@ def redirect_workspaces(request, token):
         return render_message(request, str(e))
 
     return redirect(vendor.workspaces_url)
+
+
+class AcademyActivityView(APIView):
+    extensions = APIViewExtensions(sort='-id')
+
+    renderer_classes = [JSONRenderer, CSVRenderer]
+
+    @capable_of('read_provisioning_activity')
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        query = handler.lookup.build(
+            lang,
+            strings={
+                'exact': [
+                    'hash',
+                    'username',
+                    'product_name',
+                    'status',
+                ],
+            },
+            datetimes={
+                'gte': ['registered_at'],
+                'lte': ['created_at'],  # fix it
+            },
+            overwrite={
+                'start': 'registered_at',
+                'end': 'created_at',
+            },
+        )
+
+        items = ProvisioningActivity.objects.filter(query, bill__academy__id=academy_id)
+        items = handler.queryset(items)
+        serializer = ProvisioningActivitySerializer(items, many=True)
+        return Response(serializer.data)
 
 
 class UploadView(APIView):

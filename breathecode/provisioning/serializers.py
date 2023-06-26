@@ -35,6 +35,26 @@ class ContainerMeBigSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
+class ProvisioningActivitySerializer(serpy.Serializer):
+    id = serpy.Field()
+    username = serpy.Field()
+    registered_at = serpy.Field()
+    product_name = serpy.Field()
+    sku = serpy.Field()
+    quantity = serpy.Field()
+    unit_type = serpy.Field()
+    price_per_unit = serpy.Field()
+    currency_code = serpy.Field()
+    multiplier = serpy.Field()
+    repository_url = serpy.Field()
+    processed_at = serpy.Field()
+    status = serpy.Field()
+    bill = serpy.MethodField()
+
+    def get_bill(self, obj):
+        return obj.bill.id if obj.bill else None
+
+
 class ProvisioningContainerSerializer(serializers.ModelSerializer):
     # slug = serializers.CharField(required=False, default=None)
 
