@@ -775,6 +775,10 @@ class CourseTranslation(models.Model):
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
+    short_description = models.CharField(max_length=120,
+                                         null=True,
+                                         blank=True,
+                                         help_text='Short description with no more than 120 characters.')
     course_modules = models.JSONField(
         default=None,
         blank=True,
