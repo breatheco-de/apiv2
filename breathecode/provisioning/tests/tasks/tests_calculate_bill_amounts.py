@@ -190,7 +190,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
                 'status': 'DUE',
-                'total_amount': amount,
+                'total_amount': quantity * CREDIT_PRICE,
                 'paid_at': None,
                 'stripe_url': stripe_url,
             },
@@ -300,7 +300,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
                 'status': 'DUE',
-                'total_amount': amount,
+                'total_amount': quantity * CREDIT_PRICE,
                 'paid_at': None,
                 'stripe_url': stripe_url,
             },

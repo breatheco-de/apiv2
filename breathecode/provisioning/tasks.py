@@ -52,7 +52,6 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
         for activity in ProvisioningActivity.objects.filter(bill=bill):
             amount += activity.price_per_unit * activity.quantity
 
-        bill.total_amount = amount
         bill.status = 'DUE' if amount else 'PAID'
 
         if amount:
@@ -61,6 +60,10 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
 
             s = Stripe()
             bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
+            bill.total_amount = quantity * credit_price
+
+        else:
+            bill.total_amount = amount
 
         bill.save()
 
