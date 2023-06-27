@@ -80,7 +80,7 @@ def get_my_event_types(_user):
         ids = []
 
         utc_now = timezone.now()
-        statuses = ['CANCELLED', 'DEPRECATED', 'FREE_TRIAL']
+        statuses = ['CANCELLED', 'DEPRECATED']
         at_least_one_resource_linked = (Q(selected_cohort__isnull=False)
                                         | Q(selected_mentorship_service_set__isnull=False)
                                         | Q(selected_event_type_set__isnull=False))
