@@ -20,6 +20,7 @@ from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
 from django import forms
 from django.core.handlers.wsgi import WSGIRequest
+from breathecode.payments import signals
 from breathecode.utils.validation_exception import ValidationException
 
 from breathecode.utils.validators.language import validate_language_code
@@ -1134,6 +1135,11 @@ class Consumable(AbstractServiceItem):
 
     def save(self):
         self.full_clean()
+
+        created = not self.id
+
+        if created and self.how_many != 0:
+            signals.grant_service_permissions.send(instance=self, sender=self.__class__)
 
         super().save()
 
