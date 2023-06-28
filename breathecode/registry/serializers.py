@@ -11,6 +11,8 @@ from rest_framework import serializers
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from breathecode.utils.validation_exception import ValidationException
+from breathecode.utils.i18n import translation
+from breathecode.authenticate.actions import get_user_language
 
 
 class ProfileSerializer(serpy.Serializer):
@@ -657,8 +659,25 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         ] and self.instance.test_status not in ['OK', 'WARNING']:
             raise ValidationException('This asset has to pass tests successfully before publishing', code=400)
 
+        lang = self.instance.lang
         if 'slug' in data:
             data['slug'] = slugify(data['slug']).lower()
+            asset_slug = Asset.objects.filter(slug=data['slug'])
+            if asset_slug is None:
+                asset_alias = AssetAlias.objects.filter(slug=data['slug'])
+                if asset_alias is not None:
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'Asset with slug "{data["slug"]}" already exists.',
+                        es=f'El asset con slug "{data["slug"]}" ya existe.',
+                        slug='slug-already-exists'),
+                                              code=409)
+            else:
+                raise ValidationException(translation(lang,
+                                                      en=f'Asset with slug "{data["slug"]}" already exists.',
+                                                      es=f'El asset con slug "{data["slug"]}" ya existe.',
+                                                      slug='slug-already-exists'),
+                                          code=409)
 
         lang = self.instance.lang
         if 'lang' in data:

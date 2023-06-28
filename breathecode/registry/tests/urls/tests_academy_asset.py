@@ -618,3 +618,57 @@ class RegistryTestAsset(RegistryTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_asset__put_many_with_same_slug(self):
+        """Test Asset bulk update"""
+        self.headers(academy=1)
+
+        slug = self.bc.fake.slug()
+
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_asset',
+                                     role='potato',
+                                     asset_category={'lang': 'es'},
+                                     asset={
+                                         'category_id': 1,
+                                         'academy_id': 1,
+                                         'slug': 'asset-1',
+                                         'visibility': 'PRIVATE',
+                                         'test_status': 'OK',
+                                         'lang': 'es',
+                                     })
+
+        title = self.bc.fake.slug()
+        date = timezone.now()
+
+        url = reverse_lazy('registry:academy_asset')
+        data = [{
+            'category': 1,
+            'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+            'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
+            'title': title,
+            'id': 1,
+            'slug': 'asset-1',
+            'visibility': 'PUBLIC',
+            'asset_type': 'VIDEO',
+        }, {
+            'category': 1,
+            'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
+            'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
+            'title': title,
+            'id': 1,
+            'slug': 'asset-1',
+            'visibility': 'PUBLIC',
+            'asset_type': 'VIDEO',
+        }]
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+        print(json)
+
+        expected = {'detail': 'slug-already-exists', 'status_code': 409}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 409)
