@@ -258,6 +258,7 @@ class EventPublicBigSerializer(serpy.Serializer):
     academy = AcademySerializer(required=False)
     host_user = UserBigSerializer(required=False)
     online_event = serpy.Field()
+    free_for_bootcamps = serpy.Field()
     venue = VenueSerializer(required=False)
     event_type = EventTypeBigSerializer(required=False)
     status = serpy.Field()
