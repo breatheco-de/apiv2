@@ -32,7 +32,7 @@ UTC_NOW = timezone.now()
 USERNAMES = [fake.slug() for _ in range(10)]
 RANDOM_ACADEMIES = [random.randint(0, 2) for _ in range(10)]
 
-while len(set(RANDOM_ACADEMIES)) != 3:
+while len(set(RANDOM_ACADEMIES[:3])) != 3:
     RANDOM_ACADEMIES = [random.randint(0, 2) for _ in range(10)]
 
 
@@ -181,6 +181,7 @@ def provisioning_bill_data(data={}):
         'status': 'PENDING',
         'status_details': None,
         'total_amount': 0.0,
+        'stripe_url': None,
         **data,
     }
 
@@ -1752,7 +1753,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         mapping = {}
 
         for n in range(3):
-            mapping[n] = academies[n] + 1
+            mapping[academies[n]] = n + 1
 
         activities = []
         id = 0

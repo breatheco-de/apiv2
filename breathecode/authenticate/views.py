@@ -42,6 +42,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils.shorteners import C
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
 from .actions import (generate_academy_token, get_user_language, resend_invite, reset_password,
@@ -56,9 +57,9 @@ from .serializers import (AuthSerializer, GetGitpodUserSerializer, GetProfileAca
                           GetProfileAcademySmallSerializer, GetProfileSerializer, GitpodUserSmallSerializer,
                           MemberPOSTSerializer, MemberPUTSerializer, ProfileAcademySmallSerializer,
                           ProfileSerializer, RoleBigSerializer, RoleSmallSerializer, StudentPOSTSerializer,
-                          TokenSmallSerializer, UserInviteSerializer, UserInviteSmallSerializer,
-                          UserInviteWaitingListSerializer, UserMeSerializer, UserSerializer,
-                          UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
+                          TokenSmallSerializer, UserInviteSerializer, UserInviteShortSerializer,
+                          UserInviteSmallSerializer, UserInviteWaitingListSerializer, UserMeSerializer,
+                          UserSerializer, UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
                           PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer,
                           POSTGithubUserSerializer)
 
@@ -159,35 +160,36 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
     permission_classes = [AllowAny]
 
     def post(self, request):
-        from breathecode.payments.models import Plan
-
         data = {**request.data}
         lang = get_user_language(request)
 
-        if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
+        syllabus = None
+        if (v := data.pop('syllabus', None)):
             try:
-                data['syllabus'] = Syllabus.objects.filter(slug=syllabus).values_list('id', flat=True).first()
-            except:
+                args = {}
+                if isinstance(v, int):
+                    args['id'] = v
+                else:
+                    args['slug'] = v
+
+                syllabus = Syllabus.objects.filter(**args).get()
+
+            except Exception as e:
                 raise ValidationException(
                     translation(lang,
                                 en='The syllabus does not exist',
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
 
-        if (plan := data.get('plan')) and isinstance(plan, str):
-            try:
-                data['plan'] = Plan.objects.filter(slug=plan).values_list('id', flat=True).first()
-            except:
-                raise ValidationException(
-                    translation(lang,
-                                en='The plan does not exist',
-                                es='El plan no existe',
-                                slug='plan-not-found'))
+        if syllabus:
+            data['syllabus'] = syllabus.id
 
         serializer = UserInviteWaitingListSerializer(data=data,
                                                      context={
                                                          'lang': lang,
                                                          'plan': data.get('plan'),
+                                                         'course': data.get('course'),
+                                                         'syllabus': syllabus,
                                                      })
         if serializer.is_valid():
             serializer.save()
@@ -195,8 +197,6 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request):
-        from breathecode.payments.models import Plan
-
         lang = get_user_language(request)
 
         invite = UserInvite.objects.filter(email=request.data.get('email'),
@@ -211,31 +211,34 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
         data = {**request.data}
 
-        if (syllabus := data.get('syllabus')) and isinstance(syllabus, str):
+        syllabus = None
+        if (v := data.pop('syllabus', None)):
             try:
-                data['syllabus'] = Syllabus.objects.filter(slug=syllabus).values_list('id', flat=True).first()
-            except:
+                args = {}
+                if isinstance(v, int):
+                    args['id'] = v
+                else:
+                    args['slug'] = v
+
+                syllabus = Syllabus.objects.filter(**args).get()
+
+            except Exception as e:
                 raise ValidationException(
                     translation(lang,
                                 en='The syllabus does not exist',
                                 es='El syllabus no existe',
                                 slug='syllabus-not-found'))
 
-        if (plan := data.get('plan')) and isinstance(plan, str):
-            try:
-                data['plan'] = Plan.objects.filter(slug=plan).values_list('id', flat=True).first()
-            except:
-                raise ValidationException(
-                    translation(lang,
-                                en='The plan does not exist',
-                                es='El plan no existe',
-                                slug='plan-not-found'))
+        if syllabus:
+            data['syllabus'] = syllabus.id
 
         serializer = UserInviteWaitingListSerializer(invite,
-                                                     data=request.data,
+                                                     data=data,
                                                      context={
                                                          'lang': lang,
                                                          'plan': data.get('plan'),
+                                                         'course': data.get('course'),
+                                                         'syllabus': syllabus,
                                                      })
         if serializer.is_valid():
             serializer.save()
@@ -402,7 +405,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             raise ValidationException(f'Invalid invite status {new_status}', slug='invalid-status')
 
         if lookups:
-            items = UserInvite.objects.filter(**lookups, email=request.user.email)
+            items = UserInvite.objects.filter(**lookups, email=request.user.email, status='PENDING')
 
             for item in items:
 
@@ -425,6 +428,84 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         else:
             raise ValidationException('Invite ids were not provided', code=400, slug='missing-ids')
+
+
+class ConfirmEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def put(self, request, token=None):
+        get_user_language(request)
+        errors: list[C] = []
+
+        invite = UserInvite.objects.filter(token=token).first()
+        if invite is None:
+            raise ValidationException('Invite not found', code=404, slug='user-invite-not-found')
+
+        if not invite.email:
+            errors.append(C(f'This invite don\'t have email, contact to admin', slug=f'without-email'))
+
+        if invite.is_email_validated:
+            errors.append(C(f'Email already validated', slug=f'email-already-validated'))
+
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        invite.is_email_validated = True
+        invite.save()
+
+        serializer = UserInviteShortSerializer(invite, many=False)
+        return Response(serializer.data)
+
+
+class ResendInviteView(APIView):
+    permission_classes = [AllowAny]
+
+    def put(self, request, invite_id=None):
+        get_user_language(request)
+        errors: list[C] = []
+
+        invite = UserInvite.objects.filter(id=invite_id).first()
+        if invite is None:
+            raise ValidationException('Invite not found', code=404, slug='user-invite-not-found')
+
+        invite_answered = invite.status not in ['PENDING', 'WAITING_LIST']
+
+        if invite.is_email_validated and invite_answered:
+            status = invite.status.lower()
+            errors.append(C(f'You already {status} this invite', slug=f'user-already-{status}'))
+
+        if invite.status == 'WAITING_LIST':
+            status = invite.status.lower()
+            errors.append(C(f'You are in the waiting list, ', slug=f'user-already-{status}'))
+
+        if not invite.email:
+            status = invite.status.lower()
+            errors.append(C(f'This invite don\'t have email, contact to admin', slug=f'without-email'))
+
+        now = timezone.now()
+        days = 1
+        if invite.sent_at and invite.sent_at + timedelta(days=1) > now:
+            errors.append(
+                C(f'You have a pending invitation sent less than {days} day ago, check your email',
+                  slug=f'sent-at-diff-less-{days}-days'))
+
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        if not invite.is_email_validated and invite_answered:
+            notify_actions.send_email_message(
+                'verify_email', invite.email, {
+                    'SUBJECT': 'Verify your 4Geeks account',
+                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/confirmation/{invite.token}'
+                })
+
+        if not invite_answered:
+            resend_invite(invite.token, invite.email, invite.first_name)
+
+        invite.sent_at = timezone.now()
+        invite.save()
+        serializer = UserInviteShortSerializer(invite, many=False)
+        return Response(serializer.data)
 
 
 class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -1695,6 +1776,7 @@ def render_invite(request, token, member_id=None):
                 cu.save()
 
         invite.status = 'ACCEPTED'
+        invite.is_email_validated = True
         invite.save()
 
         callback = request.POST.get('callback', None)
@@ -1779,7 +1861,11 @@ def login_html_view(request):
                 msg = 'Must include "username" and "password".'
                 raise Exception(msg, code=403)
 
-            token, created = Token.get_or_create(user=user, token_type='login')
+            if user and not UserInvite.objects.filter(
+                    email__iexact=email, status='ACCEPTED', is_email_validated=True).exists():
+                raise Exception('You need to validate your email first')
+
+            token, _ = Token.get_or_create(user=user, token_type='login')
 
             request.session['token'] = token.key
             return HttpResponseRedirect(
@@ -1792,7 +1878,7 @@ def login_html_view(request):
         url = request.GET.get('url', None)
         if url is None or url == '':
             messages.error(request,
-                           "You must specify a 'url' (querystring) to redirect to after successfull login")
+                           "You must specify a 'url' (querystring) to redirect to after successful login")
 
     return render(request, 'login.html', {'form': form, 'redirect_url': request.GET.get('url', None)})
 

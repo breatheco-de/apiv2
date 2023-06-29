@@ -104,6 +104,7 @@ class ProvisioningBill(models.Model):
     status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
     paid_at = models.DateTimeField(null=True, default=None, blank=True)
     status_details = models.TextField(default=None, null=True, blank=True)
+    stripe_url = models.URLField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

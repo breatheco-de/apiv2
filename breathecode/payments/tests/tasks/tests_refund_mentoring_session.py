@@ -20,6 +20,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_0_items(self):
         refund_mentoring_session.delay(1)
 
@@ -41,6 +42,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_1_mentoring_session__nothing_provide(self):
         model = self.bc.database.create(mentorship_session=1)
 
@@ -70,6 +72,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_1_mentoring_session__just_with_mentee(self):
 
         user = {'groups': []}
@@ -103,6 +106,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_1_mentoring_session__just_with_service(self):
         model = self.bc.database.create(mentorship_session=1, mentorship_service=1)
 
@@ -132,6 +136,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_1_mentoring_session__just_with_right_status(self):
         mentorship_session = {'status': random.choice(['PENDING', 'STARTED', 'COMPLETED'])}
         model = self.bc.database.create(mentorship_session=mentorship_session)
@@ -162,6 +167,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_1_mentoring_session__all_elements_given(self):
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
 
@@ -200,6 +206,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_consumption_session_is_pending(self):
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
         how_many_consumables = random.randint(1, 10)
@@ -249,6 +256,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_consumption_session_is_done(self):
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
         how_many_consumables = random.randint(1, 10)
@@ -301,6 +309,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_consumption_session_is_cancelled(self):
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
         how_many_consumables = random.randint(1, 10)

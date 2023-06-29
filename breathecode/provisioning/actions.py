@@ -311,13 +311,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
 
     def write_activity(academy: Optional[Academy] = None):
         errors = []
-        if academy:
-            logs = context['logs'].get(metadata['userName'], None)
-            if logs is None:
-                logs = get_github_academy_user_logs(academy, metadata['userName'], context['limit'])
-                context['logs'][metadata['userName']] = logs
-
-        else:
+        if not academy:
             errors.append(f'User {metadata["userName"]} not found in any academy')
 
         pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
@@ -350,12 +344,6 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
             errors.append(f'Provisioning vendor Codespaces not found')
 
         date = iso_to_datetime(field['effectiveTime'])
-        if academy:
-            for log in logs:
-                if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
-                        and log['starting_at'] <= date <= log['ending_at']):
-                    errors.append(
-                        f'User {field["Username"]} was deleted from the academy during this event at {date}')
 
         pa = ProvisioningActivity()
         pa.bill = provisioning_bill

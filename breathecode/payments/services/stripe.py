@@ -205,3 +205,19 @@ class Stripe:
         invoice.save()
 
         return invoice
+
+    def create_payment_link(self, price_id: str, quantity: int) -> str:
+
+        stripe.api_key = self.api_key
+
+        def callback():
+            return stripe.PaymentLink.create(line_items=[
+                {
+                    'price': price_id,
+                    'quantity': quantity,
+                },
+            ], )
+
+        refund = self._i18n_validations(callback)
+
+        return refund['url']
