@@ -392,6 +392,7 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = FormEntry
         exclude = ()
+        read_only_fields = ['id']
 
     def create(self, validated_data):
 
