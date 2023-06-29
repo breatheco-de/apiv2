@@ -1034,6 +1034,7 @@ class AuthSerializer(serializers.Serializer):
             data = UserInviteNoUrlSerializer(invites, many=True).data
             raise ValidationException('You need to validate your email first',
                                       slug='email-not-validated',
+                                      silent=True,
                                       code=403,
                                       data=data)
 
