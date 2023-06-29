@@ -905,10 +905,10 @@ def refund_mentoring_session(session_id: int):
     consumption_session.status == 'CANCELLED'
     consumption_session.save()
 
-    how_many = consumption_session.how_many
-    consumable = consumption_session.consumable
-
     if consumption_session.status == 'DONE':
         logger.info('Refunding consumption session because it was discounted')
+
+        how_many = consumption_session.how_many
+        consumable = consumption_session.consumable
         reimburse_service_units.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
         return

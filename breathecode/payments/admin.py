@@ -1,5 +1,5 @@
 from django.contrib import admin
-from breathecode.payments import tasks
+from breathecode.payments import signals, tasks
 
 from breathecode.payments.models import (
     Bag, Consumable, ConsumptionSession, Currency, EventTypeSet, EventTypeSetTranslation, FinancialReputation,
@@ -72,12 +72,18 @@ class PlanTranslationAdmin(admin.ModelAdmin):
     search_fields = ['title', 'plan__slug']
 
 
+def grant_service_permissions(modeladmin, request, queryset):
+    for item in queryset.all():
+        signals.grant_service_permissions.send(instance=item, sender=item.__class__)
+
+
 @admin.register(Consumable)
 class ConsumableAdmin(admin.ModelAdmin):
     list_display = ('id', 'unit_type', 'how_many', 'service_item', 'user', 'valid_until')
     list_filter = ['unit_type']
     search_fields = ['service_item__service__slug']
     raw_id_fields = ['user', 'service_item', 'cohort', 'event_type_set', 'mentorship_service_set']
+    actions = [grant_service_permissions]
 
 
 @admin.register(Invoice)

@@ -179,14 +179,15 @@ class GetProfileSerializer(serpy.Serializer):
     blog = serpy.Field()
 
 
-class UserInviteSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
+class UserInviteShortSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     email = serpy.Field()
     sent_at = serpy.Field()
     created_at = serpy.Field()
+
+
+class UserInviteNoUrlSerializer(UserInviteShortSerializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
@@ -194,6 +195,8 @@ class UserInviteSerializer(serpy.Serializer):
     cohort = CohortTinySerializer(required=False)
     role = RoleSmallSerializer(required=False)
 
+
+class UserInviteSerializer(UserInviteNoUrlSerializer):
     invite_url = serpy.MethodField()
 
     def get_invite_url(self, _invite):
@@ -1022,6 +1025,18 @@ class AuthSerializer(serializers.Serializer):
             msg = 'Must include "username" and "password".'
             raise serializers.ValidationError(msg, code=403)
 
+        if user and not UserInvite.objects.filter(
+                email__iexact=email, status='ACCEPTED', is_email_validated=True).exists():
+            invites = UserInvite.objects.filter(email__iexact=email,
+                                                status='ACCEPTED',
+                                                is_email_validated=False).order_by('-id')
+
+            data = UserInviteNoUrlSerializer(invites, many=True).data
+            raise ValidationException('You need to validate your email first',
+                                      slug='email-not-validated',
+                                      code=403,
+                                      data=data)
+
         attrs['user'] = user
         return attrs
 
@@ -1068,6 +1083,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
     def validate(self, data: dict[str, str]):
         from breathecode.payments.models import Plan
+        from breathecode.marketing.models import Course
 
         lang = self.context.get('lang', 'en')
 
@@ -1102,29 +1118,76 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         user = User.objects.filter(email=data['email']).first()
 
         if not self.instance and user:
-            raise ValidationException(
-                translation(lang,
-                            en='User already exists, go ahead and log in instead.',
-                            es='El usuario ya existe, inicie sesión en su lugar.',
-                            slug='user-exists'))
+            raise ValidationException(translation(lang,
+                                                  en='User already exists, go ahead and log in instead.',
+                                                  es='El usuario ya existe, inicie sesión en su lugar.'),
+                                      slug='user-exists',
+                                      silent=True)
 
-        plan_id = self.context.get('plan')
         plan = None
-        if plan_id and not (plan := Plan.objects.filter(id=plan_id).first()):
-            raise ValidationException(
-                translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
+        if plan_pk := self.context.get('plan'):
+            try:
+                kwargs = {}
+                if isinstance(plan_pk, int):
+                    kwargs['id'] = plan_pk
+                else:
+                    kwargs['slug'] = plan_pk
+
+                plan = Plan.objects.filter(**kwargs).get()
+
+            except:
+                raise ValidationException(
+                    translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
+
+        course = None
+        if course_pk := self.context.get('course'):
+            try:
+                kwargs = {}
+                if isinstance(course_pk, int):
+                    kwargs['id'] = course_pk
+                else:
+                    kwargs['slug'] = course_pk
+
+                course = Course.objects.filter(**kwargs).get()
+
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='Course not found',
+                                es='Curso no encontrado',
+                                slug='course-not-found'))
 
         self.user = user
         self.plan = plan
+        self.course = course
 
         cohort = data.get('cohort')
         syllabus = data.get('syllabus')
+
+        if course and syllabus and not course.syllabus.filter(id=syllabus.id).exists():
+            raise ValidationException(
+                translation(lang,
+                            en='The syllabus does not belong to the course',
+                            es='El syllabus no pertenece al curso',
+                            slug='syllabus-not-belong-to-course'))
 
         if plan and plan.has_waiting_list == True:
             data['status'] = 'WAITING_LIST'
             data['process_status'] = 'PENDING'
 
         elif plan and plan.has_waiting_list == False:
+            data['status'] = 'ACCEPTED'
+            data['process_status'] = 'DONE'
+
+        elif course and course.has_waiting_list == True:
+            data['academy'] = course.academy
+            data['syllabus'] = syllabus
+            data['status'] = 'WAITING_LIST'
+            data['process_status'] = 'PENDING'
+
+        elif course and course.has_waiting_list == False:
+            data['academy'] = course.academy
+            data['syllabus'] = syllabus
             data['status'] = 'ACCEPTED'
             data['process_status'] = 'DONE'
 
@@ -1158,6 +1221,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if self.plan:
             self.plan.invites.add(instance)
 
+        if self.course:
+            self.course.invites.add(instance)
+
         return instance
 
     def update(self, *args, **kwargs):
@@ -1165,6 +1231,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if self.plan:
             self.plan.invites.add(instance)
+
+        if self.course:
+            self.course.invites.add(instance)
 
         return instance
 

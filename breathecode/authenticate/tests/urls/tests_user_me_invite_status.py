@@ -155,7 +155,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                     user_kwargs={'email': 'a@a.com'})
 
         invite_kwargs = {
-            'status': 'ACCEPTED',
+            'status': 'PENDING',
             'email': 'a@a.com',
             'id': 1,
         }
@@ -236,6 +236,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'email': 'a@a.com',
                              'first_name': None,
                              'id': 1,
+                             'is_email_validated': False,
                              'last_name': None,
                              'phone': '',
                              'role_id': 'potato',
@@ -252,6 +253,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'email': 'a@a.com',
                              'first_name': None,
                              'id': 2,
+                             'is_email_validated': False,
                              'last_name': None,
                              'phone': '',
                              'role_id': 'potato',

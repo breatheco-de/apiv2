@@ -184,7 +184,7 @@ class Event(models.Model):
                             validators=[validate_language_code])
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
-    free_for_bootcamps = models.BooleanField(default=None, blank=True, null=True)
+    free_for_bootcamps = models.BooleanField(default=None, blank=True, null=True, help_text='Determines if users that belong to an academy not available as saas can join the event for free.')
 
     url = models.URLField(
         max_length=255,
