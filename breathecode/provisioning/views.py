@@ -2,10 +2,12 @@ import hashlib
 from io import StringIO
 import json
 import os
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.notify.actions import get_template_content
 from breathecode.provisioning.serializers import ProvisioningActivitySerializer
 from breathecode.provisioning.tasks import upload
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -13,13 +15,15 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import private_view, render_message
 from .actions import get_provisioning_vendor
-from .models import ProvisioningActivity, ProvisioningProfile
+from .models import BILL_STATUS, ProvisioningActivity, ProvisioningBill, ProvisioningProfile
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 import pandas as pd
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.renderers import JSONRenderer
@@ -252,6 +256,81 @@ class UploadView(APIView):
                 })
 
         return Response(result, status=status.HTTP_207_MULTI_STATUS)
+
+
+# @private_view()
+# def render_html_all_bills(request, token):
+def render_html_all_bills(request):
+
+    ProvisioningActivity.objects.filter().delete()
+
+    status_mapper = {}
+    for key, value in BILL_STATUS:
+        status_mapper[key] = value
+
+        ProvisioningBill.objects.filter(status=key).delete()
+
+        # import django mixer
+        from mixer.backend.django import mixer
+
+        # if not ProvisioningBill.objects.filter(status=key).exists():
+        for n in range(5):
+            bill = mixer.blend(ProvisioningBill, status=key)
+            mixer.cycle(5).blend(ProvisioningActivity, bill=bill)
+
+    lookup = {}
+
+    status = 'DUE'
+    if 'status' in request.GET:
+        status = request.GET.get('status')
+    lookup['status'] = status.upper()
+
+    if 'academy' in request.GET:
+        lookup['academy__id__in'] = request.GET.get('academy').split(',')
+
+    items = ProvisioningBill.objects.filter(**lookup).exclude(academy__isnull=True)
+    # serializer = BigBillSerializer(items, many=True)
+
+    total_price = 0
+    # for bill in serializer.data:
+    for bill in []:
+        total_price += bill['total_price']
+
+    data = {
+        'status': status,
+        # 'token': token.key,
+        'title': f'Payments {status_mapper[status]}',
+        'possible_status': [(key, status_mapper[key]) for key, label in BILL_STATUS],
+        # 'bills': serializer.data,
+        'bills': items,
+        'total_price': total_price
+    }
+    template = get_template_content('provisioning_bills', data)
+    return HttpResponse(template['html'])
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def render_html_bill(request, id=None):
+    item = ProvisioningBill.objects.filter(id=id, academy__isnull=False).first()
+    if item is None:
+        template = get_template_content('message', {'message': 'Bill not found'})
+        return HttpResponse(template['html'])
+
+    status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
+    status_mapper = {}
+    for key, value in BILL_STATUS:
+        status_mapper[key] = value
+
+    data = {
+        **{},
+        'bill': item,
+        'issues': [vars(x) for x in ProvisioningActivity.objects.filter(bill=item)],
+        'status': status_map['DUE'],
+        'title': item.academy.name,
+    }
+    template = get_template_content('provisioning_invoice', data)
+    return HttpResponse(template['html'])
 
 
 # class ContainerMeView(APIView):

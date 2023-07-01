@@ -251,6 +251,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
             'hits': 1,
             'last_call_status': 'ERROR',
             'last_request_data': '{}',
+            'last_call_log': '{"language": ["This field may not be null."]}',
         }])
 
         self.assertEqual(persist_single_lead.delay.call_args_list, [])

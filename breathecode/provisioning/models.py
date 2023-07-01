@@ -104,6 +104,7 @@ class ProvisioningBill(models.Model):
     status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
     paid_at = models.DateTimeField(null=True, default=None, blank=True)
     status_details = models.TextField(default=None, null=True, blank=True)
+    stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True, help_text='Stripe id')
     stripe_url = models.URLField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -165,6 +166,9 @@ class ProvisioningActivity(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def price(self):
+        return self.price_per_unit * self.quantity
 
 
 class ProvisioningContainer(models.Model):

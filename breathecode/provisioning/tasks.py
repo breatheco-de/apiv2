@@ -59,7 +59,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
             quantity = math.ceil(amount / credit_price)
 
             s = Stripe()
-            bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
+            bill.stripe_id, bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
             bill.total_amount = quantity * credit_price
 
         else:

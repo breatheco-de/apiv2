@@ -181,6 +181,7 @@ def provisioning_bill_data(data={}):
         'status': 'PENDING',
         'status_details': None,
         'total_amount': 0.0,
+        'stripe_id': None,
         'stripe_url': None,
         **data,
     }

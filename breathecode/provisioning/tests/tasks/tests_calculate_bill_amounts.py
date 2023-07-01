@@ -178,9 +178,10 @@ class MakeBillsTestSuite(ProvisioningTestCase):
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
+        stripe_id = self.bc.fake.slug()
         stripe_url = self.bc.fake.url()
         with patch('breathecode.payments.services.stripe.Stripe.create_payment_link',
-                   MagicMock(return_value=stripe_url)):
+                   MagicMock(return_value=(stripe_id, stripe_url))):
             calculate_bill_amounts(slug)
 
             quantity = math.ceil(amount / CREDIT_PRICE)
@@ -192,6 +193,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'status': 'DUE',
                 'total_amount': quantity * CREDIT_PRICE,
                 'paid_at': None,
+                'stripe_id': stripe_id,
                 'stripe_url': stripe_url,
             },
         ])
@@ -288,9 +290,10 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
+        stripe_id = self.bc.fake.slug()
         stripe_url = self.bc.fake.url()
         with patch('breathecode.payments.services.stripe.Stripe.create_payment_link',
-                   MagicMock(return_value=stripe_url)):
+                   MagicMock(return_value=(stripe_id, stripe_url))):
             calculate_bill_amounts(slug, force=True)
 
             quantity = math.ceil(amount / CREDIT_PRICE)
@@ -302,6 +305,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'status': 'DUE',
                 'total_amount': quantity * CREDIT_PRICE,
                 'paid_at': None,
+                'stripe_id': stripe_id,
                 'stripe_url': stripe_url,
             },
         ])
