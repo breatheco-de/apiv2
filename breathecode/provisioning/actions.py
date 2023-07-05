@@ -210,6 +210,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
     def write_activity(academy: Optional[Academy] = None) -> None:
         errors = []
         provisioning_bill = None
+        provisioning_vendor = None
 
         if academy:
             logs = context['logs'].get(field['Username'], None)
@@ -225,6 +226,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
             if not provisioning_bill:
                 provisioning_bill = ProvisioningBill()
                 provisioning_bill.academy = academy
+                provisioning_bill.vendor = provisioning_vendor
                 provisioning_bill.status = 'PENDING'
                 provisioning_bill.hash = context['hash']
                 provisioning_bill.save()
@@ -323,6 +325,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
             slug = result[0]
 
         provisioning_bill = None
+        provisioning_vendor = None
         if academy:
             provisioning_bill = context['provisioning_bills'].get(academy.id, None)
 
@@ -332,6 +335,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
         if academy and not provisioning_bill:
             provisioning_bill = ProvisioningBill()
             provisioning_bill.academy = academy
+            provisioning_bill.vendor = provisioning_vendor
             provisioning_bill.status = 'PENDING'
             provisioning_bill.hash = context['hash']
             provisioning_bill.save()

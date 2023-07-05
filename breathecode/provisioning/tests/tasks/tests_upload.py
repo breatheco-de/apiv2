@@ -154,7 +154,7 @@ def provisioning_activity_data(data={}):
         'bill_id': 1,
         'currency_code': 'USD',
         'id': 1,
-        'multiplier': None,
+        'multiplier': 1.0,
         'notes': None,
         'price_per_unit': 38.810343970751504,
         'processed_at': ...,
@@ -181,8 +181,10 @@ def provisioning_bill_data(data={}):
         'status': 'PENDING',
         'status_details': None,
         'total_amount': 0.0,
+        'fee': 0.0,
         'stripe_id': None,
         'stripe_url': None,
+        'vendor_id': None,
         **data,
     }
 
@@ -1637,7 +1639,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                     'processed_at': UTC_NOW,
                     'status': 'PERSISTED',
                     'status_text': '',
-                    'multiplier': None,
+                    'multiplier': 1.0,
                     'notes': None,
                 })
 
@@ -1777,7 +1779,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'processed_at': UTC_NOW,
                 'status': 'PERSISTED',
                 'status_text': '',
-                'multiplier': None,
+                'multiplier': 1.0,
                 'notes': None,
             })
 

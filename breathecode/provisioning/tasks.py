@@ -57,10 +57,12 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
         if amount:
             credit_price = get_provisioning_credit_price()
             quantity = math.ceil(amount / credit_price)
+            new_price = quantity * credit_price
 
             s = Stripe()
             bill.stripe_id, bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
-            bill.total_amount = quantity * credit_price
+            bill.fee = new_price - amount
+            bill.total_amount = new_price
 
         else:
             bill.total_amount = amount

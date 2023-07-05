@@ -1,5 +1,7 @@
 import serpy, base64
-from .models import ProvisioningContainer
+
+from breathecode.utils.i18n import translation
+from .models import ProvisioningBill, ProvisioningContainer
 from django.utils import timezone
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -77,3 +79,35 @@ class ProvisioningContainerSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
 
         return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
+
+
+class ProvisioningBillSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProvisioningBill
+        fields = ('status', )
+
+    def validate(self, data):
+
+        if self.instance and 'status' in data and self.instance.status in ['PAID', 'ERROR']:
+            status = data['status'].lower()
+            raise ValidationException(translation(
+                self.context['lang'],
+                en=f'You cannot change the status of this bill due to it is marked as {status}',
+                es='No puedes cambiar el estado de esta factura debido a que esta marcada '
+                f'como {status}',
+                slug='readonly-bill-status'),
+                                      code=400)
+
+        if self.instance and 'status' in data and data['status'] in ['PAID', 'ERROR']:
+            status = data['status'].lower()
+            raise ValidationException(translation(
+                self.context['lang'],
+                en=f'You cannot set the status of this bill to {status} because this status is '
+                'forbidden',
+                es=f'No puedes cambiar el estado de esta factura a {status} porque este estado esta '
+                'prohibido',
+                slug='invalid-bill-status'),
+                                      code=400)
+
+        return data

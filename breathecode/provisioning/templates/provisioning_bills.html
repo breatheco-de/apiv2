@@ -156,12 +156,11 @@
             {% for bill in bills %}
             <tr class="item">
                 <td>
-                    {{ bill.freelancer.user.first_name }} {{ bill.freelancer.user.last_name }} ➝ <small>
-                        {{ bill.freelancer.user.email }}</small>
+                    <strong>{{ bill.vendor.name }}</strong><small> - {{ bill.created_at }}</small>
                 </td>
 
                 <td>
-                    {{ bill.total_price }}
+                    ${{ bill.total_amount|floatformat:2  }}
                 </td>
 
                 <td>
@@ -180,7 +179,7 @@
                 <td></td>
 
                 <td>
-                    Total: ${{ total_price }}
+                    Total: ${{ total_price|floatformat:2 }}
                 </td>
             </tr>
         </table>
@@ -199,7 +198,7 @@
                 status,
             })
         }
-        fetch('/v1/provisioning/bills/'+bill_id, options)
+        fetch('/v1/provisioning/academy/bill/'+bill_id, options)
             .then(function(resp){
                 if(resp.status >= 200 && resp.status < 400){
                     return resp.json();
@@ -208,6 +207,7 @@
                     alert('You don\'t have permissions to do this action')
                 }
                 else{
+                    console.log(resp.status, res.json())
                     alert('Error updating the bill')
                 }
             })

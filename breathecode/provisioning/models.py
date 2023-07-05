@@ -1,4 +1,5 @@
 import logging
+from django import forms
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
@@ -97,7 +98,13 @@ BILL_STATUS = (
 
 
 class ProvisioningBill(models.Model):
+    vendor = models.ForeignKey(ProvisioningVendor,
+                               on_delete=models.SET_NULL,
+                               null=True,
+                               default=None,
+                               blank=True)
     total_amount = models.FloatField(default=0)
+    fee = models.FloatField(default=0)
     hash = models.CharField(max_length=64, blank=True, null=True, default=None)
     currency_code = models.CharField(max_length=3, default='USD')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -152,7 +159,8 @@ class ProvisioningActivity(models.Model):
     price_per_unit = models.FloatField(help_text='Price paid to the provisioning vendor, E.g: Github')
     currency_code = models.CharField(max_length=3)
     multiplier = models.FloatField(blank=True,
-                                   null=True,
+                                   null=False,
+                                   default=1,
                                    help_text='To increase price in a certain percentage')
     repository_url = models.URLField()
     task_associated_slug = models.SlugField(

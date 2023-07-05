@@ -51,7 +51,7 @@ def format_csv(provisioning_activity, provisioning_bill=None):
         format_field(provisioning_bill.id if provisioning_bill else ''),
         format_field(provisioning_activity.currency_code),
         format_field(provisioning_activity.id),
-        format_field(provisioning_activity.multiplier),
+        format_field(float(provisioning_activity.multiplier)),
         format_field(provisioning_activity.price_per_unit),
         format_field(provisioning_activity.processed_at),
         format_field(provisioning_activity.product_name),

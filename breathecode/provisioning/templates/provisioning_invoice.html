@@ -1,4 +1,12 @@
 {% extends "base.html" %}
+{% load math %}
+
+{% block head %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
+        crossorigin="anonymous">
+{% endblock %}
+
 {% block content %}
 <style>
     .invoice-box {
@@ -24,7 +32,7 @@
         vertical-align: top;
     }
 
-    .invoice-box table tr td:nth-child(2) {
+    .invoice-box table tr td:nth-child(4) {
         text-align: right;
     }
 
@@ -60,7 +68,7 @@
         border-bottom: none;
     }
 
-    .invoice-box table tr.total td:nth-child(2) {
+    .invoice-box table tr.total td:nth-child(4) {
         border-top: 2px solid #eee;
         font-weight: bold;
     }
@@ -85,11 +93,12 @@
         font-family: Tahoma, 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
     }
 
+
     .rtl table {
         text-align: right;
     }
 
-    .rtl table tr td:nth-child(2) {
+    .rtl table tr td:nth-child(4) {
         text-align: left;
     }
 
@@ -105,30 +114,10 @@
         color: rgb(0, 100, 50);
     }
 
-    .alert {
-        border: 1px solid;
-        border-radius: 10px;
-        background: #BDBDBD;
-        padding: 5px;
-    }
-
     .alert td {
         width: 100%;
     }
 
-    .alert.alert-danger {
-        background: #ffb8b8;
-        color: rgb(92, 0, 0);
-        text-align: center;
-    }
-
-    .text-danger {
-        color: rgb(134, 0, 0);
-    }
-
-    .text-success {
-        color: rgb(13, 128, 0);
-    }
 </style>
 </head>
 
@@ -137,9 +126,10 @@
         <table cellpadding="0" cellspacing="0">
             <tr>
                 <td>
-                    <a href="/v1/freelance/bills/html">⬅ Back to all bills</a>
+                    <a href="/v1/provisioning/bill/html">⬅ Back to all bills</a>
                 </td>
             </tr>
+            <tr>
             <tr class="top">
                 <td colspan="2">
                     <table>
@@ -189,40 +179,74 @@
                     Item
                 </td>
 
+                <td></td>
+
+                <td>
+                    Quantity
+                </td>
+
                 <td>
                     Price
                 </td>
             </tr>
 
-            {% for issue in issues %}
+            {% for activity in activities %}
             <tr class="item">
-                <td>
-                    {% if issue.status_text is not None and issue.status_text != "" %}
-                    <span class="text-danger tooltip pointer" data-tippy-content="{{issue.status_text}}">⚠️</span>
+                <td colspan="2">
+                    {{ activity.product_name }}
+                    <small> - </small>
+                    {% if activity.status_text %}
+                        <a onclick="alert('{{activity.status_text}}')" type="button" class="btn-link">
+                            see error
+                        </a>
                     {% endif %}
-                    <a href="{{ issue.url }}" target="_blank" rel="noopener noreferrer">{{ issue.product_name }}</a>
                 </td>
 
                 <td>
-                    <span style="color: #608062;">{{ issue.price }}</span>
+                    {% if activity.quantity.is_integer %}
+                        {{ activity.quantity|floatformat }}
+                    {% else %}
+                        {{ activity.quantity|floatformat:3 }}
+                    {% endif %}
+                </td>
+
+
+                <td>
+                    <span style="color: #608062;">
+                        ${{ activity.quantity|mul:activity.price_per_unit|mul:activity.multiplier|floatformat:2 }}
+                    </span>
+                    <!-- <span style="color: #608062;">{{ activity.quantity|floatformat:2 }}x{{ activity.price_per_unit|floatformat:2 }}={{ activity.price|floatformat:2 }}</span> -->
                 </td>
             </tr>
             {% endfor %}
 
+
             <tr class="total">
+                <td></td>
+                <td></td>
                 <td></td>
 
                 <td>
-                    Total Hours: {{ total_duration_in_hours }} <br />
-                </td>
-            </tr>
-            <tr class="total">
-                <td></td>
-
-                <td>
-                    Total: ${{ bill.total_amount }}
+                    Total: ${{ bill.total_amount|floatformat:2 }}
                 </td>
             </tr>
         </table>
+        {% if bill.stripe_url %}
+            <a class="btn btn-primary" type="button" href="{{bill.stripe_url}}">Pay</a>
+        {% else %}
+            <br />
+            <button class="btn btn-primary" type="button" disabled>Pay</button>
+            <br />
+            <br />
+            <div class="alert alert-warning" role="alert">
+                ⚠️This bill doesn't have a payment link
+            </div>
+        {% endif %}
+
+
     </div>
-    {% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+
+</body>
+{% endblock %}

@@ -8,7 +8,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
-from breathecode.provisioning.serializers import ProvisioningActivitySerializer
+from breathecode.provisioning.serializers import ProvisioningActivitySerializer, ProvisioningBillSerializer
 from breathecode.provisioning.tasks import upload
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
@@ -24,6 +24,7 @@ from rest_framework.parsers import FileUploadParser, MultiPartParser
 import pandas as pd
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from django.shortcuts import render
 
 from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.renderers import JSONRenderer
@@ -258,25 +259,29 @@ class UploadView(APIView):
         return Response(result, status=status.HTTP_207_MULTI_STATUS)
 
 
-# @private_view()
-# def render_html_all_bills(request, token):
-def render_html_all_bills(request):
+@private_view()
+def render_html_all_bills(request, token):
+    lang = get_user_language(request)
+    academy_ids = {
+        x.academy.id
+        for x in ProfileAcademy.objects.filter(user=request.user,
+                                               role__capabilities__slug='crud_provisioning_bill')
+    }
 
-    ProvisioningActivity.objects.filter().delete()
+    if not academy_ids:
+        return render(request,
+                      'message.html', {
+                          'MESSAGE':
+                          translation(lang,
+                                      en='You have no access to this resource',
+                                      es='No tienes acceso a este recurso',
+                                      slug='no-access')
+                      },
+                      status=403)
 
     status_mapper = {}
     for key, value in BILL_STATUS:
         status_mapper[key] = value
-
-        ProvisioningBill.objects.filter(status=key).delete()
-
-        # import django mixer
-        from mixer.backend.django import mixer
-
-        # if not ProvisioningBill.objects.filter(status=key).exists():
-        for n in range(5):
-            bill = mixer.blend(ProvisioningBill, status=key)
-            mixer.cycle(5).blend(ProvisioningActivity, bill=bill)
 
     lookup = {}
 
@@ -286,22 +291,23 @@ def render_html_all_bills(request):
     lookup['status'] = status.upper()
 
     if 'academy' in request.GET:
-        lookup['academy__id__in'] = request.GET.get('academy').split(',')
+        ids = {int(x) for x in request.GET.get('academy').split(',')}
+        lookup['academy__id__in'] = academy_ids.intersection(ids)
+
+    else:
+        lookup['academy__id__in'] = academy_ids
 
     items = ProvisioningBill.objects.filter(**lookup).exclude(academy__isnull=True)
-    # serializer = BigBillSerializer(items, many=True)
 
     total_price = 0
-    # for bill in serializer.data:
     for bill in []:
         total_price += bill['total_price']
 
     data = {
         'status': status,
-        # 'token': token.key,
+        'token': token.key,
         'title': f'Payments {status_mapper[status]}',
         'possible_status': [(key, status_mapper[key]) for key, label in BILL_STATUS],
-        # 'bills': serializer.data,
         'bills': items,
         'total_price': total_price
     }
@@ -309,13 +315,32 @@ def render_html_all_bills(request):
     return HttpResponse(template['html'])
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def render_html_bill(request, id=None):
+@private_view()
+def render_html_bill(request, token, id=None):
+    lang = get_user_language(request)
+    academy_ids = {
+        x.academy.id
+        for x in ProfileAcademy.objects.filter(user=request.user,
+                                               role__capabilities__slug='crud_provisioning_bill')
+    }
+
+    if not academy_ids:
+        return render(request,
+                      'message.html', {
+                          'MESSAGE':
+                          translation(lang,
+                                      en='You have no access to this resource',
+                                      es='No tienes acceso a este recurso',
+                                      slug='no-access')
+                      },
+                      status=403)
+
     item = ProvisioningBill.objects.filter(id=id, academy__isnull=False).first()
     if item is None:
-        template = get_template_content('message', {'message': 'Bill not found'})
-        return HttpResponse(template['html'])
+        return render(request, 'message.html', {
+            'MESSAGE':
+            translation(lang, en='Bill not found', es='Factura no encontrada', slug='bill-not-found')
+        })
 
     status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
     status_mapper = {}
@@ -325,12 +350,38 @@ def render_html_bill(request, id=None):
     data = {
         **{},
         'bill': item,
-        'issues': [vars(x) for x in ProvisioningActivity.objects.filter(bill=item)],
+        'activities': ProvisioningActivity.objects.filter(bill=item),
         'status': status_map['DUE'],
         'title': item.academy.name,
     }
     template = get_template_content('provisioning_invoice', data)
     return HttpResponse(template['html'])
+
+
+class AcademyBillView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('crud_provisioning_bill')
+    def put(self, request, bill_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        item = ProvisioningBill.objects.filter(id=bill_id, academy__id=academy_id).first()
+        if item is None:
+            raise ValidationException(translation(
+                lang,
+                en='Not found',
+                es='No encontrado',
+                slug='not-found',
+            ),
+                                      code=404)
+
+        serializer = ProvisioningBillSerializer(item, data=request.data, many=False, context={'lang': lang})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # class ContainerMeView(APIView):

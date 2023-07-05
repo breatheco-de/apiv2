@@ -185,13 +185,17 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             calculate_bill_amounts(slug)
 
             quantity = math.ceil(amount / CREDIT_PRICE)
+            new_amount = quantity * CREDIT_PRICE
+
             self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
+        fee = new_amount - amount
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
                 'status': 'DUE',
-                'total_amount': quantity * CREDIT_PRICE,
+                'total_amount': new_amount,
+                'fee': fee,
                 'paid_at': None,
                 'stripe_id': stripe_id,
                 'stripe_url': stripe_url,
@@ -297,13 +301,17 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             calculate_bill_amounts(slug, force=True)
 
             quantity = math.ceil(amount / CREDIT_PRICE)
+            new_amount = quantity * CREDIT_PRICE
+
             self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
+        fee = new_amount - amount
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
                 'status': 'DUE',
                 'total_amount': quantity * CREDIT_PRICE,
+                'fee': fee,
                 'paid_at': None,
                 'stripe_id': stripe_id,
                 'stripe_url': stripe_url,
