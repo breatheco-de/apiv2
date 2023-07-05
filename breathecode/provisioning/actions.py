@@ -314,11 +314,11 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
     def write_activity(academy: Optional[Academy] = None):
         errors = []
         if not academy:
-            errors.append(f'User {metadata["userName"]} not found in any academy')
+            errors.append(f'User {field["userName"]} not found in any academy')
 
         pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
-        if not (result := re.findall(pattern, metadata['contextURL'])):
-            errors.append(f'Invalid repository URL {metadata["contextURL"]}')
+        if not (result := re.findall(pattern, field['contextURL'])):
+            errors.append(f'Invalid repository URL {field["contextURL"]}')
             slug = 'unknown'
 
         else:
@@ -347,20 +347,20 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
         if not provisioning_vendor:
             errors.append(f'Provisioning vendor Codespaces not found')
 
-        date = iso_to_datetime(field['effectiveTime'])
+        date = iso_to_datetime(field['startTime'])
 
         pa = ProvisioningActivity()
         pa.bill = provisioning_bill
         pa.hash = context['hash']
-        pa.username = metadata['userName']
+        pa.username = field['userName']
         pa.registered_at = date
         pa.product_name = field['kind']
         pa.sku = field['id']
-        pa.quantity = field['creditCents']
-        pa.unit_type = 'Credit cents'
-        pa.price_per_unit = 0.00036
+        pa.quantity = field['credits']
+        pa.unit_type = 'Credits'
+        pa.price_per_unit = 0.36
         pa.currency_code = 'USD'
-        pa.repository_url = metadata['contextURL']
+        pa.repository_url = field['contextURL']
 
         pa.task_associated_slug = slug
         pa.processed_at = timezone.now()
@@ -368,18 +368,12 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
         pa.status_text = ', '.join(errors)
         pa.save()
 
-    try:
-        metadata = json.loads(field['metadata'])
-    except:
-        logger.warning(f'Skipped field with kind {field["kind"]}')
-        return
-
-    profile_academies = context['profile_academies'].get(metadata['userName'], None)
+    profile_academies = context['profile_academies'].get(field['userName'], None)
     if profile_academies is None:
-        profile_academies = ProfileAcademy.objects.filter(
-            user__credentialsgithub__username=metadata['userName'], status='ACTIVE')
+        profile_academies = ProfileAcademy.objects.filter(user__credentialsgithub__username=field['userName'],
+                                                          status='ACTIVE')
 
-        context['profile_academies'][metadata['userName']] = profile_academies
+        context['profile_academies'][field['userName']] = profile_academies
 
     if profile_academies:
         academies = random.choices(list({profile.academy for profile in profile_academies}), k=1)
