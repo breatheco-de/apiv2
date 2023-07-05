@@ -243,7 +243,7 @@ def get_blob_content(repo, path_name, branch='main'):
     return repo.get_git_blob(sha[0])
 
 
-def set_blob_content(repo, path_name, content, branch='main'):
+def set_blob_content(repo, path_name, content, file_name, branch='main'):
 
     if content is None or content == '':
         raise Exception(f'Blob content is empty for {path_name}')
@@ -259,7 +259,7 @@ def set_blob_content(repo, path_name, content, branch='main'):
         return None
 
     # update
-    return repo.update_file(file[0].path, 'Updated from admin.4Geeks.com', content, file[0].sha)
+    return repo.update_file(file[0].path, f'Update {file_name}', content, file[0].sha)
 
 
 def push_github_asset(github, asset):
@@ -286,7 +286,7 @@ def push_github_asset(github, asset):
     if decoded_readme is None or decoded_readme == 'None' or decoded_readme == '':
         raise Exception('The markdown content you are trying to push to Github is empty')
 
-    result = set_blob_content(repo, file_path, decoded_readme, branch=branch)
+    result = set_blob_content(repo, file_path, decoded_readme, file_name, branch=branch)
     if 'commit' in result:
         asset.github_commit_hash = result['commit'].sha
 
