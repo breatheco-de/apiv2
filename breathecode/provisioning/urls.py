@@ -10,7 +10,7 @@ urlpatterns = [
     path('admin/upload', UploadView.as_view(), name='admin_upload'),
     path('academy/activity', AcademyActivityView.as_view(), name='academy_activity'),
     path('academy/bill/<int:bill_id>', AcademyBillView.as_view(), name='academy_bill_id'),
-    path('bill/html', render_html_all_bills, name='bill_html_id'),
+    path('bill/html', render_html_all_bills, name='bill_html'),
     path('bill/<int:id>/html', render_html_bill, name='bill_id_html'),
     # path('academy/me/container', ContainerMeView.as_view()),
     # path('me/container', ContainerMeView.as_view()),
