@@ -1114,6 +1114,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 translation(lang,
                             en='You are already a member of 4Geeks.com, go ahead and log in',
                             es='Ya eres miembro de 4Geeks.com, inicia sesión en su lugar',
+                            silent=True,
                             slug='user-invite-exists-status-accepted'))
 
         user = User.objects.filter(email=data['email']).first()
