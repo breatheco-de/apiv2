@@ -1193,7 +1193,7 @@ class ConsumableCheckoutView(APIView):
                                                   slug='service-is-required'),
                                       code=400)
 
-        if not (service := Service.objects.filter(id=service).first()):
+        if not (service := Service.objects.filter(Q(id=service) | Q(slug=service)).first()):
             raise ValidationException(
                 translation(lang,
                             en='Service not found',
