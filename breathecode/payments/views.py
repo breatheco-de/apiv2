@@ -1197,7 +1197,7 @@ class ConsumableCheckoutView(APIView):
             query['id'] = service
         elif service and isinstance(service, str):
             query['slug'] = service
-        
+
         if not query or not (service := Service.objects.filter(**query).first()):
             raise ValidationException(
                 translation(lang,
