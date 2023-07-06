@@ -103,7 +103,13 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
 
         json = response.json()
-        expected = {'detail': 'email-not-validated', 'status_code': 403, 'data': []}
+        expected = {
+            'detail': 'email-not-validated',
+            'status_code': 403,
+            'silent': True,
+            'silent_code': 'email-not-validated',
+            'data': [],
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -126,6 +132,10 @@ class AuthenticateTestSuite(AuthTestCase):
             'email-not-validated',
             'status_code':
             403,
+            'silent':
+            True,
+            'silent_code':
+            'email-not-validated',
             'data': [
                 user_invite_serializer(self, model.user_invite[1]),
                 user_invite_serializer(self, model.user_invite[0]),
