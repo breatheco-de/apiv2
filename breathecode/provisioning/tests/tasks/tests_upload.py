@@ -109,31 +109,24 @@ def codespaces_csv(lines=1, data={}):
     }
 
 
-def get_gitpod_metadata():
-    username = fake.slug()
-    repo = fake.slug()
-    branch = fake.slug()
-    return {
-        'userName': username,
-        'contextURL': f'https://github.com/{username}/{repo}/tree/{branch}/',
-    }
-
-
 def gitpod_csv(lines=1, data={}):
     ids = [random.randint(1, 10) for _ in range(lines)]
     credit_cents = [random.randint(1, 10000) for _ in range(lines)]
     effective_times = [datetime_to_iso(datetime.utcnow()) for _ in range(lines)]
     kinds = [fake.slug() for _ in range(lines)]
-
-    metadata = [json.dumps(get_gitpod_metadata()) for _ in range(lines)]
+    usernames = [fake.slug() for _ in range(lines)]
+    contextURLs = [
+        f'https://github.com/{username}/{fake.slug()}/tree/{fake.slug()}/' for username in usernames
+    ]
 
     # dictionary of lists
     return {
         'id': ids,
-        'creditCents': credit_cents,
-        'effectiveTime': effective_times,
+        'credits': credit_cents,
+        'startTime': effective_times,
         'kind': kinds,
-        'metadata': metadata,
+        'userName': usernames,
+        'contextURL': contextURLs,
         **data,
     }
 
@@ -1248,32 +1241,32 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'bill_id':
                 None,
                 'username':
-                parse(csv['metadata'][n])['userName'],
+                csv['userName'][n],
                 'registered_at':
-                self.bc.datetime.from_iso_string(csv['effectiveTime'][n]),
+                self.bc.datetime.from_iso_string(csv['startTime'][n]),
                 'product_name':
                 csv['kind'][n],
                 'sku':
                 str(csv['id'][n]),
                 'quantity':
-                float(csv['creditCents'][n]),
+                float(csv['credits'][n]),
                 'unit_type':
-                'Credit cents',
+                'Credits',
                 'price_per_unit':
-                0.00036,
+                0.36,
                 'currency_code':
                 'USD',
                 'repository_url':
-                parse(csv['metadata'][n])['contextURL'],
+                csv['contextURL'][n],
                 'task_associated_slug':
-                repo_name(parse(csv['metadata'][n])['contextURL']),
+                repo_name(csv['contextURL'][n], ),
                 'processed_at':
                 UTC_NOW,
                 'status':
                 'ERROR',
                 'status_text':
                 ', '.join([
-                    f"User {parse(csv['metadata'][n])['userName']} not found in any academy",
+                    f"User {csv['userName'][n]} not found in any academy",
                     'Provisioning vendor Codespaces not found'
                 ]),
             }) for n in range(10)
@@ -1313,8 +1306,8 @@ class GitpodTestSuite(ProvisioningTestCase):
         csv = gitpod_csv(10)
 
         github_academy_users = [{
-            'username': parse(x)['userName'],
-        } for x in csv['metadata']]
+            'username': username,
+        } for username in csv['userName']]
         github_academy_user_logs = [{
             'storage_status': 'SYNCHED',
             'storage_action': 'ADD',
@@ -1338,25 +1331,24 @@ class GitpodTestSuite(ProvisioningTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            provisioning_activity_data(
-                {
-                    'id': n + 1,
-                    'hash': slug,
-                    'bill_id': 1,
-                    'username': parse(csv['metadata'][n])['userName'],
-                    'registered_at': self.bc.datetime.from_iso_string(csv['effectiveTime'][n]),
-                    'product_name': csv['kind'][n],
-                    'sku': str(csv['id'][n]),
-                    'quantity': float(csv['creditCents'][n]),
-                    'unit_type': 'Credit cents',
-                    'price_per_unit': 0.00036,
-                    'currency_code': 'USD',
-                    'repository_url': parse(csv['metadata'][n])['contextURL'],
-                    'task_associated_slug': repo_name(parse(csv['metadata'][n])['contextURL']),
-                    'processed_at': UTC_NOW,
-                    'status': 'ERROR',
-                    'status_text': ', '.join(['Provisioning vendor Codespaces not found']),
-                }) for n in range(10)
+            provisioning_activity_data({
+                'id': n + 1,
+                'hash': slug,
+                'bill_id': 1,
+                'username': csv['userName'][n],
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'product_name': csv['kind'][n],
+                'sku': str(csv['id'][n]),
+                'quantity': float(csv['credits'][n]),
+                'unit_type': 'Credits',
+                'price_per_unit': 0.36,
+                'currency_code': 'USD',
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n], ),
+                'processed_at': UTC_NOW,
+                'status': 'ERROR',
+                'status_text': ', '.join(['Provisioning vendor Codespaces not found']),
+            }) for n in range(10)
         ])
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'),
                          self.bc.format.to_dict(model.github_academy_user))
@@ -1395,8 +1387,8 @@ class GitpodTestSuite(ProvisioningTestCase):
         csv = gitpod_csv(10)
 
         github_academy_users = [{
-            'username': parse(x)['userName'],
-        } for x in csv['metadata']]
+            'username': username,
+        } for username in csv['userName']]
         github_academy_user_logs = [{
             'storage_status': 'SYNCHED',
             'storage_action': 'ADD',
@@ -1422,24 +1414,23 @@ class GitpodTestSuite(ProvisioningTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            provisioning_activity_data(
-                {
-                    'id': n + 1,
-                    'hash': slug,
-                    'bill_id': 1,
-                    'username': parse(csv['metadata'][n])['userName'],
-                    'registered_at': self.bc.datetime.from_iso_string(csv['effectiveTime'][n]),
-                    'product_name': csv['kind'][n],
-                    'sku': str(csv['id'][n]),
-                    'quantity': float(csv['creditCents'][n]),
-                    'unit_type': 'Credit cents',
-                    'price_per_unit': 0.00036,
-                    'currency_code': 'USD',
-                    'repository_url': parse(csv['metadata'][n])['contextURL'],
-                    'task_associated_slug': repo_name(parse(csv['metadata'][n])['contextURL']),
-                    'processed_at': UTC_NOW,
-                    'status': 'PERSISTED',
-                }) for n in range(10)
+            provisioning_activity_data({
+                'id': n + 1,
+                'hash': slug,
+                'bill_id': 1,
+                'username': csv['userName'][n],
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'product_name': csv['kind'][n],
+                'sku': str(csv['id'][n]),
+                'quantity': float(csv['credits'][n]),
+                'unit_type': 'Credits',
+                'price_per_unit': 0.36,
+                'currency_code': 'USD',
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n], ),
+                'processed_at': UTC_NOW,
+                'status': 'PERSISTED',
+            }) for n in range(10)
         ])
 
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'),
@@ -1484,8 +1475,8 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         provisioning_vendor = {'name': 'Codespaces'}
         github_academy_users = [{
-            'username': parse(x)['userName'],
-        } for x in csv['metadata']]
+            'username': username,
+        } for username in csv['userName']]
         github_academy_user_logs = [{
             'storage_status': 'SYNCHED',
             'storage_action': 'ADD',
@@ -1510,24 +1501,23 @@ class GitpodTestSuite(ProvisioningTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            provisioning_activity_data(
-                {
-                    'id': n + 1,
-                    'hash': slug,
-                    'bill_id': 1,
-                    'username': parse(csv['metadata'][n])['userName'],
-                    'registered_at': self.bc.datetime.from_iso_string(csv['effectiveTime'][n]),
-                    'product_name': csv['kind'][n],
-                    'sku': str(csv['id'][n]),
-                    'quantity': float(csv['creditCents'][n]),
-                    'unit_type': 'Credit cents',
-                    'price_per_unit': 0.00036,
-                    'currency_code': 'USD',
-                    'repository_url': parse(csv['metadata'][n])['contextURL'],
-                    'task_associated_slug': repo_name(parse(csv['metadata'][n])['contextURL']),
-                    'processed_at': UTC_NOW,
-                    'status': 'PERSISTED',
-                }) for n in range(10)
+            provisioning_activity_data({
+                'id': n + 1,
+                'hash': slug,
+                'bill_id': 1,
+                'username': csv['userName'][n],
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'product_name': csv['kind'][n],
+                'sku': str(csv['id'][n]),
+                'quantity': float(csv['credits'][n]),
+                'unit_type': 'Credits',
+                'price_per_unit': 0.36,
+                'currency_code': 'USD',
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n], ),
+                'processed_at': UTC_NOW,
+                'status': 'PERSISTED',
+            }) for n in range(10)
         ])
 
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'),
@@ -1575,8 +1565,8 @@ class GitpodTestSuite(ProvisioningTestCase):
         csv = gitpod_csv(10)
 
         github_academy_users = [{
-            'username': parse(x)['userName'],
-        } for x in csv['metadata']]
+            'username': username,
+        } for username in csv['userName']]
         github_academy_user_logs = [{
             'storage_status': 'SYNCHED',
             'storage_action': 'ADD',
@@ -1626,16 +1616,16 @@ class GitpodTestSuite(ProvisioningTestCase):
                     'id': id,
                     'hash': slug,
                     'bill_id': n2 + 1,
-                    'username': parse(csv['metadata'][n1])['userName'],
-                    'registered_at': self.bc.datetime.from_iso_string(csv['effectiveTime'][n1]),
+                    'username': csv['userName'][n1],
+                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n1]),
                     'product_name': csv['kind'][n1],
                     'sku': str(csv['id'][n1]),
-                    'quantity': float(csv['creditCents'][n1]),
-                    'unit_type': 'Credit cents',
-                    'price_per_unit': 0.00036,
+                    'quantity': float(csv['credits'][n1]),
+                    'unit_type': 'Credits',
+                    'price_per_unit': 0.36,
                     'currency_code': 'USD',
-                    'repository_url': parse(csv['metadata'][n1])['contextURL'],
-                    'task_associated_slug': repo_name(parse(csv['metadata'][n1])['contextURL']),
+                    'repository_url': csv['contextURL'][n1],
+                    'task_associated_slug': repo_name(csv['contextURL'][n1]),
                     'processed_at': UTC_NOW,
                     'status': 'PERSISTED',
                     'status_text': '',
@@ -1683,8 +1673,8 @@ class GitpodTestSuite(ProvisioningTestCase):
         csv = gitpod_csv(10)
 
         github_academy_users = [{
-            'username': parse(x)['userName'],
-        } for x in csv['metadata']]
+            'username': username,
+        } for username in csv['userName']]
         github_academy_user_logs = [{
             'storage_status': 'SYNCHED',
             'storage_action': 'ADD',
@@ -1702,7 +1692,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 })
 
         credentials_github = [{
-            'username': parse(csv['metadata'][n])['userName'],
+            'username': csv['userName'][n],
             'user_id': n + 1,
         } for n in range(10)]
 
@@ -1766,16 +1756,16 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'id': id,
                 'hash': slug,
                 'bill_id': mapping[RANDOM_ACADEMIES[n1]],
-                'username': parse(csv['metadata'][n1])['userName'],
-                'registered_at': self.bc.datetime.from_iso_string(csv['effectiveTime'][n1]),
+                'username': csv['userName'][n1],
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n1]),
                 'product_name': csv['kind'][n1],
                 'sku': str(csv['id'][n1]),
-                'quantity': float(csv['creditCents'][n1]),
-                'unit_type': 'Credit cents',
-                'price_per_unit': 0.00036,
+                'quantity': float(csv['credits'][n1]),
+                'unit_type': 'Credits',
+                'price_per_unit': 0.36,
                 'currency_code': 'USD',
-                'repository_url': parse(csv['metadata'][n1])['contextURL'],
-                'task_associated_slug': repo_name(parse(csv['metadata'][n1])['contextURL']),
+                'repository_url': csv['contextURL'][n1],
+                'task_associated_slug': repo_name(csv['contextURL'][n1]),
                 'processed_at': UTC_NOW,
                 'status': 'PERSISTED',
                 'status_text': '',

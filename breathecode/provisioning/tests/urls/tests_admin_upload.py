@@ -479,25 +479,20 @@ class MarketingTestSuite(ProvisioningTestCase):
         credit_cents = [random.randint(1, 10000) for _ in range(0, 3)]
         effective_times = [self.bc.datetime.to_iso_string(self.bc.datetime.now()) for _ in range(0, 3)]
         kinds = [self.bc.fake.slug() for _ in range(0, 3)]
-
-        def get_metadata():
-            username = self.bc.fake.slug()
-            repo = self.bc.fake.slug()
-            branch = self.bc.fake.slug()
-            return {
-                'userName': username,
-                'contextURL': f'https://github.com/{username}/{repo}/tree/{branch}/',
-            }
-
-        metadata = [json.dumps(get_metadata()) for _ in range(0, 3)]
+        usernames = [self.bc.fake.slug() for _ in range(0, 3)]
+        contextURLs = [
+            f'https://github.com/{username}/{self.bc.fake.slug()}/tree/{self.bc.fake.slug()}/'
+            for username in usernames
+        ]
 
         # dictionary of lists
         obj = {
             'id': ids,
-            'creditCents': credit_cents,
-            'effectiveTime': effective_times,
+            'credits': credit_cents,
+            'startTime': effective_times,
             'kind': kinds,
-            'metadata': metadata,
+            'userName': usernames,
+            'contextURL': contextURLs,
         }
 
         df = pd.DataFrame.from_dict(obj)
@@ -586,25 +581,20 @@ class MarketingTestSuite(ProvisioningTestCase):
         credit_cents = [random.randint(1, 10000) for _ in range(0, 3)]
         effective_times = [self.bc.datetime.to_iso_string(self.bc.datetime.now()) for _ in range(0, 3)]
         kinds = [self.bc.fake.slug() for _ in range(0, 3)]
-
-        def get_metadata():
-            username = self.bc.fake.slug()
-            repo = self.bc.fake.slug()
-            branch = self.bc.fake.slug()
-            return {
-                'userName': username,
-                'contextURL': f'https://github.com/{username}/{repo}/tree/{branch}/',
-            }
-
-        metadata = [json.dumps(get_metadata()) for _ in range(0, 3)]
+        usernames = [self.bc.fake.slug() for _ in range(0, 3)]
+        contextURLs = [
+            f'https://github.com/{username}/{self.bc.fake.slug()}/tree/{self.bc.fake.slug()}/'
+            for username in usernames
+        ]
 
         # dictionary of lists
         obj = {
             'id': ids,
-            'creditCents': credit_cents,
-            'effectiveTime': effective_times,
+            'credits': credit_cents,
+            'startTime': effective_times,
             'kind': kinds,
-            'metadata': metadata,
+            'userName': usernames,
+            'contextURL': contextURLs,
         }
 
         df = pd.DataFrame.from_dict(obj)

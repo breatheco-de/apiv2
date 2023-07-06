@@ -121,10 +121,8 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
     handler = None
 
     # edit it
-    fields = ['id', 'credits', 'effectiveTime', 'kind', 'userName']
-    if (len(df.keys().intersection(fields)) == len(fields) and len(
-        {x
-         for x in json.loads(df.iloc[0]['metadata'])}.intersection({'userName', 'contextURL'})) == 2):
+    fields = ['id', 'credits', 'startTime', 'kind', 'userName', 'contextURL']
+    if len(df.keys().intersection(fields)) == len(fields):
         handler = actions.add_gitpod_activity
 
     if not handler:

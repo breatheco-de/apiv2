@@ -162,10 +162,8 @@ class UploadView(APIView):
         format_error = True
 
         # gitpod
-        fields = ['id', 'creditCents', 'effectiveTime', 'kind', 'metadata']
-        if (len(df.keys().intersection(fields)) == len(fields) and len(
-            {x
-             for x in json.loads(df.iloc[0]['metadata'])}.intersection({'userName', 'contextURL'})) == 2):
+        fields = ['id', 'credits', 'startTime', 'kind', 'userName', 'contextURL']
+        if len(df.keys().intersection(fields)) == len(fields):
             format_error = False
 
         if format_error:
