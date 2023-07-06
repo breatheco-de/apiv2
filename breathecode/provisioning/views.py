@@ -266,7 +266,7 @@ def render_html_bill(request, id=None):
         return HttpResponse(template['html'])
     else:
         serializer = ProvisioningBillSerializer(item, many=False)
-        status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
+        status_map = {'DUE': 'DUE', 'PENDING': 'PENDING PAYMENT', 'PAID': 'ALREADY PAID'}
         data = {
             **serializer.data, 'provisioning_activities':
             ProvisioningActivitySerializer(item.provisioningactivity_set.all(), many=True).data,
