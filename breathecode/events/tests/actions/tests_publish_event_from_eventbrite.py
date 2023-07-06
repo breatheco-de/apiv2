@@ -140,6 +140,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_publish_event_from_eventbrite__event_not_found__with_one_event(self):
         """
         Descriptions of models are being generated:
@@ -157,9 +158,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         model = self.bc.database.create(organization=organization, event=event)
 
         publish_event_from_eventbrite({'id': '1', 'status': 'they-killed-kenny'}, model.organization)
-        self.assertEqual(Logger.debug.call_args_list,
-                         [call('The event with the eventbrite id `1` was saved')])
-        self.assertEqual(Logger.error.call_args_list, [])
+        self.bc.check.calls(Logger.debug.call_args_list,
+                            [call('The events with the eventbrite id `1` were saved')])
+        self.bc.check.calls(Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('events.Organization'), [
             self.bc.format.to_dict(model.organization),

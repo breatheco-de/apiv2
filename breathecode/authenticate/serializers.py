@@ -1034,6 +1034,7 @@ class AuthSerializer(serializers.Serializer):
             data = UserInviteNoUrlSerializer(invites, many=True).data
             raise ValidationException('You need to validate your email first',
                                       slug='email-not-validated',
+                                      silent=True,
                                       code=403,
                                       data=data)
 
@@ -1094,6 +1095,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         invites = UserInvite.objects.filter(email=data['email'])
 
         if not self.instance and invites.filter(status='WAITING_LIST').exists():
+
             raise ValidationException(
                 translation(lang,
                             en='User already exists in the waiting list',
@@ -1109,11 +1111,12 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                     slug='user-invite-exists-status-pending'))
 
         if not self.instance and invites.filter(status='ACCEPTED').exists():
-            raise ValidationException(
-                translation(lang,
-                            en='You are already a member of 4Geeks.com, go ahead and log in',
-                            es='Ya eres miembro de 4Geeks.com, inicia sesión en su lugar',
-                            slug='user-invite-exists-status-accepted'))
+            raise ValidationException(translation(
+                lang,
+                en='You are already a member of 4Geeks.com, go ahead and log in',
+                es='Ya eres miembro de 4Geeks.com, inicia sesión en su lugar'),
+                                      silent=True,
+                                      slug='user-invite-exists-status-accepted')
 
         user = User.objects.filter(email=data['email']).first()
 
@@ -1254,11 +1257,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
             subject = translation(
                 lang,
-                en='Set your password at 4Geeks',
-                es='Agrega tu contraseña en 4Geeks',
+                en='4Geeks - Validate account',
+                es='4Geeks - Valida tu cuenta',
             )
             notify_actions.send_email_message(
-                'pick_password', self.user.email, {
+                'verify_email', self.user.email, {
                     'SUBJECT': subject,
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
                 })

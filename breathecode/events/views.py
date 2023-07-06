@@ -30,14 +30,15 @@ from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibil
                      Venue, EventbriteWebhook, Organizer)
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (EventBigSerializer, EventPublicBigSerializer, GetLiveClassSerializer,
-                          LiveClassJoinSerializer, LiveClassSerializer, EventSerializer, EventSmallSerializer,
-                          EventTypeSerializer, EventTypeBigSerializer, EventCheckinSerializer,
-                          EventSmallSerializerNoAcademy, EventTypeVisibilitySettingSerializer,
-                          PostEventTypeSerializer, EventTypePutSerializer, VenueSerializer,
-                          OrganizationBigSerializer, OrganizationSerializer, EventbriteWebhookSerializer,
-                          OrganizerSmallSerializer, EventCheckinSmallSerializer, PUTEventCheckinSerializer,
-                          POSTEventCheckinSerializer)
+from .serializers import (EventBigSerializer, EventJoinSmallSerializer, EventPublicBigSerializer,
+                          GetLiveClassSerializer, LiveClassJoinSerializer, LiveClassSerializer,
+                          EventSerializer, EventSmallSerializer, EventTypeSerializer, EventTypeBigSerializer,
+                          EventCheckinSerializer, EventSmallSerializerNoAcademy,
+                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
+                          EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
+                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer,
+                          EventCheckinSmallSerializer, PUTEventCheckinSerializer, POSTEventCheckinSerializer,
+                          AcademyEventSmallSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -413,7 +414,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
             if single_event is None:
                 raise ValidationException('Event not found', 404)
 
-            serializer = EventSmallSerializer(single_event, many=False)
+            serializer = AcademyEventSmallSerializer(single_event, many=False)
             return handler.response(serializer.data)
 
         items = Event.objects.filter(academy__id=academy_id)
@@ -803,7 +804,7 @@ def join_event(request, token, event):
     if event.starting_at > now:
         return render(request, 'countdown.html', {
             'token': token.key,
-            'event': EventSmallSerializer(event).data,
+            'event': EventJoinSmallSerializer(event).data,
         })
 
     # if the event is happening right now and I have not joined yet

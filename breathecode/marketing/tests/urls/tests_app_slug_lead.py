@@ -248,6 +248,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
 
         self.assertEqual(db, [{
             **self.model_to_dict(model, 'lead_generation_app'),
+            'last_call_log': '{"language": ["This field may not be null."]}',
             'hits': 1,
             'last_call_status': 'ERROR',
             'last_request_data': '{}',

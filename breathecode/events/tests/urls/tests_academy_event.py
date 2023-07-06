@@ -160,7 +160,6 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
-            'live_stream_url': model['event'].live_stream_url,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -225,7 +224,6 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
-            'live_stream_url': model['event'].live_stream_url,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -290,7 +288,6 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
-            'live_stream_url': model['event'].live_stream_url,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -338,7 +335,6 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
-            'live_stream_url': None,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,

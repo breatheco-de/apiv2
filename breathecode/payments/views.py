@@ -1192,8 +1192,13 @@ class ConsumableCheckoutView(APIView):
                                                   es='El servicio es requerido',
                                                   slug='service-is-required'),
                                       code=400)
+        query = {}
+        if service and isinstance(service, int):
+            query['id'] = service
+        elif service and isinstance(service, str):
+            query['slug'] = service
 
-        if not (service := Service.objects.filter(id=service).first()):
+        if not query or not (service := Service.objects.filter(**query).first()):
             raise ValidationException(
                 translation(lang,
                             en='Service not found',

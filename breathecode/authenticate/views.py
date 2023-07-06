@@ -433,7 +433,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 class ConfirmEmailView(APIView):
     permission_classes = [AllowAny]
 
-    def put(self, request, token=None):
+    def get(self, request, token=None):
         get_user_language(request)
         errors: list[C] = []
 
@@ -1550,6 +1550,9 @@ def pick_password(request, token):
             # destroy the token
             if token_instance:
                 token_instance.delete()
+
+            UserInvite.objects.filter(email=user.email,
+                                      is_email_validated=False).update(is_email_validated=True)
 
             callback = request.POST.get('callback', None)
             if callback is not None and callback != '':
