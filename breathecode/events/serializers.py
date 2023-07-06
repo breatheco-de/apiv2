@@ -194,7 +194,6 @@ class EventSmallSerializer(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
-    live_stream_url = serpy.Field()
     tags = serpy.Field()
     host_user = UserSerializer(required=False)
     author = UserSerializer(required=False)
@@ -265,7 +264,6 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
-    live_stream_url = serpy.Field()
     tags = serpy.Field()
 
 
@@ -306,7 +304,6 @@ class EventBigSerializer(serpy.Serializer):
     url = serpy.Field()
     banner = serpy.Field()
     capacity = serpy.Field()
-    live_stream_url = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
     host = serpy.Field()
