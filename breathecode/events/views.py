@@ -37,7 +37,7 @@ from .serializers import (EventBigSerializer, EventPublicBigSerializer, GetLiveC
                           PostEventTypeSerializer, EventTypePutSerializer, VenueSerializer,
                           OrganizationBigSerializer, OrganizationSerializer, EventbriteWebhookSerializer,
                           OrganizerSmallSerializer, EventCheckinSmallSerializer, PUTEventCheckinSerializer,
-                          POSTEventCheckinSerializer)
+                          POSTEventCheckinSerializer, AcademyEventBigSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -413,7 +413,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
             if single_event is None:
                 raise ValidationException('Event not found', 404)
 
-            serializer = EventSmallSerializer(single_event, many=False)
+            serializer = AcademyEventBigSerializer(single_event, many=False)
             return handler.response(serializer.data)
 
         items = Event.objects.filter(academy__id=academy_id)
