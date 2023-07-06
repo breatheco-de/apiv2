@@ -1089,14 +1089,12 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         lang = self.context.get('lang', 'en')
 
         if 'email' not in data:
-            print(1111111111111111, lang)
             raise ValidationException(
                 translation(lang, en='Email is required', es='El email es requerido', slug='without-email'))
 
         invites = UserInvite.objects.filter(email=data['email'])
 
         if not self.instance and invites.filter(status='WAITING_LIST').exists():
-            print(1111111111111111, lang)
 
             raise ValidationException(
                 translation(lang,
@@ -1113,7 +1111,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                     slug='user-invite-exists-status-pending'))
 
         if not self.instance and invites.filter(status='ACCEPTED').exists():
-            print(1111111111111111, lang)
             raise ValidationException(translation(
                 lang,
                 en='You are already a member of 4Geeks.com, go ahead and log in',
