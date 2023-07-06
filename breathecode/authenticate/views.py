@@ -1551,6 +1551,9 @@ def pick_password(request, token):
             if token_instance:
                 token_instance.delete()
 
+            UserInvite.objects.filter(email=user.email,
+                                      is_email_validated=False).update(is_email_validated=True)
+
             callback = request.POST.get('callback', None)
             if callback is not None and callback != '':
                 return HttpResponseRedirect(redirect_to=request.POST.get('callback'))

@@ -263,7 +263,12 @@ class SubscribeTestSuite(AuthTestCase):
         response = self.client.post(url, data, format='json')
 
         json = response.json()
-        expected = {'detail': 'user-invite-exists-status-accepted', 'status_code': 400}
+        expected = {
+            'detail': 'user-invite-exists-status-accepted',
+            'status_code': 400,
+            'silent': True,
+            'silent_code': 'user-invite-exists-status-accepted',
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
