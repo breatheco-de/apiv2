@@ -433,7 +433,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 class ConfirmEmailView(APIView):
     permission_classes = [AllowAny]
 
-    def put(self, request, token=None):
+    def get(self, request, token=None):
         get_user_language(request)
         errors: list[C] = []
 
