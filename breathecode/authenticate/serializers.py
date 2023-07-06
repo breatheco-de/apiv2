@@ -1260,11 +1260,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
             subject = translation(
                 lang,
-                en='Set your password at 4Geeks',
-                es='Agrega tu contraseña en 4Geeks',
+                en='4Geeks - Validate account',
+                es='4Geeks - Valida tu cuenta',
             )
             notify_actions.send_email_message(
-                'pick_password', self.user.email, {
+                'verify_email', self.user.email, {
                     'SUBJECT': subject,
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
                 })
