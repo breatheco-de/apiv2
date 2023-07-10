@@ -73,3 +73,9 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
             'SUBJECT': 'Set your password at 4Geeks',
             'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{invite.token}'
         })
+
+
+@shared_task
+def destroy_legacy_key(legacy_key_id):
+    from .models import LegacyKey
+    LegacyKey.objects.filter(id=legacy_key_id).delete()

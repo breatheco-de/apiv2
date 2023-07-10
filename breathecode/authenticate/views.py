@@ -39,6 +39,7 @@ from breathecode.utils import (GenerateLookupsMixin, HeaderLimitOffsetPagination
 from breathecode.utils.api_view_extensions.api_view_extensions import \
     APIViewExtensions
 from breathecode.utils.decorators import has_permission
+from breathecode.utils.decorators.scope import scope
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
@@ -2360,3 +2361,23 @@ class GithubMeView(APIView):
         instance.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+# app/example
+class ExampleView(APIView):
+    extensions = APIViewExtensions(paginate=True)
+
+    @scope(['read:example'])
+    def get(self, request, app_id, token: dict):
+        pass
+
+    @scope(['create:example'])
+    def post(self, request, app_id, token: dict):
+        pass
+
+
+# app/webhook
+@api_view(['POST'])
+@scope(['webhook'])
+def app_webhook(request, app_id):
+    pass

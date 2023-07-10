@@ -8,18 +8,21 @@ import urllib.parse
 from random import randint
 from django.core.handlers.wsgi import WSGIRequest
 import breathecode.notify.actions as notify_actions
+from rest_framework.exceptions import AuthenticationFailed
+from functools import lru_cache
 
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db.models import Q
 from breathecode.admissions.models import Academy, CohortUser
-from breathecode.notify.actions import send_email_message
 from breathecode.utils import ValidationException
 from breathecode.utils.i18n import translation
 from breathecode.services.github import Github
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat, PublicFormat
 
-from .models import (CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Role, Token, UserSetting,
-                     AcademyAuthSettings, GithubAcademyUser)
+from .models import (ASYMMETRIC_ALGORITHMS, CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Role,
+                     Token, UserSetting, AcademyAuthSettings, GithubAcademyUser)
 
 logger = logging.getLogger(__name__)
 
@@ -619,3 +622,64 @@ def sync_organization_members(academy_id, only_status=[]):
 #         _member.log('Error inviting member to organization')
 #         _member.save()
 #         return False
+
+
+def generate_auth_keys(algorithm) -> tuple[bytes, bytes]:
+    public_key = None
+    key = Ed25519PrivateKey.generate()
+
+    private_key = key.private_bytes(encoding=Encoding.PEM,
+                                    format=PrivateFormat.PKCS8,
+                                    encryption_algorithm=NoEncryption()).hex()
+
+    if algorithm in ASYMMETRIC_ALGORITHMS:
+        public_key = key.public_key().public_bytes(encoding=Encoding.PEM,
+                                                   format=PublicFormat.SubjectPublicKeyInfo).hex()
+
+    return public_key, private_key
+
+
+@lru_cache(maxsize=100)
+def get_app_keys(app_id):
+    from .models import App
+    app = App.objects.filter(id=app_id).first()
+
+    if app.algorithm == 'HMAC_SHA256':
+        alg = 'HS256'
+
+    elif app.algorithm == 'HMAC_SHA512':
+        alg = 'HS512'
+
+    elif app.algorithm == 'ed25519':
+        alg = 'EdDSA'
+
+    else:
+        raise AuthenticationFailed({'error': 'Algorithm not implemented', 'is_authenticated': False})
+
+    if app is None:
+        raise AuthenticationFailed({'error': 'Unauthorized', 'is_authenticated': False})
+
+    legacy_public_key = None
+    legacy_private_key = None
+    legacy_key = None
+    if hasattr(app, 'legacy_key'):
+        legacy_public_key = bytes.fromhex(app.legacy_key.public_key)
+        legacy_private_key = bytes.fromhex(app.legacy_key.private_key)
+        legacy_key = (
+            legacy_public_key,
+            legacy_private_key,
+        )
+
+    info = (
+        app.id,
+        alg,
+        app.strategy,
+        app.schema,
+        (x.slug for x in app.scopes.all()),
+    )
+    key = (
+        bytes.fromhex(app.public_key),
+        bytes.fromhex(app.private_key),
+    )
+
+    return info, key, legacy_key

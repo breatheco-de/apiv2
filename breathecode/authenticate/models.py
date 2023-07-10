@@ -11,6 +11,8 @@ from django.utils import timezone
 from django.core.validators import RegexValidator
 from django.contrib.contenttypes.models import ContentType
 from django import forms
+from slugify import slugify
+from breathecode.authenticate import tasks
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
@@ -108,6 +110,174 @@ class Role(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.slug})'
+
+
+class Scope(models.Model):
+    name = models.SlugField(max_length=25, unique=True)
+    slug = models.SlugField(unique=True)
+    description = models.CharField(max_length=255)
+    internal = models.BooleanField(default=False,
+                                   help_text='If true, this scope is only for internal use and '
+                                   'it will not be shown to the user')
+
+    def clean(self) -> None:
+        if not self.slug:
+            self.slug = slugify(self.name)
+
+        if not self.description:
+            raise forms.ValidationError('Scope description is required')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'{self.name} ({self.slug})'
+
+
+HMAC_SHA256 = 'HMAC_SHA256'
+HMAC_SHA512 = 'HMAC_SHA512'
+ED25519 = 'ED25519'
+AUTH_ALGORITHM = (
+    (HMAC_SHA256, 'HMAC-SHA256'),
+    (HMAC_SHA512, 'HMAC_SHA512'),
+    (ED25519, 'ED25519'),
+)
+
+JWT = 'JWT'
+SIGNATURE = 'SIGNATURE'
+AUTH_STRATEGY = (
+    (JWT, 'Json Web Token'),
+    (SIGNATURE, 'Signature'),
+)
+
+LINK = 'LINK'
+AUTH_SCHEMA = ((LINK, 'Link'), )
+
+SYMMETRIC_ALGORITHMS = [HMAC_SHA256, HMAC_SHA512]
+ASYMMETRIC_ALGORITHMS = [ED25519]
+
+
+class App(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(UserInvite, self).__init__(*args, **kwargs)
+
+        self._algorithm = self.algorithm
+        self._strategy = self.strategy
+        self._schema = self.schema
+
+        self._private_key = self.private_key
+        self._public_key = self.public_key
+
+        self._webhook_url = self.webhook_url
+        self._redirect_url = self.redirect_url
+
+    name = models.SlugField(max_length=25, unique=True)
+    slug = models.SlugField(unique=True)
+
+    algorithm = models.CharField(max_length=11, choices=AUTH_ALGORITHM)
+    strategy = models.CharField(max_length=9, choices=AUTH_STRATEGY)
+    schema = models.CharField(max_length=4, choices=AUTH_SCHEMA)
+
+    scopes = models.ManyToManyField(Scope, blank=True)
+
+    private_key = models.CharField(max_length=255, blank=True, null=False)
+    public_key = models.CharField(max_length=255, blank=True, null=True, default=None)
+
+    webhook_url = models.URLField()
+    redirect_url = models.URLField()
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.slug})'
+
+    def clean(self) -> None:
+        from .actions import generate_auth_keys
+        if not self.slug:
+            self.slug = slugify(self.name)
+
+        if self.public_key and self.algorithm in SYMMETRIC_ALGORITHMS:
+            raise forms.ValidationError('Public key is not required for symmetric algorithms')
+
+        if not self.public_key and not self.private_key:
+            self.public_key, self.private_key = generate_auth_keys(self.algorithm)
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        if self.id and (self.private_key != self._private_key or self.public_key != self._public_key
+                        or self.algorithm != self._algorithm):
+            key = LegacyKey()
+            key.app = self
+
+            key.algorithm = self._algorithm
+            key.strategy = self._strategy
+            key.schema = self._schema
+
+            key.private_key = self._private_key
+            key.public_key = self._public_key
+
+            key.webhook_url = self._webhook_url
+            key.redirect_url = self._redirect_url
+
+            key.save()
+
+        self._algorithm = self.algorithm
+        self._strategy = self.strategy
+        self._schema = self.schema
+
+        self._private_key = self.private_key
+        self._public_key = self.public_key
+
+        self._webhook_url = self.webhook_url
+        self._redirect_url = self.redirect_url
+
+
+LEGACY_KEY_LIFETIME = timezone.timedelta(minutes=2)
+
+
+class LegacyKey(models.Model):
+
+    app = models.OneToOneField(App, on_delete=models.CASCADE, related_name='legacy_key')
+
+    algorithm = models.CharField(max_length=11, choices=AUTH_ALGORITHM)
+    strategy = models.CharField(max_length=9, choices=AUTH_STRATEGY)
+    schema = models.CharField(max_length=4, choices=AUTH_SCHEMA)
+
+    private_key = models.CharField(max_length=255, blank=True, null=False)
+    public_key = models.CharField(max_length=255, blank=True, null=True, default=None)
+
+    webhook_url = models.URLField()
+    redirect_url = models.URLField()
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.slug})'
+
+    def clean(self) -> None:
+        if self.public_key and self.algorithm in SYMMETRIC_ALGORITHMS:
+            raise forms.ValidationError('Public key is not required for symmetric algorithms')
+
+        if not self.public_key and not self.private_key:
+            raise forms.ValidationError('Public and private keys are required')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        tasks.destroy_legacy_key.apply_async(args=(self.id), eta=LEGACY_KEY_LIFETIME)
 
 
 PENDING = 'PENDING'
