@@ -5,7 +5,8 @@ from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Academy
 from breathecode.utils.script_notification import WrongScriptConfiguration
-from .models import CSVUpload, Endpoint, CSVDownload, RepositoryWebhook
+from breathecode.utils.validation_exception import ValidationException
+from .models import CSVUpload, Endpoint, CSVDownload, RepositoryWebhook, StripeEvent
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
 logger = logging.getLogger(__name__)
@@ -405,3 +406,22 @@ def add_github_webhook(context: dict, academy_slug: str):
     webhook.save()
 
     return webhook
+
+
+def add_stripe_webhook(context: dict) -> StripeEvent:
+    try:
+        event = StripeEvent(
+            stripe_id=context['id'],
+            type=context['type'],
+            status='PENDING',
+            data=context['data'],
+            request=context['request'],
+        )
+        event.save()
+
+    except Exception as e:
+        raise ValidationException('Invalid stripe webhook payload',
+                                  code=400,
+                                  slug='invalid-stripe-webhook-payload')
+
+    return event

@@ -2,6 +2,7 @@ import os, requests, logging
 from io import BytesIO, StringIO
 from django.shortcuts import render
 from django.utils import timezone
+import stripe
 from .signals import github_webhook
 from .models import Application, Endpoint, CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
 from rest_framework.permissions import AllowAny
@@ -13,9 +14,14 @@ from rest_framework.decorators import api_view, permission_classes
 from breathecode.utils import ValidationException
 from rest_framework import status
 from django.http import StreamingHttpResponse
-from .actions import add_github_webhook
+from .actions import add_github_webhook, add_stripe_webhook
+from breathecode.monitoring import signals
 
 logger = logging.getLogger(__name__)
+
+
+def get_stripe_webhook_secret():
+    return os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
 
 @api_view(['GET'])
@@ -88,7 +94,6 @@ def get_upload(request, upload_id=None):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-# @renderer_classes([PlainTextRenderer])
 def process_github_webhook(request, subscription_token):
 
     subscription = RepositorySubscription.objects.filter(token=subscription_token).first()
@@ -114,3 +119,29 @@ def process_github_webhook(request, subscription_token):
         else:
             logger.debug(f'Error at processing github webhook from academy {academy_slug}')
             raise ValidationException(f'Error at processing github webhook from academy {academy_slug}')
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def process_stripe_webhook(request):
+    event = None
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature', None)
+    endpoint_secret = get_stripe_webhook_secret()
+
+    try:
+        if not sig_header:
+            raise stripe.error.SignatureVerificationError(None, None)
+
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+
+    except ValueError as e:
+        raise ValidationException('Invalid payload', code=400, slug='invalid-payload')
+
+    except stripe.error.SignatureVerificationError as e:
+        raise ValidationException('Not allowed', code=403, slug='not-allowed')
+
+    if event := add_stripe_webhook(event):
+        signals.stripe_webhook.send(event=event, sender=event.__class__)
+
+    return Response({'success': True})

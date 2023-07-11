@@ -57,10 +57,12 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
         if amount:
             credit_price = get_provisioning_credit_price()
             quantity = math.ceil(amount / credit_price)
+            new_price = quantity * credit_price
 
             s = Stripe()
-            bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
-            bill.total_amount = quantity * credit_price
+            bill.stripe_id, bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
+            bill.fee = new_price - amount
+            bill.total_amount = new_price
 
         else:
             bill.total_amount = amount
@@ -118,10 +120,9 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
 
     handler = None
 
-    fields = ['id', 'creditCents', 'effectiveTime', 'kind', 'metadata']
-    if (len(df.keys().intersection(fields)) == len(fields) and len(
-        {x
-         for x in json.loads(df.iloc[0]['metadata'])}.intersection({'userName', 'contextURL'})) == 2):
+    # edit it
+    fields = ['id', 'credits', 'startTime', 'kind', 'userName', 'contextURL']
+    if len(df.keys().intersection(fields)) == len(fields):
         handler = actions.add_gitpod_activity
 
     if not handler:

@@ -174,7 +174,7 @@ class CSVUpload(models.Model):
 
 
 class RepositorySubscription(models.Model):
-    repository = models.URLField(max_length=255, help_text='Github repo where the event occured')
+    repository = models.URLField(max_length=255, help_text='Github repo where the event ocurred')
     token = models.CharField(max_length=255, unique=True)
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -199,6 +199,34 @@ WEBHOOK_STATUS = (
     (DONE, 'Done'),
     (ERROR, 'Error'),
 )
+
+
+class StripeEvent(models.Model):
+    stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True, help_text='Stripe id')
+
+    type = models.CharField(max_length=50, help_text='Stripe event type')
+    status = models.CharField(max_length=9, choices=WEBHOOK_STATUS, default=PENDING)
+    status_texts = models.JSONField(default=dict, blank=True)
+
+    data = models.JSONField(default=dict, blank=True)
+    request = models.JSONField(default=dict, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if not self.data:
+            self.data = {}
+
+        if not self.request:
+            self.request = {}
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        return super().save(*args, **kwargs)
 
 
 class RepositoryWebhook(models.Model):

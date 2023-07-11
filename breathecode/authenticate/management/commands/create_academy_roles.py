@@ -395,6 +395,10 @@ CAPABILITIES = [
         'slug': 'crud_academyservice',
         'description': 'Crud Academy Service details'
     },
+    {
+        'slug': 'crud_provisioning_bill',
+        'description': 'Crud Provisioning Bills'
+    }
 ]
 
 ROLES = [
@@ -723,7 +727,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'accountant',
         ]) + [
             'crud_my_academy', 'crud_organization', 'generate_academy_token', 'send_reset_password',
-            'generate_temporal_token', 'read_organization'
+            'generate_temporal_token', 'read_organization', 'crud_provisioning_bill'
         ]
     })
 
