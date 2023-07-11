@@ -173,7 +173,7 @@ class PPCFilter(SimpleListFilter):
 
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    search_fields = ['email', 'first_name', 'last_name', 'phone', 'utm_campaign']
+    search_fields = ['email', 'first_name', 'last_name', 'phone', 'utm_campaign', 'utm_url']
     list_display = ('id', '_storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location',
                     'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = [

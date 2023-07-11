@@ -34,10 +34,15 @@ class ProvisioningAcademyAdmin(admin.ModelAdmin):
 
 @admin.register(ProvisioningActivity)
 class ProvisioningActivityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill')
+    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill', 'invoice_url')
     search_fields = ['username', 'task_associated_slug', 'bill__hash']
     list_filter = ['bill__academy', 'status', ('bill', admin.EmptyFieldListFilter)]
     actions = []
+
+    def invoice_url(self, obj):
+        return format_html(
+            "<a rel='noopener noreferrer' target='_blank' href='/v1/provisioning/bill/{id}/html'>open invoice</a>",
+            id=obj.id)
 
     def _status(self, obj):
         colors = {
