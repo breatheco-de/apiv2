@@ -184,7 +184,11 @@ def handle_pending_github_user(organization: str, username: str) -> list[Academy
         return []
 
     user = None
-    credentials = CredentialsGithub.objects.filter(username__iexact=username).first()
+
+    credentials = None
+    if username:
+        credentials = CredentialsGithub.objects.filter(username__iexact=username).first()
+
     if credentials:
         user = credentials.user
 
