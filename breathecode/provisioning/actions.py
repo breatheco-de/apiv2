@@ -269,6 +269,8 @@ def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
         pa.status_text = ', '.join(errors)
         pa.save()
 
+    field['Username'] = field['Username'] or ''
+
     github_academy_user_log = context['github_academy_user_logs'].get(field['Username'], None)
     not_found = False
     academies = []
