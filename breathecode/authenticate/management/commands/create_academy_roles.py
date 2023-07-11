@@ -398,7 +398,7 @@ CAPABILITIES = [
     {
         'slug': 'crud_provisioning_bill',
         'description': 'Crud Provisioning Bills'
-    }
+    },
 ]
 
 ROLES = [

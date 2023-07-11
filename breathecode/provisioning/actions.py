@@ -358,7 +358,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
         pa.sku = field['id']
         pa.quantity = field['credits']
         pa.unit_type = 'Credits'
-        pa.price_per_unit = 0.36
+        pa.price_per_unit = 0.036
         pa.currency_code = 'USD'
         pa.repository_url = field['contextURL']
 

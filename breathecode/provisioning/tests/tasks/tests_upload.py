@@ -1253,7 +1253,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'unit_type':
                 'Credits',
                 'price_per_unit':
-                0.36,
+                0.036,
                 'currency_code':
                 'USD',
                 'repository_url':
@@ -1341,7 +1341,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'sku': str(csv['id'][n]),
                 'quantity': float(csv['credits'][n]),
                 'unit_type': 'Credits',
-                'price_per_unit': 0.36,
+                'price_per_unit': 0.036,
                 'currency_code': 'USD',
                 'repository_url': csv['contextURL'][n],
                 'task_associated_slug': repo_name(csv['contextURL'][n], ),
@@ -1424,7 +1424,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'sku': str(csv['id'][n]),
                 'quantity': float(csv['credits'][n]),
                 'unit_type': 'Credits',
-                'price_per_unit': 0.36,
+                'price_per_unit': 0.036,
                 'currency_code': 'USD',
                 'repository_url': csv['contextURL'][n],
                 'task_associated_slug': repo_name(csv['contextURL'][n], ),
@@ -1511,7 +1511,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'sku': str(csv['id'][n]),
                 'quantity': float(csv['credits'][n]),
                 'unit_type': 'Credits',
-                'price_per_unit': 0.36,
+                'price_per_unit': 0.036,
                 'currency_code': 'USD',
                 'repository_url': csv['contextURL'][n],
                 'task_associated_slug': repo_name(csv['contextURL'][n], ),
@@ -1622,7 +1622,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                     'sku': str(csv['id'][n1]),
                     'quantity': float(csv['credits'][n1]),
                     'unit_type': 'Credits',
-                    'price_per_unit': 0.36,
+                    'price_per_unit': 0.036,
                     'currency_code': 'USD',
                     'repository_url': csv['contextURL'][n1],
                     'task_associated_slug': repo_name(csv['contextURL'][n1]),
@@ -1762,7 +1762,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'sku': str(csv['id'][n1]),
                 'quantity': float(csv['credits'][n1]),
                 'unit_type': 'Credits',
-                'price_per_unit': 0.36,
+                'price_per_unit': 0.036,
                 'currency_code': 'USD',
                 'repository_url': csv['contextURL'][n1],
                 'task_associated_slug': repo_name(csv['contextURL'][n1]),
