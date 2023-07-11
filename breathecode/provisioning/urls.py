@@ -1,5 +1,4 @@
 from django.urls import path
-
 from .views import (AcademyActivityView, AcademyBillView, UploadView, redirect_new_container,
                     redirect_workspaces, render_html_all_bills, render_html_bill)
 

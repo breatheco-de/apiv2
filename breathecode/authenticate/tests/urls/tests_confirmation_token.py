@@ -40,7 +40,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': 'hash'})
 
-        response = self.client.put(url)
+        response = self.client.get(url)
         json = response.json()
         expected = {'detail': 'user-invite-not-found', 'status_code': 404}
 
@@ -58,7 +58,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.bc.database.create(user_invite=1)
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
 
-        response = self.client.put(url)
+        response = self.client.get(url)
         json = response.json()
         expected = {'detail': 'without-email', 'status_code': 400}
 
@@ -82,7 +82,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.bc.database.create(user_invite=user_invite)
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
 
-        response = self.client.put(url)
+        response = self.client.get(url)
         json = response.json()
         expected = {'detail': 'email-already-validated', 'status_code': 400}
 
@@ -103,7 +103,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.bc.database.create(user_invite=user_invite)
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
 
-        response = self.client.put(url)
+        response = self.client.get(url)
         json = response.json()
         expected = post_serializer(self, model.user_invite)
 
@@ -129,7 +129,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.bc.database.create(user_invite=user_invite)
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
 
-        response = self.client.put(url)
+        response = self.client.get(url)
         json = response.json()
         expected = [
             {

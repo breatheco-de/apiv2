@@ -10,6 +10,13 @@ from rest_framework.exceptions import ValidationError
 from breathecode.utils.validation_exception import ValidationException
 
 
+class AcademySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    name = serpy.Field()
+
+
 class ContainerMeSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.

@@ -124,22 +124,14 @@
 <body>
     <div class="invoice-box">
         <table cellpadding="0" cellspacing="0">
-            <tr>
-                <td>
-                    <a href="/v1/provisioning/bill/html">⬅ Back to all bills</a>
-                </td>
-            </tr>
-            <tr>
             <tr class="top">
                 <td colspan="2">
                     <table>
                         <tr>
                             <td class="title">
-                                {{ academy.title }}
                             </td>
 
                             <td>
-
                                 Invoice #{{ bill.id }}<br>
                                 Status: <span class="{{ bill.status }}">{{ bill.status }}</span><br>
                                 Created: {{ bill.created_at }}<br>
@@ -173,12 +165,10 @@
                 <td colspan="2">This bill is not to be paid yet as it its still PENDING</td>
             </tr>
             {% endif %}
-
             <tr class="heading">
                 <td>
                     Item
                 </td>
-
                 <td></td>
 
                 <td>
