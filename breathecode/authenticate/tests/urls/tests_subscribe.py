@@ -391,7 +391,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call(
                 'verify_email', 'pokemon@potato.io', {
                     'SUBJECT':
@@ -893,7 +893,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [])
 
     """
@@ -976,7 +976,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call('verify_email', 'pokemon@potato.io', {
                 'SUBJECT': '4Geeks - Validate account',
                 'LINK': f'http://localhost:8000/v1/auth/password/{token}'
@@ -1047,7 +1047,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [])
 
     """
@@ -1132,7 +1132,7 @@ class SubscribeTestSuite(AuthTestCase):
             'username': 'pokemon@potato.io',
         }])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call('verify_email', 'pokemon@potato.io', {
                 'SUBJECT': '4Geeks - Validate account',
                 'LINK': f'http://localhost:8000/v1/auth/password/{token}'
@@ -1226,7 +1226,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call('verify_email', 'pokemon@potato.io', {
                 'SUBJECT': '4Geeks - Validate account',
                 'LINK': f'http://localhost:8000/v1/auth/password/{token}'
@@ -1304,7 +1304,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [
             call(user=model.user, token_type='login'),
         ])
@@ -1368,7 +1368,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
         self.assertEqual(self.bc.database.list_of('auth.User'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [])
 
     """
@@ -1455,7 +1455,7 @@ class SubscribeTestSuite(AuthTestCase):
             'username': 'pokemon@potato.io',
         }])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call('verify_email', 'pokemon@potato.io', {
                 'SUBJECT': '4Geeks - Validate account',
                 'LINK': f'http://localhost:8000/v1/auth/password/{token}'
@@ -1554,7 +1554,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call('verify_email', 'pokemon@potato.io', {
                 'SUBJECT': '4Geeks - Validate account',
                 'LINK': f'http://localhost:8000/v1/auth/password/{token}'
@@ -1638,7 +1638,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [
             call(user=model.user, token_type='login'),
         ])
@@ -1713,7 +1713,7 @@ class SubscribeTestSuite(AuthTestCase):
 
         self.assertEqual(user_db, [])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [])
 
     """
@@ -1781,7 +1781,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [plan_db_item(model.plan, data={})])
         self.bc.check.queryset_with_pks(model.plan.invites.all(), [1])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [])
         self.assertEqual(Token.get_or_create.call_args_list, [])
 
     """
@@ -1869,7 +1869,7 @@ class SubscribeTestSuite(AuthTestCase):
             'username': 'pokemon@potato.io',
         }])
 
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+        self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call('verify_email', 'pokemon@potato.io', {
                 'SUBJECT': '4Geeks - Validate account',
                 'LINK': f'http://localhost:8000/v1/auth/password/{token}'
