@@ -448,7 +448,7 @@ def update_or_create_event(data, org):
 
         kwargs = {
             'title': data['name']['text'],
-            'description': data['description']['text'],
+#            'description': data['description']['text'],
             'excerpt': data['description']['text'],
             'starting_at': data['start']['utc'],
             'ending_at': data['end']['utc'],
