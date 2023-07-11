@@ -1,5 +1,7 @@
 import serpy, base64
-from .models import ProvisioningContainer
+
+from breathecode.utils.i18n import translation
+from .models import ProvisioningBill, ProvisioningContainer
 from django.utils import timezone
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -86,21 +88,33 @@ class ProvisioningContainerSerializer(serializers.ModelSerializer):
         return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
 
 
-class ProvisioningBillSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    id = serpy.Field()
-    total_amount = serpy.Field()
-    currency_code = serpy.Field()
-    academy = AcademySerializer(required=False)
-    status = serpy.Field()
-    status_details = serpy.Field()
-    paid_at = serpy.Field()
-    created_at = serpy.Field()
-    updated_at = serpy.Field()
+class ProvisioningBillSerializer(serializers.ModelSerializer):
 
-    activities = serpy.MethodField()
+    class Meta:
+        model = ProvisioningBill
+        fields = ('status', )
 
-    def get_activities(self, obj):
-        _activities = obj.provisioningactivity_set.order_by('created_at').all()
-        return ProvisioningActivitySerializer(_activities, many=True).data
+    def validate(self, data):
+
+        if self.instance and 'status' in data and self.instance.status in ['PAID', 'ERROR']:
+            status = data['status'].lower()
+            raise ValidationException(translation(
+                self.context['lang'],
+                en=f'You cannot change the status of this bill due to it is marked as {status}',
+                es='No puedes cambiar el estado de esta factura debido a que esta marcada '
+                f'como {status}',
+                slug='readonly-bill-status'),
+                                      code=400)
+
+        if self.instance and 'status' in data and data['status'] in ['PAID', 'ERROR']:
+            status = data['status'].lower()
+            raise ValidationException(translation(
+                self.context['lang'],
+                en=f'You cannot set the status of this bill to {status} because this status is '
+                'forbidden',
+                es=f'No puedes cambiar el estado de esta factura a {status} porque este estado esta '
+                'prohibido',
+                slug='invalid-bill-status'),
+                                      code=400)
+
+        return data

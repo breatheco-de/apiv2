@@ -308,10 +308,10 @@ class Format:
         """Parse the object to a `dict`"""
 
         if isinstance(arg, Model):
-            return ModelsMixin.remove_dinamics_fields(None, vars(arg))
+            return ModelsMixin.remove_dinamics_fields(None, vars(arg)).copy()
 
         if isinstance(arg, dict):
-            return arg
+            return arg.copy()
 
         raise NotImplementedError(f'{arg.__name__} is not implemented yet')
 

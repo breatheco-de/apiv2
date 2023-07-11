@@ -15,6 +15,7 @@ class MonitoringModelsMixin(ModelsMixin):
                                    slack_channel=False,
                                    endpoint=False,
                                    monitor_script=False,
+                                   stripe_event=False,
                                    application_kwargs={},
                                    endpoint_kwargs={},
                                    monitor_script_kwargs={},
@@ -66,6 +67,13 @@ class MonitoringModelsMixin(ModelsMixin):
                 kargs['academy'] = just_one(models['academy'])
 
             models['csv_upload'] = create_models(csv_upload, 'monitoring.CSVUpload', **{
+                **kargs,
+            })
+
+        if not 'stripe_event' in models and is_valid(stripe_event):
+            kargs = {}
+
+            models['stripe_event'] = create_models(stripe_event, 'monitoring.StripeEvent', **{
                 **kargs,
             })
 

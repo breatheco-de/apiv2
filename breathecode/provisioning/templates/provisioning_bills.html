@@ -1,0 +1,224 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>4Geeks Bills</title>
+
+    <style>
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, .15);
+            font-size: 16px;
+            line-height: 24px;
+            font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+            color: #555;
+        }
+
+        .invoice-box table {
+            width: 100%;
+            line-height: inherit;
+            text-align: left;
+        }
+
+        .invoice-box table td {
+            padding: 5px;
+            vertical-align: top;
+        }
+
+        .invoice-box table tr td:nth-child(2) {
+            text-align: right;
+        }
+
+        .invoice-box table tr.top table td {
+            padding-bottom: 20px;
+        }
+
+        .invoice-box table tr.top table td.title {
+            font-size: 45px;
+            line-height: 45px;
+            color: #333;
+        }
+
+        .invoice-box table tr.information table td {
+            padding-bottom: 40px;
+        }
+
+        .invoice-box table tr.heading td {
+            background: #eee;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+        }
+
+        .invoice-box table tr.details td {
+            padding-bottom: 20px;
+        }
+
+        .invoice-box table tr.item td {
+            border-bottom: 1px solid #eee;
+        }
+
+        .invoice-box table tr.item.last td {
+            border-bottom: none;
+        }
+
+        .invoice-box table tr.total td:nth-child(2) {
+            border-top: 2px solid #eee;
+            font-weight: bold;
+        }
+
+        .inline {
+            margin: 0;
+            padding: 0;
+        }
+
+        .inline li {
+            display: inline-block;
+        }
+
+        .inline li::before {
+            content: "- "
+        }
+
+        .inline li:first-child::before {
+            content: ""
+        }
+
+
+        @media only screen and (max-width: 600px) {
+            .invoice-box table tr.top table td {
+                width: 100%;
+                display: block;
+                text-align: center;
+            }
+
+            .invoice-box table tr.information table td {
+                width: 100%;
+                display: block;
+                text-align: center;
+            }
+        }
+
+        /** RTL **/
+        .rtl {
+            direction: rtl;
+            font-family: Tahoma, 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+        }
+
+        .rtl table {
+            text-align: right;
+        }
+
+        .rtl table tr td:nth-child(2) {
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="invoice-box">
+        <table cellpadding="0" cellspacing="0">
+            <tr class="top">
+                <td colspan="2">
+                    <h1>{{ title }}</h1>
+                </td>
+            </tr>
+            <tr class="top">
+                <td colspan="2">
+                    <ul class="inline">
+                        {% for key, label in possible_status %}
+                        {% if key == status %}
+                        <li><a style="background: #acccff; padding: 3px; border-radius: 4px;" href="?status={{key}}">{{label}}</a></li>
+                        {% else %}
+                        <li><a href="?status={{key}}">{{label}}</a></li>
+                        {% endif %}
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+
+            <tr class="heading">
+                <td>
+                    Item
+                </td>
+
+                <td>
+                    Price
+                </td>
+                <td>
+                    &nbsp;
+                </td>
+            </tr>
+
+            {% for bill in bills %}
+            <tr class="item">
+                <td>
+                    <strong>{{ bill.vendor.name }}</strong><small> - {{ bill.created_at }}</small>
+                </td>
+
+                <td>
+                    ${{ bill.total_amount|floatformat:2  }}
+                </td>
+
+                <td>
+                    <button class="btn" onClick="location.href = '/v1/provisioning/bill/{{ bill.id }}/html';">view</button>
+                    <select id="change_status" onChange="chanceBillStatus({{ bill.id }}, {{ bill.academy.id }}, this.value);">
+                        <option value="mark_as">Mark as</option>
+                        {% for key, label in possible_status %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            {% endfor %}
+
+            <tr class="total">
+                <td></td>
+
+                <td>
+                    Total: ${{ total_price|floatformat:2 }}
+                </td>
+            </tr>
+        </table>
+    </div>
+    <script>
+
+    function chanceBillStatus(bill_id, academy_id, status){
+        const options = {
+            method: 'PUT',
+            headers: {
+                "Content-Type": "application/json",
+                "Academy": academy_id,
+                "Authorization": 'Token {{ token }}',
+            },
+            body: JSON.stringify({
+                status,
+            })
+        }
+        fetch('/v1/provisioning/academy/bill/'+bill_id, options)
+            .then(function(resp){
+                if(resp.status >= 200 && resp.status < 400){
+                    return resp.json();
+                }
+                else if(resp.status == 401 || resp.status == 403){
+                    alert('You don\'t have permissions to do this action')
+                }
+                else{
+                    console.log(resp.status, res.json())
+                    alert('Error updating the bill')
+                }
+            })
+            .then(function(){
+                window.location.reload()
+            })
+            .catch(function(){
+                alert("There was an error updating the bill")
+            })
+        }
+    </script>
+</body>
+
+</html>

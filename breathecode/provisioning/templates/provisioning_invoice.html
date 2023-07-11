@@ -1,4 +1,12 @@
 {% extends "base.html" %}
+{% load math %}
+
+{% block head %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
+        crossorigin="anonymous">
+{% endblock %}
+
 {% block content %}
 <style>
     .invoice-box {
@@ -24,7 +32,7 @@
         vertical-align: top;
     }
 
-    .invoice-box table tr td:nth-child(2) {
+    .invoice-box table tr td:nth-child(5) {
         text-align: right;
     }
 
@@ -60,9 +68,13 @@
         border-bottom: none;
     }
 
-    .invoice-box table tr.total td:nth-child(2) {
+    .invoice-box table tr.total td:nth-child(5) {
         border-top: 2px solid #eee;
         font-weight: bold;
+    }
+
+    .price {
+        text-align: right;
     }
 
     @media only screen and (max-width: 600px) {
@@ -85,19 +97,20 @@
         font-family: Tahoma, 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
     }
 
+
     .rtl table {
         text-align: right;
     }
 
-    .rtl table tr td:nth-child(2) {
-        text-align: left;
+    .rtl table tr td:nth-child(5) {
+        text-align: right;
     }
 
     .capitalize {
         text-transform: uppercase;
     }
 
-    .DISPUTED {
+    .PENDING {
         color: rgb(153, 0, 0);
     }
 
@@ -105,30 +118,10 @@
         color: rgb(0, 100, 50);
     }
 
-    .alert {
-        border: 1px solid;
-        border-radius: 10px;
-        background: #BDBDBD;
-        padding: 5px;
-    }
-
     .alert td {
         width: 100%;
     }
 
-    .alert.alert-danger {
-        background: #ffb8b8;
-        color: rgb(92, 0, 0);
-        text-align: center;
-    }
-
-    .text-danger {
-        color: rgb(134, 0, 0);
-    }
-
-    .text-success {
-        color: rgb(13, 128, 0);
-    }
 </style>
 </head>
 
@@ -140,19 +133,13 @@
                     <table>
                         <tr>
                             <td class="title">
-
                             </td>
 
                             <td>
-
-                                Invoice #{{ id }}<br>
-                                Status: <span class="{{ status }}">{{ status }}</span><br>
-                                Created: {{ created_at }}<br>
-                                {% if paid_at is not None %}
-                                Paid: {{ paid_at }}<br>
-                                {% else %}
-                                Not paid yet<br>
-                                {% endif %}
+                                Invoice #{{ bill.id }}<br>
+                                Status: <span class="{{ bill.status }}">{{ bill.status }}</span><br>
+                                Created: {{ bill.created_at }}<br>
+                                Paid: {{ bill.paid_at }}<br>
                             </td>
                         </tr>
                     </table>
@@ -165,7 +152,7 @@
                     <table>
                         <tr>
                             <td>
-                                {{ academy.name }}
+                                {{ bill.academy.name }}<br>
                             </td>
 
                             <!-- <td>
@@ -177,37 +164,91 @@
                     </table>
                 </td>
             </tr>
+            {% if status == "PENDING" %}
+            <tr class="alert alert-danger {{ status }}" style="padding-top: -30px;">
+                <td colspan="2">This bill is not to be paid yet as it its still PENDING</td>
+            </tr>
+            {% endif %}
             <tr class="heading">
                 <td>
-                    Item
+                    Username
                 </td>
 
                 <td>
-                    Credits consumed
+                    Product name
                 </td>
-            </tr>
-
-            {% for provisioning_activity in provisioning_activities %}
-            <tr class="item">
-                <td>
-                    {% if provisioning_activity.status_text is not None and provisioning_activity.status_text != "" %}
-                    <span class="text-danger tooltip pointer" data-tippy-content="{{provisioning_activity.status_text}}">⚠️</span>
-                    {% endif %}
-                    <a href="https://github.com/{{ provisioning_activity.username }}" target="_blank" rel="noopener noreferrer">{{ provisioning_activity.username }}</a>
-                </td>
-
-                <td>
-                    <span>{{ provisioning_activity.quantity }}</span>
-                </td>
-            </tr>
-            {% endfor %}
-            <tr class="total">
                 <td></td>
 
                 <td>
-                    Total Price: ${{ total_amount }}
+                    Quantity
+                </td>
+
+                <td>
+                    Price
+                </td>
+            </tr>
+
+            {% for activity in activities %}
+            <tr class="item">
+                <td>
+                    {{ activity.username }}
+                </td>
+
+                <td colspan="2">
+                    {{ activity.product_name }}
+                    {% if activity.status_text %}
+                        <small> - </small>
+                        <a onclick="alert('{{activity.status_text}}')" type="button" class="btn-link">
+                            see error
+                        </a>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if activity.quantity.is_integer %}
+                        {{ activity.quantity|floatformat }}
+                    {% else %}
+                        {{ activity.quantity|floatformat:3 }}
+                    {% endif %}
+                </td>
+
+
+                <td class="price">
+                    <span style="color: #608062;">
+                        ${{ activity.quantity|mul:activity.price_per_unit|mul:activity.multiplier|floatformat:2 }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+
+
+            <tr class="total">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+
+                <td>
+                    Total: ${{ bill.total_amount|floatformat:2 }}
                 </td>
             </tr>
         </table>
+        {% if bill.stripe_url %}
+            <a class="btn btn-primary" type="button" href="{{bill.stripe_url}}">Pay</a>
+        {% else %}
+            <br />
+            <button class="btn btn-primary" type="button" disabled>Pay</button>
+            <br />
+            <br />
+            <div class="alert alert-warning" role="alert">
+                ⚠️This bill doesn't have a payment link
+            </div>
+        {% endif %}
+
+
     </div>
-    {% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+
+</body>
+{% endblock %}
