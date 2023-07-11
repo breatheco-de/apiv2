@@ -259,6 +259,7 @@ class UploadView(APIView):
 
         return Response(result, status=status.HTTP_207_MULTI_STATUS)
 
+
 @private_view()
 def render_html_all_bills(request, token):
     lang = get_user_language(request)
