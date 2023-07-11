@@ -91,7 +91,7 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
     }
 
     storage = Storage()
-    cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), hash)
+    cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
     if not cloud_file.exists():
         logger.error(f'File {hash} not found')
         return
