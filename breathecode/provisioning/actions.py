@@ -150,7 +150,7 @@ def get_github_academy_user_logs(academy: Academy, username: str,
         log = logs[n]
 
         if n != 0:
-            logs[n - 1]['ending_at'] = log.created_at
+            ret[n - 1]['ending_at'] = log.created_at
 
         obj = {
             'starting_at': log.created_at,
