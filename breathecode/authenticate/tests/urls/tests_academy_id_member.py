@@ -210,10 +210,10 @@ class MemberDeleteDuckTestSuite(AuthTestCase):
             response = self.client.delete(url)
 
             json = response.json()
-            expected = {'detail': 'profile-academy-not-found', 'status_code': 404}
+            expected = {'detail': 'delete-is-forbidden', 'status_code': 403}
 
             self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """
     🔽🔽🔽 Check the param is being passed
