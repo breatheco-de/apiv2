@@ -1,5 +1,5 @@
 from datetime import datetime
-import json
+import pytz
 import re
 import random
 from typing import Optional, TypedDict
@@ -246,7 +246,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
         if academy:
             for log in logs:
                 if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
-                        and log['starting_at'] <= date <= log['ending_at']):
+                        and log['starting_at'] <= pytz.utc.localize(date) <= log['ending_at']):
                     errors.append(
                         f'User {field["Username"]} was deleted from the academy during this event at {date}')
 
