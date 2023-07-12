@@ -137,6 +137,7 @@ PERSISTED = 'PERSISTED'
 ACTIVITY_STATUS = (
     (PENDING, 'Pending'),
     (PERSISTED, 'Persisted'),
+    (IGNORED, 'Ignored'),
     (ERROR, 'Error'),
 )
 

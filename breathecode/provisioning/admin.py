@@ -2,6 +2,8 @@ import logging, secrets
 from django.contrib import admin, messages
 from django import forms
 from django.utils.html import format_html
+
+from breathecode.provisioning import tasks
 from .models import (ProvisioningVendor, ProvisioningMachineTypes, ProvisioningAcademy, ProvisioningBill,
                      ProvisioningActivity, ProvisioningContainer, ProvisioningProfile)
 # from .actions import ()
@@ -32,12 +34,18 @@ class ProvisioningAcademyAdmin(admin.ModelAdmin):
     list_filter = ['vendor']
 
 
+def force_calculate_bill(modeladmin, request, queryset):
+    for x in queryset.all():
+        tasks.calculate_bill_amounts.delay(x.hash, force=True)
+
+
 @admin.register(ProvisioningActivity)
 class ProvisioningActivityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill', 'invoice_url')
+    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill',
+                    'invoice_url')
     search_fields = ['username', 'task_associated_slug', 'bill__hash']
     list_filter = ['bill__academy', 'status', ('bill', admin.EmptyFieldListFilter)]
-    actions = []
+    actions = [force_calculate_bill]
 
     def invoice_url(self, obj):
         return format_html(

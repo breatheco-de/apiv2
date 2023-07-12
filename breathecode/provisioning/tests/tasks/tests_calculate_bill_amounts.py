@@ -120,7 +120,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         provisioning_activity = {
             'price_per_unit': 0.0,
             'quantity': 0.0,
-            'status': 'PENDING',
+            'status': 'PERSISTED',
         }
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
                                         provisioning_activity=(2, provisioning_activity))
@@ -169,7 +169,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         provisioning_activities = [{
             'price_per_unit': random.random() * 100,
             'quantity': random.random() * 10,
-            'status': 'PENDING',
+            'status': 'PERSISTED',
         } for _ in range(2)]
         amount = sum(
             [activity['price_per_unit'] * activity['quantity'] for activity in provisioning_activities])
@@ -231,7 +231,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         provisioning_activities = [{
             'price_per_unit': random.random() * 100,
             'quantity': random.random() * 10,
-            'status': 'PENDING',
+            'status': 'PERSISTED',
         } for _ in range(2)]
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
                                         provisioning_activity=provisioning_activities)
@@ -284,7 +284,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         provisioning_activities = [{
             'price_per_unit': random.random() * 100,
             'quantity': random.random() * 10,
-            'status': 'PENDING',
+            'status': 'PERSISTED',
         } for _ in range(2)]
         amount = sum(
             [activity['price_per_unit'] * activity['quantity'] for activity in provisioning_activities])
@@ -347,7 +347,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         provisioning_activities = [{
             'price_per_unit': random.random() * 100,
             'quantity': random.random() * 10,
-            'status': 'PENDING',
+            'status': 'PERSISTED',
         } for _ in range(2)]
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
                                         provisioning_activity=provisioning_activities)

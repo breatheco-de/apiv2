@@ -49,7 +49,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
 
     for bill in bills:
         amount = 0
-        for activity in ProvisioningActivity.objects.filter(bill=bill):
+        for activity in ProvisioningActivity.objects.filter(bill=bill, status='PERSISTED'):
             amount += activity.price_per_unit * activity.quantity
 
         bill.status = 'DUE' if amount else 'PAID'
