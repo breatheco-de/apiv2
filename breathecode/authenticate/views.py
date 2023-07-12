@@ -455,11 +455,11 @@ class ResendInviteView(APIView):
             errors.append(C(f'This invite don\'t have email, contact to admin', slug=f'without-email'))
 
         now = timezone.now()
-        days = 1
-        if invite.sent_at and invite.sent_at + timedelta(days=1) > now:
+        minutes = 10
+        if invite.sent_at and invite.sent_at + timedelta(minutes=minutes) > now:
             errors.append(
-                C(f'You have a pending invitation sent less than {days} day ago, check your email',
-                  slug=f'sent-at-diff-less-{days}-days'))
+                C(f'You have a pending invitation sent less than {minutes} minutes ago, check your email',
+                  slug=f'sent-at-diff-less-{minutes}-minutes'))
 
         if errors:
             raise ValidationException(errors, code=400)

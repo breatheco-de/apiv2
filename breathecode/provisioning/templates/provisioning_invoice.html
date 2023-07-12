@@ -32,7 +32,7 @@
         vertical-align: top;
     }
 
-    .invoice-box table tr td:nth-child(4) {
+    .invoice-box table tr td:nth-child(5) {
         text-align: right;
     }
 
@@ -68,9 +68,13 @@
         border-bottom: none;
     }
 
-    .invoice-box table tr.total td:nth-child(4) {
+    .invoice-box table tr.total td:nth-child(5) {
         border-top: 2px solid #eee;
         font-weight: bold;
+    }
+
+    .price {
+        text-align: right;
     }
 
     @media only screen and (max-width: 600px) {
@@ -98,8 +102,8 @@
         text-align: right;
     }
 
-    .rtl table tr td:nth-child(4) {
-        text-align: left;
+    .rtl table tr td:nth-child(5) {
+        text-align: right;
     }
 
     .capitalize {
@@ -167,7 +171,11 @@
             {% endif %}
             <tr class="heading">
                 <td>
-                    Item
+                    Username
+                </td>
+
+                <td>
+                    Product name
                 </td>
                 <td></td>
 
@@ -182,10 +190,14 @@
 
             {% for activity in activities %}
             <tr class="item">
+                <td>
+                    {{ activity.username }}
+                </td>
+
                 <td colspan="2">
                     {{ activity.product_name }}
-                    <small> - </small>
                     {% if activity.status_text %}
+                        <small> - </small>
                         <a onclick="alert('{{activity.status_text}}')" type="button" class="btn-link">
                             see error
                         </a>
@@ -201,17 +213,17 @@
                 </td>
 
 
-                <td>
+                <td class="price">
                     <span style="color: #608062;">
                         ${{ activity.quantity|mul:activity.price_per_unit|mul:activity.multiplier|floatformat:2 }}
                     </span>
-                    <!-- <span style="color: #608062;">{{ activity.quantity|floatformat:2 }}x{{ activity.price_per_unit|floatformat:2 }}={{ activity.price|floatformat:2 }}</span> -->
                 </td>
             </tr>
             {% endfor %}
 
 
             <tr class="total">
+                <td></td>
                 <td></td>
                 <td></td>
                 <td></td>

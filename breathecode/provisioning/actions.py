@@ -184,7 +184,11 @@ def handle_pending_github_user(organization: str, username: str) -> list[Academy
         return []
 
     user = None
-    credentials = CredentialsGithub.objects.filter(username__iexact=username).first()
+
+    credentials = None
+    if username:
+        credentials = CredentialsGithub.objects.filter(username__iexact=username).first()
+
     if credentials:
         user = credentials.user
 
@@ -268,6 +272,9 @@ def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
         pa.status = 'PERSISTED' if not errors else 'ERROR'
         pa.status_text = ', '.join(errors)
         pa.save()
+
+    if isinstance(field['Username'], float):
+        field['Username'] = ''
 
     github_academy_user_log = context['github_academy_user_logs'].get(field['Username'], None)
     not_found = False
@@ -358,7 +365,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
         pa.sku = field['id']
         pa.quantity = field['credits']
         pa.unit_type = 'Credits'
-        pa.price_per_unit = 0.36
+        pa.price_per_unit = 0.036
         pa.currency_code = 'USD'
         pa.repository_url = field['contextURL']
 
