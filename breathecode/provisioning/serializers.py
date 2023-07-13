@@ -1,7 +1,7 @@
 import serpy, base64
 
 from breathecode.utils.i18n import translation
-from .models import ProvisioningBill, ProvisioningContainer
+from .models import ProvisioningBill, ProvisioningContainer, ProvisioningActivity
 from django.utils import timezone
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -86,6 +86,38 @@ class ProvisioningContainerSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
 
         return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
+
+
+class GETProvisioningBillSerializer(serpy.Serializer):
+    total_amount = serpy.Field()
+    academy = AcademySerializer(required=False)
+    status = serpy.Field()
+    paid_at = serpy.Field()
+    stripe_url = serpy.Field()
+    activities = serpy.MethodField()
+
+    def get_activities(self, obj):
+        activities = ProvisioningActivity.objects.filter(bill=obj.id)
+        activities_filtered = {}
+        for activity in activities:
+            username = activity.username
+            quantity = activity.quantity
+            if username in activities_filtered:
+                activities_filtered[username]['quantity'] += quantity
+            else:
+                activities_filtered[username] = {
+                    'username': activity.username,
+                    'product_name': activity.product_name,
+                    'status': activity.status,
+                    'status_text': activity.status_text,
+                    'price_per_unit': activity.price_per_unit,
+                    'quantity': quantity,
+                    'multiplier': activity.multiplier
+                }
+        bill_activities = []
+        for activity in activities_filtered.values():
+            bill_activities.append(activity)
+        return bill_activities
 
 
 class ProvisioningBillSerializer(serializers.ModelSerializer):
