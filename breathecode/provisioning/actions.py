@@ -1,5 +1,5 @@
 from datetime import datetime
-import json
+import pytz
 import re
 import random
 from typing import Optional, TypedDict
@@ -150,7 +150,7 @@ def get_github_academy_user_logs(academy: Academy, username: str,
         log = logs[n]
 
         if n != 0:
-            logs[n - 1]['ending_at'] = log.created_at
+            ret[n - 1]['ending_at'] = log.created_at
 
         obj = {
             'starting_at': log.created_at,
@@ -213,6 +213,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
 
     def write_activity(academy: Optional[Academy] = None) -> None:
         errors = []
+        ignores = []
         provisioning_bill = None
         provisioning_vendor = None
 
@@ -246,8 +247,8 @@ def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
         if academy:
             for log in logs:
                 if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
-                        and log['starting_at'] <= date <= log['ending_at']):
-                    errors.append(
+                        and log['starting_at'] <= pytz.utc.localize(date) <= log['ending_at']):
+                    ignores.append(
                         f'User {field["Username"]} was deleted from the academy during this event at {date}')
 
         else:
@@ -269,8 +270,19 @@ def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
         pa.repository_url = f"https://github.com/{field['Owner']}/{field['Repository Slug']}"
         pa.task_associated_slug = field['Repository Slug']
         pa.processed_at = timezone.now()
-        pa.status = 'PERSISTED' if not errors else 'ERROR'
-        pa.status_text = ', '.join(errors)
+
+        if errors:
+            pa.status = 'ERROR'
+            pa.status_text = ', '.join(errors + ignores)
+
+        elif ignores:
+            pa.status = 'IGNORED'
+            pa.status_text = ', '.join(ignores)
+
+        else:
+            pa.status = 'PERSISTED'
+            pa.status_text = ''
+
         pa.save()
 
     if isinstance(field['Username'], float):
