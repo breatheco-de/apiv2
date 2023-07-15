@@ -1,6 +1,7 @@
 import hashlib
 from io import StringIO
 import json
+import math
 import os
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -8,6 +9,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
+from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import ProvisioningActivitySerializer, ProvisioningBillSerializer, GETProvisioningBillSerializer
 from breathecode.provisioning.tasks import upload
 from breathecode.notify.actions import get_template_content
@@ -197,7 +199,7 @@ class UploadView(APIView):
         if created:
             cloud_file.upload(file, content_type=file.content_type)
 
-        upload.delay(hash)
+        tasks.upload.delay(hash, total_pages=math.ceil(len(df) / tasks.PANDAS_ROWS_LIMIT))
 
         data = {'file_name': hash, 'status': 'PENDING', 'created': created}
 
