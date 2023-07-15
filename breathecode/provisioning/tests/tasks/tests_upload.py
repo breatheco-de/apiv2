@@ -1356,7 +1356,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'status_text':
                 ', '.join([
                     f"User {csv['userName'][n]} not found in any academy",
-                    'Provisioning vendor Codespaces not found',
+                    'Provisioning vendor Gitpod not found',
                 ]),
             }) for n in range(10)
         ])
@@ -1457,7 +1457,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'username': csv['userName'][n],
                 'processed_at': UTC_NOW,
                 'status': 'ERROR',
-                'status_text': ', '.join(['Provisioning vendor Codespaces not found']),
+                'status_text': ', '.join(['Provisioning vendor Gitpod not found']),
             }) for n in range(10)
         ])
 
@@ -1502,7 +1502,7 @@ class GitpodTestSuite(ProvisioningTestCase):
             'storage_action': 'ADD',
             'academy_user_id': n + 1,
         } for n in range(10)]
-        provisioning_vendor = {'name': 'Codespaces'}
+        provisioning_vendor = {'name': 'Gitpod'}
         model = self.bc.database.create(user=10,
                                         github_academy_user=github_academy_users,
                                         github_academy_user_log=github_academy_user_logs,
@@ -1605,7 +1605,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         limit = tasks.PANDAS_ROWS_LIMIT
         tasks.PANDAS_ROWS_LIMIT = 3
 
-        provisioning_vendor = {'name': 'Codespaces'}
+        provisioning_vendor = {'name': 'Gitpod'}
         github_academy_users = [{
             'username': username,
         } for username in csv['userName']]
@@ -1728,7 +1728,7 @@ class GitpodTestSuite(ProvisioningTestCase):
             'storage_action': 'ADD',
             'academy_user_id': n + 1,
         } for n in range(10)]
-        provisioning_vendor = {'name': 'Codespaces'}
+        provisioning_vendor = {'name': 'Gitpod'}
 
         model = self.bc.database.create(user=10,
                                         academy=3,
@@ -1852,7 +1852,7 @@ class GitpodTestSuite(ProvisioningTestCase):
             'storage_action': 'ADD',
             'academy_user_id': n + 1,
         } for n in range(10)]
-        provisioning_vendor = {'name': 'Codespaces'}
+        provisioning_vendor = {'name': 'Gitpod'}
         profile_academies = []
 
         for user_n in range(10):
