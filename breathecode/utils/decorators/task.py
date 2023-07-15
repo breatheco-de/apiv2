@@ -49,21 +49,27 @@ class Task(object):
 
             page = kwargs.get('page', None)
             total_pages = kwargs.get('total_pages', None)
+            task_manager_id = kwargs.pop('_task_manager_id', None)
             last_run = timezone.now()
 
-            x, created = TaskManager.objects.get_or_create(task_module=task_module,
-                                                           task_name=task_name,
-                                                           reverse_module=reverse_module,
-                                                           reverse_name=reverse_name,
-                                                           arguments=arguments,
-                                                           defaults={
-                                                               'status': 'PENDING',
-                                                               'current_page': page,
-                                                               'total_pages': total_pages,
-                                                               'last_run': last_run
-                                                           })
+            x = None
+            if task_manager_id:
+                x = TaskManager.objects.filter(id=task_manager_id).first()
 
-            if created:
+            created = False
+            if x is None:
+                created = True
+                x = TaskManager.objects.create(task_module=task_module,
+                                               task_name=task_name,
+                                               reverse_module=reverse_module,
+                                               reverse_name=reverse_name,
+                                               arguments=arguments,
+                                               status='PENDING',
+                                               current_page=page,
+                                               total_pages=total_pages,
+                                               last_run=last_run)
+
+            if not created:
                 x.current_page = page
                 x.last_run = last_run
                 x.save()
@@ -89,7 +95,7 @@ class Task(object):
                         # behavior by default
                         raise e
 
-            res = function(*args, **kwargs)
+            res = function(*args, **kwargs, _task_manager_id=x.id)
 
             if x.total_pages is not None and x.current_page is not None and total_pages == x.current_page:
                 x.status = 'DONE'
