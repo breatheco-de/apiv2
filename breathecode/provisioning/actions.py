@@ -402,13 +402,13 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         slug = result[0]
 
     provisioning_bills = []
-    provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
+    provisioning_vendor = context['provisioning_vendors'].get('Gitpod', None)
     if not provisioning_vendor:
-        provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
-        context['provisioning_vendors']['Codespaces'] = provisioning_vendor
+        provisioning_vendor = ProvisioningVendor.objects.filter(name='Gitpod').first()
+        context['provisioning_vendors']['Gitpod'] = provisioning_vendor
 
     if not provisioning_vendor:
-        errors.append(f'Provisioning vendor Codespaces not found')
+        errors.append(f'Provisioning vendor Gitpod not found')
 
     if academies:
         for academy in academies:
