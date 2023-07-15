@@ -99,7 +99,7 @@ class Task(object):
 
             res = function(*args, **kwargs)
 
-            if total_pages == x.current_page + 1:
+            if total_pages == page + 1:
                 x.status = 'DONE'
                 x.save()
 
