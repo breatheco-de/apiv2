@@ -1041,9 +1041,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [
-            call(slug, page=1),
-            call(slug, page=2),
-            call(slug, page=3),
+            call(slug, page=1, task_manager_id=1),
+            call(slug, page=2, task_manager_id=1),
+            call(slug, page=3, task_manager_id=1),
         ])
 
         self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
@@ -1684,9 +1684,9 @@ class GitpodTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [
-            call(slug, page=1),
-            call(slug, page=2),
-            call(slug, page=3),
+            call(slug, page=1, task_manager_id=1),
+            call(slug, page=2, task_manager_id=1),
+            call(slug, page=3, task_manager_id=1),
         ])
 
         self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])

@@ -34,7 +34,7 @@ class BaseTaskWithRetry(Task):
 
 
 @task()
-def calculate_bill_amounts(hash: str, *, force: bool = False):
+def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     logger.info(f'Starting calculate_bill_amounts for hash {hash}')
 
     bills = ProvisioningBill.objects.filter(hash=hash)
@@ -85,7 +85,7 @@ def reverse_upload(hash: str, **_: Any):
 
 
 @task(reverse=reverse_upload)
-def upload(hash: str, *, page: int = 0, force: bool = False, **_: Any):
+def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: int = 0, **_: Any):
     logger.info(f'Starting upload for hash {hash}')
 
     limit = PANDAS_ROWS_LIMIT
@@ -174,7 +174,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, **_: Any):
             bill.delete()
 
     if len(df.iloc[start:end]) == limit:
-        upload.delay(hash, page=page + 1)
+        upload.delay(hash, page=page + 1, task_manager_id=task_manager_id)
 
     elif not ProvisioningUserConsumption.objects.filter(hash=hash, status='ERROR').exists():
         calculate_bill_amounts.delay(hash)
