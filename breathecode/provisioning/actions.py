@@ -306,7 +306,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         for log in logs[academy_id]:
             if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
                     and log['starting_at'] <= pytz.utc.localize(date) <= log['ending_at']):
-                provisioning_bills.pop(academy_id)
+                provisioning_bills.pop(academy_id, None)
                 ignores.append(
                     f'User {field["Username"]} was deleted from the academy during this event at {date}')
 
