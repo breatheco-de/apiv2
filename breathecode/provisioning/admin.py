@@ -36,16 +36,10 @@ class ProvisioningAcademyAdmin(admin.ModelAdmin):
 
 @admin.register(ProvisioningActivity)
 class ProvisioningActivityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill',
-                    'invoice_url')
+    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill')
     search_fields = ['username', 'task_associated_slug', 'bill__hash']
     list_filter = ['bill__academy', 'status', ('bill', admin.EmptyFieldListFilter)]
     actions = []
-
-    def invoice_url(self, obj):
-        return format_html(
-            "<a rel='noopener noreferrer' target='_blank' href='/v1/provisioning/bill/{id}/html'>open invoice</a>",
-            id=obj.id)
 
     def _status(self, obj):
         colors = {
@@ -71,10 +65,15 @@ def force_calculate_bill(modeladmin, request, queryset):
 
 @admin.register(ProvisioningBill)
 class ProvisioningBillAdmin(admin.ModelAdmin):
-    list_display = ('id', 'academy', '_status', 'total_amount', 'currency_code', 'paid_at')
+    list_display = ('id', 'academy', '_status', 'total_amount', 'currency_code', 'paid_at', 'invoice_url')
     search_fields = ['academy__name', 'academy__slug', 'id']
     list_filter = ['academy', 'status']
     actions = [force_calculate_bill]
+
+    def invoice_url(self, obj):
+        return format_html(
+            "<a rel='noopener noreferrer' target='_blank' href='/v1/provisioning/bill/{id}/html'>open invoice</a>",
+            id=obj.id)
 
     def _status(self, obj):
         colors = {

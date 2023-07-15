@@ -8,7 +8,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
-from breathecode.provisioning.serializers import ProvisioningActivitySerializer, ProvisioningBillSerializer
+from breathecode.provisioning.serializers import ProvisioningActivitySerializer, ProvisioningBillSerializer, GETProvisioningBillSerializer
 from breathecode.provisioning.tasks import upload
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -349,12 +349,14 @@ def render_html_bill(request, token, id=None):
     for key, value in BILL_STATUS:
         status_mapper[key] = value
 
+    item = GETProvisioningBillSerializer(item, many=False).data
+
     data = {
         **{},
         'bill': item,
-        'activities': ProvisioningActivity.objects.filter(bill=item),
+        'activities': item['activities'],
         'status': status_map['DUE'],
-        'title': item.academy.name,
+        'title': item['academy']['name'],
     }
     template = get_template_content('provisioning_invoice', data)
     return HttpResponse(template['html'])
