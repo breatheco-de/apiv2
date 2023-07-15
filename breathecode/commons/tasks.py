@@ -32,7 +32,7 @@ def mark_task_as_cancelled(task_manager_id):
 
 # do not use our own task decorator
 @shared_task(bind=False)
-def mark_task_as_reversed(task_manager_id, *, attempts=0):
+def mark_task_as_reversed(task_manager_id, *, attempts=0, force=False):
     logger.info(f'Running mark_task_as_reversed for {task_manager_id}')
 
     x = TaskManager.objects.filter(id=task_manager_id).first()
@@ -44,8 +44,8 @@ def mark_task_as_reversed(task_manager_id, *, attempts=0):
         logger.warn(f'TaskManager {task_manager_id} does not have a reverse function')
         return
 
-    if (x.status != 'DONE' and not x.last_run < timezone.now() - timedelta(minutes=TOLERANCE) and not x.killed
-            and attempts < 10):
+    if not force and (x.status != 'DONE' and not x.last_run < timezone.now() - timedelta(minutes=TOLERANCE)
+                      and not x.killed and attempts < 10):
         logger.warn(f'TaskManager {task_manager_id} was not killed, scheduling to run again')
 
         x.status = 'CANCELLED'
