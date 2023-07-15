@@ -51,7 +51,7 @@ def mark_task_as_reversed(task_manager_id, *, attempts=0):
         x.status = 'CANCELLED'
         x.save()
 
-        mark_task_as_reversed.apply_async(args=(task_manager_id),
+        mark_task_as_reversed.apply_async(args=(task_manager_id, ),
                                           kwargs={'attempts': attempts + 1},
                                           eta=datetime.utcnow() + timedelta(seconds=30))
         return
@@ -103,7 +103,7 @@ def mark_task_as_pending(task_manager_id, *, attempts=0):
     if not x.last_run < timezone.now() - timedelta(minutes=TOLERANCE) and not x.killed and attempts < 10:
         logger.warn(f'TaskManager {task_manager_id} was not killed, scheduling to run again')
 
-        mark_task_as_pending.apply_async(args=(task_manager_id),
+        mark_task_as_pending.apply_async(args=(task_manager_id, ),
                                          kwargs={'attempts': attempts + 1},
                                          eta=datetime.utcnow() + timedelta(seconds=30))
         return
