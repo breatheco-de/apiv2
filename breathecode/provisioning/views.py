@@ -110,22 +110,23 @@ class AcademyActivityView(APIView):
                 'exact': [
                     'hash',
                     'username',
-                    'product_name',
                     'status',
+                    'product_name',
                 ],
             },
             datetimes={
-                'gte': ['registered_at'],
+                'gte': ['processed_at'],
                 'lte': ['created_at'],  # fix it
             },
             overwrite={
-                'start': 'registered_at',
+                'start': 'processed_at',
                 'end': 'created_at',
             },
         )
 
         items = ProvisioningActivity.objects.filter(query, bill__academy__id=academy_id)
         items = handler.queryset(items)
+
         serializer = ProvisioningActivitySerializer(items, many=True)
         return Response(serializer.data)
 

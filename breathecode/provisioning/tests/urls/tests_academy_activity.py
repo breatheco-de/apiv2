@@ -240,16 +240,16 @@ class MarketingTestSuite(ProvisioningTestCase):
                 'exact': [
                     'hash',
                     'username',
-                    'product_name',
                     'status',
+                    'product_name',
                 ],
             },
             datetimes={
-                'gte': ['registered_at'],
+                'gte': ['processed_at'],
                 'lte': ['created_at'],  # fix it
             },
             overwrite={
-                'start': 'registered_at',
+                'start': 'processed_at',
                 'end': 'created_at',
             },
         )
@@ -257,7 +257,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         query = self.bc.format.lookup(*args, **kwargs)
         url = reverse_lazy('provisioning:academy_activity') + '?' + self.bc.format.querystring(query)
 
-        self.assertEqual([x for x in query], ['hash', 'username', 'product_name', 'status', 'start', 'end'])
+        self.assertEqual([x for x in query], ['hash', 'username', 'status', 'product_name', 'start', 'end'])
 
         response = self.client.get(url)
 

@@ -37,6 +37,7 @@ class PaymentsModelsMixin(ModelsMixin):
                                  consumption_session=False,
                                  plan_offer=False,
                                  plan_offer_translation=False,
+                                 provisioning_price=False,
                                  models={},
                                  **kwargs):
         """Generate models"""
@@ -44,7 +45,8 @@ class PaymentsModelsMixin(ModelsMixin):
 
         if not 'currency' in models and (is_valid(currency) or is_valid(invoice) or is_valid(plan)
                                          or is_valid(service) or is_valid(service_item)
-                                         or is_valid(financing_option) or is_valid(academy_service)):
+                                         or is_valid(financing_option) or is_valid(academy_service)
+                                         or is_valid(provisioning_price)):
             kargs = {}
 
             if 'country' in models:

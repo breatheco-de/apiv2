@@ -6,12 +6,14 @@ from typing import Optional, TypedDict
 from django.utils import timezone
 from breathecode.authenticate.models import (AcademyAuthSettings, CredentialsGithub, GithubAcademyUser,
                                              GithubAcademyUserLog, ProfileAcademy)
+from breathecode.payments.models import Currency
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 from breathecode.services.github import Github
 from breathecode.utils.i18n import translation
 from breathecode.admissions.models import Academy, CohortUser
-from .models import ProvisioningActivity, ProvisioningBill, ProvisioningProfile, ProvisioningVendor
+from .models import (ProvisioningUserConsumption, ProvisioningConsumptionEvent, ProvisioningConsumptionKind,
+                     ProvisioningPrice, ProvisioningBill, ProvisioningProfile, ProvisioningVendor)
 from django.db.models import QuerySet, Q
 from dateutil.relativedelta import relativedelta
 
@@ -164,6 +166,17 @@ def get_github_academy_user_logs(academy: Academy, username: str,
     starts_limit = limit - relativedelta(months=1, weeks=1)
     ret = [x for x in ret if x['ending_at'] < starts_limit]
 
+    if len(ret) > 0 and ret[0]['storage_status'] == 'SYNCHED' and ret[0]['storage_action'] == 'DELETE':
+        ret = [
+            {
+                'starting_at': logs[0].created_at - relativedelta(months=12),
+                'ending_at': logs[0].created_at,
+                'storage_status': log.storage_status,
+                'storage_action': log.storage_action,
+            },
+            *ret,
+        ]
+
     return ret
 
 
@@ -179,6 +192,11 @@ class ActivityContext(TypedDict):
 
 def handle_pending_github_user(organization: str, username: str) -> list[Academy]:
     orgs = AcademyAuthSettings.objects.filter(github_username__iexact=organization)
+    orgs = [
+        x for x in orgs if GithubAcademyUser.objects.filter(
+            academy=x.academy, storage_action='ADD', storage_status='SYNCHED').count()
+    ]
+
     if not orgs:
         logger.error(f'Organization {organization} not found')
         return []
@@ -209,82 +227,7 @@ def handle_pending_github_user(organization: str, username: str) -> list[Academy
     return [org.academy for org in orgs]
 
 
-def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
-
-    def write_activity(academy: Optional[Academy] = None) -> None:
-        errors = []
-        ignores = []
-        provisioning_bill = None
-        provisioning_vendor = None
-
-        if academy:
-            logs = context['logs'].get(field['Username'], None)
-            if logs is None:
-                logs = get_github_academy_user_logs(academy, field['Username'], context['limit'])
-                context['logs'][field['Username']] = logs
-
-        if academy:
-            provisioning_bill = context['provisioning_bills'].get(academy.id, None)
-            if not provisioning_bill:
-                provisioning_bill = ProvisioningBill.objects.filter(academy=academy, status='PENDING').first()
-
-            if not provisioning_bill:
-                provisioning_bill = ProvisioningBill()
-                provisioning_bill.academy = academy
-                provisioning_bill.vendor = provisioning_vendor
-                provisioning_bill.status = 'PENDING'
-                provisioning_bill.hash = context['hash']
-                provisioning_bill.save()
-
-        provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
-        if not provisioning_vendor:
-            provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
-
-        if not provisioning_vendor:
-            errors.append(f'Provisioning vendor Codespaces not found')
-
-        date = datetime.strptime(field['Date'], '%Y-%m-%d')
-        if academy:
-            for log in logs:
-                if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
-                        and log['starting_at'] <= pytz.utc.localize(date) <= log['ending_at']):
-                    ignores.append(
-                        f'User {field["Username"]} was deleted from the academy during this event at {date}')
-
-        else:
-            errors.append(f'User {field["Username"]} not found in any academy')
-
-        pa = ProvisioningActivity()
-
-        pa.bill = provisioning_bill
-        pa.hash = context['hash']
-        pa.username = field['Username']
-        pa.registered_at = date
-        pa.product_name = field['Product']
-        pa.sku = field['SKU']
-        pa.quantity = field['Quantity']
-        pa.unit_type = field['Unit Type']
-        pa.price_per_unit = field['Price Per Unit ($)']
-        pa.currency_code = 'USD'
-        pa.multiplier = field['Multiplier']
-        pa.repository_url = f"https://github.com/{field['Owner']}/{field['Repository Slug']}"
-        pa.task_associated_slug = field['Repository Slug']
-        pa.processed_at = timezone.now()
-
-        if errors:
-            pa.status = 'ERROR'
-            pa.status_text = ', '.join(errors + ignores)
-
-        elif ignores:
-            pa.status = 'IGNORED'
-            pa.status_text = ', '.join(ignores)
-
-        else:
-            pa.status = 'PERSISTED'
-            pa.status_text = ''
-
-        pa.save()
-
+def add_codespaces_activity(context: ActivityContext, field: dict, position: int) -> None:
     if isinstance(field['Username'], float):
         field['Username'] = ''
 
@@ -314,44 +257,40 @@ def add_codespaces_activity(context: ActivityContext, field: dict) -> None:
 
         academies = [x.academy for x in github_academy_users]
 
-    if not academies:
+    if not academies and not GithubAcademyUser.objects.filter(username=field['Username']).count():
         academies = handle_pending_github_user(field['Owner'], field['Username'])
 
     if not not_found:
         academies = random.choices(academies, k=1)
 
-    if not academies:
-        write_activity()
-        return
+    errors = []
+    ignores = []
+    logs = {}
+    provisioning_bills = {}
+    provisioning_vendor = None
+
+    provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
+    if not provisioning_vendor:
+        provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
+        context['provisioning_vendors']['Codespaces'] = provisioning_vendor
+
+    if not provisioning_vendor:
+        errors.append(f'Provisioning vendor Codespaces not found')
 
     for academy in academies:
-        write_activity(academy)
+        ls = context['logs'].get((field['Username'], academy.id), None)
+        if ls is None:
+            ls = get_github_academy_user_logs(academy, field['Username'], context['limit'])
+            context['logs'][(field['Username'], academy.id)] = ls
+            logs[academy.id] = ls
 
+        provisioning_bill = context['provisioning_bills'].get(academy.id, None)
+        if not provisioning_bill and (provisioning_bill := ProvisioningBill.objects.filter(
+                academy=academy, status='PENDING').first()):
+            context['provisioning_bills'][academy.id] = provisioning_bill
+            provisioning_bills[academy.id] = provisioning_bill
 
-def add_gitpod_activity(context: ActivityContext, field: dict):
-
-    def write_activity(academy: Optional[Academy] = None):
-        errors = []
-        if not academy:
-            errors.append(f'User {field["userName"]} not found in any academy')
-
-        pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
-        if not (result := re.findall(pattern, field['contextURL'])):
-            errors.append(f'Invalid repository URL {field["contextURL"]}')
-            slug = 'unknown'
-
-        else:
-            slug = result[0]
-
-        provisioning_bill = None
-        provisioning_vendor = None
-        if academy:
-            provisioning_bill = context['provisioning_bills'].get(academy.id, None)
-
-        if academy and not provisioning_bill:
-            provisioning_bill = ProvisioningBill.objects.filter(academy=academy, status='PENDING').first()
-
-        if academy and not provisioning_bill:
+        if not provisioning_bill:
             provisioning_bill = ProvisioningBill()
             provisioning_bill.academy = academy
             provisioning_bill.vendor = provisioning_vendor
@@ -359,34 +298,82 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
             provisioning_bill.hash = context['hash']
             provisioning_bill.save()
 
-        provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
-        if not provisioning_vendor:
-            provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
+            context['provisioning_bills'][academy.id] = provisioning_bill
+            provisioning_bills[academy.id] = provisioning_bill
 
-        if not provisioning_vendor:
-            errors.append(f'Provisioning vendor Codespaces not found')
+    date = datetime.strptime(field['Date'], '%Y-%m-%d')
+    for academy_id in logs.keys():
+        for log in logs[academy_id]:
+            if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
+                    and log['starting_at'] <= pytz.utc.localize(date) <= log['ending_at']):
+                provisioning_bills.pop(academy_id)
+                ignores.append(
+                    f'User {field["Username"]} was deleted from the academy during this event at {date}')
 
-        date = iso_to_datetime(field['startTime'])
+    if not_found:
+        errors.append(f'User {field["Username"]} not found in any academy')
 
-        pa = ProvisioningActivity()
-        pa.bill = provisioning_bill
-        pa.hash = context['hash']
-        pa.username = field['userName']
-        pa.registered_at = date
-        pa.product_name = field['kind']
-        pa.sku = field['id']
-        pa.quantity = field['credits']
-        pa.unit_type = 'Credits'
-        pa.price_per_unit = 0.036
-        pa.currency_code = 'USD'
-        pa.repository_url = field['contextURL']
+    if not (kind := context['provisioning_activity_kinds'].get((field['Product'], field['SKU']), None)):
+        kind, _ = ProvisioningConsumptionKind.objects.get_or_create(
+            product_name=field['Product'],
+            sku=field['SKU'],
+        )
+        context['provisioning_activity_kinds'][(field['Product'], field['SKU'])] = kind
 
-        pa.task_associated_slug = slug
-        pa.processed_at = timezone.now()
-        pa.status = 'PERSISTED' if not errors else 'ERROR'
-        pa.status_text = ', '.join(errors)
-        pa.save()
+    if not (currency := context['currencies'].get('USD', None)):
+        currency, _ = Currency.objects.get_or_create(code='USD', name='US Dollar', decimals=2)
+        context['currencies']['USD'] = currency
 
+    if not (price := context['provisioning_activity_prices'].get(
+        (field['Unit Type'], field['Price Per Unit ($)'], field['Multiplier']), None)):
+        price, _ = ProvisioningPrice.objects.get_or_create(
+            currency=currency,
+            unit_type=field['Unit Type'],
+            price_per_unit=field['Price Per Unit ($)'],
+            multiplier=field['Multiplier'],
+        )
+
+        context['provisioning_activity_prices'][(field['Unit Type'], field['Price Per Unit ($)'],
+                                                 field['Multiplier'])] = price
+
+    pa, _ = ProvisioningUserConsumption.objects.get_or_create(username=field['Username'],
+                                                              hash=context['hash'],
+                                                              kind=kind,
+                                                              defaults={'processed_at': timezone.now()})
+
+    item, _ = ProvisioningConsumptionEvent.objects.get_or_create(
+        vendor=provisioning_vendor,
+        price=price,
+        registered_at=date,
+        quantity=field['Quantity'],
+        repository_url=f"https://github.com/{field['Owner']}/{field['Repository Slug']}",
+        task_associated_slug=field['Repository Slug'],
+        csv_row=position,
+    )
+
+    if errors and not (len(errors) == 1 and not_found):
+        pa.status = 'ERROR'
+        pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(errors + ignores)
+
+    elif pa.status != 'ERROR' and ignores and not provisioning_bills:
+        pa.status = 'IGNORED'
+        pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(ignores)
+
+    else:
+        pa.status = 'PERSISTED'
+        pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(errors + ignores)
+
+    pa.save()
+
+    current_bills = pa.bills.all()
+    for provisioning_bill in provisioning_bills.values():
+        if provisioning_bill not in current_bills:
+            pa.bills.add(provisioning_bill)
+
+    pa.events.add(item)
+
+
+def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
     profile_academies = context['profile_academies'].get(field['userName'], None)
     if profile_academies is None:
         profile_academies = ProfileAcademy.objects.filter(user__credentialsgithub__username=field['userName'],
@@ -402,9 +389,100 @@ def add_gitpod_activity(context: ActivityContext, field: dict):
             context['academies'] = Academy.objects.filter()
         academies = list(context['academies'])
 
+    errors = []
     if not academies:
-        write_activity()
-        return
+        errors.append(f'User {field["userName"]} not found in any academy')
 
-    for academy in academies:
-        write_activity(academy)
+    pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
+    if not (result := re.findall(pattern, field['contextURL'])):
+        errors.append(f'Invalid repository URL {field["contextURL"]}')
+        slug = 'unknown'
+
+    else:
+        slug = result[0]
+
+    provisioning_bills = []
+    provisioning_vendor = context['provisioning_vendors'].get('Codespaces', None)
+    if not provisioning_vendor:
+        provisioning_vendor = ProvisioningVendor.objects.filter(name='Codespaces').first()
+        context['provisioning_vendors']['Codespaces'] = provisioning_vendor
+
+    if not provisioning_vendor:
+        errors.append(f'Provisioning vendor Codespaces not found')
+
+    if academies:
+        for academy in academies:
+            provisioning_bill = context['provisioning_bills'].get(academy.id, None)
+
+            if provisioning_bill:
+                provisioning_bills.append(provisioning_bill)
+
+            elif provisioning_bill := ProvisioningBill.objects.filter(academy=academy,
+                                                                      status='PENDING').first():
+                context['provisioning_bills'][academy.id] = provisioning_bill
+                provisioning_bills.append(provisioning_bill)
+
+            else:
+                provisioning_bill = ProvisioningBill()
+                provisioning_bill.academy = academy
+                provisioning_bill.vendor = provisioning_vendor
+                provisioning_bill.status = 'PENDING'
+                provisioning_bill.hash = context['hash']
+                provisioning_bill.save()
+
+                context['provisioning_bills'][academy.id] = provisioning_bill
+                provisioning_bills.append(provisioning_bill)
+
+    provisioning_bills = list(set(provisioning_bills))
+
+    date = iso_to_datetime(field['startTime'])
+
+    if not (kind := context['provisioning_activity_kinds'].get(field['kind'], None)):
+        kind, _ = ProvisioningConsumptionKind.objects.get_or_create(
+            product_name=field['kind'],
+            sku=field['kind'],
+        )
+        context['provisioning_activity_kinds'][field['kind']] = kind
+
+    if not (currency := context['currencies'].get('USD', None)):
+        currency, _ = Currency.objects.get_or_create(code='USD', name='US Dollar', decimals=2)
+        context['currencies']['USD'] = currency
+
+    if not (price := context['provisioning_activity_prices'].get(currency.id, None)):
+        price, _ = ProvisioningPrice.objects.get_or_create(
+            currency=currency,
+            unit_type='Credits',
+            price_per_unit=0.036,
+            multiplier=1,
+        )
+
+        context['provisioning_activity_prices'][currency.id] = price
+
+    pa, _ = ProvisioningUserConsumption.objects.get_or_create(username=field['userName'],
+                                                              hash=context['hash'],
+                                                              kind=kind,
+                                                              defaults={'processed_at': timezone.now()})
+
+    item, _ = ProvisioningConsumptionEvent.objects.get_or_create(
+        external_pk=field['id'],
+        vendor=provisioning_vendor,
+        price=price,
+        registered_at=date,
+        quantity=field['credits'],
+        repository_url=field['contextURL'],
+        task_associated_slug=slug,
+        csv_row=position,
+    )
+
+    if pa.status == 'PENDING':
+        pa.status = 'PERSISTED' if not errors else 'ERROR'
+
+    pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(errors)
+    pa.save()
+
+    current_bills = pa.bills.all()
+    for provisioning_bill in provisioning_bills:
+        if provisioning_bill not in current_bills:
+            pa.bills.add(provisioning_bill)
+
+    pa.events.add(item)

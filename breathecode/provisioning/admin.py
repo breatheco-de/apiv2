@@ -4,8 +4,10 @@ from django import forms
 from django.utils.html import format_html
 
 from breathecode.provisioning import tasks
-from .models import (ProvisioningVendor, ProvisioningMachineTypes, ProvisioningAcademy, ProvisioningBill,
-                     ProvisioningActivity, ProvisioningContainer, ProvisioningProfile)
+from .models import (ProvisioningConsumptionEvent, ProvisioningConsumptionKind, ProvisioningPrice,
+                     ProvisioningUserConsumption, ProvisioningVendor, ProvisioningMachineTypes,
+                     ProvisioningAcademy, ProvisioningBill, ProvisioningActivity, ProvisioningContainer,
+                     ProvisioningProfile)
 # from .actions import ()
 from django.utils import timezone
 from breathecode.utils.validation_exception import ValidationException
@@ -32,6 +34,55 @@ class ProvisioningAcademyAdmin(admin.ModelAdmin):
     list_display = ['academy', 'vendor', 'created_at']
     search_fields = ('academy__name', 'academy__slug')
     list_filter = ['vendor']
+
+
+@admin.register(ProvisioningConsumptionKind)
+class ProvisioningConsumptionKindAdmin(admin.ModelAdmin):
+    list_display = ('id', 'product_name', 'sku')
+    search_fields = ['product_name']
+    list_filter = ['product_name']
+    actions = []
+
+
+@admin.register(ProvisioningPrice)
+class ProvisioningPriceAdmin(admin.ModelAdmin):
+    list_display = ('id', 'currency', 'unit_type', 'price_per_unit', 'multiplier')
+    search_fields = ['currency__code']
+    list_filter = ['currency__code', 'unit_type']
+    actions = []
+
+
+@admin.register(ProvisioningConsumptionEvent)
+class ProvisioningConsumptionEventAdmin(admin.ModelAdmin):
+    list_display = ('id', 'registered_at', 'external_pk', 'csv_row', 'vendor', 'quantity', 'repository_url',
+                    'task_associated_slug')
+    search_fields = ['repository_url', 'task_associated_slug', 'provisioninguserconsumption__bills__hash']
+    list_filter = ['provisioninguserconsumption__bills']
+    actions = []
+
+
+@admin.register(ProvisioningUserConsumption)
+class ProvisioningUserConsumptionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'status', 'username', 'processed_at', 'kind')
+    search_fields = ['username', 'events__task_associated_slug', 'bills__hash']
+    list_filter = ['bills__academy', 'status']
+    actions = []
+
+    def _status(self, obj):
+        colors = {
+            'PERSISTED': 'bg-success',
+            'PENDING': 'bg-error',
+            'ERROR': 'bg-error',
+            None: 'bg-warning',
+        }
+
+        def from_status(s):
+            if s in colors:
+                return colors[s]
+            return ''
+
+        return format_html(
+            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_text}</small>")
 
 
 @admin.register(ProvisioningActivity)
