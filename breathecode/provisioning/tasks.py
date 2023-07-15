@@ -76,7 +76,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
 PANDAS_ROWS_LIMIT = 100
 
 
-def reverse_upload(hash: str):
+def reverse_upload(hash: str, **_: Any):
     logger.info(f'Canceling upload for hash {hash}')
 
     ProvisioningActivity.objects.filter(hash=hash).delete()

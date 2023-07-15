@@ -13,6 +13,11 @@ def reverse(modeladmin, request, queryset):
         tasks.mark_task_as_reversed.delay(x.id)
 
 
+def force_reverse(modeladmin, request, queryset):
+    for x in queryset.all():
+        tasks.mark_task_as_reversed.delay(x.id, force=True)
+
+
 def pause(modeladmin, request, queryset):
     for x in queryset.all():
         tasks.mark_task_as_paused.delay(x.id)
@@ -31,4 +36,4 @@ class TaskManagerAdmin(admin.ModelAdmin):
     ]
     search_fields = ['task_module', 'task_name', 'reverse_module', 'reverse_name']
     list_filter = ['status', 'killed', 'task_module']
-    actions = [pause, resume, cancel, reverse]
+    actions = [pause, resume, cancel, reverse, force_reverse]
