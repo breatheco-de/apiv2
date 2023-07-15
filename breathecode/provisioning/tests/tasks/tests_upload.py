@@ -142,24 +142,57 @@ def csv_file_mock(obj):
     return s_buf.read().encode('utf-8')
 
 
+def currency_data(data={}):
+    return {
+        'code': 'USD',
+        'decimals': 2,
+        'id': 1,
+        'name': 'US Dollar',
+        **data,
+    }
+
+
+def provisioning_activity_kind_data(data={}):
+    return {
+        'id': 1,
+        'product_name': 'Lori Cook',
+        'sku': 'point-yes-another',
+        **data,
+    }
+
+
+def provisioning_activity_price_data(data={}):
+    return {
+        'id': 1,
+        'currency_id': 1,
+        'multiplier': 1.0,
+        'price_per_unit': 0.0,
+        'unit_type': '',
+        **data,
+    }
+
+
+def provisioning_activity_item_data(data={}):
+    return {
+        'external_pk': None,
+        'id': 1,
+        'price_id': 1,
+        'quantity': 0.0,
+        'registered_at': ...,
+        'repository_url': '',
+        'task_associated_slug': '',
+        'vendor_id': None,
+        'csv_row': 0,
+        **data,
+    }
+
+
 def provisioning_activity_data(data={}):
     return {
-        'bill_id': 1,
-        'currency_code': 'USD',
         'id': 1,
-        'multiplier': 1.0,
-        'notes': None,
-        'price_per_unit': 38.810343970751504,
         'processed_at': ...,
-        'product_name': 'Lori Cook',
-        'quantity': 8.0,
-        'registered_at': ...,
-        'repository_url': 'https://github.com/answer-same-which/heart-bill-computer',
-        'sku': 'point-yes-another',
         'status': 'PERSISTED',
         'status_text': '',
-        'task_associated_slug': 'heart-bill-computer',
-        'unit_type': 'eat-hold-member',
         'username': 'soldier-job-woman',
         **data,
     }
@@ -229,7 +262,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
                 upload(slug)
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
@@ -272,7 +305,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
                 upload(slug)
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
@@ -323,7 +356,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             self.bc.format.to_dict(model.provisioning_bill),
         ])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
@@ -377,7 +410,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             self.bc.format.to_dict(model.provisioning_bill),
         ])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
@@ -424,37 +457,46 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
                 upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['Product'][n],
+                'sku': str(csv['SKU'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': n + 1,
+                'multiplier': csv['Multiplier'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'unit_type': csv['Unit Type'][n],
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': n + 1,
+                    'quantity': float(csv['Quantity'][n]),
+                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
+                    'repository_url': f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
+                    'task_associated_slug': csv['Repository Slug'][n],
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
                 'id':
                 n + 1,
+                'kind_id':
+                n + 1,
                 'hash':
                 slug,
-                'bill_id':
-                None,
                 'username':
                 csv['Username'][n],
-                'registered_at':
-                datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
-                'product_name':
-                csv['Product'][n],
-                'sku':
-                csv['SKU'][n],
-                'quantity':
-                float(csv['Quantity'][n]),
-                'unit_type':
-                csv['Unit Type'][n],
-                'price_per_unit':
-                csv['Price Per Unit ($)'][n],
-                'currency_code':
-                'USD',
-                'multiplier':
-                csv['Multiplier'][n],
-                'repository_url':
-                f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                'task_associated_slug':
-                csv['Repository Slug'][n],
                 'processed_at':
                 UTC_NOW,
                 'status':
@@ -462,10 +504,11 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'status_text':
                 ', '.join([
                     'Provisioning vendor Codespaces not found',
-                    f"User {csv['Username'][n]} not found in any academy",
+                    f'User {csv["Username"][n]} not found in any academy',
                 ]),
             }) for n in range(10)
         ])
+
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
@@ -510,7 +553,17 @@ class CodespacesTestSuite(ProvisioningTestCase):
             academy_auth_settings.append({'github_username': owner, 'academy_id': id + 2})
             id += 2
 
-        self.bc.database.create(academy_auth_settings=academy_auth_settings, academy=20)
+        github_academy_users = [{
+            'user_id': 1,
+            'academy_id': n + 1,
+            'storage_action': 'ADD',
+            'storage_status': 'SYNCHED',
+        } for n in range(20)]
+
+        model = self.bc.database.create(academy_auth_settings=academy_auth_settings,
+                                        academy=20,
+                                        user=1,
+                                        github_academy_user=github_academy_users)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -522,110 +575,74 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
                 upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({
                 'id': n + 1,
                 'academy_id': n + 1,
+                'vendor_id': None,
                 'hash': slug,
                 'total_amount': 0.0,
             }) for n in range(20)
         ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['Product'][n],
+                'sku': str(csv['SKU'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': n + 1,
+                'multiplier': csv['Multiplier'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'unit_type': csv['Unit Type'][n],
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': n + 1,
+                    'quantity': float(csv['Quantity'][n]),
+                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
+                    'repository_url': f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
+                    'task_associated_slug': csv['Repository Slug'][n],
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id':
+                n + 1,
+                'kind_id':
+                n + 1,
+                'hash':
+                slug,
+                'username':
+                csv['Username'][n],
+                'processed_at':
+                UTC_NOW,
+                'status':
+                'ERROR',
+                'status_text':
+                ', '.join([
+                    'Provisioning vendor Codespaces not found',
+                    f'User {csv["Username"][n]} not found in any academy',
+                ]),
+            }) for n in range(10)
+        ])
 
         id = 0
-        activities = []
-        for n in range(10):
-            activities.append(
-                provisioning_activity_data({
-                    'id':
-                    id + 1,
-                    'hash':
-                    slug,
-                    'bill_id':
-                    id + 1,
-                    'username':
-                    csv['Username'][n],
-                    'registered_at':
-                    datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
-                    'product_name':
-                    csv['Product'][n],
-                    'sku':
-                    csv['SKU'][n],
-                    'quantity':
-                    float(csv['Quantity'][n]),
-                    'unit_type':
-                    csv['Unit Type'][n],
-                    'price_per_unit':
-                    csv['Price Per Unit ($)'][n],
-                    'currency_code':
-                    'USD',
-                    'multiplier':
-                    csv['Multiplier'][n],
-                    'repository_url':
-                    f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                    'task_associated_slug':
-                    csv['Repository Slug'][n],
-                    'processed_at':
-                    UTC_NOW,
-                    'status':
-                    'ERROR',
-                    'status_text':
-                    ', '.join([
-                        'Provisioning vendor Codespaces not found',
-                    ]),
-                }))
-
-            activities.append(
-                provisioning_activity_data({
-                    'id':
-                    id + 2,
-                    'hash':
-                    slug,
-                    'bill_id':
-                    id + 2,
-                    'username':
-                    csv['Username'][n],
-                    'registered_at':
-                    datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
-                    'product_name':
-                    csv['Product'][n],
-                    'sku':
-                    csv['SKU'][n],
-                    'quantity':
-                    float(csv['Quantity'][n]),
-                    'unit_type':
-                    csv['Unit Type'][n],
-                    'price_per_unit':
-                    csv['Price Per Unit ($)'][n],
-                    'currency_code':
-                    'USD',
-                    'multiplier':
-                    csv['Multiplier'][n],
-                    'repository_url':
-                    f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                    'task_associated_slug':
-                    csv['Repository Slug'][n],
-                    'processed_at':
-                    UTC_NOW,
-                    'status':
-                    'ERROR',
-                    'status_text':
-                    ', '.join([
-                        'Provisioning vendor Codespaces not found',
-                    ]),
-                }))
-
-            id += 2
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), activities)
-
-        id = 0
-        github_academy_users = []
+        github_academy_users = self.bc.format.to_dict(model.github_academy_user)
 
         for n in range(10):
             github_academy_users.append(
                 github_academy_user_data(
                     data={
-                        'id': id + 1,
+                        'id': id + 1 + 20,
                         'academy_id': id + 1,
                         'storage_action': 'IGNORE',
                         'storage_status': 'PAYMENT_CONFLICT',
@@ -635,7 +652,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
             github_academy_users.append(
                 github_academy_user_data(
                     data={
-                        'id': id + 2,
+                        'id': id + 2 + 20,
                         'academy_id': id + 2,
                         'storage_action': 'IGNORE',
                         'storage_status': 'PAYMENT_CONFLICT',
@@ -687,10 +704,17 @@ class CodespacesTestSuite(ProvisioningTestCase):
             id += 2
 
         credentials_github = [{'username': csv['Username'][n], 'user_id': n + 1} for n in range(10)]
-        self.bc.database.create(academy_auth_settings=academy_auth_settings,
-                                academy=20,
-                                user=10,
-                                credentials_github=credentials_github)
+        github_academy_users = [{
+            'user_id': 11,
+            'academy_id': n + 1,
+            'storage_action': 'ADD',
+            'storage_status': 'SYNCHED',
+        } for n in range(20)]
+        model = self.bc.database.create(academy_auth_settings=academy_auth_settings,
+                                        academy=20,
+                                        user=11,
+                                        github_academy_user=github_academy_users,
+                                        credentials_github=credentials_github)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -702,110 +726,74 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
                 upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({
                 'id': n + 1,
                 'academy_id': n + 1,
+                'vendor_id': None,
                 'hash': slug,
                 'total_amount': 0.0,
             }) for n in range(20)
         ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['Product'][n],
+                'sku': str(csv['SKU'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': n + 1,
+                'multiplier': csv['Multiplier'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'unit_type': csv['Unit Type'][n],
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': n + 1,
+                    'quantity': float(csv['Quantity'][n]),
+                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
+                    'repository_url': f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
+                    'task_associated_slug': csv['Repository Slug'][n],
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id':
+                n + 1,
+                'kind_id':
+                n + 1,
+                'hash':
+                slug,
+                'username':
+                csv['Username'][n],
+                'processed_at':
+                UTC_NOW,
+                'status':
+                'ERROR',
+                'status_text':
+                ', '.join([
+                    'Provisioning vendor Codespaces not found',
+                    f'User {csv["Username"][n]} not found in any academy',
+                ]),
+            }) for n in range(10)
+        ])
 
         id = 0
-        activities = []
-        for n in range(10):
-            activities.append(
-                provisioning_activity_data({
-                    'id':
-                    id + 1,
-                    'hash':
-                    slug,
-                    'bill_id':
-                    id + 1,
-                    'username':
-                    csv['Username'][n],
-                    'registered_at':
-                    datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
-                    'product_name':
-                    csv['Product'][n],
-                    'sku':
-                    csv['SKU'][n],
-                    'quantity':
-                    float(csv['Quantity'][n]),
-                    'unit_type':
-                    csv['Unit Type'][n],
-                    'price_per_unit':
-                    csv['Price Per Unit ($)'][n],
-                    'currency_code':
-                    'USD',
-                    'multiplier':
-                    csv['Multiplier'][n],
-                    'repository_url':
-                    f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                    'task_associated_slug':
-                    csv['Repository Slug'][n],
-                    'processed_at':
-                    UTC_NOW,
-                    'status':
-                    'ERROR',
-                    'status_text':
-                    ', '.join([
-                        'Provisioning vendor Codespaces not found',
-                    ]),
-                }))
-
-            activities.append(
-                provisioning_activity_data({
-                    'id':
-                    id + 2,
-                    'hash':
-                    slug,
-                    'bill_id':
-                    id + 2,
-                    'username':
-                    csv['Username'][n],
-                    'registered_at':
-                    datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
-                    'product_name':
-                    csv['Product'][n],
-                    'sku':
-                    csv['SKU'][n],
-                    'quantity':
-                    float(csv['Quantity'][n]),
-                    'unit_type':
-                    csv['Unit Type'][n],
-                    'price_per_unit':
-                    csv['Price Per Unit ($)'][n],
-                    'currency_code':
-                    'USD',
-                    'multiplier':
-                    csv['Multiplier'][n],
-                    'repository_url':
-                    f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                    'task_associated_slug':
-                    csv['Repository Slug'][n],
-                    'processed_at':
-                    UTC_NOW,
-                    'status':
-                    'ERROR',
-                    'status_text':
-                    ', '.join([
-                        'Provisioning vendor Codespaces not found',
-                    ]),
-                }))
-
-            id += 2
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), activities)
-
-        id = 0
-        github_academy_users = []
+        github_academy_users = self.bc.format.to_dict(model.github_academy_user)
 
         for n in range(10):
             github_academy_users.append(
                 github_academy_user_data(
                     data={
-                        'id': id + 1,
+                        'id': id + 1 + 20,
                         'user_id': (id / 2) + 1,
                         'academy_id': id + 1,
                         'storage_action': 'IGNORE',
@@ -816,7 +804,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
             github_academy_users.append(
                 github_academy_user_data(
                     data={
-                        'id': id + 2,
+                        'id': id + 2 + 20,
                         'user_id': (id / 2) + 1,
                         'academy_id': id + 2,
                         'storage_action': 'IGNORE',
@@ -884,30 +872,51 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
             upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
-            provisioning_bill_data({'hash': slug}),
+            provisioning_bill_data({
+                'hash': slug,
+                'vendor_id': 1,
+            }),
         ])
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            provisioning_activity_data(
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['Product'][n],
+                'sku': str(csv['SKU'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': n + 1,
+                'multiplier': csv['Multiplier'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'unit_type': csv['Unit Type'][n],
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
                 {
                     'id': n + 1,
-                    'hash': slug,
-                    'bill_id': 1,
-                    'username': csv['Username'][n],
-                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
-                    'product_name': csv['Product'][n],
-                    'sku': csv['SKU'][n],
+                    'price_id': n + 1,
+                    'vendor_id': 1,
                     'quantity': float(csv['Quantity'][n]),
-                    'unit_type': csv['Unit Type'][n],
-                    'price_per_unit': csv['Price Per Unit ($)'][n],
-                    'currency_code': 'USD',
-                    'multiplier': csv['Multiplier'][n],
+                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
                     'repository_url': f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
                     'task_associated_slug': csv['Repository Slug'][n],
-                    'processed_at': UTC_NOW,
-                    'status': 'PERSISTED',
+                    'csv_row': n,
                 }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id': n + 1,
+                'kind_id': n + 1,
+                'hash': slug,
+                'username': csv['Username'][n],
+                'processed_at': UTC_NOW,
+                'status': 'PERSISTED',
+            }) for n in range(10)
         ])
 
         self.assertEqual(
@@ -975,30 +984,51 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
             upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
-            provisioning_bill_data({'hash': slug}),
+            provisioning_bill_data({
+                'hash': slug,
+                'vendor_id': 1,
+            }),
         ])
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            provisioning_activity_data(
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['Product'][n],
+                'sku': str(csv['SKU'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': n + 1,
+                'multiplier': csv['Multiplier'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'unit_type': csv['Unit Type'][n],
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
                 {
                     'id': n + 1,
-                    'hash': slug,
-                    'bill_id': 1,
-                    'username': csv['Username'][n],
-                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
-                    'product_name': csv['Product'][n],
-                    'sku': csv['SKU'][n],
+                    'price_id': n + 1,
+                    'vendor_id': 1,
                     'quantity': float(csv['Quantity'][n]),
-                    'unit_type': csv['Unit Type'][n],
-                    'price_per_unit': csv['Price Per Unit ($)'][n],
-                    'currency_code': 'USD',
-                    'multiplier': csv['Multiplier'][n],
+                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
                     'repository_url': f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
                     'task_associated_slug': csv['Repository Slug'][n],
-                    'processed_at': UTC_NOW,
-                    'status': 'PERSISTED',
+                    'csv_row': n,
                 }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id': n + 1,
+                'kind_id': n + 1,
+                'hash': slug,
+                'username': csv['Username'][n],
+                'processed_at': UTC_NOW,
+                'status': 'PERSISTED',
+            }) for n in range(10)
         ])
 
         self.assertEqual(
@@ -1011,9 +1041,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [
-            call(slug, 1),
-            call(slug, 2),
-            call(slug, 3),
+            call(slug, page=1),
+            call(slug, page=2),
+            call(slug, page=3),
         ])
 
         self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
@@ -1072,33 +1102,52 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
             upload(slug, force=True)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({
                 'id': 2,
-                'hash': slug
+                'hash': slug,
+                'vendor_id': 1,
             }),
         ])
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            provisioning_activity_data(
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['Product'][n],
+                'sku': str(csv['SKU'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': n + 1,
+                'multiplier': csv['Multiplier'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'unit_type': csv['Unit Type'][n],
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
                 {
                     'id': n + 1,
-                    'hash': slug,
-                    'bill_id': 2,
-                    'username': csv['Username'][n],
-                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
-                    'product_name': csv['Product'][n],
-                    'sku': csv['SKU'][n],
+                    'price_id': n + 1,
+                    'vendor_id': 1,
                     'quantity': float(csv['Quantity'][n]),
-                    'unit_type': csv['Unit Type'][n],
-                    'price_per_unit': csv['Price Per Unit ($)'][n],
-                    'currency_code': 'USD',
-                    'multiplier': csv['Multiplier'][n],
+                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
                     'repository_url': f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
                     'task_associated_slug': csv['Repository Slug'][n],
-                    'processed_at': UTC_NOW,
-                    'status': 'PERSISTED',
+                    'csv_row': n,
                 }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id': n + 1,
+                'kind_id': n + 1,
+                'hash': slug,
+                'username': csv['Username'][n],
+                'processed_at': UTC_NOW,
+                'status': 'PERSISTED',
+            }) for n in range(10)
         ])
 
         self.assertEqual(
@@ -1145,8 +1194,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
             'storage_action': 'IGNORE',
         } for x in csv['Username']]
 
+        github_academy_users += [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'user_id': 11,
+        } for n in range(10)]
+
         provisioning_vendor = {'name': 'Codespaces'}
-        model = self.bc.database.create(user=10,
+        model = self.bc.database.create(user=11,
                                         github_academy_user=github_academy_users,
                                         provisioning_vendor=provisioning_vendor)
 
@@ -1159,30 +1214,52 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
             upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
-            provisioning_bill_data({'hash': slug}),
+            provisioning_bill_data({
+                'hash': slug,
+                'vendor_id': 1,
+            }),
         ])
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            provisioning_activity_data(
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['Product'][n],
+                'sku': str(csv['SKU'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': n + 1,
+                'multiplier': csv['Multiplier'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'unit_type': csv['Unit Type'][n],
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
                 {
                     'id': n + 1,
-                    'hash': slug,
-                    'bill_id': 1,
-                    'username': csv['Username'][n],
-                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
-                    'product_name': csv['Product'][n],
-                    'sku': csv['SKU'][n],
+                    'price_id': n + 1,
+                    'vendor_id': 1,
                     'quantity': float(csv['Quantity'][n]),
-                    'unit_type': csv['Unit Type'][n],
-                    'price_per_unit': csv['Price Per Unit ($)'][n],
-                    'currency_code': 'USD',
-                    'multiplier': csv['Multiplier'][n],
+                    'registered_at': datetime.strptime(csv['Date'][n], '%Y-%m-%d').replace(tzinfo=pytz.UTC),
                     'repository_url': f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
                     'task_associated_slug': csv['Repository Slug'][n],
-                    'processed_at': UTC_NOW,
-                    'status': 'PERSISTED',
+                    'csv_row': n,
                 }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id': n + 1,
+                'kind_id': n + 1,
+                'hash': slug,
+                'username': csv['Username'][n],
+                'processed_at': UTC_NOW,
+                'status': 'PERSISTED',
+                'status_text': f'User {csv["Username"][n]} not found in any academy',
+            }) for n in range(10)
         ])
 
         self.assertEqual(
@@ -1231,35 +1308,47 @@ class GitpodTestSuite(ProvisioningTestCase):
 
                 upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['kind'][n],
+                'sku': str(csv['kind'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': 1,
+                'multiplier': 1.0,
+                'price_per_unit': 0.036,
+                'unit_type': 'Credits',
+            })
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': 1,
+                    'quantity': float(csv['credits'][n]),
+                    'external_pk': str(csv['id'][n]),
+                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                    'repository_url': csv['contextURL'][n],
+                    'task_associated_slug': repo_name(csv['contextURL'][n]),
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
                 'id':
                 n + 1,
+                'kind_id':
+                n + 1,
                 'hash':
                 slug,
-                'bill_id':
-                None,
                 'username':
                 csv['userName'][n],
-                'registered_at':
-                self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                'product_name':
-                csv['kind'][n],
-                'sku':
-                str(csv['id'][n]),
-                'quantity':
-                float(csv['credits'][n]),
-                'unit_type':
-                'Credits',
-                'price_per_unit':
-                0.036,
-                'currency_code':
-                'USD',
-                'repository_url':
-                csv['contextURL'][n],
-                'task_associated_slug':
-                repo_name(csv['contextURL'][n], ),
                 'processed_at':
                 UTC_NOW,
                 'status':
@@ -1267,7 +1356,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'status_text':
                 ', '.join([
                     f"User {csv['userName'][n]} not found in any academy",
-                    'Provisioning vendor Codespaces not found'
+                    'Provisioning vendor Codespaces not found',
                 ]),
             }) for n in range(10)
         ])
@@ -1326,32 +1415,51 @@ class GitpodTestSuite(ProvisioningTestCase):
 
             upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({'hash': slug}),
         ])
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['kind'][n],
+                'sku': str(csv['kind'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': 1,
+                'multiplier': 1.0,
+                'price_per_unit': 0.036,
+                'unit_type': 'Credits',
+            })
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': 1,
+                    'vendor_id': None,
+                    'quantity': float(csv['credits'][n]),
+                    'external_pk': str(csv['id'][n]),
+                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                    'repository_url': csv['contextURL'][n],
+                    'task_associated_slug': repo_name(csv['contextURL'][n]),
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
                 'id': n + 1,
+                'kind_id': n + 1,
                 'hash': slug,
-                'bill_id': 1,
                 'username': csv['userName'][n],
-                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                'product_name': csv['kind'][n],
-                'sku': str(csv['id'][n]),
-                'quantity': float(csv['credits'][n]),
-                'unit_type': 'Credits',
-                'price_per_unit': 0.036,
-                'currency_code': 'USD',
-                'repository_url': csv['contextURL'][n],
-                'task_associated_slug': repo_name(csv['contextURL'][n], ),
                 'processed_at': UTC_NOW,
                 'status': 'ERROR',
                 'status_text': ', '.join(['Provisioning vendor Codespaces not found']),
             }) for n in range(10)
         ])
-        self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'),
-                         self.bc.format.to_dict(model.github_academy_user))
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
@@ -1409,25 +1517,49 @@ class GitpodTestSuite(ProvisioningTestCase):
 
             upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
-            provisioning_bill_data({'hash': slug}),
+            provisioning_bill_data({
+                'hash': slug,
+                'vendor_id': 1,
+            }),
         ])
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['kind'][n],
+                'sku': str(csv['kind'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': 1,
+                'multiplier': 1.0,
+                'price_per_unit': 0.036,
+                'unit_type': 'Credits',
+            })
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': 1,
+                    'vendor_id': 1,
+                    'quantity': float(csv['credits'][n]),
+                    'external_pk': str(csv['id'][n]),
+                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                    'repository_url': csv['contextURL'][n],
+                    'task_associated_slug': repo_name(csv['contextURL'][n]),
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
                 'id': n + 1,
+                'kind_id': n + 1,
                 'hash': slug,
-                'bill_id': 1,
                 'username': csv['userName'][n],
-                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                'product_name': csv['kind'][n],
-                'sku': str(csv['id'][n]),
-                'quantity': float(csv['credits'][n]),
-                'unit_type': 'Credits',
-                'price_per_unit': 0.036,
-                'currency_code': 'USD',
-                'repository_url': csv['contextURL'][n],
-                'task_associated_slug': repo_name(csv['contextURL'][n], ),
                 'processed_at': UTC_NOW,
                 'status': 'PERSISTED',
             }) for n in range(10)
@@ -1496,25 +1628,49 @@ class GitpodTestSuite(ProvisioningTestCase):
 
             upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
-            provisioning_bill_data({'hash': slug}),
+            provisioning_bill_data({
+                'hash': slug,
+                'vendor_id': 1,
+            }),
         ])
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['kind'][n],
+                'sku': str(csv['kind'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': 1,
+                'multiplier': 1.0,
+                'price_per_unit': 0.036,
+                'unit_type': 'Credits',
+            })
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': 1,
+                    'vendor_id': 1,
+                    'quantity': float(csv['credits'][n]),
+                    'external_pk': str(csv['id'][n]),
+                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                    'repository_url': csv['contextURL'][n],
+                    'task_associated_slug': repo_name(csv['contextURL'][n]),
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
                 'id': n + 1,
+                'kind_id': n + 1,
                 'hash': slug,
-                'bill_id': 1,
                 'username': csv['userName'][n],
-                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                'product_name': csv['kind'][n],
-                'sku': str(csv['id'][n]),
-                'quantity': float(csv['credits'][n]),
-                'unit_type': 'Credits',
-                'price_per_unit': 0.036,
-                'currency_code': 'USD',
-                'repository_url': csv['contextURL'][n],
-                'task_associated_slug': repo_name(csv['contextURL'][n], ),
                 'processed_at': UTC_NOW,
                 'status': 'PERSISTED',
             }) for n in range(10)
@@ -1528,9 +1684,9 @@ class GitpodTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [
-            call(slug, 1),
-            call(slug, 2),
-            call(slug, 3),
+            call(slug, page=1),
+            call(slug, page=2),
+            call(slug, page=3),
         ])
 
         self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
@@ -1589,51 +1745,67 @@ class GitpodTestSuite(ProvisioningTestCase):
 
             upload(slug)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({
                 'id': 1,
                 'academy_id': 1,
+                'vendor_id': 1,
                 'hash': slug,
             }),
             provisioning_bill_data({
                 'id': 2,
                 'academy_id': 2,
+                'vendor_id': 1,
                 'hash': slug,
             }),
             provisioning_bill_data({
                 'id': 3,
                 'academy_id': 3,
+                'vendor_id': 1,
                 'hash': slug,
             }),
         ])
-
-        activities = []
-        id = 0
-        for n1 in range(10):
-            for n2 in range(3):
-                id += 1
-                activities.append({
-                    'id': id,
-                    'hash': slug,
-                    'bill_id': n2 + 1,
-                    'username': csv['userName'][n1],
-                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n1]),
-                    'product_name': csv['kind'][n1],
-                    'sku': str(csv['id'][n1]),
-                    'quantity': float(csv['credits'][n1]),
-                    'unit_type': 'Credits',
-                    'price_per_unit': 0.036,
-                    'currency_code': 'USD',
-                    'repository_url': csv['contextURL'][n1],
-                    'task_associated_slug': repo_name(csv['contextURL'][n1]),
-                    'processed_at': UTC_NOW,
-                    'status': 'PERSISTED',
-                    'status_text': '',
-                    'multiplier': 1.0,
-                    'notes': None,
-                })
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), activities)
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['kind'][n],
+                'sku': str(csv['kind'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': 1,
+                'multiplier': 1.0,
+                'price_per_unit': 0.036,
+                'unit_type': 'Credits',
+            })
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': 1,
+                    'vendor_id': 1,
+                    'quantity': float(csv['credits'][n]),
+                    'external_pk': str(csv['id'][n]),
+                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                    'repository_url': csv['contextURL'][n],
+                    'task_associated_slug': repo_name(csv['contextURL'][n]),
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id': n + 1,
+                'kind_id': n + 1,
+                'hash': slug,
+                'username': csv['userName'][n],
+                'processed_at': UTC_NOW,
+                'status': 'PERSISTED',
+            }) for n in range(10)
+        ])
 
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'),
                          self.bc.format.to_dict(model.github_academy_user))
@@ -1725,55 +1897,67 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         academies = list(academies)
 
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({
                 'id': 1,
                 'academy_id': academies[0] + 1,
                 'hash': slug,
+                'vendor_id': 1,
             }),
             provisioning_bill_data({
                 'id': 2,
                 'academy_id': academies[1] + 1,
                 'hash': slug,
+                'vendor_id': 1,
             }),
             provisioning_bill_data({
                 'id': 3,
                 'academy_id': academies[2] + 1,
                 'hash': slug,
+                'vendor_id': 1,
             }),
         ])
-
-        mapping = {}
-
-        for n in range(3):
-            mapping[academies[n]] = n + 1
-
-        activities = []
-        id = 0
-        for n1 in range(10):
-            id += 1
-            activities.append({
-                'id': id,
-                'hash': slug,
-                'bill_id': mapping[RANDOM_ACADEMIES[n1]],
-                'username': csv['userName'][n1],
-                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n1]),
-                'product_name': csv['kind'][n1],
-                'sku': str(csv['id'][n1]),
-                'quantity': float(csv['credits'][n1]),
-                'unit_type': 'Credits',
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['kind'][n],
+                'sku': str(csv['kind'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': 1,
+                'multiplier': 1.0,
                 'price_per_unit': 0.036,
-                'currency_code': 'USD',
-                'repository_url': csv['contextURL'][n1],
-                'task_associated_slug': repo_name(csv['contextURL'][n1]),
+                'unit_type': 'Credits',
+            })
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': 1,
+                    'vendor_id': 1,
+                    'quantity': float(csv['credits'][n]),
+                    'external_pk': str(csv['id'][n]),
+                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                    'repository_url': csv['contextURL'][n],
+                    'task_associated_slug': repo_name(csv['contextURL'][n]),
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id': n + 1,
+                'kind_id': n + 1,
+                'hash': slug,
+                'username': csv['userName'][n],
                 'processed_at': UTC_NOW,
                 'status': 'PERSISTED',
-                'status_text': '',
-                'multiplier': 1.0,
-                'notes': None,
-            })
-
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), activities)
+            }) for n in range(10)
+        ])
 
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'),
                          self.bc.format.to_dict(model.github_academy_user))

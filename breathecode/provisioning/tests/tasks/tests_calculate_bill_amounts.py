@@ -37,7 +37,6 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         calculate_bill_amounts(slug)
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Starting calculate_bill_amounts for hash {slug}')])
@@ -68,7 +67,6 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             self.bc.format.to_dict(model.provisioning_bill),
         ])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Starting calculate_bill_amounts for hash {bad_slug}')])
@@ -101,7 +99,6 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'paid_at': UTC_NOW,
             },
         ])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Starting calculate_bill_amounts for hash {slug}')])
@@ -117,13 +114,24 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     def test_bill_exists_and_activities(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {'hash': slug, 'total_amount': 0.0}
-        provisioning_activity = {
-            'price_per_unit': 0.0,
-            'quantity': 0.0,
+
+        provisioning_prices = [{
+            'price_per_unit': 0,
+        } for _ in range(2)]
+
+        provisioning_consumption_events = [{
+            'quantity': 0,
+            'price_id': n + 1,
+        } for n in range(2)]
+
+        provisioning_user_consumptions = [{
             'status': 'PERSISTED',
-        }
+        } for _ in range(2)]
+
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
-                                        provisioning_activity=(2, provisioning_activity))
+                                        provisioning_price=provisioning_prices,
+                                        provisioning_consumption_event=provisioning_consumption_events,
+                                        provisioning_user_consumption=provisioning_user_consumptions)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -136,14 +144,6 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'status': 'PAID',
                 'total_amount': 0.0,
                 'paid_at': UTC_NOW,
-            },
-        ])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[0]),
-            },
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[1]),
             },
         ])
 
@@ -166,15 +166,28 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     def test_bill_exists_and_activities_with_random_amounts__bill_amount_is_override(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {'hash': slug, 'total_amount': random.random() * 1000}
-        provisioning_activities = [{
+
+        provisioning_prices = [{
             'price_per_unit': random.random() * 100,
+        } for _ in range(2)]
+
+        provisioning_consumption_events = [{
             'quantity': random.random() * 10,
+            'price_id': n + 1,
+        } for n in range(2)]
+
+        provisioning_user_consumptions = [{
             'status': 'PERSISTED',
         } for _ in range(2)]
-        amount = sum(
-            [activity['price_per_unit'] * activity['quantity'] for activity in provisioning_activities])
+
+        amount = sum([
+            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity']
+            for n in range(2)
+        ]) * 2
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
-                                        provisioning_activity=provisioning_activities)
+                                        provisioning_price=provisioning_prices,
+                                        provisioning_consumption_event=provisioning_consumption_events,
+                                        provisioning_user_consumption=provisioning_user_consumptions)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -201,14 +214,6 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'stripe_url': stripe_url,
             },
         ])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[0]),
-            },
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[1]),
-            },
-        ])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Starting calculate_bill_amounts for hash {slug}')])
@@ -228,13 +233,24 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             'total_amount': random.random() * 1000,
             'status': random.choice(['DISPUTED', 'IGNORED', 'PAID']),
         }
-        provisioning_activities = [{
+
+        provisioning_prices = [{
             'price_per_unit': random.random() * 100,
+        } for _ in range(2)]
+
+        provisioning_consumption_events = [{
             'quantity': random.random() * 10,
+            'price_id': n + 1,
+        } for n in range(2)]
+
+        provisioning_user_consumptions = [{
             'status': 'PERSISTED',
         } for _ in range(2)]
+
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
-                                        provisioning_activity=provisioning_activities)
+                                        provisioning_price=provisioning_prices,
+                                        provisioning_consumption_event=provisioning_consumption_events,
+                                        provisioning_user_consumption=provisioning_user_consumptions)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -244,14 +260,6 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
-            },
-        ])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[0]),
-            },
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[1]),
             },
         ])
 
@@ -281,15 +289,28 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             'total_amount': random.random() * 1000,
             'status': random.choice(['DISPUTED', 'IGNORED']),
         }
-        provisioning_activities = [{
+
+        provisioning_prices = [{
             'price_per_unit': random.random() * 100,
+        } for _ in range(2)]
+
+        provisioning_consumption_events = [{
             'quantity': random.random() * 10,
+            'price_id': n + 1,
+        } for n in range(2)]
+
+        provisioning_user_consumptions = [{
             'status': 'PERSISTED',
         } for _ in range(2)]
-        amount = sum(
-            [activity['price_per_unit'] * activity['quantity'] for activity in provisioning_activities])
+
+        amount = sum([
+            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity']
+            for n in range(2)
+        ]) * 2
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
-                                        provisioning_activity=provisioning_activities)
+                                        provisioning_price=provisioning_prices,
+                                        provisioning_consumption_event=provisioning_consumption_events,
+                                        provisioning_user_consumption=provisioning_user_consumptions)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -317,14 +338,6 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'stripe_url': stripe_url,
             },
         ])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[0]),
-            },
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[1]),
-            },
-        ])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Starting calculate_bill_amounts for hash {slug}')])
@@ -344,13 +357,24 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             'total_amount': random.random() * 1000,
             'status': 'PAID',
         }
-        provisioning_activities = [{
+
+        provisioning_prices = [{
             'price_per_unit': random.random() * 100,
+        } for _ in range(2)]
+
+        provisioning_consumption_events = [{
             'quantity': random.random() * 10,
+            'price_id': n + 1,
+        } for n in range(2)]
+
+        provisioning_user_consumptions = [{
             'status': 'PERSISTED',
         } for _ in range(2)]
+
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
-                                        provisioning_activity=provisioning_activities)
+                                        provisioning_price=provisioning_prices,
+                                        provisioning_consumption_event=provisioning_consumption_events,
+                                        provisioning_user_consumption=provisioning_user_consumptions)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -361,14 +385,6 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
                 'status': 'PAID',
-            },
-        ])
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[0]),
-            },
-            {
-                **self.bc.format.to_dict(model.provisioning_activity[1]),
             },
         ])
 

@@ -18,16 +18,16 @@ class ProvisioningModelsMixin(ModelsMixin):
                                      provisioning_bill=False,
                                      provisioning_activity=False,
                                      provisioning_container=False,
+                                     provisioning_consumption_kind=False,
+                                     provisioning_price=False,
+                                     provisioning_consumption_event=False,
+                                     provisioning_user_consumption=False,
                                      models={},
                                      **kwargs):
         models = models.copy()
 
-        # if not 'academy' in models and is_valid(academy):
-        #     kargs = {}
-
-        #     models['academy'] = create_models(academy, 'admissions.Academy', **kargs)
-
-        if not 'provisioning_vendor' in models and is_valid(provisioning_vendor):
+        if not 'provisioning_vendor' in models and (is_valid(provisioning_vendor)
+                                                    or is_valid(provisioning_consumption_event)):
             kargs = {}
 
             models['provisioning_vendor'] = create_models(provisioning_vendor,
@@ -96,6 +96,50 @@ class ProvisioningModelsMixin(ModelsMixin):
 
             models['provisioning_bill'] = create_models(provisioning_bill, 'provisioning.ProvisioningBill',
                                                         **kargs)
+
+        if not 'provisioning_consumption_kind' in models and (is_valid(provisioning_consumption_kind)
+                                                              or is_valid(provisioning_user_consumption)):
+            kargs = {}
+
+            models['provisioning_consumption_kind'] = create_models(
+                provisioning_consumption_kind, 'provisioning.ProvisioningConsumptionKind', **kargs)
+
+        if not 'provisioning_price' in models and (is_valid(provisioning_price)
+                                                   or is_valid(provisioning_consumption_event)):
+            kargs = {}
+
+            if 'currency' in models:
+                kargs['currency'] = just_one(models['currency'])
+
+            models['provisioning_price'] = create_models(provisioning_price, 'provisioning.ProvisioningPrice',
+                                                         **kargs)
+
+        if not 'provisioning_consumption_event' in models and is_valid(provisioning_consumption_event):
+            kargs = {}
+
+            if 'provisioning_vendor' in models:
+                kargs['vendor'] = just_one(models['provisioning_vendor'])
+
+            if 'provisioning_price' in models:
+                kargs['price'] = just_one(models['provisioning_price'])
+
+            models['provisioning_consumption_event'] = create_models(
+                provisioning_consumption_event, 'provisioning.ProvisioningConsumptionEvent', **kargs)
+
+        if not 'provisioning_user_consumption' in models and is_valid(provisioning_user_consumption):
+            kargs = {}
+
+            if 'provisioning_consumption_kind' in models:
+                kargs['kind'] = just_one(models['provisioning_consumption_kind'])
+
+            if 'provisioning_bill' in models:
+                kargs['bills'] = get_list(models['provisioning_bill'])
+
+            if 'provisioning_consumption_event' in models:
+                kargs['events'] = get_list(models['provisioning_consumption_event'])
+
+            models['provisioning_user_consumption'] = create_models(
+                provisioning_user_consumption, 'provisioning.ProvisioningUserConsumption', **kargs)
 
         if not 'provisioning_activity' in models and is_valid(provisioning_activity):
             kargs = {}
