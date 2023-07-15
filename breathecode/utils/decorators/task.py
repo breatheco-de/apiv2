@@ -47,7 +47,7 @@ class Task(object):
                 'kwargs': kwargs,
             }
 
-            page = kwargs.get('page', None)
+            page = kwargs.get('page', 0)
             total_pages = kwargs.get('total_pages', None)
             task_manager_id = kwargs.get('task_manager_id', None)
             last_run = timezone.now()
@@ -65,14 +65,14 @@ class Task(object):
                                                reverse_name=reverse_name,
                                                arguments=arguments,
                                                status='PENDING',
-                                               current_page=page,
+                                               current_page=page + 1,
                                                total_pages=total_pages,
                                                last_run=last_run)
 
                 kwargs['task_manager_id'] = x.id
 
             if not created:
-                x.current_page = page
+                x.current_page = page + 1
                 x.last_run = last_run
                 x.save()
 

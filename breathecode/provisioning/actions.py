@@ -286,7 +286,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
 
         provisioning_bill = context['provisioning_bills'].get(academy.id, None)
         if not provisioning_bill and (provisioning_bill := ProvisioningBill.objects.filter(
-                academy=academy, status='PENDING').first()):
+                academy=academy, status='PENDING', hash=context['hash']).first()):
             context['provisioning_bills'][academy.id] = provisioning_bill
             provisioning_bills[academy.id] = provisioning_bill
 
@@ -418,7 +418,8 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
                 provisioning_bills.append(provisioning_bill)
 
             elif provisioning_bill := ProvisioningBill.objects.filter(academy=academy,
-                                                                      status='PENDING').first():
+                                                                      status='PENDING',
+                                                                      hash=context['hash']).first():
                 context['provisioning_bills'][academy.id] = provisioning_bill
                 provisioning_bills.append(provisioning_bill)
 
