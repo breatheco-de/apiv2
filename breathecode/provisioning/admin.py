@@ -116,9 +116,10 @@ def force_calculate_bill(modeladmin, request, queryset):
 
 @admin.register(ProvisioningBill)
 class ProvisioningBillAdmin(admin.ModelAdmin):
-    list_display = ('id', 'academy', '_status', 'total_amount', 'currency_code', 'paid_at', 'invoice_url')
+    list_display = ('id', 'vendor', 'academy', '_status', 'total_amount', 'currency_code', 'paid_at',
+                    'invoice_url')
     search_fields = ['academy__name', 'academy__slug', 'id']
-    list_filter = ['academy', 'status']
+    list_filter = ['academy', 'status', 'vendor']
     actions = [force_calculate_bill]
 
     def invoice_url(self, obj):
