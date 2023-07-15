@@ -199,7 +199,7 @@ class UploadView(APIView):
         if created:
             cloud_file.upload(file, content_type=file.content_type)
 
-        tasks.upload.delay(hash, total_pages=math.ceil(len(df) / tasks.PANDAS_ROWS_LIMIT) - 1)
+        tasks.upload.delay(hash, total_pages=math.ceil(len(df) / tasks.PANDAS_ROWS_LIMIT))
 
         data = {'file_name': hash, 'status': 'PENDING', 'created': created}
 
