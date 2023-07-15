@@ -48,7 +48,7 @@ class Task(object):
             }
 
             page = kwargs.get('page', 0)
-            total_pages = kwargs.get('total_pages', None)
+            total_pages = kwargs.get('total_pages', 1)
             task_manager_id = kwargs.get('task_manager_id', None)
             last_run = timezone.now()
 
@@ -99,7 +99,7 @@ class Task(object):
 
             res = function(*args, **kwargs)
 
-            if x.total_pages is not None and x.current_page is not None and total_pages == x.current_page:
+            if total_pages == x.current_page + 1:
                 x.status = 'DONE'
                 x.save()
 
