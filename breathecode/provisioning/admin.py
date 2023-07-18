@@ -57,13 +57,13 @@ class ProvisioningConsumptionEventAdmin(admin.ModelAdmin):
     list_display = ('id', 'registered_at', 'external_pk', 'csv_row', 'vendor', 'quantity', 'repository_url',
                     'task_associated_slug')
     search_fields = ['repository_url', 'task_associated_slug', 'provisioninguserconsumption__bills__hash']
-    list_filter = ['provisioninguserconsumption__bills']
+    list_filter = ['vendor']
     actions = []
 
 
 @admin.register(ProvisioningUserConsumption)
 class ProvisioningUserConsumptionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'username', 'processed_at', 'kind')
+    list_display = ('id', 'username', 'kind', 'amount', 'quantity', '_status', 'processed_at')
     search_fields = ['username', 'events__task_associated_slug', 'bills__hash']
     list_filter = ['bills__academy', 'status']
     actions = []
@@ -73,6 +73,7 @@ class ProvisioningUserConsumptionAdmin(admin.ModelAdmin):
             'PERSISTED': 'bg-success',
             'PENDING': 'bg-error',
             'ERROR': 'bg-error',
+            'IGNORED': 'bg-warning',
             None: 'bg-warning',
         }
 
