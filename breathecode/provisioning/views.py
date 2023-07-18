@@ -320,7 +320,7 @@ def render_html_all_bills(request, token):
     return HttpResponse(template['html'])
 
 
-LIMIT_PER_PAGE_HTML = 50
+LIMIT_PER_PAGE_HTML = 10
 
 
 @private_view()
