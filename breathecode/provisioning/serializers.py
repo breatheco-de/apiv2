@@ -115,7 +115,7 @@ class ProvisioningUserConsumptionHTMLResumeSerializer(serpy.Serializer):
         quantity = 0
         price = 0
         page = 0
-        prices = []
+        # prices = []
 
         while page < event_pages:
             events = ProvisioningConsumptionEvent.objects.filter().order_by('id')[page * 100:(page * 100) +
@@ -125,18 +125,18 @@ class ProvisioningUserConsumptionHTMLResumeSerializer(serpy.Serializer):
                 p = event.quantity * event.price.price_per_unit * event.price.multiplier
                 price += p
 
-                prices.append({
-                    'price': p,
-                    'price_per_unit': event.price.price_per_unit,
-                    'quantity': event.quantity
-                })
+                # prices.append({
+                #     'price': p,
+                #     'price_per_unit': event.price.price_per_unit,
+                #     'quantity': event.quantity
+                # })
 
             page += 1
 
         resume = ''
 
-        for p in prices:
-            resume += f'{p["quantity"]} x {p["price_per_unit"]} = {p["price"]}\n'
+        # for p in prices:
+        #     resume += f'{p["quantity"]} x {p["price_per_unit"]} = {p["price"]}\n'
 
         return quantity, price, resume
 
