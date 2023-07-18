@@ -205,14 +205,6 @@ class AuthenticateTestSuite(ProvisioningTestCase):
     # When: 1 bill and 2 activities
     # Then: return 200
     def test_2_activities(self):
-        # provisioning_user_consumptions = [
-        #     {
-        #         # 'events': [1, 2],
-        #     },
-        #     {
-        #         # 'events': [3, 4],
-        #     },
-        # ]
         model = self.bc.database.create(user=1,
                                         token=1,
                                         provisioning_bill=1,
