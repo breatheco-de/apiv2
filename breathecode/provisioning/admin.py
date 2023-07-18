@@ -6,8 +6,7 @@ from django.utils.html import format_html
 from breathecode.provisioning import tasks
 from .models import (ProvisioningConsumptionEvent, ProvisioningConsumptionKind, ProvisioningPrice,
                      ProvisioningUserConsumption, ProvisioningVendor, ProvisioningMachineTypes,
-                     ProvisioningAcademy, ProvisioningBill, ProvisioningActivity, ProvisioningContainer,
-                     ProvisioningProfile)
+                     ProvisioningAcademy, ProvisioningBill, ProvisioningContainer, ProvisioningProfile)
 # from .actions import ()
 from django.utils import timezone
 from breathecode.utils.validation_exception import ValidationException
@@ -74,30 +73,6 @@ class ProvisioningUserConsumptionAdmin(admin.ModelAdmin):
             'PENDING': 'bg-error',
             'ERROR': 'bg-error',
             'IGNORED': 'bg-warning',
-            None: 'bg-warning',
-        }
-
-        def from_status(s):
-            if s in colors:
-                return colors[s]
-            return ''
-
-        return format_html(
-            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_text}</small>")
-
-
-@admin.register(ProvisioningActivity)
-class ProvisioningActivityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill')
-    search_fields = ['username', 'task_associated_slug', 'bill__hash']
-    list_filter = ['bill__academy', 'status', ('bill', admin.EmptyFieldListFilter)]
-    actions = []
-
-    def _status(self, obj):
-        colors = {
-            'PERSISTED': 'bg-success',
-            'PENDING': 'bg-error',
-            'ERROR': 'bg-error',
             None: 'bg-warning',
         }
 

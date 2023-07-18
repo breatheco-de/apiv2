@@ -1,6 +1,5 @@
 import hashlib
 from io import StringIO
-import json
 import math
 import os
 from django.http import HttpResponse
@@ -10,28 +9,25 @@ from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
-from breathecode.provisioning.serializers import ProvisioningActivitySerializer, ProvisioningBillSerializer, ProvisioningBillHTMLSerializer, ProvisioningUserConsumptionHTMLResumeSerializer
-from breathecode.provisioning.tasks import upload
+from breathecode.provisioning.serializers import (GetProvisioningUserConsumptionSerializer,
+                                                  ProvisioningBillSerializer, ProvisioningBillHTMLSerializer,
+                                                  ProvisioningUserConsumptionHTMLResumeSerializer)
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import private_view, render_message
 from .actions import get_provisioning_vendor
-from .models import BILL_STATUS, ProvisioningActivity, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
+from .models import BILL_STATUS, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 import pandas as pd
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
 from django.shortcuts import render
 from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.renderers import JSONRenderer
-from rest_framework.decorators import api_view, permission_classes
 from django.http import HttpResponse
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 
@@ -44,7 +40,7 @@ def redirect_new_container(request, token):
     if cohort_id is None: return render_message(request, f'Please specificy a cohort in the URL')
 
     url = request.GET.get('repo', None)
-    if url is None: return render_message(request, f'Please specificy a repository in the URL')
+    if url is None: return render_message(request, f'Please specify a repository in the URL')
 
     cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
     if cu is None: return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.")
@@ -97,7 +93,7 @@ def redirect_workspaces(request, token):
     return redirect(vendor.workspaces_url)
 
 
-class AcademyActivityView(APIView):
+class AcademyProvisioningUserConsumptionView(APIView):
     extensions = APIViewExtensions(sort='-id')
 
     renderer_classes = [JSONRenderer, CSVRenderer]
@@ -110,11 +106,12 @@ class AcademyActivityView(APIView):
         query = handler.lookup.build(
             lang,
             strings={
-                'exact': [
+                'iexact': [
                     'hash',
                     'username',
                     'status',
-                    'product_name',
+                    'kind__product_name',
+                    'kind__sku',
                 ],
             },
             datetimes={
@@ -124,13 +121,15 @@ class AcademyActivityView(APIView):
             overwrite={
                 'start': 'processed_at',
                 'end': 'created_at',
+                'product_name': 'kind__product_name',
+                'sku': 'kind__sku',
             },
         )
 
-        items = ProvisioningActivity.objects.filter(query, bill__academy__id=academy_id)
+        items = ProvisioningUserConsumption.objects.filter(query, bills__academy__id=academy_id)
         items = handler.queryset(items)
 
-        serializer = ProvisioningActivitySerializer(items, many=True)
+        serializer = GetProvisioningUserConsumptionSerializer(items, many=True)
         return Response(serializer.data)
 
 

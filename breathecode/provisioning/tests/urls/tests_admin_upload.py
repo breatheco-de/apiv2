@@ -329,7 +329,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -433,7 +433,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -527,7 +527,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -629,7 +629,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [

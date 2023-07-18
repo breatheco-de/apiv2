@@ -143,7 +143,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         event = EVENTBRITE_EVENTS['events'][0]
         kwargs = {
             'id': 1,
-            'description': event['description']['text'],
+            'description': None,
             'excerpt': event['description']['text'],
             'title': event['name']['text'],
             'lang': None,
@@ -221,7 +221,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         event = EVENTBRITE_EVENTS['events'][0]
         kwargs = {
             'id': 1,
-            'description': event['description']['text'],
+            'description': None,
             'excerpt': event['description']['text'],
             'title': event['name']['text'],
             'currency': event['currency'],

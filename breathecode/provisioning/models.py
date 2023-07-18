@@ -213,44 +213,6 @@ class ProvisioningUserConsumption(models.Model):
         return str(self.username) + ' - ' + self.kind.product_name + ' - ' + str(self.kind.sku)
 
 
-class ProvisioningActivity(models.Model):
-    username = models.CharField(
-        max_length=80, help_text='Native username in the provisioning platform, E.g: github username')
-    hash = models.CharField(max_length=64, blank=True, null=True, default=None)
-    registered_at = models.DateTimeField(
-        null=True,
-        default=None,
-        blank=True,
-        help_text='When the activity happened, this field comes form the provisioning vendor')
-    product_name = models.CharField(max_length=100)
-    sku = models.CharField(max_length=100)
-
-    quantity = models.FloatField()
-    unit_type = models.CharField(max_length=100)
-
-    price_per_unit = models.FloatField(help_text='Price paid to the provisioning vendor, E.g: Github')
-    currency_code = models.CharField(max_length=3)
-    multiplier = models.FloatField(blank=True,
-                                   null=False,
-                                   default=1,
-                                   help_text='To increase price in a certain percentage')
-    repository_url = models.URLField()
-    task_associated_slug = models.SlugField(
-        max_length=100, help_text='What assignment was the the student trying to complete with this')
-    bill = models.ForeignKey(ProvisioningBill, blank=True, null=True, on_delete=models.SET_NULL)
-    notes = models.TextField(blank=True, null=True)
-
-    status = models.CharField(max_length=20, choices=ACTIVITY_STATUS, default=PENDING)
-    status_text = models.CharField(max_length=255)
-    processed_at = models.DateTimeField(null=True, default=None, blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    def price(self):
-        return self.price_per_unit * self.quantity
-
-
 class ProvisioningContainer(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
