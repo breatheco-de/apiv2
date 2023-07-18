@@ -11,7 +11,7 @@ from breathecode.payments.services.stripe import Stripe
 from breathecode.utils.decorators import task
 
 from breathecode.provisioning import actions
-from breathecode.provisioning.models import ProvisioningActivity, ProvisioningBill, ProvisioningUserConsumption
+from breathecode.provisioning.models import ProvisioningBill, ProvisioningUserConsumption
 from breathecode.services.google_cloud.storage import Storage
 from django.utils import timezone
 
@@ -88,7 +88,6 @@ PANDAS_ROWS_LIMIT = 100
 def reverse_upload(hash: str, **_: Any):
     logger.info(f'Canceling upload for hash {hash}')
 
-    ProvisioningActivity.objects.filter(hash=hash).delete()
     ProvisioningUserConsumption.objects.filter(hash=hash).delete()
     ProvisioningBill.objects.filter(hash=hash).delete()
 

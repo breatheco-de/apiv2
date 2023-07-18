@@ -42,24 +42,37 @@ class ContainerMeBigSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
-class ProvisioningActivitySerializer(serpy.Serializer):
+class GetProvisioningVendorSerializer(serpy.Serializer):
     id = serpy.Field()
-    username = serpy.Field()
-    registered_at = serpy.Field()
+    name = serpy.Field()
+
+
+class GetProvisioningBillSerializer(serpy.Serializer):
+    id = serpy.Field()
+    vendor = GetProvisioningVendorSerializer(required=False)
+    total_amount = serpy.Field()
+    status = serpy.Field()
+    status_details = serpy.Field()
+    paid_at = serpy.Field()
+    fee = serpy.Field()
+    stripe_url = serpy.Field()
+    created_at = serpy.Field()
+
+
+class GetProvisioningConsumptionKindSerializer(serpy.Serializer):
+    id = serpy.Field()
     product_name = serpy.Field()
     sku = serpy.Field()
+
+
+class GetProvisioningUserConsumptionSerializer(serpy.Serializer):
+    id = serpy.Field()
+    kind = GetProvisioningConsumptionKindSerializer(required=False)
+    username = serpy.Field()
     quantity = serpy.Field()
-    unit_type = serpy.Field()
-    price_per_unit = serpy.Field()
-    currency_code = serpy.Field()
-    multiplier = serpy.Field()
-    repository_url = serpy.Field()
+    amount = serpy.Field()
     processed_at = serpy.Field()
     status = serpy.Field()
-    bill = serpy.MethodField()
-
-    def get_bill(self, obj):
-        return obj.bill.id if obj.bill else None
 
 
 class ProvisioningContainerSerializer(serializers.ModelSerializer):

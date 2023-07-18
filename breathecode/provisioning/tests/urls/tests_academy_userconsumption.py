@@ -21,23 +21,6 @@ from breathecode.provisioning import tasks
 
 UTC_NOW = timezone.now()
 
-HEADER = ','.join([
-    'bill',
-    'currency_code',
-    'id',
-    'multiplier',
-    'price_per_unit',
-    'processed_at',
-    'product_name',
-    'quantity',
-    'registered_at',
-    'repository_url',
-    'sku',
-    'status',
-    'unit_type',
-    'username',
-])
-
 
 def format_field(x):
     if x is None:
@@ -46,40 +29,64 @@ def format_field(x):
     return str(x)
 
 
-def format_csv(provisioning_activity, provisioning_bill=None):
+HEADER = ','.join([
+    'amount',
+    'id',
+    'kind.id',
+    'kind.product_name',
+    'kind.sku',
+    'processed_at',
+    'quantity',
+    'status',
+    'username',
+])
+
+
+def format_csv(provisioning_activity, provisioning_user_kind):
     return ','.join([
-        format_field(provisioning_bill.id if provisioning_bill else ''),
-        format_field(provisioning_activity.currency_code),
+        format_field(float(provisioning_activity.amount)),
         format_field(provisioning_activity.id),
-        format_field(float(provisioning_activity.multiplier)),
-        format_field(provisioning_activity.price_per_unit),
+        format_field(provisioning_user_kind.id),
+        format_field(provisioning_user_kind.product_name),
+        format_field(provisioning_user_kind.sku),
         format_field(provisioning_activity.processed_at),
-        format_field(provisioning_activity.product_name),
-        format_field(provisioning_activity.quantity),
-        format_field(provisioning_activity.registered_at),
-        format_field(provisioning_activity.repository_url),
-        format_field(provisioning_activity.sku),
+        format_field(float(provisioning_activity.quantity)),
         format_field(provisioning_activity.status),
-        format_field(provisioning_activity.unit_type),
         format_field(provisioning_activity.username),
     ])
 
 
-def get_serializer(provisioning_activity, provisioning_bill=None):
+def provisioning_bill_serializer(self, provisioning_bill):
     return {
-        'bill': provisioning_bill.id if provisioning_bill else None,
-        'currency_code': provisioning_activity.currency_code,
+        'created_at': self.bc.datetime.to_iso_string(provisioning_bill.created_at),
+        'fee': provisioning_bill.fee,
+        'id': provisioning_bill.id,
+        'paid_at': provisioning_bill.paid_at,
+        'status': provisioning_bill.status,
+        'status_details': provisioning_bill.status_details,
+        'stripe_url': provisioning_bill.stripe_url,
+        'total_amount': provisioning_bill.total_amount,
+        'vendor': provisioning_bill.vendor,
+    }
+
+
+def provisioning_consumption_kind_serializer(provisioning_consumption_kind):
+    return {
+        'id': provisioning_consumption_kind.id,
+        'product_name': provisioning_consumption_kind.product_name,
+        'sku': provisioning_consumption_kind.sku,
+    }
+
+
+def get_serializer(self, provisioning_activity, provisioning_consumption_kind):
+    return {
+        # 'bills': [provisioning_bill_serializer(self, x) for x in provisioning_bills],
+        'kind': provisioning_consumption_kind_serializer(provisioning_consumption_kind),
         'id': provisioning_activity.id,
-        'multiplier': provisioning_activity.multiplier,
-        'price_per_unit': provisioning_activity.price_per_unit,
         'processed_at': provisioning_activity.processed_at,
-        'product_name': provisioning_activity.product_name,
+        'amount': provisioning_activity.amount,
         'quantity': provisioning_activity.quantity,
-        'registered_at': provisioning_activity.registered_at,
-        'repository_url': provisioning_activity.repository_url,
-        'sku': provisioning_activity.sku,
         'status': provisioning_activity.status,
-        'unit_type': provisioning_activity.unit_type,
         'username': provisioning_activity.username,
     }
 
@@ -93,7 +100,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         self.headers(accept='application/json', content_disposition='attachment; filename="filename.csv"')
 
-        url = reverse_lazy('provisioning:academy_activity')
+        url = reverse_lazy('provisioning:academy_userconsumption')
 
         response = self.client.get(url)
         json = response.json()
@@ -113,7 +120,7 @@ class MarketingTestSuite(ProvisioningTestCase):
                      accept='application/json',
                      content_disposition='attachment; filename="filename.csv"')
 
-        url = reverse_lazy('provisioning:academy_activity')
+        url = reverse_lazy('provisioning:academy_userconsumption')
 
         response = self.client.get(url)
 
@@ -138,7 +145,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         self.headers(academy=1, accept='text/csv', content_disposition='attachment; filename="filename.csv"')
 
-        url = reverse_lazy('provisioning:academy_activity')
+        url = reverse_lazy('provisioning:academy_userconsumption')
 
         response = self.client.get(url)
 
@@ -147,7 +154,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
     # Given: 2 ProvisioningActivity and 1 ProvisioningBill
     # When: no filters
@@ -158,29 +165,29 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         profile_academy=1,
                                         role=1,
                                         capability='read_provisioning_activity',
-                                        provisioning_activity=2,
+                                        provisioning_user_consumption=2,
                                         provisioning_bill=1)
         self.bc.request.authenticate(model.user)
 
         self.headers(academy=1, accept='text/csv', content_disposition='attachment; filename="filename.csv"')
 
-        url = reverse_lazy('provisioning:academy_activity')
+        url = reverse_lazy('provisioning:academy_userconsumption')
 
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
         expected = '\r\n'.join([
             HEADER,
-            format_csv(model.provisioning_activity[1], model.provisioning_bill),
-            format_csv(model.provisioning_activity[0], model.provisioning_bill),
+            format_csv(model.provisioning_user_consumption[1], model.provisioning_consumption_kind),
+            format_csv(model.provisioning_user_consumption[0], model.provisioning_consumption_kind),
             '',
         ])
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            self.bc.database.list_of('provisioning.ProvisioningActivity'),
-            self.bc.format.to_dict(model.provisioning_activity),
+            self.bc.database.list_of('provisioning.ProvisioningUserConsumption'),
+            self.bc.format.to_dict(model.provisioning_user_consumption),
         )
 
     # Given: 2 ProvisioningActivity and 1 ProvisioningBill
@@ -192,7 +199,7 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         profile_academy=1,
                                         role=1,
                                         capability='read_provisioning_activity',
-                                        provisioning_activity=2,
+                                        provisioning_user_consumption=2,
                                         provisioning_bill=1)
         self.bc.request.authenticate(model.user)
 
@@ -200,21 +207,21 @@ class MarketingTestSuite(ProvisioningTestCase):
                      accept='application/json',
                      content_disposition='attachment; filename="filename.csv"')
 
-        url = reverse_lazy('provisioning:academy_activity')
+        url = reverse_lazy('provisioning:academy_userconsumption')
 
         response = self.client.get(url)
 
         json = response.json()
         expected = [
-            get_serializer(model.provisioning_activity[1], model.provisioning_bill),
-            get_serializer(model.provisioning_activity[0], model.provisioning_bill),
+            get_serializer(self, model.provisioning_user_consumption[1], model.provisioning_consumption_kind),
+            get_serializer(self, model.provisioning_user_consumption[0], model.provisioning_consumption_kind),
         ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            self.bc.database.list_of('provisioning.ProvisioningActivity'),
-            self.bc.format.to_dict(model.provisioning_activity),
+            self.bc.database.list_of('provisioning.ProvisioningUserConsumption'),
+            self.bc.format.to_dict(model.provisioning_user_consumption),
         )
 
     # Given: compile_lookup was mocked
@@ -229,7 +236,7 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         profile_academy=1,
                                         role=1,
                                         capability='read_provisioning_activity',
-                                        provisioning_activity=2,
+                                        provisioning_user_consumption=2,
                                         provisioning_bill=1)
 
         self.bc.request.authenticate(model.user)
@@ -237,11 +244,12 @@ class MarketingTestSuite(ProvisioningTestCase):
         args, kwargs = self.bc.format.call(
             'en',
             strings={
-                'exact': [
+                'iexact': [
                     'hash',
                     'username',
                     'status',
-                    'product_name',
+                    'kind__product_name',
+                    'kind__sku',
                 ],
             },
             datetimes={
@@ -251,13 +259,16 @@ class MarketingTestSuite(ProvisioningTestCase):
             overwrite={
                 'start': 'processed_at',
                 'end': 'created_at',
+                'product_name': 'kind__product_name',
+                'sku': 'kind__sku',
             },
         )
 
         query = self.bc.format.lookup(*args, **kwargs)
-        url = reverse_lazy('provisioning:academy_activity') + '?' + self.bc.format.querystring(query)
+        url = reverse_lazy('provisioning:academy_userconsumption') + '?' + self.bc.format.querystring(query)
 
-        self.assertEqual([x for x in query], ['hash', 'username', 'status', 'product_name', 'start', 'end'])
+        self.assertEqual([x for x in query],
+                         ['hash', 'username', 'status', 'product_name', 'sku', 'start', 'end'])
 
         response = self.client.get(url)
 
@@ -287,8 +298,8 @@ class MarketingTestSuite(ProvisioningTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            self.bc.database.list_of('provisioning.ProvisioningActivity'),
-            self.bc.format.to_dict(model.provisioning_activity),
+            self.bc.database.list_of('provisioning.ProvisioningUserConsumption'),
+            self.bc.format.to_dict(model.provisioning_user_consumption),
         )
 
     # When: get is called
@@ -300,13 +311,13 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         profile_academy=1,
                                         role=1,
                                         capability='read_provisioning_activity',
-                                        provisioning_activity=2,
+                                        provisioning_user_consumption=2,
                                         provisioning_bill=1)
 
         self.bc.request.set_headers(academy=1, accept='application/json')
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('provisioning:academy_activity')
+        url = reverse_lazy('provisioning:academy_userconsumption')
         self.client.get(url)
 
         self.bc.check.calls(APIViewExtensionHandlers._spy_extensions.call_args_list, [
