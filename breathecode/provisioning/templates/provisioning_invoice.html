@@ -195,10 +195,6 @@
                 <td></td>
 
                 <td>
-                    Quantity
-                </td>
-
-                <td>
                     Price
                 </td>
             </tr>
@@ -211,11 +207,6 @@
 
                 <td colspan="2">
                     {{ consumption.kind.product_name }}
-                    <!-- <small> - </small>
-                    <a onclick="alert(`{{consumption.price_description.2}}`)" type="button" class="btn-link">
-                        see items
-                    </a> -->
-
                     {% if consumption.status_text %}
                         <small> - </small>
                         <a onclick="alert('{{consumption.status_text}}')" type="button" class="btn-link">
@@ -224,21 +215,13 @@
                     {% endif %}
                 </td>
 
-                <td>
-                    {% if consumption.price_description.0.is_integer %}
-                        {{ consumption.price_description.0|floatformat:0 }}
-                    {% else %}
-                        {{ consumption.price_description.0|floatformat:3 }}
-                    {% endif %}
-                </td>
-
 
                 <td class="price">
                     <span style="color: #608062;">
-                        {% if consumption.price_description.1.is_integer %}
-                            {{ consumption.price_description.1|floatformat:0 }}
+                        {% if consumption.amount.is_integer %}
+                            {{ consumption.amount|floatformat:0 }}
                         {% else %}
-                            {{ consumption.price_description.1|floatformat:2 }}
+                            {{ consumption.amount|floatformat:2 }}
                         {% endif %}
                     </span>
                 </td>
@@ -247,7 +230,6 @@
 
 
             <tr class="total">
-                <td></td>
                 <td></td>
                 <td></td>
                 <td></td>

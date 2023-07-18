@@ -52,8 +52,14 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     for bill in bills:
         amount = 0
         for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status='PERSISTED'):
+            consumption_amount = 0
             for item in activity.events.all():
-                amount += item.price.get_price(item.quantity)
+                consumption_amount += item.price.get_price(item.quantity)
+
+            activity.amount = consumption_amount
+            activity.save()
+
+            amount += consumption_amount
 
         bill.status = 'DUE' if amount else 'PAID'
 

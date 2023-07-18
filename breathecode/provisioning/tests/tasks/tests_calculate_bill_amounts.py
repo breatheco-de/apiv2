@@ -36,6 +36,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         calculate_bill_amounts(slug)
 
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
@@ -64,6 +65,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
 
         calculate_bill_amounts(bad_slug)
 
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             self.bc.format.to_dict(model.provisioning_bill),
         ])
@@ -91,6 +93,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
 
         calculate_bill_amounts(slug)
 
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
@@ -128,6 +131,11 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             'status': 'PERSISTED',
         } for _ in range(2)]
 
+        amount = sum([
+            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity']
+            for n in range(2)
+        ]) * 2
+
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
                                         provisioning_price=provisioning_prices,
                                         provisioning_consumption_event=provisioning_consumption_events,
@@ -138,6 +146,16 @@ class MakeBillsTestSuite(ProvisioningTestCase):
 
         calculate_bill_amounts(slug)
 
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[0]),
+                'amount': amount / 2,
+            },
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[1]),
+                'amount': amount / 2,
+            },
+        ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
@@ -203,6 +221,16 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
         fee = new_amount - amount
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[0]),
+                'amount': amount / 2,
+            },
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[1]),
+                'amount': amount / 2,
+            },
+        ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
@@ -257,6 +285,14 @@ class MakeBillsTestSuite(ProvisioningTestCase):
 
         calculate_bill_amounts(slug)
 
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[0]),
+            },
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[1]),
+            },
+        ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
@@ -327,6 +363,16 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
         fee = new_amount - amount
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[0]),
+                'amount': amount / 2,
+            },
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[1]),
+                'amount': amount / 2,
+            },
+        ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
@@ -381,6 +427,14 @@ class MakeBillsTestSuite(ProvisioningTestCase):
 
         calculate_bill_amounts(slug, force=True)
 
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[0]),
+            },
+            {
+                **self.bc.format.to_dict(model.provisioning_user_consumption[1]),
+            },
+        ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),

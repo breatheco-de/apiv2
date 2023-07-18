@@ -102,6 +102,7 @@ class ProvisioningUserConsumptionHTMLResumeSerializer(serpy.Serializer):
     username = serpy.Field()
     status = serpy.Field()
     status_text = serpy.Field()
+    amount = serpy.Field()
     kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
 
     price_description = serpy.MethodField()

@@ -62,6 +62,7 @@ def provisioning_user_consumption_serializer(provisioning_user_consumption,
     return {
         'username': provisioning_user_consumption.username,
         'status': provisioning_user_consumption.status,
+        'amount': float(provisioning_user_consumption.amount),
         'status_text': provisioning_user_consumption.status_text,
         'kind': provisioning_consumption_kind_serializer(provisioning_consumption_kind),
         'price_description': (quantity, price, resume)
