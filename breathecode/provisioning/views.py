@@ -10,7 +10,7 @@ from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
-from breathecode.provisioning.serializers import ProvisioningActivitySerializer, ProvisioningBillSerializer, GETProvisioningBillSerializer
+from breathecode.provisioning.serializers import ProvisioningActivitySerializer, ProvisioningBillSerializer, ProvisioningBillHTMLSerializer, ProvisioningUserConsumptionHTMLResumeSerializer
 from breathecode.provisioning.tasks import upload
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -18,7 +18,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import private_view, render_message
 from .actions import get_provisioning_vendor
-from .models import BILL_STATUS, ProvisioningActivity, ProvisioningBill, ProvisioningProfile
+from .models import BILL_STATUS, ProvisioningActivity, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -33,6 +33,7 @@ from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.renderers import JSONRenderer
 from rest_framework.decorators import api_view, permission_classes
 from django.http import HttpResponse
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 
 
 @private_view()
@@ -319,6 +320,9 @@ def render_html_all_bills(request, token):
     return HttpResponse(template['html'])
 
 
+LIMIT_PER_PAGE_HTML = 50
+
+
 @private_view()
 def render_html_bill(request, token, id=None):
     lang = get_user_language(request)
@@ -351,14 +355,39 @@ def render_html_bill(request, token, id=None):
     for key, value in BILL_STATUS:
         status_mapper[key] = value
 
-    item = GETProvisioningBillSerializer(item, many=False).data
+    bill_serialized = ProvisioningBillHTMLSerializer(item, many=False).data
+
+    consumptions = ProvisioningUserConsumption.objects.filter(bills=item)
+    pages = math.ceil(consumptions.count() / LIMIT_PER_PAGE_HTML)
+    page = int(request.GET.get('page', 0))
+
+    consumptions = consumptions.order_by('username')[page * LIMIT_PER_PAGE_HTML:(page * LIMIT_PER_PAGE_HTML) +
+                                                     LIMIT_PER_PAGE_HTML]
+
+    consumptions_serialized = ProvisioningUserConsumptionHTMLResumeSerializer(consumptions, many=True).data
+
+    url = request.get_full_path()
+
+    u = urlparse(url)
+    query = parse_qs(u.query, keep_blank_values=True)
+    query.pop('page', None)
+    u = u._replace(query=urlencode(query, True))
+
+    url = urlunparse(u)
+
+    if not '?' in url:
+        url += '?'
+
+    page += 1
 
     data = {
-        **{},
-        'bill': item,
-        'activities': item['activities'],
-        'status': status_map['DUE'],
-        'title': item['academy']['name'],
+        'bill': bill_serialized,
+        'consumptions': consumptions_serialized,
+        'status': status_map[item.status],
+        'title': item.academy.name,
+        'pages': pages,
+        'page': page,
+        'url': url,
     }
     template = get_template_content('provisioning_invoice', data)
     return HttpResponse(template['html'])

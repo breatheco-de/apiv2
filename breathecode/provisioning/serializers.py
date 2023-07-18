@@ -1,12 +1,10 @@
-import serpy, base64
+import math
+import serpy
 
 from breathecode.utils.i18n import translation
-from .models import ProvisioningBill, ProvisioningContainer, ProvisioningActivity
-from django.utils import timezone
-from breathecode.admissions.models import Academy
+from .models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningContainer, ProvisioningUserConsumption
+
 from rest_framework import serializers
-from rest_framework import status
-from rest_framework.exceptions import ValidationError
 from breathecode.utils.validation_exception import ValidationException
 
 
@@ -88,36 +86,80 @@ class ProvisioningContainerSerializer(serializers.ModelSerializer):
         return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
 
 
-class GETProvisioningBillSerializer(serpy.Serializer):
+class ProvisioningConsumptionKindHTMLSerializer(serpy.Serializer):
+    product_name = serpy.Field()
+    sku = serpy.Field()
+
+
+class ProvisioningConsumptionEventHTMLSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
+
+
+class ProvisioningUserConsumptionHTMLResumeSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
+
+    price_description = serpy.MethodField()
+
+    def get_price_description(self, obj):
+        # import sum function from django
+        from django.db.models import Sum
+
+        event_length = ProvisioningConsumptionEvent.objects.filter().count()
+        event_pages = math.ceil(event_length / 100)
+        quantity = 0
+        price = 0
+        page = 0
+        prices = []
+
+        while page < event_pages:
+            events = ProvisioningConsumptionEvent.objects.filter().order_by('id')[page * 100:(page * 100) +
+                                                                                  100]
+            for event in events:
+                quantity += event.quantity
+                p = event.quantity * event.price.price_per_unit * event.price.multiplier
+                price += p
+
+                prices.append({
+                    'price': p,
+                    'price_per_unit': event.price.price_per_unit,
+                    'quantity': event.quantity
+                })
+
+            page += 1
+
+        resume = ''
+
+        for p in prices:
+            resume += f'{p["quantity"]} x {p["price_per_unit"]} = {p["price"]}\n'
+
+        return quantity, price, resume
+
+
+class ProvisioningUserConsumptionHTMLSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
+
+    events = serpy.MethodField()
+
+    def get_events(self, obj):
+        ProvisioningConsumptionEventHTMLSerializer(obj.events, many=True).data
+
+
+class ProvisioningBillHTMLSerializer(serpy.Serializer):
+
     total_amount = serpy.Field()
     academy = AcademySerializer(required=False)
     status = serpy.Field()
     paid_at = serpy.Field()
     stripe_url = serpy.Field()
-    activities = serpy.MethodField()
-
-    def get_activities(self, obj):
-        activities = ProvisioningActivity.objects.filter(bill=obj.id)
-        activities_filtered = {}
-        for activity in activities:
-            username = activity.username
-            quantity = activity.quantity
-            if username in activities_filtered:
-                activities_filtered[username]['quantity'] += quantity
-            else:
-                activities_filtered[username] = {
-                    'username': activity.username,
-                    'product_name': activity.product_name,
-                    'status': activity.status,
-                    'status_text': activity.status_text,
-                    'price_per_unit': activity.price_per_unit,
-                    'quantity': quantity,
-                    'multiplier': activity.multiplier
-                }
-        bill_activities = []
-        for activity in activities_filtered.values():
-            bill_activities.append(activity)
-        return bill_activities
 
 
 class ProvisioningBillSerializer(serializers.ModelSerializer):
