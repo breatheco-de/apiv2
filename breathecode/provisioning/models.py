@@ -198,7 +198,7 @@ class ProvisioningUserConsumption(models.Model):
     kind = models.ForeignKey(ProvisioningConsumptionKind, on_delete=models.CASCADE)
 
     bills = models.ManyToManyField(ProvisioningBill, blank=True)
-    events = models.ManyToManyField(ProvisioningConsumptionEvent, blank=True)
+    events = models.ManyToManyField(ProvisioningConsumptionEvent, blank=True, editable=False)
     amount = models.FloatField(default=0)
     quantity = models.FloatField(default=0)
 
