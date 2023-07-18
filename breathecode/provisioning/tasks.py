@@ -3,13 +3,15 @@ import json
 import logging
 import math
 import os
+from typing import Any
 
 from celery import Task, shared_task
 import pandas as pd
 from breathecode.payments.services.stripe import Stripe
+from breathecode.utils.decorators import task
 
 from breathecode.provisioning import actions
-from breathecode.provisioning.models import ProvisioningActivity, ProvisioningBill
+from breathecode.provisioning.models import ProvisioningBill, ProvisioningUserConsumption
 from breathecode.services.google_cloud.storage import Storage
 from django.utils import timezone
 
@@ -31,8 +33,8 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
-def calculate_bill_amounts(hash: str, *, force: bool = False):
+@task()
+def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     logger.info(f'Starting calculate_bill_amounts for hash {hash}')
 
     bills = ProvisioningBill.objects.filter(hash=hash)
@@ -49,8 +51,18 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
 
     for bill in bills:
         amount = 0
-        for activity in ProvisioningActivity.objects.filter(bill=bill, status='PERSISTED'):
-            amount += activity.price_per_unit * activity.quantity
+        for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status='PERSISTED'):
+            consumption_amount = 0
+            consumption_quantity = 0
+            for item in activity.events.all():
+                consumption_amount += item.price.get_price(item.quantity)
+                consumption_quantity += item.quantity
+
+            activity.amount = consumption_amount
+            activity.quantity = consumption_quantity
+            activity.save()
+
+            amount += consumption_amount
 
         bill.status = 'DUE' if amount else 'PAID'
 
@@ -73,8 +85,15 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
 PANDAS_ROWS_LIMIT = 100
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
-def upload(hash: str, page: int = 0, *, force: bool = False):
+def reverse_upload(hash: str, **_: Any):
+    logger.info(f'Canceling upload for hash {hash}')
+
+    ProvisioningUserConsumption.objects.filter(hash=hash).delete()
+    ProvisioningBill.objects.filter(hash=hash).delete()
+
+
+@task(reverse=reverse_upload)
+def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: int = 0, **_: Any):
     logger.info(f'Starting upload for hash {hash}')
 
     limit = PANDAS_ROWS_LIMIT
@@ -84,6 +103,10 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         'provisioning_bills': {},
         'provisioning_vendors': {},
         'github_academy_user_logs': {},
+        'provisioning_activities': {},
+        'provisioning_activity_prices': {},
+        'provisioning_activity_kinds': {},
+        'currencies': {},
         'profile_academies': {},
         'hash': hash,
         'limit': timezone.now(),
@@ -109,7 +132,7 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
 
     if force:
         for bill in pending_bills:
-            ProvisioningActivity.objects.filter(bill=bill).delete()
+            ProvisioningUserConsumption.objects.filter(bills=bill).delete()
 
         pending_bills.delete()
 
@@ -144,7 +167,7 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
     try:
         for i in range(start, end):
             try:
-                handler(context, df.iloc[i].to_dict())
+                handler(context, df.iloc[i].to_dict(), i)
             except IndexError:
                 break
 
@@ -155,11 +178,11 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         return
 
     for bill in context['provisioning_bills'].values():
-        if not ProvisioningActivity.objects.filter(bill=bill).exists():
+        if not ProvisioningUserConsumption.objects.filter(bills=bill).exists():
             bill.delete()
 
     if len(df.iloc[start:end]) == limit:
-        upload.delay(hash, page + 1)
+        upload.delay(hash, page=page + 1, task_manager_id=task_manager_id)
 
-    elif not ProvisioningActivity.objects.filter(hash=hash, status='ERROR').exists():
+    elif not ProvisioningUserConsumption.objects.filter(hash=hash, status='ERROR').exists():
         calculate_bill_amounts.delay(hash)

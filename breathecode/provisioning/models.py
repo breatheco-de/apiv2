@@ -6,6 +6,8 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.models import ProfileAcademy
 from django.utils import timezone
 
+from breathecode.payments.models import Currency
+
 logger = logging.getLogger(__name__)
 
 
@@ -142,32 +144,63 @@ ACTIVITY_STATUS = (
 )
 
 
-class ProvisioningActivity(models.Model):
-    username = models.CharField(
-        max_length=80, help_text='Native username in the provisioning platform, E.g: github username')
-    hash = models.CharField(max_length=64, blank=True, null=True, default=None)
-    registered_at = models.DateTimeField(
-        null=True,
-        default=None,
-        blank=True,
-        help_text='When the activity happened, this field comes form the provisioning vendor')
+class ProvisioningConsumptionKind(models.Model):
     product_name = models.CharField(max_length=100)
     sku = models.CharField(max_length=100)
 
-    quantity = models.FloatField()
-    unit_type = models.CharField(max_length=100)
+    def __str__(self):
+        return self.product_name + ' - ' + self.sku
 
+
+class ProvisioningPrice(models.Model):
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
+    unit_type = models.CharField(max_length=100)
     price_per_unit = models.FloatField(help_text='Price paid to the provisioning vendor, E.g: Github')
-    currency_code = models.CharField(max_length=3)
     multiplier = models.FloatField(blank=True,
                                    null=False,
                                    default=1,
                                    help_text='To increase price in a certain percentage')
+
+    def __str__(self):
+        return self.currency.code + ' - ' + self.unit_type + ' - ' + str(self.price_per_unit)
+
+    def get_price(self, how_many):
+        return self.price_per_unit * self.multiplier * how_many
+
+
+class ProvisioningConsumptionEvent(models.Model):
+    registered_at = models.DateTimeField(
+        help_text='When the activity happened, this field comes form the provisioning vendor')
+
+    external_pk = models.CharField(max_length=100, blank=True, null=True, default=None)
+    csv_row = models.IntegerField()
+    vendor = models.ForeignKey(ProvisioningVendor,
+                               on_delete=models.CASCADE,
+                               null=True,
+                               blank=True,
+                               default=None)
+
+    quantity = models.FloatField()
+    price = models.ForeignKey(ProvisioningPrice, on_delete=models.CASCADE)
+
     repository_url = models.URLField()
     task_associated_slug = models.SlugField(
         max_length=100, help_text='What assignment was the the student trying to complete with this')
-    bill = models.ForeignKey(ProvisioningBill, blank=True, null=True, on_delete=models.SET_NULL)
-    notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return str(self.quantity) + ' - ' + self.task_associated_slug
+
+
+class ProvisioningUserConsumption(models.Model):
+    username = models.CharField(
+        max_length=80, help_text='Native username in the provisioning platform, E.g: github username')
+    hash = models.CharField(max_length=64, blank=True, null=True, default=None)
+    kind = models.ForeignKey(ProvisioningConsumptionKind, on_delete=models.CASCADE)
+
+    bills = models.ManyToManyField(ProvisioningBill, blank=True)
+    events = models.ManyToManyField(ProvisioningConsumptionEvent, blank=True, editable=False)
+    amount = models.FloatField(default=0)
+    quantity = models.FloatField(default=0)
 
     status = models.CharField(max_length=20, choices=ACTIVITY_STATUS, default=PENDING)
     status_text = models.CharField(max_length=255)
@@ -176,8 +209,8 @@ class ProvisioningActivity(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    def price(self):
-        return self.price_per_unit * self.quantity
+    def __str__(self) -> str:
+        return str(self.username) + ' - ' + self.kind.product_name + ' - ' + str(self.kind.sku)
 
 
 class ProvisioningContainer(models.Model):

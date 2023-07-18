@@ -1,12 +1,10 @@
-import serpy, base64
+import math
+import serpy
 
 from breathecode.utils.i18n import translation
-from .models import ProvisioningBill, ProvisioningContainer, ProvisioningActivity
-from django.utils import timezone
-from breathecode.admissions.models import Academy
+from .models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningContainer, ProvisioningUserConsumption
+
 from rest_framework import serializers
-from rest_framework import status
-from rest_framework.exceptions import ValidationError
 from breathecode.utils.validation_exception import ValidationException
 
 
@@ -44,24 +42,37 @@ class ContainerMeBigSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
-class ProvisioningActivitySerializer(serpy.Serializer):
+class GetProvisioningVendorSerializer(serpy.Serializer):
     id = serpy.Field()
-    username = serpy.Field()
-    registered_at = serpy.Field()
+    name = serpy.Field()
+
+
+class GetProvisioningBillSerializer(serpy.Serializer):
+    id = serpy.Field()
+    vendor = GetProvisioningVendorSerializer(required=False)
+    total_amount = serpy.Field()
+    status = serpy.Field()
+    status_details = serpy.Field()
+    paid_at = serpy.Field()
+    fee = serpy.Field()
+    stripe_url = serpy.Field()
+    created_at = serpy.Field()
+
+
+class GetProvisioningConsumptionKindSerializer(serpy.Serializer):
+    id = serpy.Field()
     product_name = serpy.Field()
     sku = serpy.Field()
+
+
+class GetProvisioningUserConsumptionSerializer(serpy.Serializer):
+    id = serpy.Field()
+    kind = GetProvisioningConsumptionKindSerializer(required=False)
+    username = serpy.Field()
     quantity = serpy.Field()
-    unit_type = serpy.Field()
-    price_per_unit = serpy.Field()
-    currency_code = serpy.Field()
-    multiplier = serpy.Field()
-    repository_url = serpy.Field()
+    amount = serpy.Field()
     processed_at = serpy.Field()
     status = serpy.Field()
-    bill = serpy.MethodField()
-
-    def get_bill(self, obj):
-        return obj.bill.id if obj.bill else None
 
 
 class ProvisioningContainerSerializer(serializers.ModelSerializer):
@@ -88,36 +99,45 @@ class ProvisioningContainerSerializer(serializers.ModelSerializer):
         return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
 
 
-class GETProvisioningBillSerializer(serpy.Serializer):
+class ProvisioningConsumptionKindHTMLSerializer(serpy.Serializer):
+    product_name = serpy.Field()
+    sku = serpy.Field()
+
+
+class ProvisioningConsumptionEventHTMLSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
+
+
+class ProvisioningUserConsumptionHTMLResumeSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    amount = serpy.Field()
+    kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
+
+
+class ProvisioningUserConsumptionHTMLSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
+
+    events = serpy.MethodField()
+
+    def get_events(self, obj):
+        ProvisioningConsumptionEventHTMLSerializer(obj.events, many=True).data
+
+
+class ProvisioningBillHTMLSerializer(serpy.Serializer):
+
     total_amount = serpy.Field()
     academy = AcademySerializer(required=False)
     status = serpy.Field()
     paid_at = serpy.Field()
     stripe_url = serpy.Field()
-    activities = serpy.MethodField()
-
-    def get_activities(self, obj):
-        activities = ProvisioningActivity.objects.filter(bill=obj.id)
-        activities_filtered = {}
-        for activity in activities:
-            username = activity.username
-            quantity = activity.quantity
-            if username in activities_filtered:
-                activities_filtered[username]['quantity'] += quantity
-            else:
-                activities_filtered[username] = {
-                    'username': activity.username,
-                    'product_name': activity.product_name,
-                    'status': activity.status,
-                    'status_text': activity.status_text,
-                    'price_per_unit': activity.price_per_unit,
-                    'quantity': quantity,
-                    'multiplier': activity.multiplier
-                }
-        bill_activities = []
-        for activity in activities_filtered.values():
-            bill_activities.append(activity)
-        return bill_activities
 
 
 class ProvisioningBillSerializer(serializers.ModelSerializer):

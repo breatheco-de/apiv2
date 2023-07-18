@@ -44,7 +44,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         model = self.bc.database.create(monitor_script=monitor_script,
                                         academy=2,
                                         provisioning_bill=provisioning_bills,
-                                        provisioning_activity=provisioning_activities)
+                                        provisioning_user_consumption=provisioning_activities)
 
         script = run_script(model.monitor_script)
 
@@ -78,7 +78,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         model = self.bc.database.create(monitor_script=monitor_script,
                                         academy=2,
                                         provisioning_bill=provisioning_bills,
-                                        provisioning_activity=provisioning_activities)
+                                        provisioning_user_consumption=provisioning_activities)
 
         script = run_script(model.monitor_script)
 
@@ -89,8 +89,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             'error_slug': '1-bills-and-2-activities-with-errors',
             'severity_level': 100,
             'status': 'CRITICAL',
-            'text': 'There are 1 provisioning bills and 2 provisioning activities with errors',
-            'title': 'There are 1 bills and 2 activities with errors',
+            'text': 'There are 1 provisioning bills and 2 provisioning user consumptions with errors',
+            'title': 'There are 1 bills and 2 user consumptions with errors',
         }
 
         self.assertEqual(script, expected)
@@ -113,7 +113,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         model = self.bc.database.create(monitor_script=monitor_script,
                                         academy=2,
                                         provisioning_bill=provisioning_bills,
-                                        provisioning_activity=provisioning_activities)
+                                        provisioning_user_consumption=provisioning_activities)
 
         script = run_script(model.monitor_script)
 

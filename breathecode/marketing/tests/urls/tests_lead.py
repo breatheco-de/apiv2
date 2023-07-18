@@ -249,7 +249,7 @@ class LeadTestSuite(MarketingTestCase):
 
         json = response.json()
         expected = {
-            'phone': ["Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."],
+            'phone': ["Phone number must be entered in the format: '+99999999'. Up to 15 digits allowed."],
             'language': ['Ensure this field has no more than 2 characters.']
         }
 

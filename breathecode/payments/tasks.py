@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 import os
 import traceback
-from typing import Optional
+from typing import Any, Optional
 from django.utils import timezone
 
 from celery import Task, shared_task
@@ -234,7 +234,7 @@ def renew_plan_financing_consumables(self, plan_financing_id: int):
         renew_consumables.delay(scheduler.id)
 
 
-def fallback_charge_subscription(self, subscription_id: int, exception: Exception):
+def fallback_charge_subscription(self, subscription_id: int, exception: Exception, **_: Any):
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         return
 
@@ -257,7 +257,7 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
 
 
 @task(bind=True, base=BaseTaskWithRetry, transaction=True, fallback=fallback_charge_subscription)
-def charge_subscription(self, subscription_id: int):
+def charge_subscription(self, subscription_id: int, **_: Any):
     """
     The purpose of this function is just to renew a subscription, not more than this.
     """
@@ -347,7 +347,7 @@ def charge_subscription(self, subscription_id: int):
     renew_subscription_consumables.delay(subscription.id)
 
 
-def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exception):
+def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exception, **_: Any):
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
         return
 
@@ -370,7 +370,7 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
 
 
 @task(bind=True, base=BaseTaskWithRetry, transaction=True, fallback=fallback_charge_plan_financing)
-def charge_plan_financing(self, plan_financing_id: int):
+def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     """
     The purpose of this function is just to renew a subscription, not more than this.
     """
