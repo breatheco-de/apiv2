@@ -10,9 +10,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        date_limit = timezone.make_aware(datetime.now() - timedelta(days=10))
+        date_limit = timezone.make_aware(datetime.now() - timedelta(days=2))
 
-        webhooks = TaskManager.objects.filter(created_at__lt=date_limit - timedelta(days=2))
+        webhooks = TaskManager.objects.filter(created_at__lt=date_limit)
         count = webhooks.count()
         webhooks.delete()
 
