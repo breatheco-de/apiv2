@@ -105,42 +105,6 @@ class ProvisioningUserConsumptionHTMLResumeSerializer(serpy.Serializer):
     amount = serpy.Field()
     kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
 
-    price_description = serpy.MethodField()
-
-    def get_price_description(self, obj):
-        # import sum function from django
-        from django.db.models import Sum
-
-        event_length = ProvisioningConsumptionEvent.objects.filter().count()
-        event_pages = math.ceil(event_length / 100)
-        quantity = 0
-        price = 0
-        page = 0
-        # prices = []
-
-        while page < event_pages:
-            events = ProvisioningConsumptionEvent.objects.filter().order_by('id')[page * 100:(page * 100) +
-                                                                                  100]
-            for event in events:
-                quantity += event.quantity
-                p = event.quantity * event.price.price_per_unit * event.price.multiplier
-                price += p
-
-                # prices.append({
-                #     'price': p,
-                #     'price_per_unit': event.price.price_per_unit,
-                #     'quantity': event.quantity
-                # })
-
-            page += 1
-
-        resume = ''
-
-        # for p in prices:
-        #     resume += f'{p["quantity"]} x {p["price_per_unit"]} = {p["price"]}\n'
-
-        return quantity, price, resume
-
 
 class ProvisioningUserConsumptionHTMLSerializer(serpy.Serializer):
     username = serpy.Field()
