@@ -195,6 +195,7 @@ def provisioning_activity_data(data={}):
         'status_text': '',
         'username': 'soldier-job-woman',
         'amount': 0.0,
+        'quantity': 0.0,
         **data,
     }
 

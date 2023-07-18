@@ -53,10 +53,13 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         amount = 0
         for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status='PERSISTED'):
             consumption_amount = 0
+            consumption_quantity = 0
             for item in activity.events.all():
                 consumption_amount += item.price.get_price(item.quantity)
+                consumption_quantity += item.quantity
 
             activity.amount = consumption_amount
+            activity.quantity = consumption_quantity
             activity.save()
 
             amount += consumption_amount

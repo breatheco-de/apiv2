@@ -200,6 +200,7 @@ class ProvisioningUserConsumption(models.Model):
     bills = models.ManyToManyField(ProvisioningBill, blank=True)
     events = models.ManyToManyField(ProvisioningConsumptionEvent, blank=True)
     amount = models.FloatField(default=0)
+    quantity = models.FloatField(default=0)
 
     status = models.CharField(max_length=20, choices=ACTIVITY_STATUS, default=PENDING)
     status_text = models.CharField(max_length=255)

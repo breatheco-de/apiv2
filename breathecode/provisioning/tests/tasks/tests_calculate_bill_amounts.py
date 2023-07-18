@@ -202,6 +202,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity']
             for n in range(2)
         ]) * 2
+        q = sum([provisioning_consumption_events[n]['quantity'] for n in range(2)])
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
                                         provisioning_price=provisioning_prices,
                                         provisioning_consumption_event=provisioning_consumption_events,
@@ -225,10 +226,12 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             {
                 **self.bc.format.to_dict(model.provisioning_user_consumption[0]),
                 'amount': amount / 2,
+                'quantity': q,
             },
             {
                 **self.bc.format.to_dict(model.provisioning_user_consumption[1]),
                 'amount': amount / 2,
+                'quantity': q,
             },
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
@@ -343,6 +346,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity']
             for n in range(2)
         ]) * 2
+        q = sum([provisioning_consumption_events[n]['quantity'] for n in range(2)])
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
                                         provisioning_price=provisioning_prices,
                                         provisioning_consumption_event=provisioning_consumption_events,
@@ -367,10 +371,12 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             {
                 **self.bc.format.to_dict(model.provisioning_user_consumption[0]),
                 'amount': amount / 2,
+                'quantity': q,
             },
             {
                 **self.bc.format.to_dict(model.provisioning_user_consumption[1]),
                 'amount': amount / 2,
+                'quantity': q,
             },
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
