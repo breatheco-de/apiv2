@@ -82,7 +82,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         bill.save()
 
 
-PANDAS_ROWS_LIMIT = 100
+PANDAS_ROWS_LIMIT = 25
 
 
 def reverse_upload(hash: str, **_: Any):
