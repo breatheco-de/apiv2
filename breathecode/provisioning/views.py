@@ -360,8 +360,7 @@ def render_html_bill(request, token, id=None):
     pages = math.ceil(consumptions.count() / LIMIT_PER_PAGE_HTML)
     page = int(request.GET.get('page', 0))
 
-    consumptions = consumptions.order_by('username')[page * LIMIT_PER_PAGE_HTML:(page * LIMIT_PER_PAGE_HTML) +
-                                                     LIMIT_PER_PAGE_HTML]
+    consumptions = consumptions.order_by('username')[0:(page * LIMIT_PER_PAGE_HTML) + LIMIT_PER_PAGE_HTML]
 
     consumptions_serialized = ProvisioningUserConsumptionHTMLResumeSerializer(consumptions, many=True).data
 

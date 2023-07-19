@@ -133,10 +133,12 @@ class ProvisioningUserConsumptionHTMLSerializer(serpy.Serializer):
 
 class ProvisioningBillHTMLSerializer(serpy.Serializer):
 
+    id = serpy.Field()
     total_amount = serpy.Field()
     academy = AcademySerializer(required=False)
     status = serpy.Field()
     paid_at = serpy.Field()
+    created_at = serpy.Field()
     stripe_url = serpy.Field()
 
 
