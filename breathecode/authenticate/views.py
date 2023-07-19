@@ -1014,6 +1014,10 @@ def save_github_token(request):
             github_credentials.twitter_username = github_user['twitter_username']
             github_credentials.save()
 
+            # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
+            # to keep it in sync when the user autenticate's with github
+            GithubAcademyUser.objects.filter(user=user).update(username=github_credentials.username)
+
             profile = Profile.objects.filter(user=user).first()
             if profile is None:
                 profile = Profile(user=user,
