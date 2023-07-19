@@ -349,7 +349,8 @@ class UsernameFilter(SimpleListFilter):
 
 @admin.register(GithubAcademyUser)
 class GithubAcademyUserAdmin(admin.ModelAdmin):
-    list_display = ('academy', 'user', 'github', 'storage_status', 'storage_action')
+    list_display = ('id', 'academy', 'user', 'github', 'storage_status', 'storage_action', 'created_at',
+                    'updated_at')
     search_fields = ['username', 'user__email', 'user__first_name', 'user__last_name']
     actions = [mark_as_deleted, mark_as_add, mark_as_ignore, look_for_github_credentials]
     list_filter = ('academy', 'storage_status', 'storage_action', UsernameFilter)
