@@ -329,7 +329,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -345,7 +345,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(kwargs, {'content_type': 'text/csv'})
 
             self.assertEqual(File.url.call_args_list, [])
-            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash)])
+            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash, total_pages=1)])
 
     # When: auth and file with codespaces format, file exists
     # Then: should return a 200
@@ -433,7 +433,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -442,7 +442,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
             self.assertEqual(File.upload.call_args_list, [])
             self.assertEqual(File.url.call_args_list, [])
-            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash)])
+            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash, total_pages=1)])
 
     # When: auth and file with gitpod format
     # Then: should return a 201
@@ -527,7 +527,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -544,7 +544,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
             self.assertEqual(File.url.call_args_list, [])
 
-            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash)])
+            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash, total_pages=1)])
 
     # When: auth and file with gitpod format, file exists
     # Then: should return a 200
@@ -629,7 +629,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -638,4 +638,4 @@ class MarketingTestSuite(ProvisioningTestCase):
 
             self.assertEqual(File.upload.call_args_list, [])
             self.assertEqual(File.url.call_args_list, [])
-            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash)])
+            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash, total_pages=1)])

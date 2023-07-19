@@ -255,7 +255,7 @@ calculate_survey_scores.short_description = 'Recalculate all Survey scores and r
 
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
-    list_display = ('id','cohort', 'status', 'duration', 'created_at', 'sent_at', 'survey_url')
+    list_display = ('id', 'cohort', 'status', 'duration', 'created_at', 'sent_at', 'survey_url')
     search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
     list_filter = [SentFilter, 'status', 'cohort__academy__slug']
     raw_id_fields = ['cohort']

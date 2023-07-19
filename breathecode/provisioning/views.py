@@ -1,6 +1,6 @@
 import hashlib
 from io import StringIO
-import json
+import math
 import os
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -8,29 +8,28 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
-from breathecode.provisioning.serializers import ProvisioningActivitySerializer, ProvisioningBillSerializer
-from breathecode.provisioning.tasks import upload
+from breathecode.provisioning import tasks
+from breathecode.provisioning.serializers import (GetProvisioningUserConsumptionSerializer,
+                                                  ProvisioningBillSerializer, ProvisioningBillHTMLSerializer,
+                                                  ProvisioningUserConsumptionHTMLResumeSerializer)
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import private_view, render_message
 from .actions import get_provisioning_vendor
-from .models import BILL_STATUS, ProvisioningActivity, ProvisioningBill, ProvisioningProfile
+from .models import BILL_STATUS, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 import pandas as pd
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
 from django.shortcuts import render
 from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.renderers import JSONRenderer
-from rest_framework.decorators import api_view, permission_classes
 from django.http import HttpResponse
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 
 
 @private_view()
@@ -41,7 +40,7 @@ def redirect_new_container(request, token):
     if cohort_id is None: return render_message(request, f'Please specificy a cohort in the URL')
 
     url = request.GET.get('repo', None)
-    if url is None: return render_message(request, f'Please specificy a repository in the URL')
+    if url is None: return render_message(request, f'Please specify a repository in the URL')
 
     cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
     if cu is None: return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.")
@@ -94,7 +93,7 @@ def redirect_workspaces(request, token):
     return redirect(vendor.workspaces_url)
 
 
-class AcademyActivityView(APIView):
+class AcademyProvisioningUserConsumptionView(APIView):
     extensions = APIViewExtensions(sort='-id')
 
     renderer_classes = [JSONRenderer, CSVRenderer]
@@ -107,26 +106,30 @@ class AcademyActivityView(APIView):
         query = handler.lookup.build(
             lang,
             strings={
-                'exact': [
+                'iexact': [
                     'hash',
                     'username',
-                    'product_name',
                     'status',
+                    'kind__product_name',
+                    'kind__sku',
                 ],
             },
             datetimes={
-                'gte': ['registered_at'],
+                'gte': ['processed_at'],
                 'lte': ['created_at'],  # fix it
             },
             overwrite={
-                'start': 'registered_at',
+                'start': 'processed_at',
                 'end': 'created_at',
+                'product_name': 'kind__product_name',
+                'sku': 'kind__sku',
             },
         )
 
-        items = ProvisioningActivity.objects.filter(query, bill__academy__id=academy_id)
+        items = ProvisioningUserConsumption.objects.filter(query, bills__academy__id=academy_id)
         items = handler.queryset(items)
-        serializer = ProvisioningActivitySerializer(items, many=True)
+
+        serializer = GetProvisioningUserConsumptionSerializer(items, many=True)
         return Response(serializer.data)
 
 
@@ -196,7 +199,7 @@ class UploadView(APIView):
         if created:
             cloud_file.upload(file, content_type=file.content_type)
 
-        upload.delay(hash)
+        tasks.upload.delay(hash, total_pages=math.ceil(len(df) / tasks.PANDAS_ROWS_LIMIT))
 
         data = {'file_name': hash, 'status': 'PENDING', 'created': created}
 
@@ -316,6 +319,9 @@ def render_html_all_bills(request, token):
     return HttpResponse(template['html'])
 
 
+LIMIT_PER_PAGE_HTML = 10
+
+
 @private_view()
 def render_html_bill(request, token, id=None):
     lang = get_user_language(request)
@@ -348,12 +354,38 @@ def render_html_bill(request, token, id=None):
     for key, value in BILL_STATUS:
         status_mapper[key] = value
 
+    bill_serialized = ProvisioningBillHTMLSerializer(item, many=False).data
+
+    consumptions = ProvisioningUserConsumption.objects.filter(bills=item)
+    pages = math.ceil(consumptions.count() / LIMIT_PER_PAGE_HTML)
+    page = int(request.GET.get('page', 0))
+
+    consumptions = consumptions.order_by('username')[0:(page * LIMIT_PER_PAGE_HTML) + LIMIT_PER_PAGE_HTML]
+
+    consumptions_serialized = ProvisioningUserConsumptionHTMLResumeSerializer(consumptions, many=True).data
+
+    url = request.get_full_path()
+
+    u = urlparse(url)
+    query = parse_qs(u.query, keep_blank_values=True)
+    query.pop('page', None)
+    u = u._replace(query=urlencode(query, True))
+
+    url = urlunparse(u)
+
+    if not '?' in url:
+        url += '?'
+
+    page += 1
+
     data = {
-        **{},
-        'bill': item,
-        'activities': ProvisioningActivity.objects.filter(bill=item),
-        'status': status_map['DUE'],
+        'bill': bill_serialized,
+        'consumptions': consumptions_serialized,
+        'status': status_map[item.status],
         'title': item.academy.name,
+        'pages': pages,
+        'page': page,
+        'url': url,
     }
     template = get_template_content('provisioning_invoice', data)
     return HttpResponse(template['html'])

@@ -656,10 +656,10 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': 'dude@dude.dude'})
         response = self.client.delete(url)
         json = response.json()
-        expected = {'detail': 'user-id-is-not-numeric', 'status_code': 404}
+        expected = {'detail': 'delete-is-forbidden', 'status_code': 403}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
@@ -672,88 +672,3 @@ class AuthenticateTestSuite(AuthTestCase):
             'status': 'INVITED',
             'user_id': 1,
         }])
-
-    """
-    🔽🔽🔽 DELETE with data, passing id and bulk mode
-    """
-
-    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
-    def test_academy_student_id__delete__passing_id_and_bulk_mode(self):
-        """Test /academy/:id/member/:id"""
-        role = 'student'
-        self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_student',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'}) + '?id=1,2,3'
-        response = self.client.delete(url)
-        json = response.json()
-        expected = {'detail': 'user-id-and-bulk-mode', 'status_code': 400}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 1,
-        }])
-
-    """
-    🔽🔽🔽 DELETE with data, passing bad id
-    """
-
-    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
-    def test_academy_student_id__delete__passing_bad_id(self):
-        """Test /academy/:id/member/:id"""
-        role = 'student'
-        self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_student',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
-        response = self.client.delete(url)
-        json = response.json()
-        expected = {'detail': 'profile-academy-not-found', 'status_code': 404}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 1,
-        }])
-
-    """
-    🔽🔽🔽 DELETE with data, passing id
-    """
-
-    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
-    def test_academy_student_id__delete__passing_id(self):
-        """Test /academy/:id/member/:id"""
-        role = 'student'
-        self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_student',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'})
-        response = self.client.delete(url)
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])

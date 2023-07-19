@@ -128,94 +128,77 @@
 <body>
     <div class="invoice-box">
         <table cellpadding="0" cellspacing="0">
-            <tr class="top">
-                <td colspan="2">
-                    <table>
-                        <tr>
-                            <td class="title">
-                            </td>
 
-                            <td>
-                                Invoice #{{ bill.id }}<br>
-                                Status: <span class="{{ bill.status }}">{{ bill.status }}</span><br>
-                                Created: {{ bill.created_at }}<br>
-                                Paid: {{ bill.paid_at }}<br>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-
-
-            <tr class="information">
-                <td colspan="2">
-                    <table>
-                        <tr>
-                            <td>
-                                {{ bill.academy.name }}<br>
-                            </td>
-
-                            <!-- <td>
-                                {{ academy_name }}<br>
-                                John Doe<br>
-                                john@example.com
-                            </td> -->
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            {% if status == "PENDING" %}
-            <tr class="alert alert-danger {{ status }}" style="padding-top: -30px;">
-                <td colspan="2">This bill is not to be paid yet as it its still PENDING</td>
-            </tr>
+            {% if not bill.stripe_url %}
+            <div class="alert alert-warning text-center mb-3" role="alert">
+                ⚠️This bill doesn't have a payment link
+            </div>
             {% endif %}
+
+            {% if status == "PENDING" %}
+            <div class="alert alert-danger {{ status }} text-center mb-3" role="alert">
+                This bill should not to be paid yet as it its still PENDING
+            </div>
+            {% endif %}
+
+            <div class="row mb-3">
+                <div class="col-7 text-start">
+                    <h5>
+                        {{ bill.academy.name }}
+                    </h5>
+                </div>
+
+                <div class="col-5 text-start">
+                    Invoice #{{ bill.id }}<br>
+                    Status: <span class="{{ bill.status }}">{{ bill.status }}</span><br>
+                    Paid: {{ bill.paid_at }}<br>
+                    Created At: {{ bill.created_at }}<br>
+                    <div class="text-end">
+                        {% if bill.stripe_url %}
+                            <a class="btn btn-primary my-3 w-50" type="button" href="{{bill.stripe_url}}">Pay</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
             <tr class="heading">
                 <td>
                     Username
                 </td>
-
                 <td>
                     Product name
                 </td>
                 <td></td>
 
                 <td>
-                    Quantity
-                </td>
-
-                <td>
                     Price
                 </td>
             </tr>
 
-            {% for activity in activities %}
+            {% for consumption in consumptions %}
             <tr class="item">
                 <td>
-                    {{ activity.username }}
+                    {{ consumption.username }}
                 </td>
 
                 <td colspan="2">
-                    {{ activity.product_name }}
-                    {% if activity.status_text %}
+                    {{ consumption.kind.product_name }}
+                    {% if consumption.status_text %}
                         <small> - </small>
-                        <a onclick="alert('{{activity.status_text}}')" type="button" class="btn-link">
+                        <a onclick="alert('{{consumption.status_text}}')" type="button" class="btn-link">
                             see error
                         </a>
-                    {% endif %}
-                </td>
-
-                <td>
-                    {% if activity.quantity.is_integer %}
-                        {{ activity.quantity|floatformat }}
-                    {% else %}
-                        {{ activity.quantity|floatformat:3 }}
                     {% endif %}
                 </td>
 
 
                 <td class="price">
                     <span style="color: #608062;">
-                        ${{ activity.quantity|mul:activity.price_per_unit|mul:activity.multiplier|floatformat:2 }}
+                        {% if consumption.amount.is_integer %}
+                            {{ consumption.amount|floatformat:0 }}
+                        {% else %}
+                            {{ consumption.amount|floatformat:2 }}
+                        {% endif %}
                     </span>
                 </td>
             </tr>
@@ -226,26 +209,19 @@
                 <td></td>
                 <td></td>
                 <td></td>
-                <td></td>
 
                 <td>
                     Total: ${{ bill.total_amount|floatformat:2 }}
                 </td>
             </tr>
+
         </table>
-        {% if bill.stripe_url %}
-            <a class="btn btn-primary" type="button" href="{{bill.stripe_url}}">Pay</a>
-        {% else %}
-            <br />
-            <button class="btn btn-primary" type="button" disabled>Pay</button>
-            <br />
-            <br />
-            <div class="alert alert-warning" role="alert">
-                ⚠️This bill doesn't have a payment link
-            </div>
+
+        {% if page < pages %}
+        <button class="btn btn-primary mx-auto" >
+            <a class="page-link" href="{{ url }}&page={{ page|add:1 }}">Load more</a>
+        </button>
         {% endif %}
-
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
