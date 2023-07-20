@@ -322,6 +322,10 @@ def mark_as_ignore(modeladmin, request, queryset):
     queryset.all().update(storage_status='SYNCHED', storage_action='IGNORE')
 
 
+def clear_storage_log(modeladmin, request, queryset):
+    queryset.all().update(storage_log=None)
+
+
 def look_for_github_credentials(modeladmin, request, queryset):
     users = queryset.all()
     for u in users:
@@ -352,7 +356,10 @@ class GithubAcademyUserAdmin(admin.ModelAdmin):
     list_display = ('id', 'academy', 'user', 'github', 'storage_status', 'storage_action', 'created_at',
                     'updated_at')
     search_fields = ['username', 'user__email', 'user__first_name', 'user__last_name']
-    actions = [mark_as_pending_delete, mark_as_pending_add, mark_as_ignore, look_for_github_credentials]
+    actions = [
+        mark_as_pending_delete, mark_as_pending_add, mark_as_ignore, clear_storage_log,
+        look_for_github_credentials
+    ]
     list_filter = ('academy', 'storage_status', 'storage_action', UsernameFilter)
     raw_id_fields = ['user']
 
