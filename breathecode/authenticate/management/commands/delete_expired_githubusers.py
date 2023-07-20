@@ -13,6 +13,18 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.update_inactive_github_users()
+        self.delete_from_github_org()
+
+    def delete_from_github_org(self):
+        deleted_users = GithubAcademyUser.objects.filter(storage_action='DELETE', storage_status='SYNCHED')
+        for github in deleted_users:
+            try:
+                gb.delete_org_member(github.username)
+                _member.log('Successfully deleted in github organization')
+                print('Deleted github user: ' + github.username)
+            except Exception as e:
+                _member.log('Error calling github API while deleting member from org: ' + str(e))
+                print('Error deleting github user: ' + github.username)
 
     def is_user_active_in_other_cohorts(self, user, current_cohort, academy):
         active_cohorts_count = CohortUser.objects.filter(

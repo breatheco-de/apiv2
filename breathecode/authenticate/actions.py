@@ -430,6 +430,18 @@ def remove_from_organization(cohort_id, user_id, force=False):
         return False
 
 
+def delete_from_github(github_user):
+    try:
+        gb.delete_org_member(github_user.username)
+        _member.log('Successfully deleted in github organization')
+        print('Deleted github user: ' + github_user.username)
+        return True
+    except Exception as e:
+        _member.log('Error calling github API while deleting member from org: ' + str(e))
+        print('Error deleting github user: ' + github_user.username)
+        return False
+
+
 def sync_organization_members(academy_id, only_status=[]):
 
     now = timezone.now()

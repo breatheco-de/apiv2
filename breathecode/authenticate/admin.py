@@ -310,11 +310,11 @@ class GitpodUserAdmin(admin.ModelAdmin):
                 f"<span class='badge bg-success'>In {from_now(obj.expires_at, include_days=True)}</span>")
 
 
-def mark_as_deleted(modeladmin, request, queryset):
+def mark_as_pending_delete(modeladmin, request, queryset):
     queryset.all().update(storage_status='PENDING', storage_action='DELETE')
 
 
-def mark_as_add(modeladmin, request, queryset):
+def mark_as_pending_add(modeladmin, request, queryset):
     queryset.all().update(storage_status='PENDING', storage_action='ADD')
 
 
@@ -352,7 +352,7 @@ class GithubAcademyUserAdmin(admin.ModelAdmin):
     list_display = ('id', 'academy', 'user', 'github', 'storage_status', 'storage_action', 'created_at',
                     'updated_at')
     search_fields = ['username', 'user__email', 'user__first_name', 'user__last_name']
-    actions = [mark_as_deleted, mark_as_add, mark_as_ignore, look_for_github_credentials]
+    actions = [mark_as_pending_delete, mark_as_pending_add, mark_as_ignore, look_for_github_credentials]
     list_filter = ('academy', 'storage_status', 'storage_action', UsernameFilter)
     raw_id_fields = ['user']
 
