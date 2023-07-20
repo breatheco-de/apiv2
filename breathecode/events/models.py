@@ -113,8 +113,11 @@ class EventTypeVisibilitySetting(models.Model):
 class EventType(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
-    description = models.CharField(max_length=255, default='', null=False)
-    icon_url = models.URLField(blank=False, null=True, default=None)
+    description = models.CharField(max_length=255,
+                                   default='',
+                                   null=False,
+                                   help_text='This will be publicly shown to 4geeks.com users')
+    icon_url = models.URLField(blank=True, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
     lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
     free_for_bootcamps = models.BooleanField(

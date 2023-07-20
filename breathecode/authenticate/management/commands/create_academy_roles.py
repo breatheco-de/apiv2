@@ -380,6 +380,10 @@ CAPABILITIES = [
         'description': 'Start or end event'
     },
     {
+        'slug': 'read_provisioning_bill',
+        'description': 'Read provisioning activities and bills'
+    },
+    {
         'slug': 'crud_provisioning_activity',
         'description': 'Create, update or delete provisioning activities'
     },
@@ -709,6 +713,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_project_invoice',
             'read_freelance_projects',
             'sync_organization_users',
+            'read_provisioning_bill',
         ]
     })
     roles.append({

@@ -47,6 +47,18 @@ class GetProvisioningVendorSerializer(serpy.Serializer):
     name = serpy.Field()
 
 
+class GetProvisioningBillSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    vendor = GetProvisioningVendorSerializer(required=False)
+    total_amount = serpy.Field()
+    status = serpy.Field()
+    status_details = serpy.Field()
+    paid_at = serpy.Field()
+    fee = serpy.Field()
+    stripe_url = serpy.Field()
+    created_at = serpy.Field()
+
+
 class GetProvisioningBillSerializer(serpy.Serializer):
     id = serpy.Field()
     vendor = GetProvisioningVendorSerializer(required=False)
