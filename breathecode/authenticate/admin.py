@@ -12,8 +12,9 @@ from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, Cre
                      GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog)
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
+from django.contrib.admin import SimpleListFilter
 from breathecode.utils.datetime_integer import from_now
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Q
 from . import tasks
 
 logger = logging.getLogger(__name__)
@@ -332,12 +333,27 @@ def look_for_github_credentials(modeladmin, request, queryset):
         u.save()
 
 
+class UsernameFilter(SimpleListFilter):
+    title = 'username_type'
+    parameter_name = 'username_type'
+
+    def lookups(self, request, model_admin):
+        return [('NONE', 'Without username'), ('FULL', 'With Username')]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'NONE':
+            return queryset.filter(Q(username__isnull=True) | Q(username=''))
+        if self.value() == 'FULL':
+            return queryset.filter(username__isnull=False).exclude(username='')
+
+
 @admin.register(GithubAcademyUser)
 class GithubAcademyUserAdmin(admin.ModelAdmin):
-    list_display = ('academy', 'user', 'github', 'storage_status', 'storage_action')
+    list_display = ('id', 'academy', 'user', 'github', 'storage_status', 'storage_action', 'created_at',
+                    'updated_at')
     search_fields = ['username', 'user__email', 'user__first_name', 'user__last_name']
     actions = [mark_as_deleted, mark_as_add, mark_as_ignore, look_for_github_credentials]
-    list_filter = ('academy', 'storage_status', 'storage_action')
+    list_filter = ('academy', 'storage_status', 'storage_action', UsernameFilter)
     raw_id_fields = ['user']
 
     def github(self, obj):
