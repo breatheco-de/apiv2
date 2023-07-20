@@ -525,7 +525,7 @@ def sync_organization_members(academy_id, only_status=[]):
                 added_elsewhere = GithubAcademyUser.objects.filter(
                     Q(user=_member.user)
                     | Q(username=github.username)).filter(academy__slug__in=academy_slugs).exclude(
-                        storage_status__in=['DELETE']).exclude(id=_member.id).first()
+                        storage_status__in=['DELETE', 'IGNORE']).exclude(id=_member.id).first()
                 if added_elsewhere is None:
                     try:
                         gb.delete_org_member(github.username)
