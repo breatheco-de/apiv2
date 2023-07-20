@@ -30,22 +30,19 @@ class Command(BaseCommand):
             user = github_user.user
             academy = github_user.academy
 
-            try:
-                cohort_user = CohortUser.objects.get(
-                    user=user,
-                    educational_status__in=['POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED'],
-                    cohort__academy=academy)
-                cohort = cohort_user.cohort
+            cohort_user = CohortUser.objects.filter(
+                user=user,
+                cohort__never_ends=False,
+                educational_status__in=['POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED'],
+                cohort__academy=academy).first()
 
-                if not self.is_user_active_in_other_cohorts(user, cohort, academy):
-                    github_user.storage_action = 'DELETE'
-                    github_user.storage_status = 'PENDING'
-                    github_user.save()
-                    print(f'Schedule the following github user for deletion in Academy ' +
-                          github_user.academy.name + '. User: ' + github_user.user.email)
+            if cohort_user is None:
+                continue
 
-            except CohortUser.DoesNotExist:
-                # Handle the case where the CohortUser entry does not exist (user not in any cohort)
+            cohort = cohort_user.cohort
+            if not self.is_user_active_in_other_cohorts(user, cohort, academy):
                 github_user.storage_action = 'DELETE'
                 github_user.storage_status = 'PENDING'
                 github_user.save()
+                print(f'Schedule the following github user for deletion in Academy ' +
+                      github_user.academy.name + '. User: ' + github_user.user.email)
