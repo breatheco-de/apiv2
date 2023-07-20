@@ -353,15 +353,15 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
 
     if errors and not (len(errors) == 1 and not_found):
         pa.status = 'ERROR'
-        pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(errors + ignores)
+        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors + ignores)
 
     elif pa.status != 'ERROR' and ignores and not provisioning_bills:
         pa.status = 'IGNORED'
-        pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(ignores)
+        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(ignores)
 
     else:
         pa.status = 'PERSISTED'
-        pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(errors + ignores)
+        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors + ignores)
 
     pa.status_text = ', '.join(sorted(set(pa.status_text.split(', '))))
     pa.status_text = pa.status_text[:255]
@@ -480,7 +480,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
     if pa.status == 'PENDING':
         pa.status = 'PERSISTED' if not errors else 'ERROR'
 
-    pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(errors)
+    pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors)
 
     pa.status_text = ', '.join(sorted(set(pa.status_text.split(', '))))
     pa.status_text = pa.status_text[:255]
