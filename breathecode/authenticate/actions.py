@@ -394,6 +394,7 @@ def remove_from_organization(cohort_id, user_id, force=False):
 
         active_cohorts_in_academy = CohortUser.objects.filter(user=user,
                                                               cohort__academy=academy,
+                                                              never_ends=false,
                                                               educational_status='ACTIVE').first()
         if active_cohorts_in_academy is not None and not force:
             raise ValidationException(translation(
