@@ -363,6 +363,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         pa.status = 'PERSISTED'
         pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(errors + ignores)
 
+    pa.status_text = ', '.join(sorted(set(pa.status_text.split(', '))))
     pa.status_text = pa.status_text[:255]
     pa.save()
 
@@ -481,6 +482,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
 
     pa.status_text = pa.status_text + (',' if pa.status_text else '') + ', '.join(errors)
 
+    pa.status_text = ', '.join(sorted(set(pa.status_text.split(', '))))
     pa.status_text = pa.status_text[:255]
     pa.save()
 
