@@ -1357,8 +1357,8 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'ERROR',
                 'status_text':
                 ', '.join([
-                    f"User {csv['userName'][n]} not found in any academy",
                     'Provisioning vendor Gitpod not found',
+                    f"User {csv['userName'][n]} not found in any academy",
                 ]),
             }) for n in range(10)
         ])
