@@ -12,7 +12,7 @@ def _cut_csv(f: StringIO | TextIOWrapper, *, start: int, end: int) -> StringIO:
 
 
 @overload
-def _cut_csv(f: BytesIO | BufferedReader, *, start: int, end: int) -> BytesIO:
+def _cut_csv(f: BytesIO | BufferedReader | InMemoryUploadedFile, *, start: int, end: int) -> BytesIO:
     ...
 
 
@@ -29,6 +29,7 @@ def _cut_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUp
         res = BytesIO()
 
     if isinstance(f, InMemoryUploadedFile):
+        res = BytesIO()
         f = f.file
 
     header = f.readline()
@@ -56,7 +57,7 @@ def _first_lines_of_csv(f: StringIO | TextIOWrapper, *, last: int) -> StringIO:
 
 
 @overload
-def _first_lines_of_csv(f: BytesIO | BufferedReader, *, last: int) -> BytesIO:
+def _first_lines_of_csv(f: BytesIO | BufferedReader | InMemoryUploadedFile, *, last: int) -> BytesIO:
     ...
 
 
@@ -72,6 +73,7 @@ def _first_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, 
         res = BytesIO()
 
     if isinstance(f, InMemoryUploadedFile):
+        res = BytesIO()
         f = f.file
 
     header = f.readline()
@@ -96,7 +98,7 @@ def _last_lines_of_csv(f: StringIO | TextIOWrapper, *, last: int) -> StringIO:
 
 
 @overload
-def _last_lines_of_csv(f: BytesIO | BufferedReader, *, last: int) -> BytesIO:
+def _last_lines_of_csv(f: BytesIO | BufferedReader | InMemoryUploadedFile, *, last: int) -> BytesIO:
     ...
 
 
@@ -112,6 +114,7 @@ def _last_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, *
         line = b''
 
     if isinstance(f, InMemoryUploadedFile):
+        res = BytesIO()
         f = f.file
 
     f.seek(0)
@@ -168,7 +171,7 @@ def cut_csv(f: StringIO | TextIOWrapper, *, start: int, end: int) -> StringIO:
 
 
 @overload
-def cut_csv(f: BytesIO | BufferedReader, *, start: int, end: int) -> BytesIO:
+def cut_csv(f: BytesIO | BufferedReader | InMemoryUploadedFile, *, start: int, end: int) -> BytesIO:
     ...
 
 
@@ -178,7 +181,7 @@ def cut_csv(f: StringIO | TextIOWrapper, *, first: int) -> StringIO:
 
 
 @overload
-def cut_csv(f: BytesIO | BufferedReader, *, first: int) -> BytesIO:
+def cut_csv(f: BytesIO | BufferedReader | InMemoryUploadedFile, *, first: int) -> BytesIO:
     ...
 
 
@@ -188,7 +191,7 @@ def cut_csv(f: StringIO | TextIOWrapper, *, last: int) -> StringIO:
 
 
 @overload
-def cut_csv(f: BytesIO | BufferedReader, *, last: int) -> BytesIO:
+def cut_csv(f: BytesIO | BufferedReader | InMemoryUploadedFile, *, last: int) -> BytesIO:
     ...
 
 
