@@ -1,9 +1,12 @@
 from io import StringIO, BytesIO, BufferedReader, TextIOWrapper
+import logging
 import os
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from typing import Optional, overload
 
 __all__ = ['cut_csv', 'count_csv_rows', 'count_file_lines']
+
+logger = logging.getLogger(__name__)
 
 
 @overload
@@ -71,6 +74,9 @@ def _first_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, 
 
     elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(f, InMemoryUploadedFile):
         res = BytesIO()
+
+    print(f, type(f))
+    logger.info('f is a %s', type(f))
 
     if isinstance(f, InMemoryUploadedFile):
         res = BytesIO()
