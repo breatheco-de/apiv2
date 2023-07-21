@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from io import StringIO
+from io import BytesIO, StringIO
 import json
 import logging
 import math
@@ -195,7 +195,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
 
         pending_bills.delete()
 
-    csvStringIO = StringIO()
+    csvStringIO = BytesIO()
     cloud_file.download(csvStringIO)
     csvStringIO = cut_csv(csvStringIO, start=start, end=end)
     csvStringIO.seek(0)
