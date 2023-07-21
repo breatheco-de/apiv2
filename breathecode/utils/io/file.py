@@ -32,8 +32,11 @@ def _cut_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUp
             f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
         res = BytesIO()
 
-    if isinstance(f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
+    if isinstance(f, InMemoryUploadedFile):
         f = f.file
+
+    if isinstance(f, TemporaryUploadedFile):
+        f = f.file.file
 
     header = f.readline()
 
@@ -76,8 +79,11 @@ def _first_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, 
             f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
         res = BytesIO()
 
-    if isinstance(f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
+    if isinstance(f, InMemoryUploadedFile):
         f = f.file
+
+    if isinstance(f, TemporaryUploadedFile):
+        f = f.file.file
 
     header = f.readline()
 
@@ -117,8 +123,11 @@ def _last_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, *
         res = BytesIO()
         line = b''
 
-    if isinstance(f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
+    if isinstance(f, InMemoryUploadedFile):
         f = f.file
+
+    if isinstance(f, TemporaryUploadedFile):
+        f = f.file.file
 
     f.seek(0)
     header = f.readline()
@@ -226,8 +235,11 @@ def cut_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUpl
 
 
 def count_file_lines(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUploadedFile) -> int:
-    if isinstance(f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
+    if isinstance(f, InMemoryUploadedFile):
         f = f.file
+
+    if isinstance(f, TemporaryUploadedFile):
+        f = f.file.file
 
     f.seek(0)
 
