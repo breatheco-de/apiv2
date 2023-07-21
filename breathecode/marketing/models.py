@@ -1,4 +1,4 @@
-import re
+import re, uuid
 import secrets
 from django.db import models
 from datetime import timedelta
@@ -479,6 +479,14 @@ class FormEntry(models.Model):
 
     won_at = models.DateTimeField(default=None, null=True, blank=True)
 
+    attribution_id = models.BigIntegerField(
+        null=True,
+        default=None,
+        blank=True,
+        help_text=
+        'Keep a consistent attribution from al the previous applications from the same email (it will reset to a new one for each WON)'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -491,6 +499,9 @@ class FormEntry(models.Model):
 
         if self.__old_deal_status != self.deal_status:
             deal_status_modified = True
+
+        if not self.id:
+            self.set_attribution_id()
 
         super().save(*args, **kwargs)
 
@@ -516,25 +527,35 @@ class FormEntry(models.Model):
 
         return False
 
-    # def attribution_id(self):
-    #     duplicate_leads_delta_avoidance = timedelta(minutes=30)
-    #     if self.academy is not None and self.academy.activecampaignacademy is not None:
-    #         duplicate_leads_delta_avoidance = self.academy.activecampaignacademy.duplicate_leads_delta_avoidance
+    def set_attribution_id(self):
+        """
+        well keep the attribution id consistent as long as there is not sale made
+        """
 
-    #     last_one = FormEntry.objects.filter(
-    #         email=self.email,
-    #         course=incoming_lead['course'],
-    #         storage_status='PERSISTED',
-    #         created_at__lte=self.created_at).exclude(id=self.id).order_by('-created_at').first()
+        if self.email is None:
+            return None
 
-    #     if last_one is None:
-    #         return False
+        previously_not_won = FormEntry.objects.filter(email=self.email,
+                                                      won_at__isnull=True).order_by('-created_at').first()
 
-    #     delta = self.created_at - last_one.created_at
-    #     if duplicate_leads_delta_avoidance >= delta:
-    #         return True
+        # if there is any other attribution_id recently used
+        if previously_not_won is not None and previously_not_won.attribution_id is not None:
+            self.attribution_id = previously_not_won.attribution_id
+        else:
+            self.attribution_id = int(uuid.uuid4().int & (2**63 - 1))
 
-    #     return False
+        # has the attriution id already been attributed to a previous won lead?
+        # if true, we need a new one to reset attribution cycle
+        if FormEntry.objects.filter(email=self.email,
+                                    attribution_id=self.attribution_id,
+                                    won_at__isnull=False).exists():
+            # if true, reset
+            self.attribution_id = int(uuid.uuid4().int & (2**63 - 1))
+
+        if self.attribution_id is None:
+            self.attribution_id = int(uuid.uuid4().int & (2**63 - 1))
+
+        return self.attribution_id
 
     def calculate_academy(self):
 
