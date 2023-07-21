@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from io import StringIO
 import json
 import logging
@@ -14,6 +15,8 @@ from breathecode.provisioning import actions
 from breathecode.provisioning.models import ProvisioningBill, ProvisioningUserConsumption
 from breathecode.services.google_cloud.storage import Storage
 from django.utils import timezone
+
+from breathecode.utils.io.file import cut_csv
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +52,51 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         logger.error(f'Does not exists bills for hash {hash}')
         return
 
+    if bills[0].vendor.name == 'Gitpod':
+        fields = ['id', 'credits', 'startTime', 'endTime', 'kind', 'userName', 'contextURL']
+
+    elif bills[0].vendor.name == 'Codespaces':
+        fields = [
+            'Username', 'Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)', 'Multiplier',
+            'Owner'
+        ]
+
+    storage = Storage()
+    cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
+    if not cloud_file.exists():
+        logger.error(f'File {hash} not found')
+        return
+
+    csvStringIO = StringIO()
+    cloud_file.download(csvStringIO)
+    csvStringIO = cut_csv(csvStringIO, first=1)
+    csvStringIO.seek(0)
+
+    df1 = pd.read_csv(csvStringIO, sep=',', usecols=fields)
+
+    csvStringIO = StringIO()
+    cloud_file.download(csvStringIO)
+    csvStringIO = cut_csv(csvStringIO, last=1)
+    csvStringIO.seek(0)
+
+    df2 = pd.read_csv(csvStringIO, sep=',', usecols=fields)
+
+    if bills[0].vendor.name == 'Gitpod':
+        first = df2['startTime'][0].split('-')
+        last = df1['startTime'][0].split('-')
+
+    elif bills[0].vendor.name == 'Codespaces':
+        first = df1['Date'][0].split('-')
+        last = df2['Date'][0].split('-')
+
+    first[2] = first[2].split('T')[0]
+    last[2] = last[2].split('T')[0]
+
+    import pytz
+
+    first = datetime(int(first[0]), int(first[1]), int(first[2]), 0, 0, 0, 0, pytz.UTC)
+    last = datetime(int(last[0]), int(last[1]), int(last[2]))
+
     for bill in bills:
         amount = 0
         for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status='PERSISTED'):
@@ -79,10 +127,12 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         else:
             bill.total_amount = amount
 
+        bill.started_at = first
+        bill.ended_at = last
         bill.save()
 
 
-PANDAS_ROWS_LIMIT = 25
+PANDAS_ROWS_LIMIT = 100
 
 
 def reverse_upload(hash: str, **_: Any):
@@ -103,7 +153,6 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         'provisioning_bills': {},
         'provisioning_vendors': {},
         'github_academy_user_logs': {},
-        'provisioning_activities': {},
         'provisioning_activity_prices': {},
         'provisioning_activity_kinds': {},
         'currencies': {},
@@ -136,15 +185,17 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
 
         pending_bills.delete()
 
-    s = cloud_file.download().decode('utf-8')
+    csvStringIO = StringIO()
+    cloud_file.download(csvStringIO)
+    csvStringIO = cut_csv(csvStringIO, start=start, end=end)
+    csvStringIO.seek(0)
 
-    csvStringIO = StringIO(s)
     df = pd.read_csv(csvStringIO, sep=',')
 
     handler = None
 
     # edit it
-    fields = ['id', 'credits', 'startTime', 'kind', 'userName', 'contextURL']
+    fields = ['id', 'credits', 'startTime', 'endTime', 'kind', 'userName', 'contextURL']
     if len(df.keys().intersection(fields)) == len(fields):
         handler = actions.add_gitpod_activity
 
@@ -165,9 +216,12 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         context['limit'] = prev_bill.created_at
 
     try:
-        for i in range(start, end):
+        i = 0
+        for position in range(start, end):
             try:
-                handler(context, df.iloc[i].to_dict(), i)
+                handler(context, df.iloc[i].to_dict(), position)
+                i += 1
+
             except IndexError:
                 break
 
@@ -181,7 +235,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         if not ProvisioningUserConsumption.objects.filter(bills=bill).exists():
             bill.delete()
 
-    if len(df.iloc[start:end]) == limit:
+    if len(df) == limit:
         upload.delay(hash, page=page + 1, task_manager_id=task_manager_id)
 
     elif not ProvisioningUserConsumption.objects.filter(hash=hash, status='ERROR').exists():

@@ -20,11 +20,13 @@ def academy_serializer(academy):
 
 def provisioning_bill_serializer(provisioning_bill, academy):
     return {
+        'id': provisioning_bill.id,
         'total_amount': provisioning_bill.total_amount,
         'academy': academy_serializer(academy),
         'status': provisioning_bill.status,
         'paid_at': provisioning_bill.paid_at,
         'stripe_url': provisioning_bill.stripe_url,
+        'created_at': provisioning_bill.created_at,
     }
 
 
