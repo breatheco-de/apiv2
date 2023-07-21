@@ -12,7 +12,8 @@ from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (GetProvisioningUserConsumptionSerializer,
                                                   ProvisioningBillSerializer, ProvisioningBillHTMLSerializer,
-                                                  ProvisioningUserConsumptionHTMLResumeSerializer)
+                                                  ProvisioningUserConsumptionHTMLResumeSerializer,
+                                                  GetProvisioningBillSmallSerializer)
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
@@ -455,6 +456,33 @@ class AcademyBillView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of('read_provisioning_bill')
+    def get(self, request, academy_id=None, bill_id=None):
+        handler = self.extensions(request)
+
+        if bill_id is not None:
+            bill = ProvisioningBill.objects.filter(academy__id=academy_id, id=bill_id).first()
+
+            if bill is None:
+                raise ValidationException('Provisioning Bill not found',
+                                          code=404,
+                                          slug='provisioning_bill-not-found')
+
+            serializer = GetProvisioningBillSerializer(bill, many=False)
+            return Response(serializer.data)
+
+        items = ProvisioningBill.objects.filter(academy__id=academy_id)
+
+        status = request.GET.get('status', None)
+        if status is not None:
+            items = items.filter(status__in=status.upper().split(','))
+
+        items = handler.queryset(items)
+        serializer = GetProvisioningBillSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
     @capable_of('crud_provisioning_bill')
     def put(self, request, bill_id=None, academy_id=None):
