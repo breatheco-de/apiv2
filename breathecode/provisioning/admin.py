@@ -92,7 +92,7 @@ def force_calculate_bill(modeladmin, request, queryset):
 
 def reverse_bill(modeladmin, request, queryset):
     for x in queryset.all():
-        tasks.reverse_upload.delay(x.hash)
+        tasks.reverse_upload(x.hash)
 
 
 @admin.register(ProvisioningBill)
