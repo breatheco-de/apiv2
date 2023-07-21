@@ -3,7 +3,7 @@ import os
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from typing import Optional, overload
 
-__all__ = ['cut_csv']
+__all__ = ['cut_csv', 'count_csv_rows', 'count_file_lines']
 
 
 @overload
@@ -217,3 +217,28 @@ def cut_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUpl
 
     else:
         return _first_lines_of_csv(f, first=first)
+
+
+def count_file_lines(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUploadedFile) -> int:
+    if isinstance(f, InMemoryUploadedFile):
+        f = f.file
+
+    f.seek(0)
+
+    n = 0
+
+    try:
+        while True:
+            next(f)
+            n += 1
+
+    except StopIteration:
+        pass
+
+    f.seek(0)
+
+    return n
+
+
+def count_csv_rows(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUploadedFile) -> int:
+    return count_file_lines(f) - 1

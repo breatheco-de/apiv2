@@ -18,6 +18,7 @@ from breathecode.notify.actions import get_template_content
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
+from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 from breathecode.utils import cut_csv
 from .actions import get_provisioning_vendor
@@ -260,7 +261,7 @@ class UploadView(APIView):
         if created:
             cloud_file.upload(file, content_type=file.content_type)
 
-        tasks.upload.delay(hash, total_pages=math.ceil(len(df) / tasks.PANDAS_ROWS_LIMIT))
+        tasks.upload.delay(hash, total_pages=math.ceil(count_csv_rows(file) / tasks.PANDAS_ROWS_LIMIT))
 
         data = {'file_name': hash, 'status': 'PENDING', 'created': created}
 
