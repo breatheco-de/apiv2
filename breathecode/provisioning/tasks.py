@@ -147,7 +147,7 @@ PANDAS_ROWS_LIMIT = 100
 def reverse_upload(hash: str, **_: Any):
     logger.info(f'Canceling upload for hash {hash}')
 
-    ProvisioningConsumptionEvent.objects.filter(provisioninguserconsumption__hash=hash)
+    ProvisioningConsumptionEvent.objects.filter(provisioninguserconsumption__hash=hash).delete()
     ProvisioningUserConsumption.objects.filter(hash=hash).delete()
     ProvisioningBill.objects.filter(hash=hash).delete()
 
