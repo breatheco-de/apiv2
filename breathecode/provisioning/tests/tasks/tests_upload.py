@@ -215,6 +215,7 @@ def provisioning_bill_data(data={}):
         'vendor_id': None,
         'started_at': None,
         'ended_at': None,
+        'title': None,
         **data,
     }
 

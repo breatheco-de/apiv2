@@ -22,6 +22,10 @@ STRIPE_PRICE_ID = f'price_{random.randint(1000, 9999)}'
 CREDIT_PRICE = random.randint(1, 20)
 
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
+MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+    'November', 'December'
+]
 
 fake = Faker()
 fake_url = fake.url()
@@ -192,14 +196,16 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             calculate_bill_amounts(slug)
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
+        started = UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=9)
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
                 'status': 'PAID',
                 'total_amount': 0.0,
                 'paid_at': UTC_NOW,
-                'started_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=9),
+                'started_at': started,
                 'ended_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=0),
+                'title': f'{MONTHS[started.month - 1]} {started.year}',
             },
         ])
 
@@ -274,6 +280,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'amount': amount / 2,
             },
         ])
+        started = UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=9)
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
@@ -282,6 +289,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'paid_at': UTC_NOW,
                 'started_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=9),
                 'ended_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=0),
+                'title': f'{MONTHS[started.month - 1]} {started.year}',
             },
         ])
 
@@ -356,14 +364,16 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'amount': amount / 2,
             },
         ])
+        started = UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=0)
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
                 'status': 'PAID',
                 'total_amount': 0.0,
                 'paid_at': UTC_NOW,
-                'started_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=0),
+                'started_at': started,
                 'ended_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=9),
+                'title': f'{MONTHS[started.month - 1]} {started.year}',
             },
         ])
 
@@ -454,6 +464,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'quantity': q,
             },
         ])
+        started = UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=9)
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
@@ -463,8 +474,9 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'paid_at': None,
                 'stripe_id': stripe_id,
                 'stripe_url': stripe_url,
-                'started_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=9),
+                'started_at': started,
                 'ended_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=0),
+                'title': f'{MONTHS[started.month - 1]} {started.year}',
             },
         ])
 
@@ -619,6 +631,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'quantity': q,
             },
         ])
+        started = UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=9)
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             {
                 **self.bc.format.to_dict(model.provisioning_bill),
@@ -628,8 +641,9 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 'paid_at': None,
                 'stripe_id': stripe_id,
                 'stripe_url': stripe_url,
-                'started_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=9),
+                'started_at': started,
                 'ended_at': UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=0),
+                'title': f'{MONTHS[started.month - 1]} {started.year}',
             },
         ])
 

@@ -36,6 +36,12 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 
+MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+    'November', 'December'
+]
+
+
 @task()
 def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     logger.info(f'Starting calculate_bill_amounts for hash {hash}')
@@ -92,6 +98,8 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     first[2] = first[2].split('T')[0]
     last[2] = last[2].split('T')[0]
 
+    month = MONTHS[int(first[1]) - 1]
+
     import pytz
 
     first = datetime(int(first[0]), int(first[1]), int(first[2]), 0, 0, 0, 0, pytz.UTC)
@@ -129,6 +137,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
 
         bill.started_at = first
         bill.ended_at = last
+        bill.title = f'{month} {first.year}'
         bill.save()
 
 
