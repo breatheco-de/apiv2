@@ -1,5 +1,6 @@
 import logging, os
-from io import StringIO
+from io import StringIO, BytesIO, TextIOWrapper, BufferedReader
+from typing import Optional, overload
 from google.cloud.storage import Bucket, Blob
 
 logger = logging.getLogger(__name__)
@@ -46,9 +47,28 @@ class File:
         # TODO Private url
         return self.blob.public_url
 
+    @overload
+    def download(self, file: StringIO | TextIOWrapper) -> None:
+        ...
+
+    @overload
+    def download(self, file: BytesIO | BufferedReader) -> None:
+        ...
+
+    @overload
+    def download(self, file: None) -> bytes:
+        ...
+
+    @overload
     def download(self) -> bytes:
+        ...
+
+    def download(self, file: Optional[BytesIO | StringIO]) -> bytes | None:
         """Delete Blob from Bucket"""
-        if self.blob:
+        if self.blob and file:
+            return self.blob.download_to_file(file)
+
+        elif self.blob:
             return self.blob.download_as_string()
 
     def stream_download(self) -> str:

@@ -275,7 +275,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w+')
 
         usernames = [self.bc.fake.slug() for _ in range(0, 3)]
-        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()) for _ in range(0, 3)]
+        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()).split('T')[0] for _ in range(0, 3)]
         products = [self.bc.fake.name() for _ in range(0, 3)]
         skus = [self.bc.fake.slug() for _ in range(0, 3)]
         quantities = [random.randint(1, 10) for _ in range(0, 3)]
@@ -379,7 +379,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w+')
 
         usernames = [self.bc.fake.slug() for _ in range(0, 3)]
-        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()) for _ in range(0, 3)]
+        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()).split('T')[0] for _ in range(0, 3)]
         products = [self.bc.fake.name() for _ in range(0, 3)]
         skus = [self.bc.fake.slug() for _ in range(0, 3)]
         quantities = [random.randint(1, 10) for _ in range(0, 3)]
@@ -490,6 +490,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             'id': ids,
             'credits': credit_cents,
             'startTime': effective_times,
+            'endTime': effective_times,
             'kind': kinds,
             'userName': usernames,
             'contextURL': contextURLs,
@@ -592,6 +593,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             'id': ids,
             'credits': credit_cents,
             'startTime': effective_times,
+            'endTime': effective_times,
             'kind': kinds,
             'userName': usernames,
             'contextURL': contextURLs,
