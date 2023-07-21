@@ -147,7 +147,9 @@
                         {{ bill.academy.name }}
                     </h5>
                     <h5>
+                        {% if bill.title %}
                         {{ bill.title }}
+                        {% endif %}
                     </h5>
                 </div>
 
