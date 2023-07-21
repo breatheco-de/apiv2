@@ -186,6 +186,8 @@ class App(models.Model):
 
     private_key = models.CharField(max_length=255, blank=True, null=False)
     public_key = models.CharField(max_length=255, blank=True, null=True, default=None)
+    belongs_to_breathecode = models.BooleanField(default=False,
+                                                 help_text='If true, this app belongs to breathecode')
 
     webhook_url = models.URLField()
     redirect_url = models.URLField()

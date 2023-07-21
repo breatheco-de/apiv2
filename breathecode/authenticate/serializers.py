@@ -349,25 +349,15 @@ class GetPermissionSmallSerializer(serpy.Serializer):
     codename = serpy.Field()
 
 
-class UserSerializer(serpy.Serializer):
-    """The serializer schema definition."""
+class AppUserSerializer(serpy.Serializer):
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
     github = serpy.MethodField()
-    roles = serpy.MethodField()
     profile = serpy.MethodField()
-    permissions = serpy.MethodField()
-
-    def get_permissions(self, obj):
-        permissions = Permission.objects.none()
-
-        for group in obj.groups.all():
-            permissions |= group.permissions.all()
-
-        return GetPermissionSmallSerializer(permissions.distinct().order_by('-id'), many=True).data
 
     def get_profile(self, obj):
         if not hasattr(obj, 'profile'):
@@ -380,6 +370,22 @@ class UserSerializer(serpy.Serializer):
         if github is None:
             return None
         return GithubSmallSerializer(github).data
+
+
+class UserSerializer(AppUserSerializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+
+    roles = serpy.MethodField()
+    permissions = serpy.MethodField()
+
+    def get_permissions(self, obj):
+        permissions = Permission.objects.none()
+
+        for group in obj.groups.all():
+            permissions |= group.permissions.all()
+
+        return GetPermissionSmallSerializer(permissions.distinct().order_by('-id'), many=True).data
 
     def get_roles(self, obj):
         roles = ProfileAcademy.objects.filter(user=obj.id)

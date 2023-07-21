@@ -54,15 +54,14 @@ from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswor
                     SyncGithubUsersForm)
 from .models import (CredentialsFacebook, CredentialsGithub, CredentialsGoogle, CredentialsSlack, GitpodUser,
                      Profile, ProfileAcademy, Role, Token, UserInvite, GithubAcademyUser, AcademyAuthSettings)
-from .serializers import (AuthSerializer, GetGitpodUserSerializer, GetProfileAcademySerializer,
-                          GetProfileAcademySmallSerializer, GetProfileSerializer, GitpodUserSmallSerializer,
-                          MemberPOSTSerializer, MemberPUTSerializer, ProfileAcademySmallSerializer,
-                          ProfileSerializer, RoleBigSerializer, RoleSmallSerializer, StudentPOSTSerializer,
-                          TokenSmallSerializer, UserInviteSerializer, UserInviteShortSerializer,
-                          UserInviteSmallSerializer, UserInviteWaitingListSerializer, UserMeSerializer,
-                          UserSerializer, UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
-                          PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer,
-                          POSTGithubUserSerializer)
+from .serializers import (
+    AppUserSerializer, AuthSerializer, GetGitpodUserSerializer, GetProfileAcademySerializer,
+    GetProfileAcademySmallSerializer, GetProfileSerializer, GitpodUserSmallSerializer, MemberPOSTSerializer,
+    MemberPUTSerializer, ProfileAcademySmallSerializer, ProfileSerializer, RoleBigSerializer,
+    RoleSmallSerializer, StudentPOSTSerializer, TokenSmallSerializer, UserInviteSerializer,
+    UserInviteShortSerializer, UserInviteSmallSerializer, UserInviteWaitingListSerializer, UserMeSerializer,
+    UserSerializer, UserSmallSerializer, UserTinySerializer, GithubUserSerializer, PUTGithubUserSerializer,
+    AuthSettingsBigSerializer, AcademyAuthSettingsSerializer, POSTGithubUserSerializer)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -2374,6 +2373,24 @@ class ExampleView(APIView):
     @scope(['create:example'])
     def post(self, request, app_id, token: dict):
         pass
+
+
+# app/user/:id
+class AppUserView(APIView):
+    extensions = APIViewExtensions(paginate=True)
+
+    @scope(['read:user'])
+    def get(self, request, app_id, token: dict, user_id=None):
+        lang = get_user_language(request)
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            raise ValidationException(translation(lang, en='User not found', es='Usuario no encontrado'),
+                                      code=404,
+                                      slug='user-not-found',
+                                      silent=True)
+
+        serializer = AppUserSerializer(user, many=False)
+        return Response(serializer.data)
 
 
 # app/webhook
