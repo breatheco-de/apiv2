@@ -1,7 +1,7 @@
 from io import StringIO, BytesIO, BufferedReader, TextIOWrapper
 import logging
 import os
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 from typing import Optional, overload
 
 __all__ = ['cut_csv', 'count_csv_rows', 'count_file_lines']
@@ -28,11 +28,11 @@ def _cut_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUp
     if isinstance(f, StringIO) or isinstance(f, TextIOWrapper):
         res = StringIO()
 
-    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(f, InMemoryUploadedFile):
+    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(
+            f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
         res = BytesIO()
 
-    if isinstance(f, InMemoryUploadedFile):
-        res = BytesIO()
+    if isinstance(f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
         f = f.file
 
     header = f.readline()
@@ -72,14 +72,11 @@ def _first_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, 
     if isinstance(f, StringIO) or isinstance(f, TextIOWrapper):
         res = StringIO()
 
-    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(f, InMemoryUploadedFile):
+    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(
+            f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
         res = BytesIO()
 
-    print(f, type(f))
-    logger.info('f is a %s', type(f))
-
-    if isinstance(f, InMemoryUploadedFile):
-        res = BytesIO()
+    if isinstance(f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
         f = f.file
 
     header = f.readline()
@@ -115,12 +112,12 @@ def _last_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, *
         res = StringIO()
         line = ''
 
-    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(f, InMemoryUploadedFile):
+    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(
+            f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
         res = BytesIO()
         line = b''
 
-    if isinstance(f, InMemoryUploadedFile):
-        res = BytesIO()
+    if isinstance(f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
         f = f.file
 
     f.seek(0)
@@ -229,7 +226,7 @@ def cut_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUpl
 
 
 def count_file_lines(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUploadedFile) -> int:
-    if isinstance(f, InMemoryUploadedFile):
+    if isinstance(f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
         f = f.file
 
     f.seek(0)
