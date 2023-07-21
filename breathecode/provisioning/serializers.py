@@ -69,6 +69,7 @@ class GetProvisioningBillSerializer(serpy.Serializer):
     fee = serpy.Field()
     stripe_url = serpy.Field()
     created_at = serpy.Field()
+    title = serpy.Field()
 
 
 class GetProvisioningConsumptionKindSerializer(serpy.Serializer):
@@ -151,6 +152,7 @@ class ProvisioningBillHTMLSerializer(serpy.Serializer):
     status = serpy.Field()
     paid_at = serpy.Field()
     created_at = serpy.Field()
+    title = serpy.Field()
     stripe_url = serpy.Field()
 
 
