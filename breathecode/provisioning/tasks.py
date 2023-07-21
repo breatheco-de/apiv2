@@ -73,14 +73,14 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         logger.error(f'File {hash} not found')
         return
 
-    csvStringIO = StringIO()
+    csvStringIO = BytesIO()
     cloud_file.download(csvStringIO)
     csvStringIO = cut_csv(csvStringIO, first=1)
     csvStringIO.seek(0)
 
     df1 = pd.read_csv(csvStringIO, sep=',', usecols=fields)
 
-    csvStringIO = StringIO()
+    csvStringIO = BytesIO()
     cloud_file.download(csvStringIO)
     csvStringIO = cut_csv(csvStringIO, last=1)
     csvStringIO.seek(0)
