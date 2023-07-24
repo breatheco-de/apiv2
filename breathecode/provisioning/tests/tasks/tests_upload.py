@@ -1,7 +1,7 @@
 """
 Test /answer/:id
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 import json
 import random
@@ -124,6 +124,7 @@ def gitpod_csv(lines=1, data={}):
         'id': ids,
         'credits': credit_cents,
         'startTime': effective_times,
+        'endTime': effective_times,
         'kind': kinds,
         'userName': usernames,
         'contextURL': contextURLs,
@@ -134,12 +135,11 @@ def gitpod_csv(lines=1, data={}):
 def csv_file_mock(obj):
     df = pd.DataFrame.from_dict(obj)
 
-    s_buf = io.StringIO()
-    df.to_csv(s_buf)
+    def csv_file_mock_inner(file):
+        df.to_csv(file)
+        file.seek(0)
 
-    s_buf.seek(0)
-
-    return s_buf.read().encode('utf-8')
+    return csv_file_mock_inner
 
 
 def currency_data(data={}):
@@ -213,6 +213,9 @@ def provisioning_bill_data(data={}):
         'stripe_id': None,
         'stripe_url': None,
         'vendor_id': None,
+        'started_at': None,
+        'ended_at': None,
+        'title': None,
         **data,
     }
 
@@ -259,7 +262,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
             with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
+                       MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -302,7 +305,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
             with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
+                       MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -351,7 +354,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
 
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
             with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
+                       MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -405,7 +408,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
 
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
             with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
+                       MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug, force=True)
 
@@ -455,7 +458,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
             with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
+                       MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -506,7 +509,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'status_text':
                 ', '.join([
                     'Provisioning vendor Codespaces not found',
-                    f'User {csv["Username"][n]} not found in any academy',
+                    f"We could not find enough information about {csv['Username'][n]}, mark this user user "
+                    "as deleted if you don't recognize it",
                 ]),
             }) for n in range(10)
         ])
@@ -573,7 +577,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
             with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
+                       MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -632,7 +636,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'status_text':
                 ', '.join([
                     'Provisioning vendor Codespaces not found',
-                    f'User {csv["Username"][n]} not found in any academy',
+                    f"We could not find enough information about {csv['Username'][n]}, mark this user user "
+                    "as deleted if you don't recognize it",
                 ]),
             }) for n in range(10)
         ])
@@ -724,7 +729,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
             with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
+                       MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -783,7 +788,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'status_text':
                 ', '.join([
                     'Provisioning vendor Codespaces not found',
-                    f'User {csv["Username"][n]} not found in any academy',
+                    f"We could not find enough information about {csv['Username'][n]}, mark this user user "
+                    "as deleted if you don't recognize it",
                 ]),
             }) for n in range(10)
         ])
@@ -870,7 +876,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
+                   MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -982,7 +988,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
+                   MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1100,7 +1106,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         logging.Logger.error.call_args_list = []
 
         with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
+                   MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug, force=True)
 
@@ -1212,7 +1218,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
+                   MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1254,13 +1260,21 @@ class CodespacesTestSuite(ProvisioningTestCase):
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
-                'id': n + 1,
-                'kind_id': n + 1,
-                'hash': slug,
-                'username': csv['Username'][n],
-                'processed_at': UTC_NOW,
-                'status': 'PERSISTED',
-                'status_text': f'User {csv["Username"][n]} not found in any academy',
+                'id':
+                n + 1,
+                'kind_id':
+                n + 1,
+                'hash':
+                slug,
+                'username':
+                csv['Username'][n],
+                'processed_at':
+                UTC_NOW,
+                'status':
+                'PERSISTED',
+                'status_text':
+                (f"We could not find enough information about {csv['Username'][n]}, mark this user user "
+                 "as deleted if you don't recognize it"),
             }) for n in range(10)
         ])
 
@@ -1306,7 +1320,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
             with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
+                       MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -1358,7 +1372,8 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'status_text':
                 ', '.join([
                     'Provisioning vendor Gitpod not found',
-                    f"User {csv['userName'][n]} not found in any academy",
+                    f"We could not find enough information about {csv['userName'][n]}, mark this user user "
+                    "as deleted if you don't recognize it",
                 ]),
             }) for n in range(10)
         ])
@@ -1413,7 +1428,7 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
+                   MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1515,7 +1530,7 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
+                   MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1626,7 +1641,7 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
+                   MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1743,7 +1758,7 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(return_value=csv_file_mock(csv))):
+                   MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1883,11 +1898,165 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
 
+        with patch('breathecode.services.google_cloud.File.download',
+                   MagicMock(side_effect=csv_file_mock(csv))):
+
+            upload(slug)
+
+        self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
+            provisioning_bill_data({
+                'id': 1,
+                'academy_id': 1,
+                'hash': slug,
+                'vendor_id': 1,
+            }),
+            provisioning_bill_data({
+                'id': 2,
+                'academy_id': 2,
+                'hash': slug,
+                'vendor_id': 1,
+            }),
+            provisioning_bill_data({
+                'id': 3,
+                'academy_id': 3,
+                'hash': slug,
+                'vendor_id': 1,
+            }),
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
+            provisioning_activity_kind_data({
+                'id': n + 1,
+                'product_name': csv['kind'][n],
+                'sku': str(csv['kind'][n]),
+            }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
+            provisioning_activity_price_data({
+                'currency_id': 1,
+                'id': 1,
+                'multiplier': 1.0,
+                'price_per_unit': 0.036,
+                'unit_type': 'Credits',
+            })
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
+            provisioning_activity_item_data(
+                {
+                    'id': n + 1,
+                    'price_id': 1,
+                    'vendor_id': 1,
+                    'quantity': float(csv['credits'][n]),
+                    'external_pk': str(csv['id'][n]),
+                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                    'repository_url': csv['contextURL'][n],
+                    'task_associated_slug': repo_name(csv['contextURL'][n]),
+                    'csv_row': n,
+                }) for n in range(10)
+        ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id': n + 1,
+                'kind_id': n + 1,
+                'hash': slug,
+                'username': csv['userName'][n],
+                'processed_at': UTC_NOW,
+                'status': 'PERSISTED',
+            }) for n in range(10)
+        ])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'),
+                         self.bc.format.to_dict(model.github_academy_user))
+
+        self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
+        self.bc.check.calls(logging.Logger.error.call_args_list, [])
+
+        self.bc.check.calls(tasks.upload.delay.call_args_list, [])
+        self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
+
+    # Given: a csv with codespaces data and 10 User, 10 GithubAcademyUser, 10 GithubAcademyUserLog
+    #     -> and 1 ProvisioningVendor of type codespaces
+    # When: all the data is correct, with ProfileAcademy
+    # Then: the task should create 1 bills and 10 activities per user's ProfileAcademy
+    @patch.multiple('breathecode.services.google_cloud.Storage',
+                    __init__=MagicMock(return_value=None),
+                    client=PropertyMock(),
+                    create=True)
+    @patch.multiple(
+        'breathecode.services.google_cloud.File',
+        __init__=MagicMock(return_value=None),
+        bucket=PropertyMock(),
+        file_name=PropertyMock(),
+        upload=MagicMock(),
+        exists=MagicMock(return_value=True),
+        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+        create=True)
+    @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
+    @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('breathecode.authenticate.signals.academy_invite_accepted.send', MagicMock())
+    def test_from_github_credentials__generate_anything__case3(self):
+        csv = gitpod_csv(10)
+
+        github_academy_users = [{
+            'username': username,
+        } for username in csv['userName']]
+        github_academy_user_logs = [{
+            'storage_status': 'SYNCHED',
+            'storage_action': 'ADD',
+            'academy_user_id': n + 1,
+        } for n in range(10)]
+        provisioning_vendor = {'name': 'Gitpod'}
+        profile_academies = []
+
+        for user_n in range(10):
+            for academy_n in range(3):
+                profile_academies.append({
+                    'academy_id': academy_n + 1,
+                    'user_id': user_n + 1,
+                    'status': 'ACTIVE',
+                })
+
+        credentials_github = [{
+            'username': csv['userName'][n],
+            'user_id': n + 1,
+        } for n in range(10)]
+
+        cohort_users = [{
+            'user_id': n + 1,
+            'cohort_id': 1,
+        } for n in range(10)]
+
+        cohort = {
+            'academy_id': 1,
+            'kickoff_date': self.bc.datetime.now() + timedelta(days=1),
+            'ending_date': self.bc.datetime.now() - timedelta(days=1),
+        }
+
+        model = self.bc.database.create(user=10,
+                                        credentials_github=credentials_github,
+                                        academy=3,
+                                        cohort=cohort,
+                                        cohort_user=cohort_users,
+                                        profile_academy=profile_academies,
+                                        github_academy_user=github_academy_users,
+                                        github_academy_user_log=github_academy_user_logs,
+                                        provisioning_vendor=provisioning_vendor)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        slug = self.bc.fake.slug()
+
         y = [[model.academy[RANDOM_ACADEMIES[x]]] for x in range(10)]
 
         with patch('random.choices', MagicMock(side_effect=y)):
             with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(return_value=csv_file_mock(csv))):
+                       MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -1903,19 +2072,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({
                 'id': 1,
-                'academy_id': academies[0] + 1,
-                'hash': slug,
-                'vendor_id': 1,
-            }),
-            provisioning_bill_data({
-                'id': 2,
-                'academy_id': academies[1] + 1,
-                'hash': slug,
-                'vendor_id': 1,
-            }),
-            provisioning_bill_data({
-                'id': 3,
-                'academy_id': academies[2] + 1,
+                'academy_id': 1,
                 'hash': slug,
                 'vendor_id': 1,
             }),
