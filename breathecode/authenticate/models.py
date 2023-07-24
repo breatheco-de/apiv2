@@ -183,12 +183,15 @@ class App(models.Model):
     strategy = models.CharField(max_length=9, choices=AUTH_STRATEGY)
     schema = models.CharField(max_length=4, choices=AUTH_SCHEMA)
 
-    scopes = models.ManyToManyField(Scope, blank=True)
+    available_scopes = models.ManyToManyField(Scope, blank=True)
+    optional_scopes = models.ManyToManyField(Scope, blank=True)
+    agreement_version = models.IntegerField(default=1,
+                                            help_text='Version of the agreement, based in the scopes')
 
     private_key = models.CharField(max_length=255, blank=True, null=False)
     public_key = models.CharField(max_length=255, blank=True, null=True, default=None)
-    belongs_to_breathecode = models.BooleanField(default=False,
-                                                 help_text='If true, this app belongs to breathecode')
+    require_an_agreement = models.BooleanField(
+        default=False, help_text='If true, the user will be required to accept an agreement')
 
     webhook_url = models.URLField()
     redirect_url = models.URLField()
@@ -242,6 +245,17 @@ class App(models.Model):
 
         self._webhook_url = self.webhook_url
         self._redirect_url = self.redirect_url
+
+
+class OptionalScopesCache(models.Model):
+    optional_scopes = models.ManyToManyField(Scope, blank=True)
+
+
+class AppUserAgreement(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    app = models.ForeignKey(App, on_delete=models.CASCADE)
+    optional_scopes_cache = models.ForeignKey(OptionalScopesCache, on_delete=models.CASCADE)
+    agreement_version = models.IntegerField(default=1, help_text='Version of the agreement that was accepted')
 
 
 LEGACY_KEY_LIFETIME = timezone.timedelta(minutes=2)
