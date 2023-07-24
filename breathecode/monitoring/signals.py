@@ -5,3 +5,4 @@ declare a new variable here like this:
 from django import dispatch
 
 github_webhook = dispatch.Signal()
+stripe_webhook = dispatch.Signal()

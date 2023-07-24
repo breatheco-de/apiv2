@@ -1,10 +1,10 @@
-import serpy, base64
-from .models import ProvisioningContainer
-from django.utils import timezone
-from breathecode.admissions.models import Academy
+import math
+import serpy
+
+from breathecode.utils.i18n import translation
+from .models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningContainer, ProvisioningUserConsumption
+
 from rest_framework import serializers
-from rest_framework import status
-from rest_framework.exceptions import ValidationError
 from breathecode.utils.validation_exception import ValidationException
 
 
@@ -42,24 +42,50 @@ class ContainerMeBigSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
-class ProvisioningActivitySerializer(serpy.Serializer):
+class GetProvisioningVendorSerializer(serpy.Serializer):
     id = serpy.Field()
-    username = serpy.Field()
-    registered_at = serpy.Field()
+    name = serpy.Field()
+
+
+class GetProvisioningBillSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    vendor = GetProvisioningVendorSerializer(required=False)
+    total_amount = serpy.Field()
+    status = serpy.Field()
+    status_details = serpy.Field()
+    paid_at = serpy.Field()
+    fee = serpy.Field()
+    stripe_url = serpy.Field()
+    created_at = serpy.Field()
+
+
+class GetProvisioningBillSerializer(serpy.Serializer):
+    id = serpy.Field()
+    vendor = GetProvisioningVendorSerializer(required=False)
+    total_amount = serpy.Field()
+    status = serpy.Field()
+    status_details = serpy.Field()
+    paid_at = serpy.Field()
+    fee = serpy.Field()
+    stripe_url = serpy.Field()
+    created_at = serpy.Field()
+    title = serpy.Field()
+
+
+class GetProvisioningConsumptionKindSerializer(serpy.Serializer):
+    id = serpy.Field()
     product_name = serpy.Field()
     sku = serpy.Field()
+
+
+class GetProvisioningUserConsumptionSerializer(serpy.Serializer):
+    id = serpy.Field()
+    kind = GetProvisioningConsumptionKindSerializer(required=False)
+    username = serpy.Field()
     quantity = serpy.Field()
-    unit_type = serpy.Field()
-    price_per_unit = serpy.Field()
-    currency_code = serpy.Field()
-    multiplier = serpy.Field()
-    repository_url = serpy.Field()
+    amount = serpy.Field()
     processed_at = serpy.Field()
     status = serpy.Field()
-    bill = serpy.MethodField()
-
-    def get_bill(self, obj):
-        return obj.bill.id if obj.bill else None
 
 
 class ProvisioningContainerSerializer(serializers.ModelSerializer):
@@ -86,21 +112,77 @@ class ProvisioningContainerSerializer(serializers.ModelSerializer):
         return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
 
 
-class ProvisioningBillSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
+class ProvisioningConsumptionKindHTMLSerializer(serpy.Serializer):
+    product_name = serpy.Field()
+    sku = serpy.Field()
+
+
+class ProvisioningConsumptionEventHTMLSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
+
+
+class ProvisioningUserConsumptionHTMLResumeSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    amount = serpy.Field()
+    kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
+
+
+class ProvisioningUserConsumptionHTMLSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    kind = ProvisioningConsumptionKindHTMLSerializer(required=False)
+
+    events = serpy.MethodField()
+
+    def get_events(self, obj):
+        ProvisioningConsumptionEventHTMLSerializer(obj.events, many=True).data
+
+
+class ProvisioningBillHTMLSerializer(serpy.Serializer):
+
     id = serpy.Field()
     total_amount = serpy.Field()
-    currency_code = serpy.Field()
     academy = AcademySerializer(required=False)
     status = serpy.Field()
-    status_details = serpy.Field()
     paid_at = serpy.Field()
     created_at = serpy.Field()
-    updated_at = serpy.Field()
+    title = serpy.Field()
+    stripe_url = serpy.Field()
 
-    activities = serpy.MethodField()
 
-    def get_activities(self, obj):
-        _activities = obj.provisioningactivity_set.order_by('created_at').all()
-        return ProvisioningActivitySerializer(_activities, many=True).data
+class ProvisioningBillSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProvisioningBill
+        fields = ('status', )
+
+    def validate(self, data):
+
+        if self.instance and 'status' in data and self.instance.status in ['PAID', 'ERROR']:
+            status = data['status'].lower()
+            raise ValidationException(translation(
+                self.context['lang'],
+                en=f'You cannot change the status of this bill due to it is marked as {status}',
+                es='No puedes cambiar el estado de esta factura debido a que esta marcada '
+                f'como {status}',
+                slug='readonly-bill-status'),
+                                      code=400)
+
+        if self.instance and 'status' in data and data['status'] in ['PAID', 'ERROR']:
+            status = data['status'].lower()
+            raise ValidationException(translation(
+                self.context['lang'],
+                en=f'You cannot set the status of this bill to {status} because this status is '
+                'forbidden',
+                es=f'No puedes cambiar el estado de esta factura a {status} porque este estado esta '
+                'prohibido',
+                slug='invalid-bill-status'),
+                                      code=400)
+
+        return data

@@ -380,6 +380,10 @@ CAPABILITIES = [
         'description': 'Start or end event'
     },
     {
+        'slug': 'read_provisioning_bill',
+        'description': 'Read provisioning activities and bills'
+    },
+    {
         'slug': 'crud_provisioning_activity',
         'description': 'Create, update or delete provisioning activities'
     },
@@ -394,6 +398,10 @@ CAPABILITIES = [
     {
         'slug': 'crud_academyservice',
         'description': 'Crud Academy Service details'
+    },
+    {
+        'slug': 'crud_provisioning_bill',
+        'description': 'Crud Provisioning Bills'
     },
 ]
 
@@ -644,7 +652,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff', 'community_manager']) + [
             'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
-            'crud_tag', 'crud_keyword', 'crud_keywordcluster'
+            'crud_tag', 'crud_keyword', 'crud_keywordcluster', 'crud_asset', 'read_category'
         ]
     })
     roles.append({
@@ -705,6 +713,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_project_invoice',
             'read_freelance_projects',
             'sync_organization_users',
+            'read_provisioning_bill',
         ]
     })
     roles.append({
@@ -723,7 +732,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'accountant',
         ]) + [
             'crud_my_academy', 'crud_organization', 'generate_academy_token', 'send_reset_password',
-            'generate_temporal_token', 'read_organization'
+            'generate_temporal_token', 'read_organization', 'crud_provisioning_bill'
         ]
     })
 

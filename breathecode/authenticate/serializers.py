@@ -1098,7 +1098,50 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             raise ValidationException(
                 translation(lang, en='Email is required', es='El email es requerido', slug='without-email'))
 
-        invites = UserInvite.objects.filter(email=data['email'])
+        extra = {}
+
+        plan = None
+        if plan_pk := self.context.get('plan'):
+            try:
+                kwargs = {}
+                if isinstance(plan_pk, int):
+                    kwargs['id'] = plan_pk
+                else:
+                    kwargs['slug'] = plan_pk
+
+                plan = Plan.objects.filter(**kwargs).get()
+                extra['plans'] = plan
+
+            except:
+                raise ValidationException(
+                    translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
+
+        course = None
+        if course_pk := self.context.get('course'):
+            try:
+                kwargs = {}
+                if isinstance(course_pk, int):
+                    kwargs['id'] = course_pk
+                else:
+                    kwargs['slug'] = course_pk
+
+                course = Course.objects.filter(**kwargs).get()
+                extra['courses'] = course
+
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='Course not found',
+                                es='Curso no encontrado',
+                                slug='course-not-found'))
+
+        if cohort := data.get('cohort'):
+            extra['cohort'] = cohort
+
+        if syllabus := data.get('syllabus'):
+            extra['syllabus'] = syllabus
+
+        invites = UserInvite.objects.filter(email=data['email'], **extra)
 
         if not self.instance and invites.filter(status='WAITING_LIST').exists():
 
@@ -1133,45 +1176,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                                       slug='user-exists',
                                       silent=True)
 
-        plan = None
-        if plan_pk := self.context.get('plan'):
-            try:
-                kwargs = {}
-                if isinstance(plan_pk, int):
-                    kwargs['id'] = plan_pk
-                else:
-                    kwargs['slug'] = plan_pk
-
-                plan = Plan.objects.filter(**kwargs).get()
-
-            except:
-                raise ValidationException(
-                    translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
-
-        course = None
-        if course_pk := self.context.get('course'):
-            try:
-                kwargs = {}
-                if isinstance(course_pk, int):
-                    kwargs['id'] = course_pk
-                else:
-                    kwargs['slug'] = course_pk
-
-                course = Course.objects.filter(**kwargs).get()
-
-            except:
-                raise ValidationException(
-                    translation(lang,
-                                en='Course not found',
-                                es='Curso no encontrado',
-                                slug='course-not-found'))
-
         self.user = user
         self.plan = plan
         self.course = course
-
-        cohort = data.get('cohort')
-        syllabus = data.get('syllabus')
 
         if course and syllabus and not course.syllabus.filter(id=syllabus.id).exists():
             raise ValidationException(

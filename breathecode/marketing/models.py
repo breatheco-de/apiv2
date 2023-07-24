@@ -1,4 +1,4 @@
-import re
+import re, uuid
 import secrets
 from django.db import models
 from datetime import timedelta
@@ -343,8 +343,8 @@ class FormEntry(models.Model):
     email = models.CharField(max_length=150, null=True, default=None, blank=True)
 
     phone_regex = RegexValidator(
-        regex=r'^\+?1?\d{9,15}$',
-        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+        regex=r'^\+?1?\d{8,15}$',
+        message="Phone number must be entered in the format: '+99999999'. Up to 15 digits allowed.")
     phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True,
                              default=None)  # validators should be a list
 
@@ -479,6 +479,14 @@ class FormEntry(models.Model):
 
     won_at = models.DateTimeField(default=None, null=True, blank=True)
 
+    attribution_id = models.BigIntegerField(
+        null=True,
+        default=None,
+        blank=True,
+        help_text=
+        'Keep a consistent attribution from al the previous applications from the same email (it will reset to a new one for each WON)'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -491,6 +499,9 @@ class FormEntry(models.Model):
 
         if self.__old_deal_status != self.deal_status:
             deal_status_modified = True
+
+        if not self.id:
+            self.set_attribution_id()
 
         super().save(*args, **kwargs)
 
@@ -515,6 +526,36 @@ class FormEntry(models.Model):
             return True
 
         return False
+
+    def set_attribution_id(self):
+        """
+        well keep the attribution id consistent as long as there is not sale made
+        """
+
+        if self.email is None:
+            return None
+
+        previously_not_won = FormEntry.objects.filter(email=self.email,
+                                                      won_at__isnull=True).order_by('-created_at').first()
+
+        # if there is any other attribution_id recently used
+        if previously_not_won is not None and previously_not_won.attribution_id is not None:
+            self.attribution_id = previously_not_won.attribution_id
+        else:
+            self.attribution_id = int(uuid.uuid4().int & (2**63 - 1))
+
+        # has the attriution id already been attributed to a previous won lead?
+        # if true, we need a new one to reset attribution cycle
+        if FormEntry.objects.filter(email=self.email,
+                                    attribution_id=self.attribution_id,
+                                    won_at__isnull=False).exists():
+            # if true, reset
+            self.attribution_id = int(uuid.uuid4().int & (2**63 - 1))
+
+        if self.attribution_id is None:
+            self.attribution_id = int(uuid.uuid4().int & (2**63 - 1))
+
+        return self.attribution_id
 
     def calculate_academy(self):
 

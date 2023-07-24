@@ -173,14 +173,14 @@ class AuthenticateTestSuite(AuthTestCase):
 
         user_invite = {
             'email': self.bc.fake.email(),
-            'sent_at': UTC_NOW - timedelta(seconds=random.randint(0, (3600 * 24) - 1)),
+            'sent_at': UTC_NOW - timedelta(seconds=random.randint(0, (60 * 10) - 1)),
         }
         model = self.bc.database.create(user_invite=user_invite)
         url = reverse_lazy('authenticate:invite_resend_id', kwargs={'invite_id': 1})
 
         response = self.client.put(url)
         json = response.json()
-        expected = {'detail': 'sent-at-diff-less-1-days', 'status_code': 400}
+        expected = {'detail': 'sent-at-diff-less-10-minutes', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
@@ -295,7 +295,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test """
 
         user_invite = {
-            'sent_at': UTC_NOW - timedelta(seconds=random.randint(0, (3600 * 24) - 1)),
+            'sent_at': UTC_NOW - timedelta(seconds=random.randint(0, (60 * 10) - 1)),
             'status': random.choice(['ACCEPTED', 'REJECTED']),
             'is_email_validated': True,
         }
@@ -314,7 +314,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'status_code': 400,
             },
             {
-                'detail': 'sent-at-diff-less-1-days',
+                'detail': 'sent-at-diff-less-10-minutes',
                 'status_code': 400,
             },
         ]

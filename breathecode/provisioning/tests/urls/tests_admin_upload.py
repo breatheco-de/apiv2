@@ -275,7 +275,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w+')
 
         usernames = [self.bc.fake.slug() for _ in range(0, 3)]
-        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()) for _ in range(0, 3)]
+        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()).split('T')[0] for _ in range(0, 3)]
         products = [self.bc.fake.name() for _ in range(0, 3)]
         skus = [self.bc.fake.slug() for _ in range(0, 3)]
         quantities = [random.randint(1, 10) for _ in range(0, 3)]
@@ -329,7 +329,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -345,7 +345,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(kwargs, {'content_type': 'text/csv'})
 
             self.assertEqual(File.url.call_args_list, [])
-            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash)])
+            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash, total_pages=1)])
 
     # When: auth and file with codespaces format, file exists
     # Then: should return a 200
@@ -379,7 +379,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         file = tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w+')
 
         usernames = [self.bc.fake.slug() for _ in range(0, 3)]
-        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()) for _ in range(0, 3)]
+        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()).split('T')[0] for _ in range(0, 3)]
         products = [self.bc.fake.name() for _ in range(0, 3)]
         skus = [self.bc.fake.slug() for _ in range(0, 3)]
         quantities = [random.randint(1, 10) for _ in range(0, 3)]
@@ -433,7 +433,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -442,7 +442,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
             self.assertEqual(File.upload.call_args_list, [])
             self.assertEqual(File.url.call_args_list, [])
-            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash)])
+            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash, total_pages=1)])
 
     # When: auth and file with gitpod format
     # Then: should return a 201
@@ -479,25 +479,21 @@ class MarketingTestSuite(ProvisioningTestCase):
         credit_cents = [random.randint(1, 10000) for _ in range(0, 3)]
         effective_times = [self.bc.datetime.to_iso_string(self.bc.datetime.now()) for _ in range(0, 3)]
         kinds = [self.bc.fake.slug() for _ in range(0, 3)]
-
-        def get_metadata():
-            username = self.bc.fake.slug()
-            repo = self.bc.fake.slug()
-            branch = self.bc.fake.slug()
-            return {
-                'userName': username,
-                'contextURL': f'https://github.com/{username}/{repo}/tree/{branch}/',
-            }
-
-        metadata = [json.dumps(get_metadata()) for _ in range(0, 3)]
+        usernames = [self.bc.fake.slug() for _ in range(0, 3)]
+        contextURLs = [
+            f'https://github.com/{username}/{self.bc.fake.slug()}/tree/{self.bc.fake.slug()}/'
+            for username in usernames
+        ]
 
         # dictionary of lists
         obj = {
             'id': ids,
-            'creditCents': credit_cents,
-            'effectiveTime': effective_times,
+            'credits': credit_cents,
+            'startTime': effective_times,
+            'endTime': effective_times,
             'kind': kinds,
-            'metadata': metadata,
+            'userName': usernames,
+            'contextURL': contextURLs,
         }
 
         df = pd.DataFrame.from_dict(obj)
@@ -532,7 +528,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -549,7 +545,7 @@ class MarketingTestSuite(ProvisioningTestCase):
 
             self.assertEqual(File.url.call_args_list, [])
 
-            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash)])
+            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash, total_pages=1)])
 
     # When: auth and file with gitpod format, file exists
     # Then: should return a 200
@@ -586,25 +582,21 @@ class MarketingTestSuite(ProvisioningTestCase):
         credit_cents = [random.randint(1, 10000) for _ in range(0, 3)]
         effective_times = [self.bc.datetime.to_iso_string(self.bc.datetime.now()) for _ in range(0, 3)]
         kinds = [self.bc.fake.slug() for _ in range(0, 3)]
-
-        def get_metadata():
-            username = self.bc.fake.slug()
-            repo = self.bc.fake.slug()
-            branch = self.bc.fake.slug()
-            return {
-                'userName': username,
-                'contextURL': f'https://github.com/{username}/{repo}/tree/{branch}/',
-            }
-
-        metadata = [json.dumps(get_metadata()) for _ in range(0, 3)]
+        usernames = [self.bc.fake.slug() for _ in range(0, 3)]
+        contextURLs = [
+            f'https://github.com/{username}/{self.bc.fake.slug()}/tree/{self.bc.fake.slug()}/'
+            for username in usernames
+        ]
 
         # dictionary of lists
         obj = {
             'id': ids,
-            'creditCents': credit_cents,
-            'effectiveTime': effective_times,
+            'credits': credit_cents,
+            'startTime': effective_times,
+            'endTime': effective_times,
             'kind': kinds,
-            'metadata': metadata,
+            'userName': usernames,
+            'contextURL': contextURLs,
         }
 
         df = pd.DataFrame.from_dict(obj)
@@ -639,7 +631,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
 
             self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
-            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningActivity'), [])
+            self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
             self.assertEqual(File.__init__.call_args_list, [
@@ -648,4 +640,4 @@ class MarketingTestSuite(ProvisioningTestCase):
 
             self.assertEqual(File.upload.call_args_list, [])
             self.assertEqual(File.url.call_args_list, [])
-            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash)])
+            self.bc.check.calls(tasks.upload.delay.call_args_list, [call(hash, total_pages=1)])

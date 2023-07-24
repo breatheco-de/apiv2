@@ -206,7 +206,8 @@ class Stripe:
 
         return invoice
 
-    def create_payment_link(self, price_id: str, quantity: int) -> str:
+    def create_payment_link(self, price_id: str, quantity: int) -> tuple[str, str]:
+        """Create a payment link for a given price id, return the id and the url"""
 
         stripe.api_key = self.api_key
 
@@ -220,4 +221,4 @@ class Stripe:
 
         refund = self._i18n_validations(callback)
 
-        return refund['url']
+        return refund['id'], refund['url']

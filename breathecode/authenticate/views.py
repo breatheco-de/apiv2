@@ -348,37 +348,9 @@ class MemberView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_member')
     def delete(self, request, academy_id=None, user_id_or_email=None):
-        lookups = self.generate_lookups(request, many_fields=['id'])
-
-        if lookups and user_id_or_email:
-            raise ValidationException(
-                'user_id or cohort_id was provided in url '
-                'in bulk mode request, use querystring style instead',
-                code=400,
-                slug='user-id-and-bulk-mode')
-
-        if lookups:
-            items = ProfileAcademy.objects.filter(**lookups,
-                                                  academy__id=academy_id).exclude(role__slug='student')
-
-            for item in items:
-                item.delete()
-
-            return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-        if user_id_or_email and not user_id_or_email.isnumeric():
-            raise ValidationException('User id must be a numeric value',
-                                      code=404,
-                                      slug='user-id-is-not-numeric')
-
-        member = ProfileAcademy.objects.filter(user=user_id_or_email,
-                                               academy__id=academy_id).exclude(role__slug='student').first()
-
-        if member is None:
-            raise ValidationException('Member not found', code=404, slug='profile-academy-not-found')
-
-        member.delete()
-        return Response(None, status=status.HTTP_204_NO_CONTENT)
+        raise ValidationException('This functionality is under maintenance and it\'s not working',
+                                  code=403,
+                                  slug='delete-is-forbidden')
 
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -483,11 +455,11 @@ class ResendInviteView(APIView):
             errors.append(C(f'This invite don\'t have email, contact to admin', slug=f'without-email'))
 
         now = timezone.now()
-        days = 1
-        if invite.sent_at and invite.sent_at + timedelta(days=1) > now:
+        minutes = 10
+        if invite.sent_at and invite.sent_at + timedelta(minutes=minutes) > now:
             errors.append(
-                C(f'You have a pending invitation sent less than {days} day ago, check your email',
-                  slug=f'sent-at-diff-less-{days}-days'))
+                C(f'You have a pending invitation sent less than {minutes} minutes ago, check your email',
+                  slug=f'sent-at-diff-less-{minutes}-minutes'))
 
         if errors:
             raise ValidationException(errors, code=400)
@@ -732,58 +704,9 @@ class StudentView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id_or_email=None):
-        lookups = self.generate_lookups(request, many_fields=['id'])
-        allow_old = request.GET.get('allow_old', 'false')
-        not_recent = []
-
-        if lookups and user_id_or_email:
-            raise ValidationException(
-                'user_id was provided in url '
-                'in bulk mode request, use querystring style instead',
-                code=400,
-                slug='user-id-and-bulk-mode')
-
-        if lookups:
-            items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
-            if allow_old != 'true':
-                responses = []
-                not_recent = items.filter(created_at__lt=Now() - timedelta(minutes=30))
-                responses.append(
-                    MultiStatusResponse('Only recently created students can be deleted',
-                                        code=400,
-                                        slug='non-recently-created',
-                                        queryset=not_recent))
-                items = items.filter(created_at__gt=Now() - timedelta(minutes=30))
-                if items:
-                    responses.append(MultiStatusResponse(code=204, queryset=items))
-
-            for item in items:
-
-                item.delete()
-
-            if not_recent:
-                response = response_207(responses, 'first_name')
-                return response
-            return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-        if academy_id is None or user_id_or_email is None:
-            raise serializers.ValidationError('Missing user_id or academy_id', code=400)
-
-        if user_id_or_email and not user_id_or_email.isnumeric():
-            raise ValidationException('User id must be a numeric value',
-                                      code=404,
-                                      slug='user-id-is-not-numeric')
-
-        profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                user__id=user_id_or_email,
-                                                role__slug='student').first()
-        if profile is None:
-            raise ValidationException('User doest not exist or does not belong to this academy',
-                                      code=404,
-                                      slug='profile-academy-not-found')
-
-        profile.delete()
-        return Response(None, status=status.HTTP_204_NO_CONTENT)
+        raise ValidationException('This functionality is under maintenance and it\'s not working',
+                                  code=403,
+                                  slug='delete-is-forbidden')
 
 
 class LoginView(ObtainAuthToken):
@@ -1090,6 +1013,10 @@ def save_github_token(request):
             github_credentials.company = github_user['company']
             github_credentials.twitter_username = github_user['twitter_username']
             github_credentials.save()
+
+            # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
+            # to keep it in sync when the user autenticate's with github
+            GithubAcademyUser.objects.filter(user=user).update(username=github_credentials.username)
 
             profile = Profile.objects.filter(user=user).first()
             if profile is None:

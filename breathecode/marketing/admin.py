@@ -173,14 +173,28 @@ class PPCFilter(SimpleListFilter):
 
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    search_fields = ['email', 'first_name', 'last_name', 'phone', 'utm_campaign']
-    list_display = ('id', '_storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location',
-                    'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
+    search_fields = ['email', 'first_name', 'last_name', 'phone', 'utm_campaign', 'utm_url']
+    list_display = ('id', '_attribution_id', '_storage_status', 'created_at', 'first_name', 'last_name',
+                    'email', 'location', 'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url',
+                    'gclid', 'tags')
     list_filter = [
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app', 'utm_medium',
         'utm_campaign', 'utm_source'
     ]
     actions = [send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
+
+    def _attribution_id(self, obj):
+
+        _html = f'<small>{obj.attribution_id}</small>'
+        if obj.won_at is not None:
+            colors = {
+                'WON': 'bg-success',
+                'LOST': 'bg-error',
+                None: '',
+            }
+            _html += f"<p class='{colors[obj.deal_status]}'>WON</p>"
+
+        return format_html(_html)
 
     def _storage_status(self, obj):
         colors = {

@@ -1,17 +1,22 @@
-from io import StringIO
+from datetime import date, datetime
+from io import BytesIO, StringIO
 import json
 import logging
 import math
 import os
+from typing import Any
 
 from celery import Task, shared_task
 import pandas as pd
 from breathecode.payments.services.stripe import Stripe
+from breathecode.utils.decorators import task
 
 from breathecode.provisioning import actions
-from breathecode.provisioning.models import ProvisioningActivity, ProvisioningBill
+from breathecode.provisioning.models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningUserConsumption
 from breathecode.services.google_cloud.storage import Storage
 from django.utils import timezone
+
+from breathecode.utils.io.file import cut_csv
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +36,14 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
-def calculate_bill_amounts(hash: str, *, force: bool = False):
+MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+    'November', 'December'
+]
+
+
+@task()
+def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     logger.info(f'Starting calculate_bill_amounts for hash {hash}')
 
     bills = ProvisioningBill.objects.filter(hash=hash)
@@ -47,32 +58,102 @@ def calculate_bill_amounts(hash: str, *, force: bool = False):
         logger.error(f'Does not exists bills for hash {hash}')
         return
 
+    if bills[0].vendor.name == 'Gitpod':
+        fields = ['id', 'credits', 'startTime', 'endTime', 'kind', 'userName', 'contextURL']
+
+    elif bills[0].vendor.name == 'Codespaces':
+        fields = [
+            'Username', 'Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)', 'Multiplier',
+            'Owner'
+        ]
+
+    storage = Storage()
+    cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
+    if not cloud_file.exists():
+        logger.error(f'File {hash} not found')
+        return
+
+    csvStringIO = BytesIO()
+    cloud_file.download(csvStringIO)
+    csvStringIO = cut_csv(csvStringIO, first=1)
+    csvStringIO.seek(0)
+
+    df1 = pd.read_csv(csvStringIO, sep=',', usecols=fields)
+
+    csvStringIO = BytesIO()
+    cloud_file.download(csvStringIO)
+    csvStringIO = cut_csv(csvStringIO, last=1)
+    csvStringIO.seek(0)
+
+    df2 = pd.read_csv(csvStringIO, sep=',', usecols=fields)
+
+    if bills[0].vendor.name == 'Gitpod':
+        first = df2['startTime'][0].split('-')
+        last = df1['startTime'][0].split('-')
+
+    elif bills[0].vendor.name == 'Codespaces':
+        first = df1['Date'][0].split('-')
+        last = df2['Date'][0].split('-')
+
+    first[2] = first[2].split('T')[0]
+    last[2] = last[2].split('T')[0]
+
+    month = MONTHS[int(first[1]) - 1]
+
+    import pytz
+
+    first = datetime(int(first[0]), int(first[1]), int(first[2]), 0, 0, 0, 0, pytz.UTC)
+    last = datetime(int(last[0]), int(last[1]), int(last[2]))
+
     for bill in bills:
         amount = 0
-        for activity in ProvisioningActivity.objects.filter(bill=bill):
-            amount += activity.price_per_unit * activity.quantity
+        for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status='PERSISTED'):
+            consumption_amount = 0
+            consumption_quantity = 0
+            for item in activity.events.all():
+                consumption_amount += item.price.get_price(item.quantity)
+                consumption_quantity += item.quantity
+
+            activity.amount = consumption_amount
+            activity.quantity = consumption_quantity
+            activity.save()
+
+            amount += consumption_amount
 
         bill.status = 'DUE' if amount else 'PAID'
 
         if amount:
             credit_price = get_provisioning_credit_price()
             quantity = math.ceil(amount / credit_price)
+            new_price = quantity * credit_price
 
             s = Stripe()
-            bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
-            bill.total_amount = quantity * credit_price
+            bill.stripe_id, bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
+            bill.fee = new_price - amount
+            bill.total_amount = new_price
 
         else:
             bill.total_amount = amount
 
+        bill.started_at = first
+        bill.ended_at = last
+        bill.title = f'{month} {first.year}'
         bill.save()
 
 
 PANDAS_ROWS_LIMIT = 100
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
-def upload(hash: str, page: int = 0, *, force: bool = False):
+def reverse_upload(hash: str, **_: Any):
+    logger.info(f'Canceling upload for hash {hash}')
+
+    ProvisioningConsumptionEvent.objects.filter(provisioninguserconsumption__hash=hash).delete()
+    ProvisioningUserConsumption.objects.filter(hash=hash).delete()
+    ProvisioningBill.objects.filter(hash=hash).delete()
+
+
+@task(reverse=reverse_upload)
+def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: int = 0, **_: Any):
     logger.info(f'Starting upload for hash {hash}')
 
     limit = PANDAS_ROWS_LIMIT
@@ -82,6 +163,9 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         'provisioning_bills': {},
         'provisioning_vendors': {},
         'github_academy_user_logs': {},
+        'provisioning_activity_prices': {},
+        'provisioning_activity_kinds': {},
+        'currencies': {},
         'profile_academies': {},
         'hash': hash,
         'limit': timezone.now(),
@@ -89,7 +173,7 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
     }
 
     storage = Storage()
-    cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), hash)
+    cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
     if not cloud_file.exists():
         logger.error(f'File {hash} not found')
         return
@@ -107,21 +191,22 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
 
     if force:
         for bill in pending_bills:
-            ProvisioningActivity.objects.filter(bill=bill).delete()
+            ProvisioningUserConsumption.objects.filter(bills=bill).delete()
 
         pending_bills.delete()
 
-    s = cloud_file.download().decode('utf-8')
+    csvStringIO = BytesIO()
+    cloud_file.download(csvStringIO)
+    csvStringIO = cut_csv(csvStringIO, start=start, end=end)
+    csvStringIO.seek(0)
 
-    csvStringIO = StringIO(s)
     df = pd.read_csv(csvStringIO, sep=',')
 
     handler = None
 
-    fields = ['id', 'creditCents', 'effectiveTime', 'kind', 'metadata']
-    if (len(df.keys().intersection(fields)) == len(fields) and len(
-        {x
-         for x in json.loads(df.iloc[0]['metadata'])}.intersection({'userName', 'contextURL'})) == 2):
+    # edit it
+    fields = ['id', 'credits', 'startTime', 'endTime', 'kind', 'userName', 'contextURL']
+    if len(df.keys().intersection(fields)) == len(fields):
         handler = actions.add_gitpod_activity
 
     if not handler:
@@ -141,9 +226,12 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         context['limit'] = prev_bill.created_at
 
     try:
-        for i in range(start, end):
+        i = 0
+        for position in range(start, end):
             try:
-                handler(context, df.iloc[i].to_dict())
+                handler(context, df.iloc[i].to_dict(), position)
+                i += 1
+
             except IndexError:
                 break
 
@@ -154,11 +242,11 @@ def upload(hash: str, page: int = 0, *, force: bool = False):
         return
 
     for bill in context['provisioning_bills'].values():
-        if not ProvisioningActivity.objects.filter(bill=bill).exists():
+        if not ProvisioningUserConsumption.objects.filter(bills=bill).exists():
             bill.delete()
 
-    if len(df.iloc[start:end]) == limit:
-        upload.delay(hash, page + 1)
+    if len(df) == limit:
+        upload.delay(hash, page=page + 1, task_manager_id=task_manager_id)
 
-    elif not ProvisioningActivity.objects.filter(hash=hash, status='ERROR').exists():
+    elif not ProvisioningUserConsumption.objects.filter(hash=hash, status='ERROR').exists():
         calculate_bill_amounts.delay(hash)

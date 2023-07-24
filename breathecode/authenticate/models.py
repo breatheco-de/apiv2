@@ -16,6 +16,7 @@ from breathecode.authenticate import tasks
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
+from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators import validate_language_code
 from .signals import invite_status_updated, profile_academy_saved, academy_invite_accepted
 from breathecode.admissions.models import Academy, Cohort

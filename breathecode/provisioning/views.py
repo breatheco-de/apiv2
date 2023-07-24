@@ -1,31 +1,40 @@
+from datetime import date
 import hashlib
 from io import StringIO
-import json
+import math
 import os
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.provisioning.serializers import ProvisioningActivitySerializer, ProvisioningBillSerializer
-from breathecode.provisioning.tasks import upload
+from breathecode.notify.actions import get_template_content
+from breathecode.provisioning import tasks
+from breathecode.provisioning.serializers import (GetProvisioningUserConsumptionSerializer,
+                                                  ProvisioningBillSerializer, ProvisioningBillHTMLSerializer,
+                                                  ProvisioningUserConsumptionHTMLResumeSerializer,
+                                                  GetProvisioningBillSmallSerializer)
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
+from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
+from breathecode.utils import cut_csv
 from .actions import get_provisioning_vendor
-from .models import ProvisioningActivity, ProvisioningProfile, ProvisioningBill
+from .models import BILL_STATUS, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 import pandas as pd
+from django.shortcuts import render
 from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.renderers import JSONRenderer
-from rest_framework.decorators import api_view, permission_classes
 from django.http import HttpResponse
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
+from dateutil.relativedelta import relativedelta
 
 
 @private_view()
@@ -36,7 +45,7 @@ def redirect_new_container(request, token):
     if cohort_id is None: return render_message(request, f'Please specificy a cohort in the URL')
 
     url = request.GET.get('repo', None)
-    if url is None: return render_message(request, f'Please specificy a repository in the URL')
+    if url is None: return render_message(request, f'Please specify a repository in the URL')
 
     cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
     if cu is None: return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.")
@@ -89,7 +98,7 @@ def redirect_workspaces(request, token):
     return redirect(vendor.workspaces_url)
 
 
-class AcademyActivityView(APIView):
+class AcademyProvisioningUserConsumptionView(APIView):
     extensions = APIViewExtensions(sort='-id')
 
     renderer_classes = [JSONRenderer, CSVRenderer]
@@ -102,26 +111,30 @@ class AcademyActivityView(APIView):
         query = handler.lookup.build(
             lang,
             strings={
-                'exact': [
+                'iexact': [
                     'hash',
                     'username',
-                    'product_name',
                     'status',
+                    'kind__product_name',
+                    'kind__sku',
                 ],
             },
             datetimes={
-                'gte': ['registered_at'],
+                'gte': ['processed_at'],
                 'lte': ['created_at'],  # fix it
             },
             overwrite={
-                'start': 'registered_at',
+                'start': 'processed_at',
                 'end': 'created_at',
+                'product_name': 'kind__product_name',
+                'sku': 'kind__sku',
             },
         )
 
-        items = ProvisioningActivity.objects.filter(query, bill__academy__id=academy_id)
+        items = ProvisioningUserConsumption.objects.filter(query, bills__academy__id=academy_id)
         items = handler.queryset(items)
-        serializer = ProvisioningActivitySerializer(items, many=True)
+
+        serializer = GetProvisioningUserConsumptionSerializer(items, many=True)
         return Response(serializer.data)
 
 
@@ -148,23 +161,50 @@ class UploadView(APIView):
                             slug='bad-format'))
 
         content_bytes = file.read()
-        content = content_bytes.decode('utf-8')
         hash = hashlib.sha256(content_bytes).hexdigest()
 
         file.seek(0)
-
-        csvStringIO = StringIO(content)
-        df = pd.read_csv(csvStringIO, sep=',')
+        csv_first_line = cut_csv(file, first=1)
+        df = pd.read_csv(csv_first_line, sep=',')
         df.reset_index()
 
         format_error = True
 
         # gitpod
-        fields = ['id', 'creditCents', 'effectiveTime', 'kind', 'metadata']
-        if (len(df.keys().intersection(fields)) == len(fields) and len(
-            {x
-             for x in json.loads(df.iloc[0]['metadata'])}.intersection({'userName', 'contextURL'})) == 2):
+        fields = ['id', 'credits', 'startTime', 'endTime', 'kind', 'userName', 'contextURL']
+        if len(df.keys().intersection(fields)) == len(fields):
             format_error = False
+
+            csv_last_line = cut_csv(file, last=1)
+            df2 = pd.read_csv(csv_last_line, sep=',', usecols=fields)
+            df2.reset_index()
+
+            try:
+
+                first = df2['startTime'][0].split('-')
+                last = df['startTime'][0].split('-')
+
+                first[2] = first[2].split('T')[0]
+                last[2] = last[2].split('T')[0]
+
+                first = date(int(first[0]), int(first[1]), int(first[2]))
+                last = date(int(last[0]), int(last[1]), int(last[2]))
+
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='CSV file from unknown source',
+                                es='Archivo CSV de fuente desconocida',
+                                slug='bad-date-format'))
+
+            delta = relativedelta(last, first)
+
+            if delta.years > 0 or delta.months > 1 or (delta.months > 1 and delta.days > 1):
+                raise ValidationException(
+                    translation(lang,
+                                en='Each file must have only one month of data',
+                                es='Cada archivo debe tener solo un mes de datos',
+                                slug='overflow'))
 
         if format_error:
             # codespaces
@@ -175,6 +215,34 @@ class UploadView(APIView):
 
         if format_error and len(df.keys().intersection(fields)) == len(fields):
             format_error = False
+
+            csv_last_line = cut_csv(file, last=1)
+            df2 = pd.read_csv(csv_last_line, sep=',', usecols=fields)
+            df2.reset_index()
+
+            try:
+
+                first = df['Date'][0].split('-')
+                last = df2['Date'][0].split('-')
+
+                first = date(int(first[0]), int(first[1]), int(first[2]))
+                last = date(int(last[0]), int(last[1]), int(last[2]))
+
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='CSV file from unknown source',
+                                es='Archivo CSV de fuente desconocida',
+                                slug='bad-date-format'))
+
+            delta = relativedelta(last, first)
+
+            if delta.years > 0 or delta.months > 1 or (delta.months > 1 and delta.days > 1):
+                raise ValidationException(
+                    translation(lang,
+                                en='Each file must have only one month of data',
+                                es='Cada archivo debe tener solo un mes de datos',
+                                slug='overflow'))
 
         # Think about uploading correct files and leaving out incorrect ones
         if format_error:
@@ -193,7 +261,7 @@ class UploadView(APIView):
         if created:
             cloud_file.upload(file, content_type=file.content_type)
 
-        upload.delay(hash)
+        tasks.upload.delay(hash, total_pages=math.ceil(count_csv_rows(file) / tasks.PANDAS_ROWS_LIMIT))
 
         data = {'file_name': hash, 'status': 'PENDING', 'created': created}
 
@@ -257,26 +325,185 @@ class UploadView(APIView):
         return Response(result, status=status.HTTP_207_MULTI_STATUS)
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def render_html_bill(request, id=None):
-    item = ProvisioningBill.objects.filter(id=id).first()
-    if item is None:
-        template = get_template_content('message', {'message': 'Bill not found'})
-        return HttpResponse(template['html'])
+@private_view()
+def render_html_all_bills(request, token):
+    lang = get_user_language(request)
+    academy_ids = {
+        x.academy.id
+        for x in ProfileAcademy.objects.filter(user=request.user,
+                                               role__capabilities__slug='crud_provisioning_bill')
+    }
+
+    if not academy_ids:
+        return render(request,
+                      'message.html', {
+                          'MESSAGE':
+                          translation(lang,
+                                      en='You have no access to this resource',
+                                      es='No tienes acceso a este recurso',
+                                      slug='no-access')
+                      },
+                      status=403)
+
+    status_mapper = {}
+    for key, value in BILL_STATUS:
+        status_mapper[key] = value
+
+    lookup = {}
+
+    status = 'DUE'
+    if 'status' in request.GET:
+        status = request.GET.get('status')
+    lookup['status'] = status.upper()
+
+    if 'academy' in request.GET:
+        ids = {int(x) for x in request.GET.get('academy').split(',')}
+        lookup['academy__id__in'] = academy_ids.intersection(ids)
+
     else:
-        serializer = ProvisioningBillSerializer(item, many=False)
-        status_map = {'DUE': 'DUE', 'PENDING': 'PENDING PAYMENT', 'PAID': 'ALREADY PAID'}
-        data = {
-            **serializer.data, 'provisioning_activities':
-            ProvisioningActivitySerializer(item.provisioningactivity_set.all(), many=True).data,
-            'status':
-            status_map[serializer.data['status']],
-            'title':
-            f'Bill { serializer.data["academy"]["name"] } - Invoice { item.id }'
-        }
-        template = get_template_content('provisioning_invoice', data)
-        return HttpResponse(template['html'])
+        lookup['academy__id__in'] = academy_ids
+
+    items = ProvisioningBill.objects.filter(**lookup).exclude(academy__isnull=True)
+
+    total_price = 0
+    for bill in []:
+        total_price += bill['total_price']
+
+    data = {
+        'status': status,
+        'token': token.key,
+        'title': f'Payments {status_mapper[status]}',
+        'possible_status': [(key, status_mapper[key]) for key, label in BILL_STATUS],
+        'bills': items,
+        'total_price': total_price
+    }
+    template = get_template_content('provisioning_bills', data)
+    return HttpResponse(template['html'])
+
+
+LIMIT_PER_PAGE_HTML = 10
+
+
+@private_view()
+def render_html_bill(request, token, id=None):
+    lang = get_user_language(request)
+    academy_ids = {
+        x.academy.id
+        for x in ProfileAcademy.objects.filter(user=request.user,
+                                               role__capabilities__slug='crud_provisioning_bill')
+    }
+
+    if not academy_ids:
+        return render(request,
+                      'message.html', {
+                          'MESSAGE':
+                          translation(lang,
+                                      en='You have no access to this resource',
+                                      es='No tienes acceso a este recurso',
+                                      slug='no-access')
+                      },
+                      status=403)
+
+    item = ProvisioningBill.objects.filter(id=id, academy__isnull=False).first()
+    if item is None:
+        return render(request, 'message.html', {
+            'MESSAGE':
+            translation(lang, en='Bill not found', es='Factura no encontrada', slug='bill-not-found')
+        })
+
+    status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
+    status_mapper = {}
+    for key, value in BILL_STATUS:
+        status_mapper[key] = value
+
+    bill_serialized = ProvisioningBillHTMLSerializer(item, many=False).data
+
+    consumptions = ProvisioningUserConsumption.objects.filter(bills=item)
+    pages = math.ceil(consumptions.count() / LIMIT_PER_PAGE_HTML)
+    page = int(request.GET.get('page', 0))
+
+    consumptions = consumptions.order_by('username')[0:(page * LIMIT_PER_PAGE_HTML) + LIMIT_PER_PAGE_HTML]
+
+    consumptions_serialized = ProvisioningUserConsumptionHTMLResumeSerializer(consumptions, many=True).data
+
+    url = request.get_full_path()
+
+    u = urlparse(url)
+    query = parse_qs(u.query, keep_blank_values=True)
+    query.pop('page', None)
+    u = u._replace(query=urlencode(query, True))
+
+    url = urlunparse(u)
+
+    if not '?' in url:
+        url += '?'
+
+    page += 1
+
+    data = {
+        'bill': bill_serialized,
+        'consumptions': consumptions_serialized,
+        'status': status_map[item.status],
+        'title': item.academy.name,
+        'pages': pages,
+        'page': page,
+        'url': url,
+    }
+    template = get_template_content('provisioning_invoice', data)
+    return HttpResponse(template['html'])
+
+
+class AcademyBillView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of('read_provisioning_bill')
+    def get(self, request, academy_id=None, bill_id=None):
+        handler = self.extensions(request)
+
+        if bill_id is not None:
+            bill = ProvisioningBill.objects.filter(academy__id=academy_id, id=bill_id).first()
+
+            if bill is None:
+                raise ValidationException('Provisioning Bill not found',
+                                          code=404,
+                                          slug='provisioning_bill-not-found')
+
+            serializer = GetProvisioningBillSerializer(bill, many=False)
+            return Response(serializer.data)
+
+        items = ProvisioningBill.objects.filter(academy__id=academy_id)
+
+        status = request.GET.get('status', None)
+        if status is not None:
+            items = items.filter(status__in=status.upper().split(','))
+
+        items = handler.queryset(items)
+        serializer = GetProvisioningBillSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of('crud_provisioning_bill')
+    def put(self, request, bill_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        item = ProvisioningBill.objects.filter(id=bill_id, academy__id=academy_id).first()
+        if item is None:
+            raise ValidationException(translation(
+                lang,
+                en='Not found',
+                es='No encontrado',
+                slug='not-found',
+            ),
+                                      code=404)
+
+        serializer = ProvisioningBillSerializer(item, data=request.data, many=False, context={'lang': lang})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # class ContainerMeView(APIView):

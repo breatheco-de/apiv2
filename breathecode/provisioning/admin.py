@@ -2,8 +2,11 @@ import logging, secrets
 from django.contrib import admin, messages
 from django import forms
 from django.utils.html import format_html
-from .models import (ProvisioningVendor, ProvisioningMachineTypes, ProvisioningAcademy, ProvisioningBill,
-                     ProvisioningActivity, ProvisioningContainer, ProvisioningProfile)
+
+from breathecode.provisioning import tasks
+from .models import (ProvisioningConsumptionEvent, ProvisioningConsumptionKind, ProvisioningPrice,
+                     ProvisioningUserConsumption, ProvisioningVendor, ProvisioningMachineTypes,
+                     ProvisioningAcademy, ProvisioningBill, ProvisioningContainer, ProvisioningProfile)
 # from .actions import ()
 from django.utils import timezone
 from breathecode.utils.validation_exception import ValidationException
@@ -32,11 +35,36 @@ class ProvisioningAcademyAdmin(admin.ModelAdmin):
     list_filter = ['vendor']
 
 
-@admin.register(ProvisioningActivity)
-class ProvisioningActivityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'username', 'registered_at', 'product_name', 'sku', 'quantity', 'bill')
-    search_fields = ['username', 'task_associated_slug', 'bill__hash']
-    list_filter = ['bill__academy', 'status', ('bill', admin.EmptyFieldListFilter)]
+@admin.register(ProvisioningConsumptionKind)
+class ProvisioningConsumptionKindAdmin(admin.ModelAdmin):
+    list_display = ('id', 'product_name', 'sku')
+    search_fields = ['product_name']
+    list_filter = ['product_name']
+    actions = []
+
+
+@admin.register(ProvisioningPrice)
+class ProvisioningPriceAdmin(admin.ModelAdmin):
+    list_display = ('id', 'currency', 'unit_type', 'price_per_unit', 'multiplier')
+    search_fields = ['currency__code']
+    list_filter = ['currency__code', 'unit_type']
+    actions = []
+
+
+@admin.register(ProvisioningConsumptionEvent)
+class ProvisioningConsumptionEventAdmin(admin.ModelAdmin):
+    list_display = ('id', 'registered_at', 'external_pk', 'csv_row', 'vendor', 'quantity', 'repository_url',
+                    'task_associated_slug')
+    search_fields = ['repository_url', 'task_associated_slug', 'provisioninguserconsumption__bills__hash']
+    list_filter = ['vendor']
+    actions = []
+
+
+@admin.register(ProvisioningUserConsumption)
+class ProvisioningUserConsumptionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'username', 'kind', 'amount', 'quantity', '_status', 'processed_at')
+    search_fields = ['username', 'events__task_associated_slug', 'bills__hash']
+    list_filter = ['bills__academy', 'status']
     actions = []
 
     def _status(self, obj):
@@ -44,6 +72,7 @@ class ProvisioningActivityAdmin(admin.ModelAdmin):
             'PERSISTED': 'bg-success',
             'PENDING': 'bg-error',
             'ERROR': 'bg-error',
+            'IGNORED': 'bg-warning',
             None: 'bg-warning',
         }
 
@@ -56,12 +85,28 @@ class ProvisioningActivityAdmin(admin.ModelAdmin):
             f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_text}</small>")
 
 
+def force_calculate_bill(modeladmin, request, queryset):
+    for x in queryset.all():
+        tasks.calculate_bill_amounts.delay(x.hash, force=True)
+
+
+def reverse_bill(modeladmin, request, queryset):
+    for x in queryset.all():
+        tasks.reverse_upload(x.hash)
+
+
 @admin.register(ProvisioningBill)
 class ProvisioningBillAdmin(admin.ModelAdmin):
-    list_display = ('id', 'academy', '_status', 'total_amount', 'currency_code', 'paid_at')
-    search_fields = ['academy__name', 'academy__slug', 'id']
-    list_filter = ['academy', 'status']
-    actions = []
+    list_display = ('id', 'title', 'vendor', 'academy', '_status', 'total_amount', 'currency_code', 'paid_at',
+                    'invoice_url')
+    search_fields = ['academy__name', 'academy__slug', 'id', 'title']
+    list_filter = ['academy', 'status', 'vendor']
+    actions = [force_calculate_bill, reverse_bill]
+
+    def invoice_url(self, obj):
+        return format_html(
+            "<a rel='noopener noreferrer' target='_blank' href='/v1/provisioning/bill/{id}/html'>open invoice</a>",
+            id=obj.id)
 
     def _status(self, obj):
         colors = {
