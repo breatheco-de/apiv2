@@ -1092,6 +1092,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             raise ValidationException(
                 translation(lang, en='Email is required', es='El email es requerido', slug='without-email'))
 
+        data['email'] = data['email'].lower()
+
         extra = {}
 
         plan = None
@@ -1135,6 +1137,16 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if syllabus := data.get('syllabus'):
             extra['syllabus'] = syllabus
 
+        have_pending_invites = UserInvite.objects.filter(email=data['email'], status='PENDING').exists()
+        have_accepted_invites = UserInvite.objects.filter(email=data['email'], status='ACCEPTED').exists()
+
+        if not have_accepted_invites and have_pending_invites:
+            raise ValidationException(
+                translation(lang,
+                            en='User already exists, go ahead and log in instead.',
+                            es='El usuario ya existe, inicie sesión en su lugar.',
+                            slug='invite-exists'))
+
         invites = UserInvite.objects.filter(email=data['email'], **extra)
 
         if not self.instance and invites.filter(status='WAITING_LIST').exists():
@@ -1162,6 +1174,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                                       slug='user-invite-exists-status-accepted')
 
         user = User.objects.filter(email=data['email']).first()
+
+        if user:
+            for i in UserInvite.objects.filter(user__isnull=True, email=data['email'], status='ACCEPTED'):
+                i.user = user
+                i.save()
 
         if not self.instance and user:
             raise ValidationException(translation(lang,
@@ -1272,6 +1289,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                     'SUBJECT': subject,
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
                 })
+
+        self.instance.user = self.user
+        self.instance.save()
 
         token, _ = Token.get_or_create(user=self.user, token_type='login')
         return token.key

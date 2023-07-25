@@ -144,6 +144,7 @@ class UserInvite(models.Model):
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
     is_email_validated = models.BooleanField(default=False)
 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None, blank=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
     syllabus = models.ForeignKey('admissions.Syllabus',
                                  on_delete=models.CASCADE,

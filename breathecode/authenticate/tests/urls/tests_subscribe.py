@@ -73,6 +73,7 @@ def user_invite_db_item(data={}):
         'process_message': '',
         'process_status': 'PENDING',
         'syllabus_id': None,
+        'user_id': None,
         **data,
     }
 
@@ -170,6 +171,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': 1,
                              'academy_id': None,
                              'author_id': None,
                              'cohort_id': None,
@@ -236,13 +238,41 @@ class SubscribeTestSuite(AuthTestCase):
         response = self.client.post(url, data, format='json')
 
         json = response.json()
-        expected = {'detail': 'user-invite-exists-status-pending', 'status_code': 400}
+        expected = {'detail': 'invite-exists', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             self.bc.format.to_dict(model.user_invite),
         ])
+
+        self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
+        self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=now))
+    def test_task__post__with_user_invite__already_exists__status_pending__(self):
+        """
+        Descriptions of models are being generated:
+
+          UserInvite(id=1): {}
+        """
+
+        user_invites = [{'email': 'pokemon@potato.io', 'status': x} for x in ['PENDING', 'ACCEPTED']]
+        model = self.bc.database.create(user_invite=user_invites)
+
+        url = reverse_lazy('authenticate:subscribe')
+        data = {'email': 'pokemon@potato.io'}
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'user-invite-exists-status-pending', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.bc.database.list_of('authenticate.UserInvite'),
+            self.bc.format.to_dict(model.user_invite),
+        )
 
         self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
@@ -354,6 +384,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             self.bc.format.to_dict(model.user_invite), {
+                'user_id': 1,
                 'academy_id': None,
                 'author_id': None,
                 'cohort_id': None,
@@ -447,6 +478,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             self.bc.format.to_dict(model.user_invite), {
+                'user_id': None,
                 'academy_id': None,
                 'author_id': None,
                 'cohort_id': None,
@@ -512,6 +544,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             self.bc.format.to_dict(model.user_invite), {
+                'user_id': 1,
                 'academy_id': None,
                 'author_id': None,
                 'cohort_id': None,
@@ -646,6 +679,7 @@ class SubscribeTestSuite(AuthTestCase):
                     'process_status': 'DONE',
                     'status': 'ACCEPTED',
                     'academy_id': 1,
+                    'user_id': 1,
                     **data,
                 }),
         ])
@@ -724,6 +758,7 @@ class SubscribeTestSuite(AuthTestCase):
                     'process_status': 'DONE',
                     'status': 'ACCEPTED',
                     'academy_id': 1,
+                    'user_id': 1,
                     **data,
                 }),
         ])
@@ -1049,6 +1084,7 @@ class SubscribeTestSuite(AuthTestCase):
                     'process_status': 'DONE',
                     'academy_id': 1,
                     'cohort_id': 1,
+                    'user_id': 1,
                     **data,
                     'id': 2,
                 }),
@@ -1142,6 +1178,7 @@ class SubscribeTestSuite(AuthTestCase):
                     'process_status': 'DONE',
                     'academy_id': None,
                     'syllabus_id': 1,
+                    'user_id': 1,
                     **data,
                     'id': 2,
                 }),
@@ -1250,6 +1287,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': 1,
                              'academy_id': None,
                              'author_id': None,
                              'cohort_id': None,
@@ -1335,6 +1373,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': None,
                              'academy_id': None,
                              'author_id': None,
                              'cohort_id': None,
@@ -1406,6 +1445,7 @@ class SubscribeTestSuite(AuthTestCase):
         del data['cohort']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': 1,
                              'academy_id': 1,
                              'author_id': None,
                              'cohort_id': 1,
@@ -1500,6 +1540,7 @@ class SubscribeTestSuite(AuthTestCase):
         del data['cohort']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': 1,
                              'academy_id': 1,
                              'author_id': None,
                              'cohort_id': 1,
@@ -1595,6 +1636,7 @@ class SubscribeTestSuite(AuthTestCase):
         del data['cohort']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': 1,
                              'academy_id': 1,
                              'author_id': 1,
                              'cohort_id': 1,
@@ -1656,6 +1698,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': None,
                              'academy_id': None,
                              'author_id': None,
                              'cohort_id': None,
@@ -1729,6 +1772,7 @@ class SubscribeTestSuite(AuthTestCase):
         del data['syllabus']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             {
+                'user_id': 1,
                 'academy_id': 1,
                 'author_id': None,
                 'cohort_id': None,
@@ -1828,6 +1872,7 @@ class SubscribeTestSuite(AuthTestCase):
         del data['syllabus']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': 1,
                              'academy_id': 1,
                              'author_id': None,
                              'cohort_id': None,
@@ -1929,6 +1974,7 @@ class SubscribeTestSuite(AuthTestCase):
         del data['syllabus']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': 1,
                              'academy_id': 1,
                              'author_id': 1,
                              'cohort_id': None,
@@ -1996,6 +2042,7 @@ class SubscribeTestSuite(AuthTestCase):
         # del data['cohort']
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': None,
                              'academy_id': 1,
                              'author_id': None,
                              'cohort_id': 1,
@@ -2072,6 +2119,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [{
+            'user_id': None,
             'academy_id': 1,
             'author_id': None,
             'cohort_id': None,
@@ -2144,6 +2192,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [{
+            'user_id': 1,
             'academy_id': 1,
             'author_id': None,
             'cohort_id': None,
@@ -2277,13 +2326,15 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            user_invite_db_item(data={
-                'token': token,
-                'process_status': 'DONE',
-                'status': 'ACCEPTED',
-                'academy_id': 1,
-                **data,
-            }),
+            user_invite_db_item(
+                data={
+                    'token': token,
+                    'process_status': 'DONE',
+                    'status': 'ACCEPTED',
+                    'academy_id': 1,
+                    'user_id': 1,
+                    **data,
+                }),
         ])
 
         del data['phone']
@@ -2362,13 +2413,15 @@ class SubscribeTestSuite(AuthTestCase):
 
         data['syllabus_id'] = data.pop('syllabus')
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            user_invite_db_item(data={
-                'token': token,
-                'process_status': 'DONE',
-                'status': 'ACCEPTED',
-                'academy_id': 1,
-                **data,
-            }),
+            user_invite_db_item(
+                data={
+                    'token': token,
+                    'process_status': 'DONE',
+                    'status': 'ACCEPTED',
+                    'academy_id': 1,
+                    'user_id': 1,
+                    **data,
+                }),
         ])
 
         del data['phone']
