@@ -35,10 +35,10 @@ def get_app(pk: str | int) -> App:
 
 class Service:
 
-    def __init__(self, app_pk: str | int, user_pk: Optional[str | int] = None, use_signature: bool = False):
+    def __init__(self, app_pk: str | int, user_pk: Optional[str | int] = None, *, mode: Optional[str] = None):
         self.app = get_app(app_pk)
         self.user_pk = user_pk
-        self.use_signature = use_signature
+        self.mode = mode
 
     def _sign(self, method, params=None, data=None, json=None, **kwargs) -> requests.Request:
         from breathecode.authenticate.actions import get_signature
@@ -72,10 +72,10 @@ class Service:
         return headers
 
     def _authenticate(self, method, params=None, data=None, json=None, **kwargs) -> requests.Request:
-        if self.app.strategy == 'SIGNATURE' or self.use_signature:
+        if self.mode == 'signature' or self.app.strategy == 'SIGNATURE':
             return self._sign(method, params=params, data=data, json=json, **kwargs)
 
-        elif self.app.strategy == 'JWT':
+        elif self.mode == 'jwt' or self.app.strategy == 'JWT':
             return self._jwt(self, method, **kwargs)
 
         raise Exception('Strategy not implemented')

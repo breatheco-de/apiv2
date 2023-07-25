@@ -43,6 +43,7 @@ from breathecode.utils.decorators.scope import scope
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils.service import Service
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
@@ -2356,4 +2357,28 @@ def app_webhook(request, app: dict):
     return Response({'message': 'ok'})
 
 
-# app/webhook
+# demo
+class DemoView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(paginate=True)
+
+    def get(self, request, user_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        # default from app (jwt)
+        s = Service('rigobot', request.user.id)
+        request = s.get('https://rigobot.4geeks.com/user')
+        response = request.json()
+
+        # force jwt
+        s = Service('rigobot', request.user.id, mode='jwt')
+        request = s.get('https://rigobot.4geeks.com/user')
+        response = request.json()
+
+        # force signature
+        s = Service('rigobot', request.user.id, mode='signature')
+        request = s.get('https://rigobot.4geeks.com/webhook')
+        response = request.json()
+
+        return Response({'message': 'ok'})
