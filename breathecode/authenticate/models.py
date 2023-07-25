@@ -12,7 +12,6 @@ from django.core.validators import RegexValidator
 from django.contrib.contenttypes.models import ContentType
 from django import forms
 from slugify import slugify
-from breathecode.authenticate import tasks
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
@@ -117,9 +116,6 @@ class Scope(models.Model):
     name = models.SlugField(max_length=25, unique=True)
     slug = models.SlugField(unique=True)
     description = models.CharField(max_length=255)
-    internal = models.BooleanField(default=False,
-                                   help_text='If true, this scope is only for internal use and '
-                                   'it will not be shown to the user')
 
     def clean(self) -> None:
         if not self.slug:
@@ -164,7 +160,7 @@ ASYMMETRIC_ALGORITHMS = [ED25519]
 class App(models.Model):
 
     def __init__(self, *args, **kwargs):
-        super(UserInvite, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._algorithm = self.algorithm
         self._strategy = self.strategy
@@ -183,15 +179,15 @@ class App(models.Model):
     strategy = models.CharField(max_length=9, choices=AUTH_STRATEGY)
     schema = models.CharField(max_length=4, choices=AUTH_SCHEMA)
 
-    available_scopes = models.ManyToManyField(Scope, blank=True)
-    optional_scopes = models.ManyToManyField(Scope, blank=True)
+    required_scopes = models.ManyToManyField(Scope, blank=True, related_name='app_required_scopes')
+    optional_scopes = models.ManyToManyField(Scope, blank=True, related_name='app_optional_scopes')
     agreement_version = models.IntegerField(default=1,
                                             help_text='Version of the agreement, based in the scopes')
 
     private_key = models.CharField(max_length=255, blank=True, null=False)
     public_key = models.CharField(max_length=255, blank=True, null=True, default=None)
     require_an_agreement = models.BooleanField(
-        default=False, help_text='If true, the user will be required to accept an agreement')
+        default=True, help_text='If true, the user will be required to accept an agreement')
 
     webhook_url = models.URLField()
     redirect_url = models.URLField()
@@ -204,6 +200,7 @@ class App(models.Model):
 
     def clean(self) -> None:
         from .actions import generate_auth_keys
+
         if not self.slug:
             self.slug = slugify(self.name)
 
@@ -216,11 +213,15 @@ class App(models.Model):
         return super().clean()
 
     def save(self, *args, **kwargs):
+        from .actions import reset_app_cache
+
+        had_pk = self.pk
+
         self.full_clean()
         super().save(*args, **kwargs)
 
-        if self.id and (self.private_key != self._private_key or self.public_key != self._public_key
-                        or self.algorithm != self._algorithm):
+        if had_pk and (self.private_key != self._private_key or self.public_key != self._public_key
+                       or self.algorithm != self._algorithm):
             key = LegacyKey()
             key.app = self
 
@@ -236,6 +237,9 @@ class App(models.Model):
 
             key.save()
 
+        if had_pk:
+            reset_app_cache()
+
         self._algorithm = self.algorithm
         self._strategy = self.strategy
         self._schema = self.schema
@@ -247,15 +251,41 @@ class App(models.Model):
         self._redirect_url = self.redirect_url
 
 
-class OptionalScopesCache(models.Model):
+class OptionalScopeSet(models.Model):
     optional_scopes = models.ManyToManyField(Scope, blank=True)
+
+    def save(self, *args, **kwargs):
+        from .actions import reset_app_user_cache
+
+        had_pk = self.pk
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        self.__class__.objects.exclude(app_user_agreement__id__gte=1).delete()
+
+        if had_pk:
+            reset_app_user_cache()
 
 
 class AppUserAgreement(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     app = models.ForeignKey(App, on_delete=models.CASCADE)
-    optional_scopes_cache = models.ForeignKey(OptionalScopesCache, on_delete=models.CASCADE)
+    optional_scope_set = models.ForeignKey(OptionalScopeSet,
+                                           on_delete=models.CASCADE,
+                                           related_name='app_user_agreement')
     agreement_version = models.IntegerField(default=1, help_text='Version of the agreement that was accepted')
+
+    def save(self, *args, **kwargs):
+        from .actions import reset_app_user_cache
+
+        had_pk = self.pk
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        if had_pk:
+            reset_app_user_cache()
 
 
 LEGACY_KEY_LIFETIME = timezone.timedelta(minutes=2)
@@ -279,7 +309,7 @@ class LegacyKey(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.slug})'
+        return f'{self.app.name} ({self.app.slug})'
 
     def clean(self) -> None:
         if self.public_key and self.algorithm in SYMMETRIC_ALGORITHMS:
@@ -291,10 +321,12 @@ class LegacyKey(models.Model):
         return super().clean()
 
     def save(self, *args, **kwargs):
+        from breathecode.authenticate import tasks
+
         self.full_clean()
         super().save(*args, **kwargs)
 
-        tasks.destroy_legacy_key.apply_async(args=(self.id), eta=LEGACY_KEY_LIFETIME)
+        tasks.destroy_legacy_key.apply_async(args=(self.id, ), eta=timezone.now() + LEGACY_KEY_LIFETIME)
 
 
 PENDING = 'PENDING'

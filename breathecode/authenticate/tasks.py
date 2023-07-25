@@ -1,6 +1,5 @@
 import logging, os
 from celery import shared_task, Task
-from .models import UserInvite, Token
 from django.contrib.auth.models import User
 from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions
@@ -35,6 +34,8 @@ def async_remove_from_organization(cohort_id, user_id, force=False):
 
 @shared_task
 def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
+    from .models import UserInvite
+
     logger.debug(f'Process to accept UserInvite {user_invite_id}')
 
     if not (invite := UserInvite.objects.filter(id=user_invite_id).first()):

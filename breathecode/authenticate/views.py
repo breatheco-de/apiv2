@@ -2304,11 +2304,13 @@ class ExampleView(APIView):
 
 # app/user/:id
 class AppUserView(APIView):
+    permission_classes = [AllowAny]
     extensions = APIViewExtensions(paginate=True)
 
     @scope(['read:user'])
     def get(self, request, app_id, token: dict, user_id=None):
         lang = get_user_language(request)
+
         user = User.objects.filter(id=user_id).first()
         if not user:
             raise ValidationException(translation(lang, en='User not found', es='Usuario no encontrado'),
@@ -2322,6 +2324,10 @@ class AppUserView(APIView):
 
 # app/webhook
 @api_view(['POST'])
-@scope(['webhook'])
+@permission_classes([AllowAny])
+@scope(['webhook'], use_signature=True)
 def app_webhook(request, app_id):
-    pass
+    return Response({'message': 'ok'})
+
+
+# app/webhook

@@ -41,60 +41,30 @@ class Service:
         self.use_signature = use_signature
 
     def _sign(self, method, params=None, data=None, json=None, **kwargs) -> requests.Request:
+        from breathecode.authenticate.actions import get_signature
+
         headers = kwargs.pop('headers', {})
         headers.pop('Authorization', None)
-        payload = {
-            'method': method,
-            'params': params,
-            'data': json if json else data,
-            'headers': headers,
-        }
 
-        paybytes = urllib.parse.urlencode(payload).encode('utf8')
-
-        if self.app.algorithm == 'HMAC_SHA256':
-            sign = hmac.new(self.app.private_key, paybytes, hashlib.sha256).hexdigest()
-
-        elif self.app.algorithm == 'HMAC_SHA512':
-            sign = hmac.new(self.app.private_key, paybytes, hashlib.sha512).hexdigest()
-
-        else:
-            raise Exception('Algorithm not implemented')
+        sign, now = get_signature(self.app,
+                                  self.user_pk,
+                                  method=method,
+                                  params=params,
+                                  body=data or json,
+                                  headers=headers)
 
         headers['Authorization'] = (f'Signature App=breathecode,'
                                     f'Nonce={sign},'
                                     f'SignedHeaders={";".join(headers.keys())},'
-                                    f'Date={datetime.utcnow().isoformat()}')
+                                    f'Date={now}')
 
         return headers
 
     def _jwt(self, method, **kwargs) -> requests.Request:
+        from breathecode.authenticate.actions import get_jwt
         headers = kwargs.pop('headers', {})
-        # headers.pop('Authorization', None)
-        now = datetime.utcnow()
 
-        # https://datatracker.ietf.org/doc/html/rfc7519#section-4
-        payload = {
-            'sub': self.user_pk,
-            'iss': os.getenv('API_URL', 'http://localhost:8000'),
-            'app': 'breathecode',
-            'aud': self.app.slug,
-            'exp': datetime.timestamp(now + timedelta(minutes=2)),
-            'iat': datetime.timestamp(now),
-            'typ': 'JWT',
-        }
-
-        if self.app.algorithm == 'HMAC_SHA256':
-            token = jwt.encode(payload, self.app.private_key, algorithm='HS256')
-
-        elif self.app.algorithm == 'HMAC_SHA512':
-            token = jwt.encode(payload, self.app.private_key, algorithm='HS512')
-
-        elif self.app.algorithm == 'ED25519':
-            token = jwt.encode(payload, self.app.private_key, algorithm='EdDSA')
-
-        else:
-            raise Exception('Algorithm not implemented')
+        token = get_jwt(self.app, self.user_pk)
 
         headers['Authorization'] = (f'Link App=breathecode,'
                                     f'Token={token}')
