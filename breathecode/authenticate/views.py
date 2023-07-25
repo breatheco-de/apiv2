@@ -1558,8 +1558,8 @@ def render_user_invite(request, token):
                 profile.save()
 
             if invite.cohort is not None:
-                role = 'student'
-                if invite.role is not None and invite.role.slug != 'student':
+                role = 'STUDENT'
+                if invite.role is not None and invite.role.slug != 'STUDENT':
                     role = invite.role.slug.upper()
 
                 cu = CohortUser.objects.filter(user=token.user, cohort=invite.cohort).first()
