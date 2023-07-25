@@ -809,6 +809,8 @@ def get_app_keys(app_slug):
         app.require_an_agreement,
         tuple(sorted(x.slug for x in app.required_scopes.all())),
         tuple(sorted(x.slug for x in app.optional_scopes.all())),
+        app.webhook_url,
+        app.redirect_url,
     )
     key = (
         bytes.fromhex(app.public_key) if app.public_key else None,

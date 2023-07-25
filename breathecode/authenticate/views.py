@@ -2308,25 +2308,51 @@ class AppUserView(APIView):
     extensions = APIViewExtensions(paginate=True)
 
     @scope(['read:user'])
-    def get(self, request, app_id, token: dict, user_id=None):
+    def get(self, request, app: dict, token: dict, user_id=None):
+        handler = self.extensions(request)
         lang = get_user_language(request)
 
-        user = User.objects.filter(id=user_id).first()
-        if not user:
-            raise ValidationException(translation(lang, en='User not found', es='Usuario no encontrado'),
-                                      code=404,
-                                      slug='user-not-found',
-                                      silent=True)
+        extra = {}
+        if app.require_an_agreement:
+            extra['appuseragreement__app__id'] = app.id
 
-        serializer = AppUserSerializer(user, many=False)
-        return Response(serializer.data)
+        if token.sub:
+            extra['id'] = token.sub
+
+        if user_id:
+            if token.sub and token.sub != user_id:
+                raise ValidationException(translation(lang,
+                                                      en='This user does not have access to this resource',
+                                                      es='Este usuario no tiene acceso a este recurso'),
+                                          code=403,
+                                          slug='user-with-no-access',
+                                          silent=True)
+
+            if 'id' not in extra:
+                extra['id'] = user_id
+
+            user = User.objects.filter(**extra).first()
+            if not user:
+                raise ValidationException(translation(lang, en='User not found', es='Usuario no encontrado'),
+                                          code=404,
+                                          slug='user-not-found',
+                                          silent=True)
+
+            serializer = AppUserSerializer(user, many=False)
+            return Response(serializer.data)
+
+        items = User.objects.filter(**extra)
+        items = handler.queryset(items)
+        serializer = AppUserSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
 
 # app/webhook
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@scope(['webhook'], use_signature=True)
-def app_webhook(request, app_id):
+@scope(['webhook'], mode='signature')
+def app_webhook(request, app: dict):
     return Response({'message': 'ok'})
 
 
