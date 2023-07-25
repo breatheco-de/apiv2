@@ -144,7 +144,12 @@ class UserInvite(models.Model):
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
     is_email_validated = models.BooleanField(default=False)
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             null=True,
+                             default=None,
+                             blank=True,
+                             related_name='invites')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
     syllabus = models.ForeignKey('admissions.Syllabus',
                                  on_delete=models.CASCADE,
@@ -159,7 +164,11 @@ class UserInvite(models.Model):
 
     token = models.CharField(max_length=255, unique=True)
 
-    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
+    author = models.ForeignKey(User,
+                               on_delete=models.CASCADE,
+                               null=True,
+                               default=None,
+                               related_name='invites_by_author')
 
     status = models.CharField(max_length=15, choices=INVITE_STATUS, default=PENDING)
 
