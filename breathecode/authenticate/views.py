@@ -2354,6 +2354,15 @@ class AppUserView(APIView):
 @permission_classes([AllowAny])
 @scope(['webhook'], mode='signature')
 def app_webhook(request, app: dict):
+    # {'type': 'user:updated', 'kind': 'user', 'data': {'id': 1, 'name': 'John'}}
+    # {'type': 'bug', 'kind': 'bug', 'url': 'https://xyz.io/bug/123'}
+
+    # save the webhook
+    ...
+
+    # send the webhook to celery
+    ...
+
     return Response({'message': 'ok'})
 
 
