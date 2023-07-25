@@ -1137,15 +1137,23 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if syllabus := data.get('syllabus'):
             extra['syllabus'] = syllabus
 
-        have_pending_invites = UserInvite.objects.filter(email=data['email'], status='PENDING').exists()
-        have_accepted_invites = UserInvite.objects.filter(email=data['email'], status='ACCEPTED').exists()
+        have_pending_invites = UserInvite.objects.filter(Q(academy__available_as_saas=False)
+                                                         | Q(cohort__academy__available_as_saas=False),
+                                                         email=data['email'],
+                                                         status='PENDING')
+        have_accepted_invites = UserInvite.objects.filter(email=data['email'], status='ACCEPTED').first()
 
         if not have_accepted_invites and have_pending_invites:
-            raise ValidationException(
-                translation(lang,
-                            en='User already exists, go ahead and log in instead.',
-                            es='El usuario ya existe, inicie sesión en su lugar.',
-                            slug='invite-exists'))
+            names = [x.academy.name if x.academy else x.cohort.academy.name for x in have_pending_invites]
+            raise ValidationException(translation(
+                lang,
+                en=f'You have a pending invites from {", ".join(names)} that you need to accept before '
+                'being able to log in. Check your email inbox to accept it or speak to your program '
+                'manager.',
+                es=f'Tienes una invitación pendiente de parte de {", ".join(names)} que debes aceptar '
+                'antes de poder registrarte. Revisa tu buzón de correo electrónico o habla con el '
+                'coordinador del curso para conseguir el link a la invitación.'),
+                                      slug='invite-exists')
 
         invites = UserInvite.objects.filter(email=data['email'], **extra)
 
