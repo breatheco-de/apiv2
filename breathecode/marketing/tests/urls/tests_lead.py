@@ -4,7 +4,7 @@ Test /academy/lead
 from decimal import Decimal
 import string
 from random import choice, choices, randint
-from unittest.mock import patch, MagicMock
+from unittest.mock import PropertyMock, patch, MagicMock
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from faker import Faker
@@ -207,6 +207,7 @@ class LeadTestSuite(MarketingTestCase):
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('uuid.UUID.int', PropertyMock(return_value=1000))
     def test_lead__without_data(self):
         url = reverse_lazy('marketing:lead')
 
@@ -218,7 +219,9 @@ class LeadTestSuite(MarketingTestCase):
         del json['created_at']
         del json['updated_at']
 
-        expected = post_serializer()
+        expected = post_serializer(data={
+            'attribution_id': None,
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -228,6 +231,7 @@ class LeadTestSuite(MarketingTestCase):
                 'id': 1,
                 'academy_id': None,
                 'storage_status_text': 'Missing location information',
+                'attribution_id': None,
             })
         ])
 
@@ -266,6 +270,7 @@ class LeadTestSuite(MarketingTestCase):
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('uuid.UUID.int', PropertyMock(return_value=1000))
     def test_lead__with__data(self):
         url = reverse_lazy('marketing:lead')
 
@@ -288,6 +293,7 @@ class LeadTestSuite(MarketingTestCase):
             'academy': None,
             'latitude': self.bc.format.to_decimal_string(data['latitude']),
             'longitude': self.bc.format.to_decimal_string(data['longitude']),
+            'attribution_id': 1000,
         })
 
         self.assertEqual(json, expected)
@@ -300,6 +306,7 @@ class LeadTestSuite(MarketingTestCase):
                 'latitude': Decimal(data['latitude']),
                 'longitude': Decimal(data['longitude']),
                 'storage_status_text': f"No academy found with slug {data['location']}",
+                'attribution_id': 1000,
             })
         ])
 
@@ -313,6 +320,7 @@ class LeadTestSuite(MarketingTestCase):
         create_assessment=MagicMock(return_value=FakeRecaptcha()),
     )
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
+    @patch('uuid.UUID.int', PropertyMock(return_value=1000))
     def test_passing_slug_of_academy_or_academy_alias(self):
         cases = [
             ({
@@ -350,6 +358,7 @@ class LeadTestSuite(MarketingTestCase):
                 'academy': model.academy.id,
                 'latitude': self.bc.format.to_decimal_string(data['latitude']),
                 'longitude': self.bc.format.to_decimal_string(data['longitude']),
+                'attribution_id': 1000,
             })
 
             self.assertEqual(json, expected)
@@ -362,6 +371,7 @@ class LeadTestSuite(MarketingTestCase):
                     'latitude': Decimal(data['latitude']),
                     'longitude': Decimal(data['longitude']),
                     'storage_status_text': 'No academy found with slug midgard',
+                    'attribution_id': 1000,
                 })
             ])
 

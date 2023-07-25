@@ -7,7 +7,7 @@ from breathecode.marketing import tasks
 import re, string, os
 import logging
 from datetime import datetime
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import PropertyMock, patch, MagicMock, call
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.services.datetime_to_iso_format import datetime_to_iso_format
@@ -318,6 +318,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.marketing.tasks.persist_single_lead.delay', MagicMock())
+    @patch('uuid.UUID.int', PropertyMock(return_value=1000))
     def test_create_form_entry_with_dict_with_correct_format(self):
         """Test create_form_entry task without data"""
 
@@ -341,6 +342,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
         self.assertEqual(self.bc.database.list_of('marketing.FormEntry'),
                          [form_entry_field({
                              **data,
+                             'attribution_id': 1000,
                              'academy_id': 1,
                          })])
         self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
@@ -354,7 +356,10 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                           call('create_form_entry successfully created')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
-        self.assertEqual(tasks.persist_single_lead.delay.call_args_list,
-                         [call(form_entry_serializer(self, {
-                             **data, 'academy': 1
-                         }))])
+        self.bc.check.calls(tasks.persist_single_lead.delay.call_args_list, [
+            call(form_entry_serializer(self, {
+                **data,
+                'academy': 1,
+                'attribution_id': 1000,
+            })),
+        ])
