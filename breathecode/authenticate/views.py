@@ -2368,7 +2368,6 @@ def app_webhook(request, app: dict):
 
 # demo
 class DemoView(APIView):
-    permission_classes = [AllowAny]
     extensions = APIViewExtensions(paginate=True)
 
     def get(self, request, user_id=None):
