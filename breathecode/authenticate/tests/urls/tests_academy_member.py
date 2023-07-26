@@ -83,6 +83,7 @@ def generate_user_invite(data: dict) -> dict:
         'token': '',
         'process_message': '',
         'process_status': 'PENDING',
+        'user_id': None,
         **data,
     }
 

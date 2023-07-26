@@ -415,6 +415,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'process_message': model['user_invite'].process_message,
             'process_status': model['user_invite'].process_status,
             'syllabus_id': None,
+            'user_id': None,
         }])
 
     def test_resend_invite_recently(self):
