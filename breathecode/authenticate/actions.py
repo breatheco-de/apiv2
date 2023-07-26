@@ -592,6 +592,47 @@ def sync_organization_members(academy_id, only_status=[]):
     return True
 
 
+def accept_invite(email, first_name, last_name):
+    invites = UserInvite.objects.filter(id__in=accepting.split(','), email=email, status='PENDING')
+
+    for invite in invites:
+        if invite.academy is not None:
+            profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
+
+            if profile is None:
+                role = invite.role
+                if not role:
+                    role = Role.objects.filter(slug='student').first()
+
+                # is better generate a role without capability that have a exception in this case
+                if not role:
+                    role = Role(slug='student', name='Student')
+                    role.save()
+
+                profile = ProfileAcademy(email=invite.email,
+                                         academy=invite.academy,
+                                         role=role,
+                                         first_name=first_name,
+                                         last_name=last_name)
+
+            profile.user = token.user
+            profile.status = 'ACTIVE'
+            profile.save()
+
+        if invite.cohort is not None:
+            role = 'student'
+            if invite.role is not None and invite.role.slug != 'student':
+                role = invite.role.slug.upper()
+
+            cu = CohortUser.objects.filter(user=token.user, cohort=invite.cohort).first()
+            if cu is None:
+                cu = CohortUser(user=token.user, cohort=invite.cohort, role=role, educational_status='ACTIVE')
+                cu.save()
+
+        invite.status = 'ACCEPTED'
+        invite.save()
+
+
 # def schedule_org_members_to_delete():
 
 #     unknown_users = GithubAcademyUser.objects.filter(
