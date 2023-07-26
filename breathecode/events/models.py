@@ -176,7 +176,7 @@ class Event(models.Model):
         super(Event, self).__init__(*args, **kwargs)
         self.__old_status = self.status
 
-    slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
+    slug = models.SlugField(max_length=150, blank=True, default=None, null=True, unique=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
