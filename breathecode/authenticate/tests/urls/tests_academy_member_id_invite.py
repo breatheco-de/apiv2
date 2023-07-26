@@ -372,6 +372,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, 200)
         all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]
         self.assertEqual(all_user_invite, [{
+            'user_id': None,
             'id': model['user_invite'].id,
             'email': model['user_invite'].email,
             'academy_id': model['user_invite'].academy_id,

@@ -1,7 +1,7 @@
 """
 Set of tests for MeInviteView, this include duck tests
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from random import choice
@@ -230,6 +230,7 @@ class AuthenticateTestSuite(AuthTestCase):
             }])
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
+                             'user_id': None,
                              'academy_id': 1,
                              'author_id': 1,
                              'cohort_id': 1,
@@ -247,6 +248,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'process_status': 'PENDING',
                              'syllabus_id': None,
                          }, {
+                             'user_id': None,
                              'academy_id': 1,
                              'author_id': 1,
                              'cohort_id': 2,

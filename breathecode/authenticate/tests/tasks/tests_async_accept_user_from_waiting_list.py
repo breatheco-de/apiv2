@@ -137,6 +137,7 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
                 'process_message': 'Registered as User with id 1',
                 'process_status': 'DONE',
                 'status': 'ACCEPTED',
+                'user_id': 1,
             },
         ])
 
