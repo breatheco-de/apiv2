@@ -652,16 +652,16 @@ def get_jwt(app: App, user_id: Optional[int] = None, reverse: bool = False):
     payload = {
         'sub': user_id,
         'iss': os.getenv('API_URL', 'http://localhost:8000'),
-        'app': 'breathecode',
+        'app': '4geeks',
         'aud': app.slug,
         'exp': datetime.timestamp(now + timedelta(minutes=JWT_LIFETIME)),
-        'iat': datetime.timestamp(now),
+        'iat': datetime.timestamp(now) - 1,
         'typ': 'JWT',
     }
 
     if reverse:
         payload['app'] = app.slug
-        payload['aud'] = 'breathecode'
+        payload['aud'] = '4geeks'
 
     if app.algorithm == 'HMAC_SHA256':
 
@@ -692,11 +692,11 @@ def get_signature(app: App,
 
     payload = {
         'timestamp': now,
-        'app': 'breathecode',
+        'app': '4geeks',
         'method': method.upper(),
-        'params': params,
+        'params': params or {},
         'body': body,
-        'headers': headers,
+        'headers': headers or {},
     }
 
     if reverse:
@@ -776,7 +776,7 @@ def get_app_keys(app_slug):
     app = App.objects.filter(slug=app_slug).first()
 
     if app is None:
-        raise AuthenticationFailed({'error': 'Unauthorized', 'is_authenticated': False})
+        raise ValidationException('Unauthorized', code=401, slug='app-not-found')
 
     if app.algorithm == 'HMAC_SHA256':
         alg = 'HS256'
@@ -788,7 +788,7 @@ def get_app_keys(app_slug):
         alg = 'EdDSA'
 
     else:
-        raise AuthenticationFailed({'error': 'Algorithm not implemented', 'is_authenticated': False})
+        raise ValidationException('Algorithm not implemented', code=401, slug='algorithm-not-implemented')
 
     legacy_public_key = None
     legacy_private_key = None
@@ -828,3 +828,22 @@ def reset_app_cache():
 
 def reset_app_user_cache():
     get_optional_scopes_set.cache_clear()
+
+
+@lru_cache(maxsize=100)
+def get_app(pk: str | int) -> App:
+    kwargs = {}
+
+    if isinstance(pk, int):
+        kwargs['id'] = pk
+
+    elif isinstance(pk, str):
+        kwargs['slug'] = pk
+
+    else:
+        raise Exception('Invalid pk type')
+
+    if not (app := App.objects.filter(**kwargs).first()):
+        raise Exception('App not found')
+
+    return app

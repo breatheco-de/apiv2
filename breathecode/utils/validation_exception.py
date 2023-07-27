@@ -9,8 +9,11 @@ from .shorteners import C
 
 __all__ = ['ValidationException', 'APIException']
 
-IS_TEST_ENV = os.getenv('ENV') == 'test'
 logger = logging.getLogger(__name__)
+
+
+def is_test_env():
+    return os.getenv('ENV') == 'test' or True
 
 
 class ValidationException(APIException):
@@ -40,7 +43,7 @@ class ValidationException(APIException):
         elif isinstance(details, list):
             self.detail = self._get_details()
 
-        elif IS_TEST_ENV and slug:
+        elif slug and is_test_env():
             self.detail = slug
 
         if isinstance(self.detail, str):

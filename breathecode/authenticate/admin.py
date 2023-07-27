@@ -7,9 +7,10 @@ from django.contrib import messages
 from .actions import (delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password,
                       sync_organization_members)
 from django.utils.html import format_html
-from .models import (App, CredentialsGithub, DeviceId, LegacyKey, Token, UserProxy, Profile, CredentialsSlack,
-                     ProfileAcademy, Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle,
-                     AcademyProxy, GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog)
+from .models import (App, AppUserAgreement, CredentialsGithub, DeviceId, LegacyKey, OptionalScopeSet, Scope,
+                     Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, Role, CredentialsFacebook,
+                     Capability, UserInvite, CredentialsGoogle, AcademyProxy, GitpodUser, GithubAcademyUser,
+                     AcademyAuthSettings, GithubAcademyUserLog)
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
@@ -445,13 +446,19 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         )
 
 
+@admin.register(Scope)
+class ScopeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug')
+    search_fields = ['name', 'slug']
+    actions = []
+
+
 @admin.register(App)
 class AppAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'algorithm', 'strategy', 'schema', 'agreement_version',
                     'require_an_agreement')
     search_fields = ['name', 'slug']
     list_filter = ['algorithm', 'strategy', 'schema', 'require_an_agreement']
-    actions = []
 
 
 @admin.register(LegacyKey)
@@ -459,4 +466,21 @@ class AppAdmin(admin.ModelAdmin):
     list_display = ('app', 'algorithm', 'strategy', 'schema')
     search_fields = ['app__name', 'app__slug']
     list_filter = ['algorithm', 'strategy', 'schema']
+    actions = []
+
+
+@admin.register(OptionalScopeSet)
+class OptionalScopeSetAdmin(admin.ModelAdmin):
+    list_display = ('id', )
+    search_fields = ['optional_scopes__name', 'optional_scopes__slug']
+    actions = []
+
+
+@admin.register(AppUserAgreement)
+class AppUserAgreementAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'app', 'optional_scope_set', 'agreement_version')
+    search_fields = [
+        'user__username', 'user__email', 'user__first_name', 'user__last_name', 'app__name', 'app__slug'
+    ]
+    list_filter = ['app']
     actions = []

@@ -1,41 +1,15 @@
 from __future__ import annotations
-from datetime import datetime, timedelta
-from functools import lru_cache
-import hashlib
-import hmac
-import os
 from typing import Optional
-import jwt
 import requests
-import urllib.parse
-from breathecode.authenticate.models import App
-from breathecode.tests.mixins import DatetimeMixin
 
-__all__ = ['get_app', 'Service']
-
-
-@lru_cache(maxsize=100)
-def get_app(pk: str | int) -> App:
-    kwargs = {}
-
-    if isinstance(pk, int):
-        kwargs['id'] = pk
-
-    elif isinstance(pk, str):
-        kwargs['slug'] = pk
-
-    else:
-        raise Exception('Invalid pk type')
-
-    if not (app := App.objects.filter(kwargs).first()):
-        raise Exception('App not found')
-
-    return app
+__all__ = ['Service']
 
 
 class Service:
 
     def __init__(self, app_pk: str | int, user_pk: Optional[str | int] = None, *, mode: Optional[str] = None):
+        from breathecode.authenticate.actions import get_app
+
         self.app = get_app(app_pk)
         self.user_pk = user_pk
         self.mode = mode
@@ -50,10 +24,10 @@ class Service:
                                   self.user_pk,
                                   method=method,
                                   params=params,
-                                  body=data or json,
+                                  body=data if data is not None else json,
                                   headers=headers)
 
-        headers['Authorization'] = (f'Signature App=breathecode,'
+        headers['Authorization'] = (f'Signature App=4geeks,'
                                     f'Nonce={sign},'
                                     f'SignedHeaders={";".join(headers.keys())},'
                                     f'Date={now}')
@@ -62,11 +36,12 @@ class Service:
 
     def _jwt(self, method, **kwargs) -> requests.Request:
         from breathecode.authenticate.actions import get_jwt
+
         headers = kwargs.pop('headers', {})
 
         token = get_jwt(self.app, self.user_pk)
 
-        headers['Authorization'] = (f'Link App=breathecode,'
+        headers['Authorization'] = (f'Link App=4geeks,'
                                     f'Token={token}')
 
         return headers
@@ -76,7 +51,7 @@ class Service:
             return self._sign(method, params=params, data=data, json=json, **kwargs)
 
         elif self.mode == 'jwt' or self.app.strategy == 'JWT':
-            return self._jwt(self, method, **kwargs)
+            return self._jwt(method, **kwargs)
 
         raise Exception('Strategy not implemented')
 

@@ -2290,19 +2290,6 @@ class GithubMeView(APIView):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-# app/example
-class ExampleView(APIView):
-    extensions = APIViewExtensions(paginate=True)
-
-    @scope(['read:example'])
-    def get(self, request, app_id, token: dict):
-        pass
-
-    @scope(['create:example'])
-    def post(self, request, app_id, token: dict):
-        pass
-
-
 # app/user/:id
 class AppUserView(APIView):
     permission_classes = [AllowAny]
