@@ -57,6 +57,11 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
+def show(name, value):
+    print(f'{name}: {value}')
+    logger.info(f'{name}: {value}')
+
+
 def has_permission(permission: str,
                    consumer: bool | HasPermissionCallback = False,
                    format='json') -> callable:
@@ -113,12 +118,14 @@ def has_permission(permission: str,
                     if consumer:
                         items = Consumable.list(user=request.user, permission=permission)
                         context['consumables'] = items
+                        show('111', context['consumables'])
 
                     if callable(consumer):
                         context, args, kwargs = consumer(context, args, kwargs)
 
                     if consumer and context['time_of_life']:
                         consumables = context['consumables']
+                        show('222', context['consumables'])
                         for item in consumables.filter(consumptionsession__status='PENDING').exclude(
                                 how_many=0):
 
@@ -126,9 +133,11 @@ def has_permission(permission: str,
                                 Sum('consumptionsession__how_many'))
 
                             if item.how_many - sum['how_many__sum'] == 0:
+                                show('333', context['consumables'])
                                 context['consumables'] = context['consumables'].exclude(id=item.id)
 
                     if consumer and context['will_consume'] and not context['consumables']:
+                        show('444', context['consumables'])
                         raise PaymentException(
                             f'You do not have enough credits to access this service: {permission}',
                             slug='with-consumer-not-enough-consumables')
