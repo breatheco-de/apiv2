@@ -5,6 +5,7 @@ from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.authenticate.actions import get_user_language
 from breathecode.monitoring.models import CSVUpload
+from breathecode.notify.actions import send_email_message
 from breathecode.renderers import PlainTextRenderer
 from breathecode.marketing.caches import CourseCache
 from rest_framework.decorators import renderer_classes
@@ -43,7 +44,7 @@ from .serializers import (
     ActiveCampaignAcademySerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
-from .actions import convert_data_frame, sync_tags, sync_automations
+from .actions import convert_data_frame, sync_tags, sync_automations, validate_email
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
 from .models import Course, ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField, AcademyAlias
 from breathecode.admissions.models import Academy
@@ -55,6 +56,7 @@ from breathecode.services.google_cloud import Recaptcha
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = 'text/csv'
+SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL')
 
 # Create your views here.
 
@@ -181,6 +183,64 @@ def create_lead_from_app(request, app_slug=None):
         app.save()
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def validate_email_from_app(request, app_slug=None):
+
+    lang = get_user_language(request)
+    data = request.data.copy()
+
+    app_id = data['app_id'] if 'app_id' in data else None
+    if app_id is None:
+        app_id = request.GET.get('app_id', None)
+        if app_id is None:
+            raise ValidationException(f'Invalid app slug and/or id',
+                                      code=400,
+                                      slug='without-app-slug-or-app-id')
+
+    app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
+    if app is None:
+        raise ValidationException(f'App not found with those credentials', code=401, slug='without-app-id')
+
+    email = data['email'] if 'email' in data else None
+    if email is None:
+        raise ValidationException(f'Please provide an email to validate',
+                                  code=400,
+                                  slug='without-app-slug-or-app-id')
+
+    if app_slug is None:
+        # try get the slug from the encoded app_id
+        decoded_id = parse.unquote(app_id)
+        if ':' not in decoded_id:
+            raise ValidationException(f'Missing app slug', code=400, slug='without-app-slug-or-app-id')
+        else:
+            app_slug, app_id = decoded_id.split(':')
+
+    try:
+        payload = validate_email(email, lang)
+        return Response(payload, status=status.HTTP_200_OK)
+    except ValidationException as e:
+        raise e
+    except Exception as e:
+
+        app.last_call_status = 'ERROR'
+        app.last_call_log = str(e)
+        app.save()
+
+        send_email_message('message',
+                           to=SYSTEM_EMAIL,
+                           data={
+                               'SUBJECT': 'Email validation API error',
+                               'MESSAGE': f'Error details: {str(e)}',
+                           })
+
+        raise ValidationException(
+            translation(lang,
+                        en='Error while validating email address',
+                        es='Se ha producido un error validando tu dirección de correo electrónico',
+                        slug='email-validation-error'))
 
 
 @api_view(['POST'])
