@@ -17,11 +17,6 @@ from .flags import api
 logger = logging.getLogger(__name__)
 
 
-def show(name, value):
-    print(f'{name}: {value}')
-    logger.info(f'{name}: {value}')
-
-
 def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
     context['will_consume'] = False
 
@@ -55,18 +50,12 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     if 'event_slug' in kwargs:
         del kwargs['event_slug']
 
-    print(900, context)
-
     if context['is_consumption_session']:
         return (context, args, kwargs)
 
     event_type = event.event_type
 
-    print(911, event_type)
-    print(911, context['consumables'])
-
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
-    print(922, context['consumables'])
 
     is_host = event.host_user == request.user
     is_free_for_bootcamps = (event.free_for_bootcamps) or (event.free_for_bootcamps is None
