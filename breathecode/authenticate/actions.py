@@ -394,7 +394,7 @@ def remove_from_organization(cohort_id, user_id, force=False):
 
         active_cohorts_in_academy = CohortUser.objects.filter(user=user,
                                                               cohort__academy=academy,
-                                                              never_ends=False,
+                                                              cohort__never_ends=False,
                                                               educational_status='ACTIVE').first()
         if active_cohorts_in_academy is not None and not force:
             raise ValidationException(translation(
@@ -540,6 +540,7 @@ def sync_organization_members(academy_id, only_status=[]):
                         storage_action__in=['DELETE', 'IGNORE']).exclude(id=_member.id).first()
                 if added_elsewhere is None:
                     try:
+                        logger.debug(f'Deleting github member {_member.user.email} because it was not added or invited on any other of the following academies:  {",".join(academy_slugs)}')
                         gb.delete_org_member(github.username)
                     except Exception as e:
                         settings.add_error('Error deleting member from org: ' + str(e))

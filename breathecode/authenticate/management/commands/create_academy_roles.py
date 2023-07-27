@@ -592,6 +592,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_mentorship_bill',
             'classroom_activity',
             'read_asset',
+            'task_delivery_details',
         ]
     })
     roles.append({
