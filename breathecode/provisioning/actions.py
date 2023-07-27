@@ -11,7 +11,7 @@ from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 from breathecode.services.github import Github
 from breathecode.utils.i18n import translation
-from breathecode.admissions.models import Academy, CohortUser
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from .models import (ProvisioningUserConsumption, ProvisioningConsumptionEvent, ProvisioningConsumptionKind,
                      ProvisioningPrice, ProvisioningBill, ProvisioningProfile, ProvisioningVendor)
 from django.db.models import QuerySet, Q
@@ -310,8 +310,22 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
                 ignores.append(
                     f'User {field["Username"]} was deleted from the academy during this event at {date}')
 
+    if not provisioning_bills:
+        for academy_id in logs.keys():
+            cohort_user = CohortUser.objects.filter(
+                Q(cohort__ending_date__lte=date) | Q(cohort__never_ends=True),
+                cohort__kickoff_date__gte=date,
+                cohort__academy__id=academy_id,
+                user__credentialsgithub__username=field['Username']).order_by('-created_at').first()
+
+            if cohort_user:
+                errors.append('We found activity from this user while he was studying at one of your cohort '
+                              f'{cohort_user.cohort.slug}')
+
     if not_found:
-        errors.append(f'User {field["Username"]} not found in any academy')
+        errors.append(
+            f'We could not find enough information about {field["Username"]}, mark this user user as '
+            'deleted if you don\'t recognize it')
 
     if not (kind := context['provisioning_activity_kinds'].get((field['Product'], field['SKU']), None)):
         kind, _ = ProvisioningConsumptionKind.objects.get_or_create(
@@ -376,6 +390,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
 
 
 def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
+    academies = []
     profile_academies = context['profile_academies'].get(field['userName'], None)
     if profile_academies is None:
         profile_academies = ProfileAcademy.objects.filter(user__credentialsgithub__username=field['userName'],
@@ -384,16 +399,32 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         context['profile_academies'][field['userName']] = profile_academies
 
     if profile_academies:
-        academies = random.choices(list({profile.academy for profile in profile_academies}), k=1)
+        academies = sorted(list({profile.academy for profile in profile_academies}), key=lambda x: x.id)
 
-    else:
+    date = iso_to_datetime(field['startTime'])
+    end = iso_to_datetime(field['endTime'])
+
+    if len(academies) > 1:
+        cohort_users = CohortUser.objects.filter(
+            Q(cohort__ending_date__lte=end) | Q(cohort__never_ends=True),
+            cohort__kickoff_date__gte=date,
+            user__credentialsgithub__username=field['userName']).order_by('-created_at')
+
+        if cohort_users:
+            academies = sorted(list({cohort_user.cohort.academy
+                                     for cohort_user in cohort_users}),
+                               key=lambda x: x.id)
+
+    if not academies:
         if 'academies' not in context:
             context['academies'] = Academy.objects.filter()
         academies = list(context['academies'])
 
     errors = []
     if not academies:
-        errors.append(f'User {field["userName"]} not found in any academy')
+        errors.append(
+            f'We could not find enough information about {field["userName"]}, mark this user user as '
+            'deleted if you don\'t recognize it')
 
     pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
     if not (result := re.findall(pattern, field['contextURL'])):
@@ -437,8 +468,6 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
                 provisioning_bills.append(provisioning_bill)
 
     provisioning_bills = list(set(provisioning_bills))
-
-    date = iso_to_datetime(field['startTime'])
 
     if not (kind := context['provisioning_activity_kinds'].get(field['kind'], None)):
         kind, _ = ProvisioningConsumptionKind.objects.get_or_create(

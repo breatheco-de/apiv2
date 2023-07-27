@@ -10,6 +10,7 @@ urlpatterns = [
     path('academy/userconsumption',
          AcademyProvisioningUserConsumptionView.as_view(),
          name='academy_userconsumption'),
+    path('academy/bill', AcademyBillView.as_view(), name='academy_bill_id'),
     path('academy/bill/<int:bill_id>', AcademyBillView.as_view(), name='academy_bill_id'),
     path('bill/html', render_html_all_bills, name='bill_html'),
     path('bill/<int:id>/html', render_html_bill, name='bill_id_html'),

@@ -1540,7 +1540,7 @@ def render_user_invite(request, token):
                 if profile is None:
                     role = invite.role
                     if not role:
-                        role = Role.objects.filter(slug='student').first()
+                        role = Role.objects.filter(slug='STUDENT').first()
 
                     # is better generate a role without capability that have a exception in this case
                     if not role:
@@ -1566,7 +1566,7 @@ def render_user_invite(request, token):
                 if cu is None:
                     cu = CohortUser(user=token.user,
                                     cohort=invite.cohort,
-                                    role=role,
+                                    role=role.upper(),
                                     educational_status='ACTIVE')
                     cu.save()
 
@@ -1696,13 +1696,13 @@ def render_invite(request, token, member_id=None):
             profile.save()
 
         if invite.cohort is not None:
-            role = 'STUDENT'
-            if invite.role is not None and invite.role.slug != 'STUDENT':
+            role = 'student'
+            if invite.role is not None and invite.role.slug != 'student':
                 role = invite.role.slug.upper()
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None:
-                cu = CohortUser(user=user, cohort=invite.cohort, role=role)
+                cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
                 cu.save()
 
         invite.status = 'ACCEPTED'

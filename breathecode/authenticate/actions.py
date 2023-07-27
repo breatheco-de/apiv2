@@ -394,6 +394,7 @@ def remove_from_organization(cohort_id, user_id, force=False):
 
         active_cohorts_in_academy = CohortUser.objects.filter(user=user,
                                                               cohort__academy=academy,
+                                                              cohort__never_ends=False,
                                                               educational_status='ACTIVE').first()
         if active_cohorts_in_academy is not None and not force:
             raise ValidationException(translation(
@@ -426,6 +427,18 @@ def remove_from_organization(cohort_id, user_id, force=False):
 
         github_user.log(str(e))
         github_user.save()
+        return False
+
+
+def delete_from_github(github_user):
+    try:
+        gb.delete_org_member(github_user.username)
+        _member.log('Successfully deleted in github organization')
+        print('Deleted github user: ' + github_user.username)
+        return True
+    except Exception as e:
+        _member.log('Error calling github API while deleting member from org: ' + str(e))
+        print('Error deleting github user: ' + github_user.username)
         return False
 
 
@@ -524,9 +537,10 @@ def sync_organization_members(academy_id, only_status=[]):
                 added_elsewhere = GithubAcademyUser.objects.filter(
                     Q(user=_member.user)
                     | Q(username=github.username)).filter(academy__slug__in=academy_slugs).exclude(
-                        storage_status__in=['DELETE']).exclude(id=_member.id).first()
+                        storage_action__in=['DELETE', 'IGNORE']).exclude(id=_member.id).first()
                 if added_elsewhere is None:
                     try:
+                        logger.debug(f'Deleting github member {_member.user.email} because it was not added or invited on any other of the following academies:  {",".join(academy_slugs)}')
                         gb.delete_org_member(github.username)
                     except Exception as e:
                         settings.add_error('Error deleting member from org: ' + str(e))

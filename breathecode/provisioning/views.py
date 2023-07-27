@@ -1,3 +1,4 @@
+from datetime import date
 import hashlib
 from io import StringIO
 import math
@@ -11,12 +12,15 @@ from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (GetProvisioningUserConsumptionSerializer,
                                                   ProvisioningBillSerializer, ProvisioningBillHTMLSerializer,
-                                                  ProvisioningUserConsumptionHTMLResumeSerializer)
+                                                  ProvisioningUserConsumptionHTMLResumeSerializer,
+                                                  GetProvisioningBillSmallSerializer)
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
+from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
+from breathecode.utils import cut_csv
 from .actions import get_provisioning_vendor
 from .models import BILL_STATUS, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
 from rest_framework.response import Response
@@ -30,6 +34,7 @@ from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.renderers import JSONRenderer
 from django.http import HttpResponse
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
+from dateutil.relativedelta import relativedelta
 
 
 @private_view()
@@ -156,21 +161,50 @@ class UploadView(APIView):
                             slug='bad-format'))
 
         content_bytes = file.read()
-        content = content_bytes.decode('utf-8')
         hash = hashlib.sha256(content_bytes).hexdigest()
 
         file.seek(0)
-
-        csvStringIO = StringIO(content)
-        df = pd.read_csv(csvStringIO, sep=',')
+        csv_first_line = cut_csv(file, first=1)
+        df = pd.read_csv(csv_first_line, sep=',')
         df.reset_index()
 
         format_error = True
 
         # gitpod
-        fields = ['id', 'credits', 'startTime', 'kind', 'userName', 'contextURL']
+        fields = ['id', 'credits', 'startTime', 'endTime', 'kind', 'userName', 'contextURL']
         if len(df.keys().intersection(fields)) == len(fields):
             format_error = False
+
+            csv_last_line = cut_csv(file, last=1)
+            df2 = pd.read_csv(csv_last_line, sep=',', usecols=fields)
+            df2.reset_index()
+
+            try:
+
+                first = df2['startTime'][0].split('-')
+                last = df['startTime'][0].split('-')
+
+                first[2] = first[2].split('T')[0]
+                last[2] = last[2].split('T')[0]
+
+                first = date(int(first[0]), int(first[1]), int(first[2]))
+                last = date(int(last[0]), int(last[1]), int(last[2]))
+
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='CSV file from unknown source',
+                                es='Archivo CSV de fuente desconocida',
+                                slug='bad-date-format'))
+
+            delta = relativedelta(last, first)
+
+            if delta.years > 0 or delta.months > 1 or (delta.months > 1 and delta.days > 1):
+                raise ValidationException(
+                    translation(lang,
+                                en='Each file must have only one month of data',
+                                es='Cada archivo debe tener solo un mes de datos',
+                                slug='overflow'))
 
         if format_error:
             # codespaces
@@ -181,6 +215,34 @@ class UploadView(APIView):
 
         if format_error and len(df.keys().intersection(fields)) == len(fields):
             format_error = False
+
+            csv_last_line = cut_csv(file, last=1)
+            df2 = pd.read_csv(csv_last_line, sep=',', usecols=fields)
+            df2.reset_index()
+
+            try:
+
+                first = df['Date'][0].split('-')
+                last = df2['Date'][0].split('-')
+
+                first = date(int(first[0]), int(first[1]), int(first[2]))
+                last = date(int(last[0]), int(last[1]), int(last[2]))
+
+            except:
+                raise ValidationException(
+                    translation(lang,
+                                en='CSV file from unknown source',
+                                es='Archivo CSV de fuente desconocida',
+                                slug='bad-date-format'))
+
+            delta = relativedelta(last, first)
+
+            if delta.years > 0 or delta.months > 1 or (delta.months > 1 and delta.days > 1):
+                raise ValidationException(
+                    translation(lang,
+                                en='Each file must have only one month of data',
+                                es='Cada archivo debe tener solo un mes de datos',
+                                slug='overflow'))
 
         # Think about uploading correct files and leaving out incorrect ones
         if format_error:
@@ -199,7 +261,7 @@ class UploadView(APIView):
         if created:
             cloud_file.upload(file, content_type=file.content_type)
 
-        tasks.upload.delay(hash, total_pages=math.ceil(len(df) / tasks.PANDAS_ROWS_LIMIT))
+        tasks.upload.delay(hash, total_pages=math.ceil(count_csv_rows(file) / tasks.PANDAS_ROWS_LIMIT))
 
         data = {'file_name': hash, 'status': 'PENDING', 'created': created}
 
@@ -395,6 +457,33 @@ class AcademyBillView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of('read_provisioning_bill')
+    def get(self, request, academy_id=None, bill_id=None):
+        handler = self.extensions(request)
+
+        if bill_id is not None:
+            bill = ProvisioningBill.objects.filter(academy__id=academy_id, id=bill_id).first()
+
+            if bill is None:
+                raise ValidationException('Provisioning Bill not found',
+                                          code=404,
+                                          slug='provisioning_bill-not-found')
+
+            serializer = GetProvisioningBillSerializer(bill, many=False)
+            return Response(serializer.data)
+
+        items = ProvisioningBill.objects.filter(academy__id=academy_id)
+
+        status = request.GET.get('status', None)
+        if status is not None:
+            items = items.filter(status__in=status.upper().split(','))
+
+        items = handler.queryset(items)
+        serializer = GetProvisioningBillSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
     @capable_of('crud_provisioning_bill')
     def put(self, request, bill_id=None, academy_id=None):

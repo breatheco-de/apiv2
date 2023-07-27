@@ -119,7 +119,8 @@ def has_permission(permission: str,
 
                     if consumer and context['time_of_life']:
                         consumables = context['consumables']
-                        for item in consumables.filter(consumptionsession__status='PENDING', how_many__gt=0):
+                        for item in consumables.filter(consumptionsession__status='PENDING').exclude(
+                                how_many=0):
 
                             sum = item.consumptionsession_set.filter(status='PENDING').aggregate(
                                 Sum('consumptionsession__how_many'))

@@ -23,6 +23,7 @@ fake = Faker()
 
 def post_serializer(data={}):
     return {
+        'attribution_id': None,
         'ac_contact_id': None,
         'ac_deal_id': None,
         'ac_expected_cohort': None,
@@ -86,6 +87,7 @@ def post_serializer(data={}):
 def form_entry_field(data={}):
     return {
         'id': 1,
+        'attribution_id': None,
         'ac_contact_id': None,
         'ac_deal_id': None,
         'ac_expected_cohort': None,
@@ -378,6 +380,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
         del json['updated_at']
 
         expected = {
+            'attribution_id': None,
             'ac_contact_id': None,
             'ac_deal_id': None,
             'ac_expected_cohort': None,
@@ -599,6 +602,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
         del json['updated_at']
 
         expected = {
+            'attribution_id': None,
             'ac_contact_id': None,
             'ac_deal_id': None,
             'ac_expected_cohort': None,

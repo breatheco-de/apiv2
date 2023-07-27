@@ -115,6 +115,14 @@ class ProvisioningBill(models.Model):
     status_details = models.TextField(default=None, null=True, blank=True)
     stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True, help_text='Stripe id')
     stripe_url = models.URLField(default=None, null=True, blank=True)
+    started_at = models.DateTimeField(null=True, default=None, blank=True)
+    ended_at = models.DateTimeField(null=True, default=None, blank=True)
+    title = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='This title should describe what the Bill is about. I.e.: April\'s bill. (MAX 64 chars)')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
