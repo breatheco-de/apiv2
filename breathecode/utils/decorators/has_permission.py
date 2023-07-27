@@ -130,7 +130,7 @@ def has_permission(permission: str,
                                 how_many=0):
 
                             sum = item.consumptionsession_set.filter(status='PENDING').aggregate(
-                                Sum('consumptionsession__how_many'))
+                                Sum('how_many'))
 
                             if item.how_many - sum['how_many__sum'] == 0:
                                 show('333', context['consumables'])
