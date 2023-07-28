@@ -23,7 +23,7 @@ jobs:
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
 
       - name: Calculate Pipfile.lock hash
-        run: A=$(python -m scripts.md5 ./Pipfile.lock)
+        run: export A=$(python -m scripts.md5 ./Pipfile.lock)
 
       - name: Install dependencies
         run: |
@@ -31,7 +31,7 @@ jobs:
           pipenv install --dev
 
       - name: Calculate Pipfile.lock hash
-        run: B=$(python -m scripts.md5 ./Pipfile.lock)
+        run: export B=$(python -m scripts.md5 ./Pipfile.lock)
 
       - name: Check dependencies
         run: |
