@@ -1,0 +1,15 @@
+templates:
+  - slug: 
+    template: 
+    description:
+    agent_engine_slug:
+    include_company_prompt: # true or false
+    include_purpose_prompt: # true or false
+    body:
+  - slug:
+    template: 
+    description:
+    agent_engine_slug:
+    include_company_prompt: # true or false
+    include_purpose_prompt: # true or false
+    body:
