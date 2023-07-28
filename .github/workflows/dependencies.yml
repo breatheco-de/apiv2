@@ -31,10 +31,7 @@ jobs:
 
           B=$(python -m scripts.md5 ./Pipfile.lock)
 
-          echo $A;
-          echo $B;
-
-          if test "$A" != "B"; then
+          if test "$A" != "$B"; then
             echo "Pipfile.lock is out of date. Please run 'pipenv lock --dev' and commit the updated Pipfile.lock.";
             exit 1;
           fi
