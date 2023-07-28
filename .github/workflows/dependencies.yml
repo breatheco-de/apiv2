@@ -35,9 +35,9 @@ jobs:
 
       - name: Check dependencies
         run: |
-          echo $A
-          echo $B
+          echo $A;
+          echo $B;
           if test "$A" != "B"; then
-            echo "Pipfile.lock is out of date. Please run 'pipenv lock --dev' and commit the updated Pipfile.lock."
-            exit 1
+            echo "Pipfile.lock is out of date. Please run 'pipenv lock --dev' and commit the updated Pipfile.lock.";
+            exit 1;
           fi
