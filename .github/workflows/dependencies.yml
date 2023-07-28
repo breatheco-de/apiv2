@@ -38,4 +38,4 @@ jobs:
           if test "$A" != "B"; then
             echo "Pipfile.lock is out of date. Please run 'pipenv lock' and commit the updated Pipfile.lock."
             exit 1
-          if
+          fi
