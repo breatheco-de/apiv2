@@ -46,7 +46,7 @@ pytest-xdist = "*"
 mkdocstrings-python = "*"
 
 [packages]
-django = "~=3.2.18"
+django = "~=3.2.20"
 djangorestframework = "~=3.14.0"
 serpy = "*"
 gunicorn = "*"
@@ -91,7 +91,7 @@ lxml = "*"
 pandas = "*"
 daphne = "*"
 twisted = {extras = ["http2", "tls"], version = "*"}
-nbconvert = "~=7.3.1"
+nbconvert = "~=7.7.3"
 certifi = "*"
 numpy = "*"
 google-cloud-recaptcha-enterprise = "*"
