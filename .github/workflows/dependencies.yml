@@ -22,21 +22,18 @@ jobs:
       - name: Install pipenv
         run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
 
-      - name: Calculate Pipfile.lock hash
-        run: export A=$(python -m scripts.md5 ./Pipfile.lock)
-
-      - name: Install dependencies
+      - name: Install and check dependencies
         run: |
+          A=$(python -m scripts.md5 ./Pipfile.lock)
+
           PYTHONUNBUFFERED=1
           pipenv install --dev
 
-      - name: Calculate Pipfile.lock hash
-        run: export B=$(python -m scripts.md5 ./Pipfile.lock)
+          B=$(python -m scripts.md5 ./Pipfile.lock)
 
-      - name: Check dependencies
-        run: |
           echo $A;
           echo $B;
+
           if test "$A" != "B"; then
             echo "Pipfile.lock is out of date. Please run 'pipenv lock --dev' and commit the updated Pipfile.lock.";
             exit 1;
