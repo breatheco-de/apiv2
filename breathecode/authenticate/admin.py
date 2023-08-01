@@ -1,7 +1,6 @@
 import base64, os, urllib.parse, logging, datetime
 from django.contrib import admin
 from django.utils import timezone
-from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
 from .actions import (delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password,

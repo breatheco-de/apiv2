@@ -822,6 +822,7 @@ def get_app_keys(app_slug):
 
 
 def reset_app_cache():
+    get_app.cache_clear()
     get_app_keys.cache_clear()
     get_optional_scopes_set.cache_clear()
 

@@ -3,12 +3,12 @@ from typing import Type
 
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.signals import post_delete, post_save, pre_delete
-from breathecode.admissions.signals import student_edu_status_updated, cohort_stage_updated
+from django.db.models.signals import post_delete, post_save, pre_delete, m2m_changed
+from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.admissions.models import CohortUser
 from django.dispatch import receiver
 from .tasks import async_remove_from_organization, async_add_to_organization
-from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.models import App, ProfileAcademy
 from breathecode.mentorship.models import MentorProfile
 from django.db.models import Q
 from django.utils import timezone
@@ -107,3 +107,22 @@ def post_save_cohort_user(sender, instance, **kwargs):
         async_add_to_organization(instance.cohort.id, instance.user.id)
     else:
         async_remove_from_organization(instance.cohort.id, instance.user.id)
+
+
+@receiver(m2m_changed, sender=App.optional_scopes.through)
+def increment_on_change_required_scope(sender: Type[App.required_scopes.through],
+                                       instance: App.required_scopes.through, action: str, **kwargs):
+
+    if action == 'post_add':
+
+        instance.agreement_version += 1
+        instance.save()
+
+
+@receiver(m2m_changed, sender=App.optional_scopes.through)
+def increment_on_change_optional_scope(sender: Type[App], instance: App, action: str, **kwargs):
+
+    if action == 'post_add':
+
+        instance.agreement_version += 1
+        instance.save()

@@ -17,6 +17,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils import APIException
+from breathecode.utils.service import Service
 from .models import Task, FinalProject, UserAttachment
 from .actions import deliver_task
 from .caches import TaskCache
@@ -818,3 +819,22 @@ class SubtaskMeView(APIView):
         item.save()
 
         return Response(item.subtasks)
+
+
+class MeCodeRevisionView(APIView):
+
+    def get(self, request):
+        s = Service('rigobot', request.user.id)
+        response = s.get('/v1/finetuning/me/coderevision?read=false')
+        return response.json()
+
+
+class MeTaskCodeRevisionView(APIView):
+
+    def get(self, request, task_id):
+        if not (task := Task.objects.filter(id=task_id, user__id=request.user.id).exists()):
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        s = Service('rigobot', request.user.id)
+        response = s.get(f'/v1/finetuning/coderevision?repo={task.github_url}')
+        return response.json()

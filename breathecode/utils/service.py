@@ -55,34 +55,48 @@ class Service:
 
         raise Exception('Strategy not implemented')
 
+    def _fix_url(self, url):
+        if url[0] != '/':
+            url = f'/{url}'
+
+        return url
+
     def get(self, url, params=None, **kwargs):
+        url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('get', params=params, **kwargs)
         return requests.get(url, params=params, **kwargs, headers=headers)
 
     def options(self, url, **kwargs):
+        url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('options', **kwargs)
         return requests.options(url, **kwargs, headers=headers)
 
     def head(self, url, **kwargs):
+        url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('head', **kwargs)
         return requests.head(url, **kwargs, headers=headers)
 
     def post(self, url, data=None, json=None, **kwargs):
+        url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('post', data=data, json=json, **kwargs)
         return requests.post(url, data=data, json=json, **kwargs, headers=headers)
 
     def put(self, url, data=None, **kwargs):
+        url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('put', data=data, **kwargs)
         return requests.put(url, data=data, **kwargs, headers=headers)
 
     def patch(self, url, data=None, **kwargs):
+        url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('patch', data=data, **kwargs)
         return requests.patch(url, data=data, **kwargs, headers=headers)
 
     def delete(self, url, **kwargs):
+        url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('delete', **kwargs)
         return requests.delete(url, **kwargs, headers=headers)
 
     def request(self, method, url, **kwargs):
+        url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate(method, **kwargs)
         return requests.request(method, url, **kwargs, headers=headers)

@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 from typing import Any
 from django.contrib.auth.models import User, Group, Permission
 from django.core.exceptions import MultipleObjectsReturned
@@ -113,9 +114,11 @@ class Role(models.Model):
 
 
 class Scope(models.Model):
-    name = models.SlugField(max_length=25, unique=True)
-    slug = models.SlugField(unique=True)
-    description = models.CharField(max_length=255)
+    name = models.CharField(max_length=25,
+                            unique=True,
+                            help_text='Descriptive and unique name that appears on the authorize UI')
+    slug = models.CharField(max_length=15, unique=True, help_text='{action}:{data} for example read:repo')
+    description = models.CharField(max_length=255, help_text='Description of the scope')
 
     def clean(self) -> None:
         if not self.slug:
@@ -123,6 +126,12 @@ class Scope(models.Model):
 
         if not self.description:
             raise forms.ValidationError('Scope description is required')
+
+        if not self.slug or not re.findall(
+                r'^[a-z_:]+$', self.slug) or self.slug.count(':') > 1 or self.slug.count('__') > 0:
+            raise forms.ValidationError(
+                'Scope slug must be in the format "action_name:data_name" or "data_name" example '
+                '"read:repo" or "repo"')
 
         return super().clean()
 
@@ -172,12 +181,19 @@ class App(models.Model):
         self._webhook_url = self.webhook_url
         self._redirect_url = self.redirect_url
 
-    name = models.SlugField(max_length=25, unique=True)
-    slug = models.SlugField(unique=True)
+    name = models.CharField(max_length=25, unique=True, help_text='Descriptive and unique name of the app')
+    slug = models.SlugField(
+        unique=True,
+        help_text='Unique slug for the app, it must be url friendly and please avoid to change it')
+    description = models.CharField(max_length=255,
+                                   help_text='Description of the app, it will appear on the authorize UI')
 
     algorithm = models.CharField(max_length=11, choices=AUTH_ALGORITHM)
     strategy = models.CharField(max_length=9, choices=AUTH_STRATEGY)
-    schema = models.CharField(max_length=4, choices=AUTH_SCHEMA)
+    schema = models.CharField(
+        max_length=4,
+        choices=AUTH_SCHEMA,
+        help_text='Schema to use for the auth process to represent how the apps will communicate')
 
     required_scopes = models.ManyToManyField(Scope, blank=True, related_name='app_required_scopes')
     optional_scopes = models.ManyToManyField(Scope, blank=True, related_name='app_optional_scopes')
@@ -191,6 +207,7 @@ class App(models.Model):
 
     webhook_url = models.URLField()
     redirect_url = models.URLField()
+    app_url = models.URLField()
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -209,6 +226,9 @@ class App(models.Model):
 
         if not self.public_key and not self.private_key:
             self.public_key, self.private_key = generate_auth_keys(self.algorithm)
+
+        if self.app_url.endswith('/'):
+            self.app_url = self.app_url[:-1]
 
         return super().clean()
 
@@ -262,7 +282,7 @@ class OptionalScopeSet(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
-        self.__class__.objects.exclude(app_user_agreement__id__gte=1).delete()
+        self.__class__.objects.exclude(app_user_agreement__id__gte=1).exclude(id=self.id).delete()
 
         if had_pk:
             reset_app_user_cache()

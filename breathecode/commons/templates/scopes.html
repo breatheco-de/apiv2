@@ -1,0 +1,65 @@
+{% if scopes.count %}
+<div class="accordion accordion-flush" id="{{id}}">
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button
+        class="accordion-button collapsed disable-shadow"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#flush-{{id}}"
+        aria-expanded="false"
+        aria-controls="flush-collapseOne"
+      >
+        {{title}}
+      </button>
+    </h2>
+    <div
+      id="flush-{{id}}"
+      class="accordion-collapse collapse"
+      data-bs-parent="#{{id}}"
+    >
+      <div class="accordion-body">
+        {% for scope in scopes.all %}
+        <div class="d-flex">
+          <div class="col-11">
+            <span
+              class="d-inline-block"
+              tabindex="0"
+              data-bs-toggle="popover"
+              data-bs-trigger="hover focus"
+              data-bs-content="{{scope.description}}"
+            >
+              <div class="">
+                {{scope.name}}
+                <i class="bi bi-question-circle-fill question"></i>
+              </div>
+            </span>
+          </div>
+
+          <div class="form-check form-switch col-1 text-end">
+            {% if disabled %}
+            <input
+              name="{{scope.slug}}"
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              checked
+              disabled
+            />
+            {% else %}
+            <input
+              name="{{scope.slug}}"
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              checked
+            />
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

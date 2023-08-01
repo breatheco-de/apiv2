@@ -47,14 +47,15 @@ from breathecode.utils.service import Service
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
-from .actions import (generate_academy_token, get_user_language, resend_invite, reset_password,
+from .actions import (generate_academy_token, get_app, get_user_language, resend_invite, reset_password,
                       set_gitpod_user_expiration, update_gitpod_users, sync_organization_members,
                       get_github_scopes)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
-from .models import (CredentialsFacebook, CredentialsGithub, CredentialsGoogle, CredentialsSlack, GitpodUser,
-                     Profile, ProfileAcademy, Role, Token, UserInvite, GithubAcademyUser, AcademyAuthSettings)
+from .models import (AppUserAgreement, CredentialsFacebook, CredentialsGithub, CredentialsGoogle,
+                     CredentialsSlack, GitpodUser, OptionalScopeSet, Profile, ProfileAcademy, Role, Scope,
+                     Token, UserInvite, GithubAcademyUser, AcademyAuthSettings)
 from .serializers import (
     AppUserSerializer, AuthSerializer, GetGitpodUserSerializer, GetProfileAcademySerializer,
     GetProfileAcademySmallSerializer, GetProfileSerializer, GitpodUserSmallSerializer, MemberPOSTSerializer,
@@ -2377,3 +2378,57 @@ class DemoView(APIView):
         response = request.json()
 
         return Response({'message': 'ok'})
+
+
+@private_view()
+def authorize_view(request, token=None, app_slug=None):
+    try:
+        app = get_app(app_slug)
+
+    except:
+        return render_message(request, 'App not found', btn_label='Continue to 4Geeks', btn_url=APP_URL)
+
+    if not app.require_an_agreement:
+        return render_message(request, 'App not found', btn_label='Continue to 4Geeks', btn_url=APP_URL)
+
+    if request.method == 'GET':
+        return render(request, 'authorize.html', {
+            'app': app,
+            'reject_url': app.redirect_url + '?app=4geeks&status=rejected',
+        })
+
+    if request.method == 'POST':
+        items = set()
+        for key in request.POST:
+            if key == 'csrfmiddlewaretoken':
+                continue
+
+            items.add(key)
+
+        items = sorted(list(items))
+        query = Q()
+
+        for item in items:
+            query |= Q(optional_scopes__slug=item)
+
+        cache = OptionalScopeSet.objects.filter(query).first()
+        if cache is None or cache.optional_scopes.count() != len(items):
+            cache = OptionalScopeSet()
+            cache.save()
+
+            for s in items:
+                scope = Scope.objects.filter(slug=s).first()
+                cache.optional_scopes.add(scope)
+
+        if (agreement := AppUserAgreement.objects.filter(app=app, user=request.user).first()):
+            agreement.optional_scope_set = cache
+            agreement.agreement_version = app.agreement_version
+            agreement.save()
+
+        else:
+            agreement = AppUserAgreement.objects.create(app=app,
+                                                        user=request.user,
+                                                        agreement_version=app.agreement_version,
+                                                        optional_scope_set=cache)
+
+        return redirect(app.redirect_url + '?app=4geeks&status=authorized')

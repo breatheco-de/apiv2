@@ -7,6 +7,7 @@ from breathecode.admissions.models import CohortUser
 
 from breathecode.assignments.actions import task_is_valid_for_notifications, NOTIFICATION_STRINGS
 import breathecode.notify.actions as actions
+from breathecode.utils.service import Service
 from .models import Task
 
 # Get an instance of a logger
@@ -114,5 +115,22 @@ def set_cohort_user_assignments(task_id: int):
 
     cohort_user.history_log = user_history_log
     cohort_user.save()
+
+    s = None
+    if hasattr(task.user, 'credentialsgithub') and task.github_url:
+        s = Service('rigobot', task.user.id)
+
+    if s and task.task_status == 'DONE':
+        s.post('/v1/finetuning/me/repository/',
+               json={
+                   'url': task.github_url,
+                   'watchers': task.user.credentialsgithub.username,
+               })
+
+    elif s:
+        s.put('/v1/finetuning/me/repository/', json={
+            'url': task.github_url,
+            'activity_status': 'INACTIVE',
+        })
 
     logger.info('History log saved')
