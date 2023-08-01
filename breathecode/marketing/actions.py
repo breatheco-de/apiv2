@@ -144,7 +144,8 @@ def validate_email(email, lang):
                 'The email address seems to have poor quality. Are you able to provide a different email address?',
                 es=
                 'El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?',
-                slug='invalid-email'))
+                slug='invalid-email'),
+            data=data)
 
     return data
 
