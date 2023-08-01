@@ -17,6 +17,7 @@ import numpy as np
 logger = getLogger(__name__)
 
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY')
+MAILBOX_LAYER_KEY = os.getenv('MAILBOX_LAYER_KEY')
 
 
 def get_save_leads():
@@ -70,6 +71,82 @@ def bind_formentry_with_webhook(webhook):
     webhook.form_entry = entry
     webhook.save()
     return True
+
+
+def validate_email(email, lang):
+    """
+    Response: {
+        "email": "e@mail.com",
+        "did_you_mean": "",
+        "user": "a",
+        "domain": "mail.com",
+        "format_valid": true,
+        "mx_found": true,
+        "smtp_check": true,
+        "catch_all": false,
+        "role": false,
+        "disposable": false,
+        "free": false,
+        "score": 0.8
+    }
+
+    Error: {
+        "success": false,
+        "error": {
+            "code": 210,
+            "type": "no_email_address_supplied",
+            "info": "Please specify an email address. [Example: support@apilayer.com]"
+        }
+    }
+    """
+
+    result = {}
+    resp = requests.get(
+        f'https://apilayer.net/api/check?access_key={MAILBOX_LAYER_KEY}&email={email}&smtp=1&format=1',
+        timeout=2)
+    data = resp.json()
+
+    if 'success' in data and data['success'] == False:
+        if data['error']['code'] >= 100 and data['error']['code'] < 200:
+            raise Exception(data['error']['type'])
+        else:
+            raise ValidationException(
+                translation(lang,
+                            en='Error while validating email address',
+                            es='Se ha producido un error validando tu dirección de correo electrónico',
+                            slug='email-validation-error'))
+
+    if 'disposable' in data and data['disposable'] == True:
+        raise ValidationException(
+            translation(
+                lang,
+                en=
+                'It seems you are using a disposable email service. Please provide a different email address',
+                es=
+                'Parece que estás utilizando un proveedor de correos electronicos temporales. Por favor cambia tu dirección de correo electrónico.',
+                slug='disposable-email'))
+
+    if (('mx_found' in data and data['mx_found'] == False)
+            or ('smtp_check' in data and data['smtp_check'] == False)):
+        raise ValidationException(
+            translation(
+                lang,
+                en='The email you have provided seems invalid, please provide a different email address.',
+                es=
+                'El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico',
+                slug='invalid-email'))
+
+    if 'score' in data and data['score'] < 65:
+        raise ValidationException(
+            translation(
+                lang,
+                en=
+                'The email address seems to have poor quality. Are you able to provide a different email address?',
+                es=
+                'El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?',
+                slug='invalid-email'))
+
+    return data
 
 
 def set_optional(contact, key, data, custom_key=None):

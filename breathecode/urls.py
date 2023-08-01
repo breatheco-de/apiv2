@@ -54,7 +54,7 @@ urlpatterns_docs = [
     path('openapi.json',
          get_root_schema_view([namespace for _, _, namespace in apps if namespace != 'shortner'],
                               extend={
-                                  'title': 'BreatheCode API',
+                                  'title': '4Geeks API',
                                   'description': 'Technology for Learning',
                                   'version': 'v1.0.0',
                               }),

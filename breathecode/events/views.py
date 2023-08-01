@@ -1142,7 +1142,7 @@ class ICalStudentView(APIView):
         key = server_id()
 
         calendar = iCalendar()
-        calendar.add('prodid', f'-//BreatheCode//Student Schedule ({user_id}) {key}//EN')
+        calendar.add('prodid', f'-//4Geeks//Student Schedule ({user_id}) {key}//EN')
         calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Schedule')
         calendar.add('X-WR-CALDESC', '')
@@ -1260,7 +1260,7 @@ class ICalCohortsView(APIView):
         key = server_id()
 
         calendar = iCalendar()
-        calendar.add('prodid', f'-//BreatheCode//Academy Cohorts{academies_repr} {key}//EN')
+        calendar.add('prodid', f'-//4Geeks//Academy Cohorts{academies_repr} {key}//EN')
         calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Cohorts')
         calendar.add('X-WR-CALDESC', '')
@@ -1432,7 +1432,7 @@ class ICalEventView(APIView):
         key = server_id()
 
         calendar = iCalendar()
-        calendar.add('prodid', f'-//BreatheCode//Academy Events{academies_repr} {key}//EN')
+        calendar.add('prodid', f'-//4Geeks//Academy Events{academies_repr} {key}//EN')
         calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Events')
         calendar.add('X-WR-CALDESC', '')

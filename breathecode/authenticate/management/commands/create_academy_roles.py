@@ -592,6 +592,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_mentorship_bill',
             'classroom_activity',
             'read_asset',
+            'task_delivery_details',
         ]
     })
     roles.append({
@@ -663,7 +664,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill',
-            'read_project_invoice', 'crud_project_invoice'
+            'read_project_invoice', 'crud_project_invoice', 'get_github_user', 'read_provisioning_bill'
         ]
     })
     roles.append({

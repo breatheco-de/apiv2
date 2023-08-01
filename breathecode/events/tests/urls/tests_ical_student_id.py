@@ -58,7 +58,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -107,7 +107,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -151,7 +151,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -219,7 +219,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -297,7 +297,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -369,7 +369,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -416,7 +416,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -462,7 +462,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -529,7 +529,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -620,7 +620,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -735,7 +735,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',
@@ -866,7 +866,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            f'PRODID:-//4Geeks//Student Schedule (1) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             'URL:http://localhost:8000/v1/events/ical/student/1',

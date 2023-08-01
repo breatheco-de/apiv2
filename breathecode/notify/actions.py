@@ -36,7 +36,7 @@ def send_email_message(template_slug, to, data={}):
         result = requests.post(f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
                                auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
                                data={
-                                   'from': f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                                   'from': f"4Geeks <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
                                    'to': to,
                                    'subject': template['subject'],
                                    'text': template['text'],

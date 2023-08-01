@@ -52,6 +52,7 @@ class GetProvisioningBillSmallSerializer(serpy.Serializer):
     vendor = GetProvisioningVendorSerializer(required=False)
     total_amount = serpy.Field()
     status = serpy.Field()
+    title = serpy.Field()
     status_details = serpy.Field()
     paid_at = serpy.Field()
     fee = serpy.Field()
