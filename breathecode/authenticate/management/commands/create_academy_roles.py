@@ -458,6 +458,7 @@ ROLES = [
             'academy_reporting',
             'read_activity',
             'read_technology',
+            'read_academyservice',
         ],
     },
     {
