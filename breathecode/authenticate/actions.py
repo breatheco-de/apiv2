@@ -750,10 +750,10 @@ def get_user_scopes(app_slug, user_id):
     from .models import AppUserAgreement
 
     info, _, _ = get_app_keys(app_slug)
-    _, _, _, _, require_an_agreement, required_scopes, optional_scopes = info
+    (_, _, _, _, require_an_agreement, required_scopes, optional_scopes, _, _, _) = info
 
     if require_an_agreement:
-        agreement = AppUserAgreement.objects.filter(app__id=app_id, user__id=user_id).first()
+        agreement = AppUserAgreement.objects.filter(app__slug=app_slug, user__id=user_id).first()
         if not agreement:
             raise ValidationException('User has not accepted the agreement',
                                       slug='agreement-not-accepted',
@@ -778,13 +778,15 @@ def get_app_keys(app_slug):
     if app is None:
         raise ValidationException('Unauthorized', code=401, slug='app-not-found')
 
+    print(app.algorithm)
+
     if app.algorithm == 'HMAC_SHA256':
         alg = 'HS256'
 
     elif app.algorithm == 'HMAC_SHA512':
         alg = 'HS512'
 
-    elif app.algorithm == 'ed25519':
+    elif app.algorithm == 'ED25519':
         alg = 'EdDSA'
 
     else:
@@ -811,6 +813,7 @@ def get_app_keys(app_slug):
         tuple(sorted(x.slug for x in app.optional_scopes.all())),
         app.webhook_url,
         app.redirect_url,
+        app.app_url,
     )
     key = (
         bytes.fromhex(app.public_key) if app.public_key else None,

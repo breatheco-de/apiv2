@@ -187,11 +187,12 @@ class App(models.Model):
     description = models.CharField(max_length=255,
                                    help_text='Description of the app, it will appear on the authorize UI')
 
-    algorithm = models.CharField(max_length=11, choices=AUTH_ALGORITHM)
-    strategy = models.CharField(max_length=9, choices=AUTH_STRATEGY)
+    algorithm = models.CharField(max_length=11, choices=AUTH_ALGORITHM, default=HMAC_SHA512)
+    strategy = models.CharField(max_length=9, choices=AUTH_STRATEGY, default=JWT)
     schema = models.CharField(
         max_length=4,
         choices=AUTH_SCHEMA,
+        default=LINK,
         help_text='Schema to use for the auth process to represent how the apps will communicate')
 
     required_scopes = models.ManyToManyField(Scope, blank=True, related_name='app_required_scopes')

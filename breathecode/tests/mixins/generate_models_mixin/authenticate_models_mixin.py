@@ -30,6 +30,11 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      user_setting=False,
                                      github_academy_user_log=False,
                                      pending_github_user=False,
+                                     scope=False,
+                                     app=False,
+                                     app_user_agreement=False,
+                                     optional_scope_set=False,
+                                     legacy_key=False,
                                      profile_kwargs={},
                                      device_id_kwargs={},
                                      capability_kwargs={},
@@ -96,6 +101,55 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 **kargs,
                 **role_kwargs
             })
+
+        if not 'scope' in models and is_valid(scope):
+            kargs = {}
+
+            models['scope'] = create_models(scope, 'authenticate.Scope', **kargs)
+
+        if not 'app' in models and (is_valid(app) or is_valid(app_user_agreement) or is_valid(legacy_key)):
+            kargs = {
+                'public_key': None,
+                'private_key': '',
+            }
+
+            if 'scope' in models:
+                kargs['required_scopes'] = get_list(models['scope'])
+                kargs['optional_scopes'] = get_list(models['scope'])
+
+            models['app'] = create_models(app, 'authenticate.App', **kargs)
+
+        if not 'optional_scope_set' in models and is_valid(optional_scope_set):
+            kargs = {}
+
+            if 'scope' in models:
+                kargs['optional_scopes'] = get_list(models['scope'])
+
+            if 'scope' in models:
+                kargs['optional_scopes'] = get_list(models['scope'])
+
+            models['optional_scope_set'] = create_models(optional_scope_set, 'authenticate.OptionalScopeSet',
+                                                         **kargs)
+
+        if not 'app_user_agreement' in models and is_valid(app_user_agreement):
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = get_list(models['user'])
+
+            if 'app' in models:
+                kargs['app'] = get_list(models['app'])
+
+            models['app_user_agreement'] = create_models(app_user_agreement, 'authenticate.AppUserAgreement',
+                                                         **kargs)
+
+        if not 'legacy_key' in models and is_valid(legacy_key):
+            kargs = {}
+
+            if 'app' in models:
+                kargs['app'] = get_list(models['app'])
+
+            models['legacy_key'] = create_models(legacy_key, 'authenticate.LegacyKey', **kargs)
 
         if not 'user_invite' in models and is_valid(user_invite):
             kargs = {}

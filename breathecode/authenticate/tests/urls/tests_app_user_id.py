@@ -1,0 +1,127 @@
+"""
+Test cases for /user
+"""
+import pytz, datetime
+from django.urls.base import reverse_lazy
+from rest_framework import status
+from ..mixins.new_auth_test_case import AuthTestCase
+
+
+def credentials_github_serializer(credentials_github):
+    return {
+        'avatar_url': credentials_github.avatar_url,
+        'name': credentials_github.name,
+        'username': credentials_github.username,
+    }
+
+
+def profile_serializer(credentials_github):
+    return {
+        'avatar_url': credentials_github.avatar_url,
+    }
+
+
+def get_serializer(user, credentials_github=None, profile=None):
+    return {
+        'email': user.email,
+        'first_name': user.first_name,
+        'github': credentials_github_serializer(credentials_github) if credentials_github else None,
+        'id': user.id,
+        'last_name': user.last_name,
+        'profile': profile_serializer(profile) if profile else None,
+    }
+
+
+class AuthenticateTestSuite(AuthTestCase):
+
+    # When: no auth
+    # Then: return 401
+    def test_no_auth(self):
+        """Test /user/me without auth"""
+
+        # self.bc.request.sign_jwt_link(app, user_id: Optional[int] = None, reverse: bool = False)
+        url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = {
+            'detail': 'no-authorization-header',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    # When: Sign with an user
+    # Then: return 200
+    def test_sign_with_user__get_own_info(self):
+        app = {'require_an_agreement': False}
+        credentials_githubs = [{'user_id': x + 1} for x in range(2)]
+        profiles = [{'user_id': x + 1} for x in range(2)]
+        model = self.bc.database.create(user=2,
+                                        app=app,
+                                        profile=profiles,
+                                        credentials_github=credentials_githubs)
+        self.bc.request.sign_jwt_link(model.app, 1)
+
+        url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = get_serializer(model.user[0], model.credentials_github[0], model.profile[0])
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))
+
+    # When: Sign with an user
+    # Then: return 200
+    def test_sign_with_user__get_info_from_another(self):
+        app = {'require_an_agreement': False}
+        credentials_githubs = [{'user_id': x + 1} for x in range(2)]
+        profiles = [{'user_id': x + 1} for x in range(2)]
+        model = self.bc.database.create(user=2,
+                                        app=app,
+                                        profile=profiles,
+                                        credentials_github=credentials_githubs)
+        self.bc.request.sign_jwt_link(model.app, 1)
+
+        url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 2})
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = {
+            'detail': 'user-with-no-access',
+            'silent': True,
+            'silent_code': 'user-with-no-access',
+            'status_code': 403,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))
+
+    # When: Sign without an user
+    # Then: return 200
+    def test_sign_without_user(self):
+        """Test /user/me without auth"""
+
+        app = {'require_an_agreement': False}
+        credentials_githubs = [{'user_id': x + 1} for x in range(2)]
+        profiles = [{'user_id': x + 1} for x in range(2)]
+        model = self.bc.database.create(user=2,
+                                        app=app,
+                                        profile=profiles,
+                                        credentials_github=credentials_githubs)
+        self.bc.request.sign_jwt_link(model.app)
+
+        for user in model.user:
+            url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': user.id})
+            response = self.client.get(url)
+
+            json = response.json()
+            expected = get_serializer(user, model.credentials_github[user.id - 1], model.profile[user.id - 1])
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(self.bc.database.list_of('auth.User'), self.bc.format.to_dict(model.user))

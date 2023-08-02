@@ -36,7 +36,7 @@ def link_schema(request, required_scopes, authorization: str, use_signature: boo
 
     info, key, legacy_key = get_app_keys(authorization['App'])
     (app_id, alg, strategy, schema, require_an_agreement, required_app_scopes, optional_app_scopes,
-     webhook_url, redirect_url) = info
+     webhook_url, redirect_url, app_url) = info
     public_key, private_key = key
 
     if schema != 'LINK':
@@ -47,7 +47,7 @@ def link_schema(request, required_scopes, authorization: str, use_signature: boo
 
     try:
         key = public_key if public_key else private_key
-        payload = jwt.decode(authorization['Token'], key, algorithms=[alg], audience='breathecode')
+        payload = jwt.decode(authorization['Token'], key, algorithms=[alg], audience='4geeks')
 
     except Exception as e:
         if not legacy_key:
@@ -84,6 +84,7 @@ def link_schema(request, required_scopes, authorization: str, use_signature: boo
         'require_an_agreement': require_an_agreement,
         'webhook_url': webhook_url,
         'redirect_url': redirect_url,
+        'app_url': app_url,
     }
 
     return app, payload
@@ -134,7 +135,7 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
 
     info, key, legacy_key = get_app_keys(authorization['App'])
     (app_id, alg, strategy, schema, require_an_agreement, required_app_scopes, optional_app_scopes,
-     webhook_url, redirect_url) = info
+     webhook_url, redirect_url, app_url) = info
     public_key, private_key = key
 
     if require_an_agreement:
@@ -189,6 +190,7 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
         'require_an_agreement': require_an_agreement,
         'webhook_url': webhook_url,
         'redirect_url': redirect_url,
+        'app_url': app_url,
     }
 
     return app

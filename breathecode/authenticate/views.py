@@ -2330,6 +2330,7 @@ class AppUserView(APIView):
             serializer = AppUserSerializer(user, many=False)
             return Response(serializer.data)
 
+        # test this path
         items = User.objects.filter(**extra)
         items = handler.queryset(items)
         serializer = AppUserSerializer(items, many=True)
