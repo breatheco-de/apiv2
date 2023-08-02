@@ -339,8 +339,8 @@ def render_html_all_bills(request, token):
                       'message.html', {
                           'MESSAGE':
                           translation(lang,
-                                      en='You have no access to this resource',
-                                      es='No tienes acceso a este recurso',
+                                      en="You don't have the capabilities to read provisioning bills in this academy",
+                                      es='No tienes capacidads para leer provisioning bills en esta academia',
                                       slug='no-access')
                       },
                       status=403)
