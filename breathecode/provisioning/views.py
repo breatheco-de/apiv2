@@ -331,7 +331,7 @@ def render_html_all_bills(request, token):
     academy_ids = {
         x.academy.id
         for x in ProfileAcademy.objects.filter(user=request.user,
-                                               role__capabilities__slug='crud_provisioning_bill')
+                                               role__capabilities__slug='read_provisioning_bill')
     }
 
     if not academy_ids:
