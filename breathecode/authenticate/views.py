@@ -2354,32 +2354,6 @@ def app_webhook(request, app: dict):
     return Response({'message': 'ok'})
 
 
-# demo
-class DemoView(APIView):
-    extensions = APIViewExtensions(paginate=True)
-
-    def get(self, request, user_id=None):
-        handler = self.extensions(request)
-        lang = get_user_language(request)
-
-        # default from app (jwt)
-        s = Service('rigobot', request.user.id)
-        request = s.get('https://rigobot.4geeks.com/user')
-        response = request.json()
-
-        # force jwt
-        s = Service('rigobot', request.user.id, mode='jwt')
-        request = s.get('https://rigobot.4geeks.com/user')
-        response = request.json()
-
-        # force signature
-        s = Service('rigobot', request.user.id, mode='signature')
-        request = s.get('https://rigobot.4geeks.com/webhook')
-        response = request.json()
-
-        return Response({'message': 'ok'})
-
-
 @private_view()
 def authorize_view(request, token=None, app_slug=None):
     try:

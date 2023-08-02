@@ -26,8 +26,8 @@ from breathecode.services.github import Github
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat, PublicFormat
 
-from .models import (ASYMMETRIC_ALGORITHMS, App, CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy,
-                     Role, Token, UserSetting, AcademyAuthSettings, GithubAcademyUser)
+from .models import (App, CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Role, Token, UserSetting,
+                     AcademyAuthSettings, GithubAcademyUser)
 
 logger = logging.getLogger(__name__)
 

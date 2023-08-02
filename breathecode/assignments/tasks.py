@@ -117,20 +117,24 @@ def set_cohort_user_assignments(task_id: int):
     cohort_user.save()
 
     s = None
-    if hasattr(task.user, 'credentialsgithub') and task.github_url:
-        s = Service('rigobot', task.user.id)
+    try:
+        if hasattr(task.user, 'credentialsgithub') and task.github_url:
+            s = Service('rigobot', task.user.id)
 
-    if s and task.task_status == 'DONE':
-        s.post('/v1/finetuning/me/repository/',
-               json={
-                   'url': task.github_url,
-                   'watchers': task.user.credentialsgithub.username,
-               })
+        if s and task.task_status == 'DONE':
+            s.post('/v1/finetuning/me/repository/',
+                   json={
+                       'url': task.github_url,
+                       'watchers': task.user.credentialsgithub.username,
+                   })
 
-    elif s:
-        s.put('/v1/finetuning/me/repository/', json={
-            'url': task.github_url,
-            'activity_status': 'INACTIVE',
-        })
+        elif s:
+            s.put('/v1/finetuning/me/repository/',
+                  json={
+                      'url': task.github_url,
+                      'activity_status': 'INACTIVE',
+                  })
+    except:
+        logger.error('App Rigobot not found')
 
     logger.info('History log saved')

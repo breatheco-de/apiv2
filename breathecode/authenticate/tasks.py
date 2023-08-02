@@ -1,6 +1,8 @@
 import logging, os
 from celery import shared_task, Task
 from django.contrib.auth.models import User
+
+from breathecode.utils.decorators.task import task
 from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions
 
@@ -76,7 +78,8 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
         })
 
 
-@shared_task
+@task
 def destroy_legacy_key(legacy_key_id):
     from .models import LegacyKey
+
     LegacyKey.objects.filter(id=legacy_key_id).delete()

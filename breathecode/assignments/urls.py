@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import (MeCodeRevisionView, MeTaskCodeRevisionView, TaskMeView, sync_cohort_tasks_view,
-                    TaskTeacherView, deliver_assignment_view, TaskMeDeliverView, FinalProjectMeView,
-                    CohortTaskView, SubtaskMeView, TaskMeAttachmentView, FinalProjectScreenshotView)
+from .views import (AcademyTaskCodeRevisionView, MeCodeRevisionView, MeTaskCodeRevisionView, TaskMeView,
+                    sync_cohort_tasks_view, TaskTeacherView, deliver_assignment_view, TaskMeDeliverView,
+                    FinalProjectMeView, CohortTaskView, SubtaskMeView, TaskMeAttachmentView,
+                    FinalProjectScreenshotView)
 
 app_name = 'assignments'
 urlpatterns = [
@@ -18,6 +19,9 @@ urlpatterns = [
     path('me/task/<int:task_id>/coderevision',
          MeTaskCodeRevisionView.as_view(),
          name='me_task_id_coderevision'),
+    path('academy/task/<int:task_id>/coderevision',
+         AcademyTaskCodeRevisionView.as_view(),
+         name='academy_task_id_coderevision'),
     path('user/<int:user_id>/task', TaskMeView.as_view(), name='user_id_task'),
     path('user/<int:user_id>/task/<int:task_id>', TaskMeView.as_view(), name='user_id_task_id'),
     path('academy/cohort/<int:cohort_id>/task', CohortTaskView.as_view()),

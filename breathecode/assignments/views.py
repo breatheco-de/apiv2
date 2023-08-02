@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, StreamingHttpResponse
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 import logging, hashlib, os
@@ -824,17 +824,87 @@ class SubtaskMeView(APIView):
 class MeCodeRevisionView(APIView):
 
     def get(self, request):
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
         s = Service('rigobot', request.user.id)
-        response = s.get('/v1/finetuning/me/coderevision?read=false')
-        return response.json()
+        response = s.get('/v1/finetuning/me/coderevision', params=params, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
 
 
 class MeTaskCodeRevisionView(APIView):
 
     def get(self, request, task_id):
-        if not (task := Task.objects.filter(id=task_id, user__id=request.user.id).exists()):
+        if not (task := Task.objects.filter(id=task_id, user__id=request.user.id).first()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
+        params['repo'] = task.github_url
+
         s = Service('rigobot', request.user.id)
-        response = s.get(f'/v1/finetuning/coderevision?repo={task.github_url}')
-        return response.json()
+        response = s.get(f'/v1/finetuning/coderevision', params=params, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
+
+
+class AcademyTaskCodeRevisionView(APIView):
+
+    @capable_of('read_assignment')
+    def get(self, request, task_id, academy_id):
+        if not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).first()):
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
+        params['repo'] = task.github_url
+
+        s = Service('rigobot')
+        response = s.get(f'/v1/finetuning/coderevision', params=params, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource

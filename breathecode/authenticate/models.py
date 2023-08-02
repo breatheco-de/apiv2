@@ -16,9 +16,8 @@ from slugify import slugify
 
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
-from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators import validate_language_code
-from .signals import invite_status_updated, profile_academy_saved, academy_invite_accepted
+from .signals import invite_status_updated, academy_invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
 __all__ = [
@@ -347,6 +346,12 @@ class LegacyKey(models.Model):
         super().save(*args, **kwargs)
 
         tasks.destroy_legacy_key.apply_async(args=(self.id, ), eta=timezone.now() + LEGACY_KEY_LIFETIME)
+
+    def delete(self, *args, **kwargs):
+        from . import actions
+        r = super().delete(*args, **kwargs)
+        actions.reset_app_cache()
+        return r
 
 
 PENDING = 'PENDING'
