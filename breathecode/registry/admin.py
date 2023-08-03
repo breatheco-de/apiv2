@@ -65,6 +65,14 @@ def pull_content_from_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         async_pull_from_github.delay(a.slug, request.user.id)
+        # pull_from_github(a.slug)  # uncomment for testing purposes
+
+
+def pull_content_from_github_override_meta(modeladmin, request, queryset):
+    queryset.update(sync_status='PENDING', status_text='Starting to sync...')
+    assets = queryset.all()
+    for a in assets:
+        async_pull_from_github.delay(a.slug, request.user.id, override_meta=True)
         # pull_from_github(a.slug, override_meta=True)  # uncomment for testing purposes
 
 
@@ -310,6 +318,7 @@ class AssetAdmin(admin.ModelAdmin):
         add_gitpod,
         remove_gitpod,
         pull_content_from_github,
+        pull_content_from_github_override_meta,
         seo_optimization_off,
         seo_optimization_on,
         seo_report,
