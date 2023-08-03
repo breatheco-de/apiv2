@@ -279,6 +279,28 @@ class WithDescription(admin.SimpleListFilter):
             return queryset.filter(description__isnull=True)
 
 
+class IsMarkdown(admin.SimpleListFilter):
+
+    title = 'Markdown Based'
+
+    parameter_name = 'is_markdown'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Is Markdown'),
+            ('no', 'Is notebook or other'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(readme_url__contains='.md')
+
+        if self.value() == 'no':
+            return queryset.exclude(readme_url__contains='.md')
+
+
 class WithKeywordFilter(admin.SimpleListFilter):
 
     title = 'With Keyword'
@@ -310,7 +332,7 @@ class AssetAdmin(admin.ModelAdmin):
     list_display = ('main', 'current_status', 'alias', 'techs', 'url_path')
     list_filter = [
         'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter,
-        WithKeywordFilter, WithDescription
+        WithKeywordFilter, WithDescription, IsMarkdown
     ]
     raw_id_fields = ['author', 'owner']
     actions = [
