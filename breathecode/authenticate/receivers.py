@@ -104,7 +104,7 @@ def post_save_cohort_user(sender, instance, **kwargs):
         # never ending cohorts cannot be in synch with github
         if instance.cohort.never_ends:
             return None
-            
+
         async_add_to_organization(instance.cohort.id, instance.user.id)
     else:
         async_remove_from_organization(instance.cohort.id, instance.user.id)

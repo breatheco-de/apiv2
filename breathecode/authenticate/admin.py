@@ -100,8 +100,8 @@ class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name']
     raw_id_fields = ['user']
     list_filter = ['academy', 'role', 'status', 'process_status']
-    list_display = ('email', 'is_email_validated', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at',
-                    'invite_url')
+    list_display = ('email', 'is_email_validated', 'first_name', 'last_name', 'status', 'academy', 'token',
+                    'created_at', 'invite_url')
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list]
 
     def invite_url(self, obj):
