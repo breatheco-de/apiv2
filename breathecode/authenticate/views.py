@@ -2236,7 +2236,7 @@ class ProfileMePictureView(APIView):
             cloud_file.upload(file, content_type=file.content_type)
             func = FunctionV2(get_shape_of_image_url())
 
-            res = func.call({'filename': hash, 'bucket': get_profile_bucket()})
+            res = func.call({'filename': hash, 'bucket': get_profile_bucket()}, timeout=28)
             json = res.json()
 
             if json['shape'] != 'Square':

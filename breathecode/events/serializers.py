@@ -443,18 +443,21 @@ class EventSerializer(serializers.ModelSerializer):
         title = data.get('title')
         slug = data.get('slug')
 
-        if slug and self.instance:
+        if self.instance and slug:
             raise ValidationException(
                 translation(lang,
                             en='The slug field is readonly',
                             es='El campo slug es de solo lectura',
                             slug='try-update-slug'))
 
-        if title and not slug:
-            slug = slugify(data['title']).lower()
-
-        elif slug:
-            slug = f'{data["slug"].lower()}'
+        if not slug:
+            raise ValidationException(
+                translation(lang,
+                            en='The slug field cannot be null',
+                            es='El campo slug no puede ser null',
+                            slug='create-with-slug-null'))
+        
+        slug = f'{data["slug"].lower()}'
 
         online_event = data.get('online_event')
         live_stream_url = data.get('live_stream_url')
