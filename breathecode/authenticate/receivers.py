@@ -98,12 +98,13 @@ def post_delete_cohort_user(sender, instance, **kwargs):
 @receiver(student_edu_status_updated, sender=CohortUser)
 def post_save_cohort_user(sender, instance, **kwargs):
 
-    # never ending cohorts cannot be in synch with github
-    if instance.cohort.never_ends:
-        return None
-
     logger.debug('User educational status updated to: ' + str(instance.educational_status))
     if instance.educational_status == 'ACTIVE':
+
+        # never ending cohorts cannot be in synch with github
+        if instance.cohort.never_ends:
+            return None
+
         async_add_to_organization(instance.cohort.id, instance.user.id)
     else:
         async_remove_from_organization(instance.cohort.id, instance.user.id)

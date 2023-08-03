@@ -1563,6 +1563,11 @@ class PayView(APIView):
                 for cohort in bag.selected_cohorts.all():
                     admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
 
+                if (plans := bag.plans.all()) and not bag.selected_cohorts.exists():
+                    for plan in plans:
+                        if plan.owner:
+                            admissions_tasks.build_profile_academy.delay(plan.owner.id, bag.user.id)
+
                 serializer = GetInvoiceSerializer(invoice, many=False)
                 return Response(serializer.data, status=201)
 

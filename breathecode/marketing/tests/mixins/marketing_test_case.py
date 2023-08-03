@@ -55,7 +55,7 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin
             call('https://api.mailgun.net/v3/None/messages',
                  auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
                  data={
-                     'from': f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                     'from': f"4Geeks <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
                      'to': model['user'].email,
                      'subject': template['subject'],
                      'text': template['text'],

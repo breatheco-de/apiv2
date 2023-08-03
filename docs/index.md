@@ -2,7 +2,7 @@
 
 ## Working inside Docker (slower)
 
-### `Build BreatheCode Dev docker image`
+### `Build 4Geeks Dev docker image`
 
 Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
@@ -10,14 +10,14 @@ Install [docker desktop](https://www.docker.com/products/docker-desktop) in your
 # Check which dependencies you need install in your operating system
 python -m scripts.doctor
 
-# Generate the BreatheCode Dev docker image
+# Generate the 4Geeks Dev docker image
 docker-compose build bc-dev
 ```
 
-### `Testing inside BreatheCode Dev`
+### `Testing inside 4Geeks Dev`
 
 ```bash
-# Open the BreatheCode Dev, this shell don't export the port 8000
+# Open the 4Geeks Dev, this shell don't export the port 8000
 docker-compose run bc-dev fish
 
 # Testing
@@ -33,19 +33,19 @@ pipenv run cov breathecode.activity  # python module path
 pipenv run pcov breathecode.activity  # python module path
 ```
 
-### `Run BreatheCode API as docker service`
+### `Run 4Geeks API as docker service`
 
 ```bash
-# open BreatheCode API as a service and export the port 8000
+# open 4Geeks API as a service and export the port 8000
 docker-compose up -d bc-dev
 
-# open the BreatheCode Dev, this shell don't export the port 8000
+# open the 4Geeks Dev, this shell don't export the port 8000
 docker-compose run bc-dev fish
 
 # create super user
 pipenv run python manage.py createsuperuser
 
-# Close the BreatheCode Dev
+# Close the 4Geeks Dev
 exit
 
 # See the output of Django
@@ -88,7 +88,7 @@ pipenv run cov breathecode.activity  # python module path
 pipenv run pcov breathecode.activity  # python module path
 ```
 
-### `Run BreatheCode API in your local machine`
+### `Run 4Geeks API in your local machine`
 
 ```bash
 # Collect statics
