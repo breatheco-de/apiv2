@@ -2428,16 +2428,22 @@ def authorize_view(request, token=None, app_slug=None):
         for item in items:
             query |= Q(optional_scopes__slug=item)
 
+        created = False
         cache = OptionalScopeSet.objects.filter(query).first()
         if cache is None or cache.optional_scopes.count() != len(items):
             cache = OptionalScopeSet()
             cache.save()
+
+            created = True
 
             for s in items:
                 scope = Scope.objects.filter(slug=s).first()
                 cache.optional_scopes.add(scope)
 
         if (agreement := AppUserAgreement.objects.filter(app=app, user=request.user).first()):
+            if created:
+                agreement.agreed_at = timezone.now()
+
             agreement.optional_scope_set = cache
             agreement.agreement_version = app.agreement_version
             agreement.save()
@@ -2445,6 +2451,7 @@ def authorize_view(request, token=None, app_slug=None):
         else:
             agreement = AppUserAgreement.objects.create(app=app,
                                                         user=request.user,
+                                                        agreed_at=timezone.now(),
                                                         agreement_version=app.agreement_version,
                                                         optional_scope_set=cache)
 
