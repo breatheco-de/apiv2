@@ -725,18 +725,17 @@ class SessionSerializer(SessionPUTSerializer):
         mentee = None
         if 'mentee' in data:
             if data['mentee'] and isinstance(data['mentee'], str) and not data['mentee'].isnumeric():
-                mentee = CohortUser.objects.filter(cohort__academy=self.context['academy_id'],
-                                                   user__email=data['mentee']).first()
+                mentee = CohortUser.objects.filter(email=data['mentee']).first()
             else:
-                mentee = CohortUser.objects.filter(cohort__academy=self.context['academy_id'],
-                                                   user__id=data['mentee']).first()
+                mentee = CohortUser.objects.filter(id=data['mentee']).first()
 
             if mentee is None:
-                raise ValidationException(
-                    f'Mentee {data["mentee"]} was not found on any cohort for this academy',
-                    slug='mentee-not-found')
-            else:
-                mentee = mentee.user
+                raise ValidationException(translation(
+                    lang,
+                    en='The session mentee is not a member of 4Geeks.com',
+                    es='El usuario que quieres agregar a la mentoría no pertenece a 4Geeks.com',
+                    slug='mentee-not-found'),
+                                          code=400)
 
         if mentee is not None and mentor.user.id == mentee.id:
             raise ValidationException(translation(
