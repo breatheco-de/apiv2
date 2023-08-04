@@ -42,6 +42,7 @@ from .serializers import (
     AcademyAliasSmallSerializer,
     ActiveCampaignAcademyBigSerializer,
     ActiveCampaignAcademySerializer,
+    FormEntryHookSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import convert_data_frame, sync_tags, sync_automations, validate_email
@@ -704,6 +705,10 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('course')
             lookup['course'] = param
 
+        if 'ac_deal_id' in self.request.GET:
+            param = self.request.GET.get('ac_deal_id')
+            lookup['ac_deal_id'] = param
+
         if 'location' in self.request.GET or 'location_alias' in self.request.GET:
             param = self.request.GET.get('location') if self.request.GET.get(
                 'location') is not None else self.request.GET.get('location_alias')
@@ -740,7 +745,15 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             items = query_like_by_full_name(like=like, items=items)
 
         items = handler.queryset(items)
-        serializer = FormEntrySmallSerializer(items, many=True)
+
+        only_first = request.GET.get('only_first', None)
+        if only_first is not None and only_first.lower() == 'true':
+            first = items.first()
+            first = [first] if first is not None else []
+            serializer = FormEntryHookSerializer(first, many=True)
+
+        else:
+            serializer = FormEntrySmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 

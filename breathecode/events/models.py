@@ -7,6 +7,7 @@ from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Sylla
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
 from django.core.exceptions import ValidationError
+from slugify import slugify
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
@@ -272,6 +273,11 @@ class Event(models.Model):
 
         created = not self.id
         super().save(*args, **kwargs)
+
+        new_slug = f'{slugify(self.title).lower()}-{self.id}'
+        if self.slug != new_slug:
+            self.slug = new_slug
+            self.save()
 
         event_saved.send(instance=self, sender=self.__class__, created=created)
 

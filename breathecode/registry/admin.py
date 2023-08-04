@@ -65,6 +65,14 @@ def pull_content_from_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         async_pull_from_github.delay(a.slug, request.user.id)
+        # pull_from_github(a.slug)  # uncomment for testing purposes
+
+
+def pull_content_from_github_override_meta(modeladmin, request, queryset):
+    queryset.update(sync_status='PENDING', status_text='Starting to sync...')
+    assets = queryset.all()
+    for a in assets:
+        async_pull_from_github.delay(a.slug, request.user.id, override_meta=True)
         # pull_from_github(a.slug, override_meta=True)  # uncomment for testing purposes
 
 
@@ -271,6 +279,28 @@ class WithDescription(admin.SimpleListFilter):
             return queryset.filter(description__isnull=True)
 
 
+class IsMarkdown(admin.SimpleListFilter):
+
+    title = 'Markdown Based'
+
+    parameter_name = 'is_markdown'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Is Markdown'),
+            ('no', 'Is notebook or other'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(readme_url__contains='.md')
+
+        if self.value() == 'no':
+            return queryset.exclude(readme_url__contains='.md')
+
+
 class WithKeywordFilter(admin.SimpleListFilter):
 
     title = 'With Keyword'
@@ -302,7 +332,7 @@ class AssetAdmin(admin.ModelAdmin):
     list_display = ('main', 'current_status', 'alias', 'techs', 'url_path')
     list_filter = [
         'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter,
-        WithKeywordFilter, WithDescription
+        WithKeywordFilter, WithDescription, IsMarkdown
     ]
     raw_id_fields = ['author', 'owner']
     actions = [
@@ -310,6 +340,7 @@ class AssetAdmin(admin.ModelAdmin):
         add_gitpod,
         remove_gitpod,
         pull_content_from_github,
+        pull_content_from_github_override_meta,
         seo_optimization_off,
         seo_optimization_on,
         seo_report,
