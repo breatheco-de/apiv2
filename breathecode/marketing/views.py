@@ -748,7 +748,9 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
 
         only_first = request.GET.get('only_first', None)
         if only_first is not None and only_first.lower() == 'true':
-            serializer = FormEntryHookSerializer(items[0], many=True)
+            first = items.first()
+            first = [first] if first is not None else []
+            serializer = FormEntryHookSerializer(first, many=True)
 
         else:
             serializer = FormEntrySmallSerializer(items, many=True)
