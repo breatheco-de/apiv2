@@ -442,7 +442,7 @@ ROLES = [
             'read_freelancer_bill',
             'read_keywordcluster',
             'crud_academyservice',
-            'crud_mentorship_service',
+            'crud_mentorship_session',
         ],
     },
     {
