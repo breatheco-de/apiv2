@@ -2,6 +2,7 @@ import serpy
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
 import breathecode.mentorship.actions as actions
+from breathecode.admissions.models import CohortUser
 from .actions import generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -104,6 +105,12 @@ class GETSupportChannelSerializer(serpy.Serializer):
         return GetSyllabusSmallSerializer(obj.syllabis.all(), many=True).data
 
 
+class GETServiceTinyTinySerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
 class GETServiceTinySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -126,6 +133,13 @@ class GETServiceSmallSerializer(serpy.Serializer):
 
 class GETMentorPublicTinySerializer(serpy.Serializer):
     user = GetUserPublicTinySerializer()
+
+
+class GETMentorTinyTinySerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    user = GetUserSmallSerializer()
+    status = serpy.Field()
 
 
 class GETMentorTinySerializer(serpy.Serializer):
@@ -283,6 +297,34 @@ class GETSessionReportSerializer(serpy.Serializer):
     suggested_accounted_duration = serpy.Field()
     mentor = GETMentorBigSerializer()
     mentee = GetUserSmallSerializer(required=False)
+
+
+class SessionBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    name = serpy.Field()
+    status = serpy.Field()
+    bill = serpy.Field()
+    # mentor = serpy.Field()
+    # mentee = serpy.Field()
+    mentor = GETMentorTinyTinySerializer()
+    mentee = GetUserSmallSerializer(required=False)
+    latitude = serpy.Field()
+    longitude = serpy.Field()
+    is_online = serpy.Field()
+    mentor_joined_at = serpy.Field()
+    mentor_left_at = serpy.Field()
+    service = GETServiceTinyTinySerializer(required=False)
+    starts_at = serpy.Field()
+    allow_billing = serpy.Field()
+    online_meeting_url = serpy.Field()
+    online_recording_url = serpy.Field()
+    agenda = serpy.Field()
+    summary = serpy.Field()
+    started_at = serpy.Field()
+    accounted_duration = serpy.Field()
+    ended_at = serpy.Field()
+    ends_at = serpy.Field()
+    mentee_left_at = serpy.Field()
 
 
 class GETSessionBigSerializer(serpy.Serializer):
@@ -650,7 +692,61 @@ class SessionPUTSerializer(serializers.ModelSerializer):
 
 
 class SessionSerializer(SessionPUTSerializer):
-    service = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(), required=True)
+    # service = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(), required=True)
+    service = serializers.CharField(required=True)
+    mentor = serializers.CharField(required=True)
+    mentee = serializers.CharField(required=False)
+
+    def validate(self, data):
+
+        lang = data.get('lang', 'en')
+        service = None
+        if 'service' in data and data['service'] and isinstance(data['service'],
+                                                                str) and not data['service'].isnumeric():
+            service = MentorshipService.objects.filter(academy=self.context['academy_id'],
+                                                       slug=data['service']).first()
+        else:
+            service = MentorshipService.objects.filter(academy=self.context['academy_id'],
+                                                       id=data['service']).first()
+        if service is None:
+            raise ValidationException(f'Service {data["service"]} not found', slug='service-not-found')
+
+        mentor = None
+        if 'mentor' in data and data['mentor'] and isinstance(data['mentor'],
+                                                              str) and not data['mentor'].isnumeric():
+            mentor = MentorProfile.objects.filter(academy=self.context['academy_id'],
+                                                  user__email=data['mentor']).first()
+        else:
+            mentor = MentorProfile.objects.filter(academy=self.context['academy_id'],
+                                                  id=data['mentor']).first()
+        if mentor is None:
+            raise ValidationException(f'Mentor {data["mentor"]} not found', slug='mentor-not-found')
+
+        mentee = None
+        if 'mentee' in data:
+            if data['mentee'] and isinstance(data['mentee'], str) and not data['mentee'].isnumeric():
+                mentee = CohortUser.objects.filter(cohort__academy=self.context['academy_id'],
+                                                   user__email=data['mentee']).first()
+            else:
+                mentee = CohortUser.objects.filter(cohort__academy=self.context['academy_id'],
+                                                   user__id=data['mentee']).first()
+
+            if mentee is None:
+                raise ValidationException(
+                    f'Mentee {data["mentee"]} was not found on any cohort for this academy',
+                    slug='mentee-not-found')
+            else:
+                mentee = mentee.user
+
+        if mentee is not None and mentor.user.id == mentee.id:
+            raise ValidationException(translation(
+                lang,
+                en='Mentee and mentor cannot be the same person in the same session',
+                es='El mentor y el estudiante no pueden ser la misma persona',
+                slug='mentor-mentee-same-person'),
+                                      code=400)
+
+        return super().validate({**data, 'service': service, 'mentor': mentor, 'mentee': mentee})
 
 
 class MentorshipBillPUTListSerializer(serializers.ListSerializer):

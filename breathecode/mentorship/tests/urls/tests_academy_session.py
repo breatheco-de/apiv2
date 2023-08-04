@@ -961,7 +961,24 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.post(url, data)
 
         json = response.json()
-        expected = post_serializer({'service': 1})
+        expected = post_serializer({
+            'service': {
+                'id': model.mentorship_service.id,
+                'name': model.mentorship_service.name,
+                'slug': model.mentorship_service.slug,
+            },
+            'mentor': {
+                'id': model.mentor_profile.id,
+                'slug': model.mentor_profile.slug,
+                'status': model.mentor_profile.status,
+                'user': {
+                    'first_name': model.mentor_profile.user.first_name,
+                    'last_name': model.mentor_profile.user.last_name,
+                    'email': model.mentor_profile.user.email,
+                    'id': model.mentor_profile.user.id,
+                }
+            }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -999,7 +1016,24 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.post(url, data)
 
         json = response.json()
-        expected = post_serializer({'service': 1})
+        expected = post_serializer({
+            'service': {
+                'id': model.mentorship_service.id,
+                'name': model.mentorship_service.name,
+                'slug': model.mentorship_service.slug,
+            },
+            'mentor': {
+                'id': model.mentor_profile.id,
+                'slug': model.mentor_profile.slug,
+                'status': model.mentor_profile.status,
+                'user': {
+                    'first_name': model.mentor_profile.user.first_name,
+                    'last_name': model.mentor_profile.user.last_name,
+                    'email': model.mentor_profile.user.email,
+                    'id': model.mentor_profile.user.id,
+                }
+            }
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -1074,7 +1108,22 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             json = response.json()
             expected = post_serializer({
                 'id': id,
-                'service': 1,
+                'service': {
+                    'id': model.mentorship_service.id,
+                    'name': model.mentorship_service.name,
+                    'slug': model.mentorship_service.slug,
+                },
+                'mentor': {
+                    'id': model.mentor_profile.id,
+                    'slug': model.mentor_profile.slug,
+                    'status': model.mentor_profile.status,
+                    'user': {
+                        'first_name': model.mentor_profile.user.first_name,
+                        'last_name': model.mentor_profile.user.last_name,
+                        'email': model.mentor_profile.user.email,
+                        'id': model.mentor_profile.user.id,
+                    }
+                },
                 field: self.bc.datetime.to_iso_string(date),
             })
 
