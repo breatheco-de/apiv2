@@ -127,7 +127,7 @@ class Scope(models.Model):
             raise forms.ValidationError('Scope description is required')
 
         if not self.slug or not re.findall(
-                r'^[a-z_:]+$', self.slug) or self.slug.count(':') > 1 or self.slug.count('__') > 0:
+                r'^[a-z_:]+$', self.slug) or (0 < self.slug.count(':') > 1) or self.slug.count('__') > 0:
             raise forms.ValidationError(
                 'Scope slug must be in the format "action_name:data_name" or "data_name" example '
                 '"read:repo" or "repo"')
@@ -195,8 +195,16 @@ class App(models.Model):
         default=LINK,
         help_text='Schema to use for the auth process to represent how the apps will communicate')
 
-    required_scopes = models.ManyToManyField(Scope, blank=True, related_name='app_required_scopes')
-    optional_scopes = models.ManyToManyField(Scope, blank=True, related_name='app_optional_scopes')
+    required_scopes = models.ManyToManyField(Scope,
+                                             blank=True,
+                                             through='AppRequiredScope',
+                                             through_fields=('App', 'Scope'),
+                                             related_name='app_required_scopes')
+    optional_scopes = models.ManyToManyField(Scope,
+                                             blank=True,
+                                             through='AppOptionalScope',
+                                             through_fields=('App', 'Scope'),
+                                             related_name='app_optional_scopes')
     agreement_version = models.IntegerField(default=1,
                                             help_text='Version of the agreement, based in the scopes')
 
@@ -271,6 +279,24 @@ class App(models.Model):
         self._redirect_url = self.redirect_url
 
 
+class AppRequiredScope(models.Model):
+    app = models.ForeignKey(App, on_delete=models.CASCADE, related_name='app_required_scopes')
+    scope = models.ForeignKey(Scope, on_delete=models.CASCADE, related_name='app_required_scopes')
+    agreed_at = models.DateTimeField()
+
+    def __str__(self):
+        return f'{self.app.name} ({self.app.slug}) -> {self.scope.name} ({self.scope.slug})'
+
+
+class AppOptionalScope(models.Model):
+    app = models.ForeignKey(App, on_delete=models.CASCADE, related_name='app_optional_scopes')
+    scope = models.ForeignKey(Scope, on_delete=models.CASCADE, related_name='app_optional_scopes')
+    agreed_at = models.DateTimeField()
+
+    def __str__(self):
+        return f'{self.app.name} ({self.app.slug}) -> {self.scope.name} ({self.scope.slug})'
+
+
 class OptionalScopeSet(models.Model):
     optional_scopes = models.ManyToManyField(Scope, blank=True)
 
@@ -295,6 +321,7 @@ class AppUserAgreement(models.Model):
                                            on_delete=models.CASCADE,
                                            related_name='app_user_agreement')
     agreement_version = models.IntegerField(default=1, help_text='Version of the agreement that was accepted')
+    agreed_at = models.DateTimeField()
 
     def save(self, *args, **kwargs):
         from .actions import reset_app_user_cache

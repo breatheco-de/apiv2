@@ -15,16 +15,16 @@ Including another URLconf
 """
 from django.urls import path
 
-from .views import (AcademyInviteView, AcademyTokenView, AppUserView, ConfirmEmailView, GithubMeView,
-                    GitpodUserView, LoginView, LogoutView, MeInviteView, MemberView, PasswordResetView,
-                    ProfileInviteMeView, ProfileMePictureView, ProfileMeView, ResendInviteView, StudentView,
-                    TemporalTokenView, TokenTemporalView, UserMeView, WaitingListView, app_webhook,
-                    authorize_view, get_facebook_token, get_github_token, get_google_token, get_roles,
-                    get_slack_token, get_token_info, get_user_by_id_or_email, get_users, login_html_view,
-                    pick_password, render_academy_invite, render_invite, render_user_invite,
-                    reset_password_view, save_facebook_token, save_github_token, save_google_token,
-                    save_slack_token, sync_gitpod_users_view, GithubUserView, AcademyGithubSyncView,
-                    AcademyAuthSettingsView)
+from .views import (AcademyInviteView, AcademyTokenView, AppUserAgreementView, AppUserView, ConfirmEmailView,
+                    GithubMeView, GitpodUserView, LoginView, LogoutView, MeInviteView, MemberView,
+                    PasswordResetView, ProfileInviteMeView, ProfileMePictureView, ProfileMeView,
+                    ResendInviteView, StudentView, TemporalTokenView, TokenTemporalView, UserMeView,
+                    WaitingListView, app_webhook, authorize_view, get_facebook_token, get_github_token,
+                    get_google_token, get_roles, get_slack_token, get_token_info, get_user_by_id_or_email,
+                    get_users, login_html_view, pick_password, render_academy_invite, render_invite,
+                    render_user_invite, reset_password_view, save_facebook_token, save_github_token,
+                    save_google_token, save_slack_token, sync_gitpod_users_view, GithubUserView,
+                    AcademyGithubSyncView, AcademyAuthSettingsView)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -107,9 +107,11 @@ urlpatterns = [
     path('academy/gitpod/user/<int:gitpoduser_id>', GitpodUserView.as_view(), name='gitpod_user_id'),
 
     # authorize
-    path('authorize/<str:app_slug>', authorize_view, name='authorize'),
+    path('authorize/<str:app_slug>', authorize_view, name='authorize_slug'),
 
     # apps
+    path('appuseragreement', AppUserAgreementView.as_view(), name='appuseragreement'),
+    path('app/user', AppUserView.as_view(), name='app_user'),
     path('app/user/<int:user_id>', AppUserView.as_view(), name='app_user_id'),
     path('app/webhook', app_webhook, name='app_webhook'),
 ]

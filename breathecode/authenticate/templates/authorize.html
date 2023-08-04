@@ -67,8 +67,8 @@
                 {{app.description}}
             </p>
 
-            {% scopes scopes=app.required_scopes id='required' title='Required permissions' disabled=True %}
-            {% scopes scopes=app.optional_scopes id='optional' title='Optional permissions' disabled=False %}
+            {% scopes scopes=required_scopes id='required' title='Required permissions' disabled=True new_scopes=new_scopes %}
+            {% scopes scopes=optional_scopes id='optional' title='Optional permissions' disabled=False new_scopes=new_scopes selected_scopes=selected_scopes %}
 
             <div class="gap-2 d-md-flex buttons">
                 {% button type="link" className="btn-danger offset-2 col-4" href=reject_url value="Reject" %}

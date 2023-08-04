@@ -36,7 +36,7 @@ class AuthenticateTestSuite(AuthTestCase):
     # When: no auth
     # Then: return 401
     def test_no_auth(self):
-        url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})
+        url = reverse_lazy('authenticate:app_user')
         response = self.client.get(url)
 
         json = response.json()
@@ -60,11 +60,11 @@ class AuthenticateTestSuite(AuthTestCase):
                                         credentials_github=credentials_githubs)
         self.bc.request.sign_jwt_link(model.app, 1)
 
-        url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})
+        url = reverse_lazy('authenticate:app_user')
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(model.user[0], model.credentials_github[0], model.profile[0])
+        expected = [get_serializer(model.user[0], model.credentials_github[0], model.profile[0])]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -132,19 +132,14 @@ class AuthenticateTestSuite(AuthTestCase):
                                         credentials_github=credentials_github)
         self.bc.request.sign_jwt_link(model.app)
 
-        url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})
+        url = reverse_lazy('authenticate:app_user')
         response = self.client.get(url)
 
         json = response.json()
-        expected = {
-            'detail': 'user-not-found',
-            'silent': True,
-            'silent_code': 'user-not-found',
-            'status_code': 404,
-        }
+        expected = []
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
 
     # When: Sign user with agreement
@@ -160,11 +155,11 @@ class AuthenticateTestSuite(AuthTestCase):
                                         app_user_agreement=1)
         self.bc.request.sign_jwt_link(model.app)
 
-        url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})
+        url = reverse_lazy('authenticate:app_user')
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(model.user, model.credentials_github, model.profile)
+        expected = [get_serializer(model.user, model.credentials_github, model.profile)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

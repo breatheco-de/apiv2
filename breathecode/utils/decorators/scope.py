@@ -63,7 +63,7 @@ def link_schema(request, required_scopes, authorization: str, use_signature: boo
         except Exception as e:
             raise ValidationException('Unauthorized', code=401, slug='wrong-legacy-app-token')
 
-    if require_an_agreement:
+    if payload['sub'] and require_an_agreement:
         required_app_scopes, optional_app_scopes = get_user_scopes(authorization['App'], payload['sub'])
         all_scopes = required_app_scopes + optional_app_scopes
 

@@ -23,11 +23,18 @@ class Command(BaseCommand):
         if not options['app']:
             raise Exception('Missing app id')
 
+        options['method'] = options['method'] if options['method'] is not None else 'get'
         options['params'] = eval(options['params']) if options['params'] is not None else {}
         options['body'] = eval(options['body']) if options['body'] is not None else None
         options['headers'] = eval(options['headers']) if options['headers'] is not None else {}
 
-        app = App.objects.get(id=options['app'])
+        try:
+            app = App.objects.get(id=options['app'])
+
+        except App.DoesNotExist:
+            self.stderr.write(self.style.ERROR(f'App {options["app"]} not found'))
+            return
+
         sign, now = get_signature(app,
                                   options['user'],
                                   method=options['method'],
@@ -36,7 +43,7 @@ class Command(BaseCommand):
                                   headers=options['headers'],
                                   reverse=True)
 
-        print(f'Authorization: Signature App={app.slug},'
-              f'Nonce={sign},'
-              f'SignedHeaders={";".join(options["headers"])},'
-              f'Date={now}')
+        self.stdout.write(f'Authorization: Signature App={app.slug},'
+                          f'Nonce={sign},'
+                          f'SignedHeaders={";".join(options["headers"])},'
+                          f'Date={now}')

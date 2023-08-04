@@ -1,4 +1,4 @@
-{% if scopes.count %}
+{% if scopes|length %}
 <div class="accordion accordion-flush" id="{{id}}">
   <div class="accordion-item">
     <h2 class="accordion-header">
@@ -19,18 +19,21 @@
       data-bs-parent="#{{id}}"
     >
       <div class="accordion-body">
-        {% for scope in scopes.all %}
+        {% for scope in scopes %}
         <div class="d-flex">
           <div class="col-11">
             <span
-              class="d-inline-block"
+              class="d-inline-block position-relative"
               tabindex="0"
               data-bs-toggle="popover"
               data-bs-trigger="hover focus"
               data-bs-content="{{scope.description}}"
             >
               <div class="">
-                {{scope.name}}
+                {{scope.name}} {% if new_scopes and scope.slug in new_scopes %}
+
+                <span class="badge bg-info">New</span>
+                {% endif %}
                 <i class="bi bi-question-circle-fill question"></i>
               </div>
             </span>
@@ -45,6 +48,22 @@
               role="switch"
               checked
               disabled
+            />
+            {% elif selected_scopes and scope.slug in selected_scopes %}
+            <input
+              name="{{scope.slug}}"
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              checked
+            />
+            {% elif selected_scopes %}
+
+            <input
+              name="{{scope.slug}}"
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
             />
             {% else %}
             <input

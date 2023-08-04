@@ -690,8 +690,7 @@ def get_signature(app: App,
                   body: Optional[dict] = None,
                   headers: dict = {},
                   reverse: bool = False):
-    from datetime import datetime
-    now = datetime.utcnow().isoformat()
+    now = timezone.now().isoformat()
 
     payload = {
         'timestamp': now,
@@ -755,7 +754,7 @@ def get_user_scopes(app_slug, user_id):
     info, _, _ = get_app_keys(app_slug)
     (_, _, _, _, require_an_agreement, required_scopes, optional_scopes, _, _, _) = info
 
-    if require_an_agreement:
+    if user_id and require_an_agreement:
         agreement = AppUserAgreement.objects.filter(app__slug=app_slug, user__id=user_id).first()
         if not agreement:
             raise ValidationException('User has not accepted the agreement',
@@ -774,14 +773,12 @@ def get_user_scopes(app_slug, user_id):
 
 @lru_cache(maxsize=100)
 def get_app_keys(app_slug):
-    from .models import App
+    from .models import App, Scope
 
     app = App.objects.filter(slug=app_slug).first()
 
     if app is None:
         raise ValidationException('Unauthorized', code=401, slug='app-not-found')
-
-    print(app.algorithm)
 
     if app.algorithm == 'HMAC_SHA256':
         alg = 'HS256'
@@ -812,8 +809,8 @@ def get_app_keys(app_slug):
         app.strategy,
         app.schema,
         app.require_an_agreement,
-        tuple(sorted(x.slug for x in app.required_scopes.all())),
-        tuple(sorted(x.slug for x in app.optional_scopes.all())),
+        tuple(sorted(x.slug for x in Scope.objects.filter(app_required_scopes__app=app))),
+        tuple(sorted(x.slug for x in Scope.objects.filter(app_optional_scopes__app=app))),
         app.webhook_url,
         app.redirect_url,
         app.app_url,

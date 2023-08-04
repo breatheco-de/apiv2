@@ -53,17 +53,20 @@ from .actions import (generate_academy_token, get_app, get_user_language, resend
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
-from .models import (AppUserAgreement, CredentialsFacebook, CredentialsGithub, CredentialsGoogle,
-                     CredentialsSlack, GitpodUser, OptionalScopeSet, Profile, ProfileAcademy, Role, Scope,
-                     Token, UserInvite, GithubAcademyUser, AcademyAuthSettings)
-from .serializers import (
-    AppUserSerializer, AuthSerializer, GetGitpodUserSerializer, GetProfileAcademySerializer,
-    GetProfileAcademySmallSerializer, GetProfileSerializer, GitpodUserSmallSerializer, MemberPOSTSerializer,
-    MemberPUTSerializer, ProfileAcademySmallSerializer, ProfileSerializer, RoleBigSerializer,
-    RoleSmallSerializer, StudentPOSTSerializer, TokenSmallSerializer, UserInviteSerializer,
-    UserInviteShortSerializer, UserInviteSmallSerializer, UserInviteWaitingListSerializer, UserMeSerializer,
-    UserSerializer, UserSmallSerializer, UserTinySerializer, GithubUserSerializer, PUTGithubUserSerializer,
-    AuthSettingsBigSerializer, AcademyAuthSettingsSerializer, POSTGithubUserSerializer)
+from .models import (App, AppOptionalScope, AppRequiredScope, AppUserAgreement, CredentialsFacebook,
+                     CredentialsGithub, CredentialsGoogle, CredentialsSlack, GitpodUser, OptionalScopeSet,
+                     Profile, ProfileAcademy, Role, Scope, Token, UserInvite, GithubAcademyUser,
+                     AcademyAuthSettings)
+from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerializer,
+                          GetProfileAcademySerializer, GetProfileAcademySmallSerializer, GetProfileSerializer,
+                          GitpodUserSmallSerializer, MemberPOSTSerializer, MemberPUTSerializer,
+                          ProfileAcademySmallSerializer, ProfileSerializer, RoleBigSerializer,
+                          RoleSmallSerializer, SmallAppUserAgreementSerializer, StudentPOSTSerializer,
+                          TokenSmallSerializer, UserInviteSerializer, UserInviteShortSerializer,
+                          UserInviteSmallSerializer, UserInviteWaitingListSerializer, UserMeSerializer,
+                          UserSerializer, UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
+                          PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer,
+                          POSTGithubUserSerializer)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -2338,6 +2341,19 @@ class AppUserView(APIView):
         return handler.response(serializer.data)
 
 
+class AppUserAgreementView(APIView):
+    extensions = APIViewExtensions(paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        items = AppUserAgreement.objects.filter(user=request.user, app__require_an_agreement=True)
+        items = handler.queryset(items)
+        serializer = SmallAppUserAgreementSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
 # app/webhook
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -2361,16 +2377,42 @@ def authorize_view(request, token=None, app_slug=None):
         app = get_app(app_slug)
 
     except:
-        return render_message(request, 'App not found', btn_label='Continue to 4Geeks', btn_url=APP_URL)
+        return render_message(request,
+                              'App not found',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=APP_URL,
+                              status=404)
 
     if not app.require_an_agreement:
-        return render_message(request, 'App not found', btn_label='Continue to 4Geeks', btn_url=APP_URL)
+        return render_message(request,
+                              'App not found',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=APP_URL,
+                              status=404)
+
+    agreement = AppUserAgreement.objects.filter(app=app, user=request.user).first()
+    selected_scopes = [x.slug
+                       for x in agreement.optional_scope_set.optional_scopes.all()] if agreement else []
+
+    required_scopes = Scope.objects.filter(app_required_scopes__app=app)
+    optional_scopes = Scope.objects.filter(app_optional_scopes__app=app)
+
+    new_scopes = [
+        x.slug for x in Scope.objects.filter(
+            Q(app_required_scopes__app=app, app_required_scopes__agreed_at__gt=agreement.agreed_at),
+            Q(app_optional_scopes__app=app, app_optional_scopes__agreed_at__gt=agreement.agreed_at))
+    ] if agreement else []
 
     if request.method == 'GET':
-        return render(request, 'authorize.html', {
-            'app': app,
-            'reject_url': app.redirect_url + '?app=4geeks&status=rejected',
-        })
+        return render(
+            request, 'authorize.html', {
+                'app': app,
+                'required_scopes': required_scopes,
+                'optional_scopes': optional_scopes,
+                'selected_scopes': selected_scopes,
+                'new_scopes': new_scopes,
+                'reject_url': app.redirect_url + '?app=4geeks&status=rejected',
+            })
 
     if request.method == 'POST':
         items = set()

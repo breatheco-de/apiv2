@@ -372,6 +372,19 @@ class AppUserSerializer(serpy.Serializer):
         return GithubSmallSerializer(github).data
 
 
+class SmallAppUserAgreementSerializer(serpy.Serializer):
+
+    # Use a Field subclass like IntField if you need more validation.
+    app = serpy.MethodField()
+    up_to_date = serpy.MethodField()
+
+    def get_app(self, obj):
+        return obj.app.slug
+
+    def get_up_to_date(self, obj):
+        return obj.agreement_version == obj.app.agreement_version
+
+
 class UserSerializer(AppUserSerializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
