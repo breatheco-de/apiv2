@@ -442,6 +442,7 @@ ROLES = [
             'read_freelancer_bill',
             'read_keywordcluster',
             'crud_academyservice',
+            'crud_mentorship_service',
         ],
     },
     {
@@ -664,7 +665,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['staff']) + [
             'read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill',
-            'read_project_invoice', 'crud_project_invoice', 'get_github_user', 'read_provisioning_bill', 
+            'read_project_invoice', 'crud_project_invoice', 'get_github_user', 'read_provisioning_bill',
             'crud_provisioning_bill'
         ]
     })
