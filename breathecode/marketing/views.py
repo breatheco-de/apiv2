@@ -704,6 +704,10 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('course')
             lookup['course'] = param
 
+        if 'ac_deal_id' in self.request.GET:
+            param = self.request.GET.get('ac_deal_id')
+            lookup['ac_deal_id'] = param
+
         if 'location' in self.request.GET or 'location_alias' in self.request.GET:
             param = self.request.GET.get('location') if self.request.GET.get(
                 'location') is not None else self.request.GET.get('location_alias')
