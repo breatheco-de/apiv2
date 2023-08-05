@@ -13,7 +13,6 @@ from random import randint
 from django.core.handlers.wsgi import WSGIRequest
 import jwt
 import breathecode.notify.actions as notify_actions
-from rest_framework.exceptions import AuthenticationFailed
 from functools import lru_cache
 
 from django.contrib.auth.models import User

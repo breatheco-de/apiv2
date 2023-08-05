@@ -78,7 +78,7 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
         })
 
 
-@task
+@task()
 def destroy_legacy_key(legacy_key_id):
     from .models import LegacyKey
 

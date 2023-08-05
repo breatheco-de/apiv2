@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import urllib.parse
-from datetime import timedelta, timezone
+from datetime import timedelta
 from urllib.parse import parse_qs, urlencode
 
 import requests
@@ -17,7 +17,7 @@ from django.db.models.functions import Now
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
-from rest_framework import serializers, status
+from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import (APIException, PermissionDenied, ValidationError)

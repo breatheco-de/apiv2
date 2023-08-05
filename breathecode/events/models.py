@@ -275,7 +275,6 @@ class Event(models.Model):
         super().save(*args, **kwargs)
 
         if self.title:
-            print(333333, self.title, type(self.title))
             new_slug = f'{slugify(self.title).lower()}-{self.id}'
             if self.slug != new_slug:
                 self.slug = new_slug
