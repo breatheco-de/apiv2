@@ -2394,13 +2394,13 @@ def authorize_view(request, token=None, app_slug=None):
     selected_scopes = [x.slug
                        for x in agreement.optional_scope_set.optional_scopes.all()] if agreement else []
 
-    required_scopes = Scope.objects.filter(app_required_scopes__app=app)
-    optional_scopes = Scope.objects.filter(app_optional_scopes__app=app)
+    required_scopes = Scope.objects.filter(m2m_required_scopes__app=app)
+    optional_scopes = Scope.objects.filter(m2m_optional_scopes__app=app)
 
     new_scopes = [
         x.slug for x in Scope.objects.filter(
-            Q(app_required_scopes__app=app, app_required_scopes__agreed_at__gt=agreement.agreed_at),
-            Q(app_optional_scopes__app=app, app_optional_scopes__agreed_at__gt=agreement.agreed_at))
+            Q(m2m_required_scopes__app=app, m2m_required_scopes__agreed_at__gt=agreement.agreed_at),
+            Q(m2m_optional_scopes__app=app, m2m_optional_scopes__agreed_at__gt=agreement.agreed_at))
     ] if agreement else []
 
     if request.method == 'GET':

@@ -274,10 +274,12 @@ class Event(models.Model):
         created = not self.id
         super().save(*args, **kwargs)
 
-        new_slug = f'{slugify(self.title).lower()}-{self.id}'
-        if self.slug != new_slug:
-            self.slug = new_slug
-            self.save()
+        if self.title:
+            print(333333, self.title, type(self.title))
+            new_slug = f'{slugify(self.title).lower()}-{self.id}'
+            if self.slug != new_slug:
+                self.slug = new_slug
+                self.save()
 
         event_saved.send(instance=self, sender=self.__class__, created=created)
 

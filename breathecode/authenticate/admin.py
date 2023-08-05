@@ -6,10 +6,10 @@ from django.contrib import messages
 from .actions import (delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password,
                       sync_organization_members)
 from django.utils.html import format_html
-from .models import (App, AppUserAgreement, CredentialsGithub, DeviceId, LegacyKey, OptionalScopeSet, Scope,
-                     Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, Role, CredentialsFacebook,
-                     Capability, UserInvite, CredentialsGoogle, AcademyProxy, GitpodUser, GithubAcademyUser,
-                     AcademyAuthSettings, GithubAcademyUserLog)
+from .models import (App, AppOptionalScope, AppRequiredScope, AppUserAgreement, CredentialsGithub, DeviceId,
+                     LegacyKey, OptionalScopeSet, Scope, Token, UserProxy, Profile, CredentialsSlack,
+                     ProfileAcademy, Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle,
+                     AcademyProxy, GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog)
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
@@ -461,8 +461,22 @@ class AppAdmin(admin.ModelAdmin):
     list_filter = ['algorithm', 'strategy', 'schema', 'require_an_agreement']
 
 
+@admin.register(AppRequiredScope)
+class AppRequiredScopeAdmin(admin.ModelAdmin):
+    list_display = ('app', 'scope', 'agreed_at')
+    search_fields = ['app__name', 'app__slug', 'scope__name', 'scope__slug']
+    list_filter = ['app', 'scope']
+
+
+@admin.register(AppOptionalScope)
+class AppOptionalScopeAdmin(admin.ModelAdmin):
+    list_display = ('app', 'scope', 'agreed_at')
+    search_fields = ['app__name', 'app__slug', 'scope__name', 'scope__slug']
+    list_filter = ['app', 'scope']
+
+
 @admin.register(LegacyKey)
-class AppAdmin(admin.ModelAdmin):
+class LegacyKeyAdmin(admin.ModelAdmin):
     list_display = ('app', 'algorithm', 'strategy', 'schema')
     search_fields = ['app__name', 'app__slug']
     list_filter = ['algorithm', 'strategy', 'schema']

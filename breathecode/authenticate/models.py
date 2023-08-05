@@ -193,17 +193,17 @@ class App(models.Model):
         max_length=4,
         choices=AUTH_SCHEMA,
         default=LINK,
-        help_text='Schema to use for the auth process to represent how the apps will communicate')
+        help_text='Schema to use for the auth process to r2epresent how the apps will communicate')
 
     required_scopes = models.ManyToManyField(Scope,
                                              blank=True,
                                              through='AppRequiredScope',
-                                             through_fields=('App', 'Scope'),
+                                             through_fields=('app', 'scope'),
                                              related_name='app_required_scopes')
     optional_scopes = models.ManyToManyField(Scope,
                                              blank=True,
                                              through='AppOptionalScope',
-                                             through_fields=('App', 'Scope'),
+                                             through_fields=('app', 'scope'),
                                              related_name='app_optional_scopes')
     agreement_version = models.IntegerField(default=1,
                                             help_text='Version of the agreement, based in the scopes')
@@ -280,8 +280,8 @@ class App(models.Model):
 
 
 class AppRequiredScope(models.Model):
-    app = models.ForeignKey(App, on_delete=models.CASCADE, related_name='app_required_scopes')
-    scope = models.ForeignKey(Scope, on_delete=models.CASCADE, related_name='app_required_scopes')
+    app = models.ForeignKey(App, on_delete=models.CASCADE, related_name='m2m_required_scopes')
+    scope = models.ForeignKey(Scope, on_delete=models.CASCADE, related_name='m2m_required_scopes')
     agreed_at = models.DateTimeField()
 
     def __str__(self):
@@ -289,8 +289,8 @@ class AppRequiredScope(models.Model):
 
 
 class AppOptionalScope(models.Model):
-    app = models.ForeignKey(App, on_delete=models.CASCADE, related_name='app_optional_scopes')
-    scope = models.ForeignKey(Scope, on_delete=models.CASCADE, related_name='app_optional_scopes')
+    app = models.ForeignKey(App, on_delete=models.CASCADE, related_name='m2m_optional_scopes')
+    scope = models.ForeignKey(Scope, on_delete=models.CASCADE, related_name='m2m_optional_scopes')
     agreed_at = models.DateTimeField()
 
     def __str__(self):
