@@ -230,7 +230,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'banner': event['logo']['url'],
             'capacity': event['capacity'],
             'tags': '',
-            'slug': None,
+            'slug': 'geektalks-presentacion-de-proyectos-finales-1',
             'starting_at': self.iso_to_datetime(event['start']['utc']),
             'ending_at': self.iso_to_datetime(event['end']['utc']),
             'host': None,
