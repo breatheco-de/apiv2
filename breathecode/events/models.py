@@ -139,14 +139,8 @@ class EventType(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        try:
-            self.full_clean()
-            super().save(*args, **kwargs)
-
-        except ValidationError as e:
-            if self.icon_url is None:
-                raise ValidationException('Icon url is required', 400)
-            raise e
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 FINISHED = 'FINISHED'
@@ -274,6 +268,9 @@ class Event(models.Model):
         created = not self.id
 
         if self.title:
+            if not self.id:
+                super().save(*args, **kwargs)
+
             new_slug = f'{slugify(self.title).lower()}-{self.id}'
             if self.slug != new_slug:
                 self.slug = new_slug

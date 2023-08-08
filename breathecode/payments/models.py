@@ -413,8 +413,6 @@ class AcademyService(models.Model):
         amount = self.price_per_unit * num_items
         discount = amount * total_discount_ratio
 
-        assert 0
-
         return amount - discount
 
     def clean(self) -> None:
