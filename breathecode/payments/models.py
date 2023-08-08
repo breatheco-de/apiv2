@@ -400,7 +400,10 @@ class AcademyService(models.Model):
         discount_nerf = 0.1
         max_discount = 0.2
 
-        for _ in range(math.floor(num_items / self.bundle_size)):
+        for n in range(math.floor(num_items / self.bundle_size)):
+            if n == 0:
+                continue
+
             total_discount_ratio += current_discount_ratio
             current_discount_ratio -= current_discount_ratio * discount_nerf
 
