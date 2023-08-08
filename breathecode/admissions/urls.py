@@ -23,6 +23,7 @@ urlpatterns = [
     path('academy/cohort/<str:cohort_id>/log',
          AcademyCohortHistoryView.as_view(),
          name='academy_cohort_id_history'),
+    path('attendance/query', AcademyCohortHistoryView.as_view(), name='academy_cohort_id_history'),
     path('academy/cohort/<str:cohort_id>', AcademyCohortView.as_view(), name='academy_cohort_id'),
     path('academy/cohort/<int:cohort_id>/user/<int:user_id>',
          AcademyCohortUserView.as_view(),

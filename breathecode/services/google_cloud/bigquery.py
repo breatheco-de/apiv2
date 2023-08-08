@@ -1,6 +1,6 @@
 import logging
 
-from google.cloud import bigquery
+from google.cloud.bigquery import bigquery
 
 from .credentials import resolve_credentials
 
@@ -15,10 +15,10 @@ class Bigquery:
     def __init__(self):
         resolve_credentials()
 
-    def query_bigquery_dataset(query, ds, columns):
+    def query_bigquery_dataset(query, ds, columns, table_name):
         client = bigquery.Client()
         dataset_ref = client.dataset(ds)
-        table = dataset_ref.table('your_table_name')  # Replace with your table name
+        table = dataset_ref.table(table_name)  # Replace with your table name
 
         query_filter = ' AND '.join(f"{key} = '{value}'" for key, value in query.items())
         query_string = f"SELECT {', '.join(columns)} FROM {table.full_table_id} WHERE {query_filter}"
