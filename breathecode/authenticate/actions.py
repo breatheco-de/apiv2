@@ -597,9 +597,9 @@ def sync_organization_members(academy_id, only_status=[]):
 
 def accept_invite(accepting_ids=None, user=None):
     if accepting_ids is not None:
-        invites = UserInvite.objects.filter(id__in=accepting.split(','), email=email, status='PENDING')
+        invites = UserInvite.objects.filter(id__in=accepting.split(','), email=user.email, status='PENDING')
     else:
-        invites = UserInvite.objects.filter(email=email, status='PENDING')
+        invites = UserInvite.objects.filter(email=user.email, status='PENDING')
 
     for invite in invites:
         if invite.academy is not None:
@@ -618,10 +618,10 @@ def accept_invite(accepting_ids=None, user=None):
                 profile = ProfileAcademy(email=invite.email,
                                          academy=invite.academy,
                                          role=role,
-                                         first_name=first_name,
-                                         last_name=last_name)
+                                         first_name=user.first_name,
+                                         last_name=user.last_name)
 
-            profile.user = token.user
+            profile.user = user
             profile.status = 'ACTIVE'
             profile.save()
 

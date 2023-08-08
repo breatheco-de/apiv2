@@ -370,9 +370,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def put(self, request, new_status=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
-        accept_invite(email=request.user.email,
-                      first_name=request.user.first_name,
-                      last_name=request.user.last_name)
+        accept_invite(user=request.user)
 
         if new_status is None:
             raise ValidationException(f'Please specify new status for the invites', slug='missing-status')
@@ -1532,7 +1530,7 @@ def render_user_invite(request, token):
     accepting = request.GET.get('accepting', '')
     rejecting = request.GET.get('rejecting', '')
     if accepting.strip() != '':
-        accept_invite(accepting, token.user.email, token.user.first_name, token.user.last_name)
+        accept_invite(accepting, token.user)
 
     if rejecting.strip() != '':
         UserInvite.objects.filter(id__in=rejecting.split(','), email=token.user.email,
