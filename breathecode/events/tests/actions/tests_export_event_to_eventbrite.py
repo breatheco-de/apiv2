@@ -75,6 +75,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([
                (201, eventbrite_post_url, eventbrite_event),
@@ -114,6 +115,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([
                (201, eventbrite_post_url, eventbrite_event),
@@ -173,6 +175,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([
                (201, eventbrite_post_url, eventbrite_event),
@@ -232,6 +235,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([
                (201, eventbrite_post_url, eventbrite_event),

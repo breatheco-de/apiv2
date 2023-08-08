@@ -7,6 +7,7 @@ from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Sylla
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
 from django.core.exceptions import ValidationError
+from slugify import slugify
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
@@ -138,14 +139,8 @@ class EventType(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        try:
-            self.full_clean()
-            super().save(*args, **kwargs)
-
-        except ValidationError as e:
-            if self.icon_url is None:
-                raise ValidationException('Icon url is required', 400)
-            raise e
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 FINISHED = 'FINISHED'
@@ -271,6 +266,15 @@ class Event(models.Model):
             status_updated = True
 
         created = not self.id
+
+        if self.title:
+            if not self.id:
+                super().save(*args, **kwargs)
+
+            new_slug = f'{slugify(self.title).lower()}-{self.id}'
+            if self.slug != new_slug:
+                self.slug = new_slug
+
         super().save(*args, **kwargs)
 
         event_saved.send(instance=self, sender=self.__class__, created=created)

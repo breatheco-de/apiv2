@@ -331,19 +331,20 @@ def render_html_all_bills(request, token):
     academy_ids = {
         x.academy.id
         for x in ProfileAcademy.objects.filter(user=request.user,
-                                               role__capabilities__slug='crud_provisioning_bill')
+                                               role__capabilities__slug='read_provisioning_bill')
     }
 
     if not academy_ids:
-        return render(request,
-                      'message.html', {
-                          'MESSAGE':
-                          translation(lang,
-                                      en='You have no access to this resource',
-                                      es='No tienes acceso a este recurso',
-                                      slug='no-access')
-                      },
-                      status=403)
+        return render(
+            request,
+            'message.html', {
+                'MESSAGE':
+                translation(lang,
+                            en="You don't have the capabilities to read provisioning bills in this academy",
+                            es='No tienes capacidads para leer provisioning bills en esta academia',
+                            slug='no-access')
+            },
+            status=403)
 
     status_mapper = {}
     for key, value in BILL_STATUS:

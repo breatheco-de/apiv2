@@ -241,29 +241,6 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(self.all_event_type_dict(), [])
 
-    def test_post_event_type_without_icon_url(self):
-        self.bc.request.set_headers(academy=1)
-
-        model = self.generate_models(authenticate=True,
-                                     academy=1,
-                                     profile_academy=1,
-                                     role='potato',
-                                     capability='crud_event_type')
-        data = {'slug': 'potato', 'name': 'Potato', 'description': 'Potato', 'lang': 'en'}
-
-        url = reverse_lazy('events:academy_eventype')
-
-        response = self.client.post(url, data)
-
-        json = response.json()
-
-        expected = {'detail': 'Icon url is required', 'status_code': 400}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 400)
-
-        self.assertEqual(self.all_event_type_dict(), [])
-
     def test_post_event_type(self):
         self.bc.request.set_headers(academy=1)
 

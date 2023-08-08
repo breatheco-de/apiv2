@@ -120,7 +120,7 @@ class AuthenticateTestSuite(ProvisioningTestCase):
                                         profile_academy=profile_academies,
                                         academy=2,
                                         role=1,
-                                        capability='crud_provisioning_bill')
+                                        capability='read_provisioning_bill')
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('provisioning:bill_html') + f'?{querystring}'
@@ -154,7 +154,7 @@ class AuthenticateTestSuite(ProvisioningTestCase):
                                         profile_academy=profile_academies,
                                         academy=2,
                                         role=1,
-                                        capability='crud_provisioning_bill')
+                                        capability='read_provisioning_bill')
 
         querystring = self.bc.format.to_querystring({'token': model.token.key, 'academy': 1})
         url = reverse_lazy('provisioning:bill_html') + f'?{querystring}'

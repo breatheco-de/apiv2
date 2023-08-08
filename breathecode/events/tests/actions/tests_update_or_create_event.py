@@ -117,6 +117,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
     @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     def test_update_or_create_event__with_academy(self):
         import logging
         import breathecode.events.actions as actions
@@ -150,7 +151,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'url': event['url'],
             'banner': event['logo']['url'],
             'tags': '',
-            'slug': None,
+            'slug': 'geektalks-presentacion-de-proyectos-finales-1',
             'capacity': event['capacity'],
             'currency': event['currency'],
             'starting_at': self.iso_to_datetime(event['start']['utc']),
@@ -230,7 +231,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'banner': event['logo']['url'],
             'capacity': event['capacity'],
             'tags': '',
-            'slug': None,
+            'slug': 'geektalks-presentacion-de-proyectos-finales-1',
             'starting_at': self.iso_to_datetime(event['start']['utc']),
             'ending_at': self.iso_to_datetime(event['end']['utc']),
             'host': None,
