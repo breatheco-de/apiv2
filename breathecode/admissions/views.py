@@ -1758,3 +1758,36 @@ class AcademyCohortHistoryView(APIView):
             raise ValidationException(str(e))
 
         return Response(cohort_log.serialize())
+
+
+class MeCohortUserHistoryView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    def get(self, request, cohort_id=None):
+
+        if cohort_id:
+            cohort_user = CohortUser.objects.filter(user=request.user, cohort__id=cohort_id).first()
+            if not cohort_user:
+                raise ValidationException('Cohort user not found', code=404, slug='cohort-user-not-found')
+
+            return Response({
+                'cohort': {
+                    'id': cohort_user.cohort.id,
+                    'slug': cohort_user.cohort.slug,
+                },
+                'history_log': cohort_user.history_log,
+            })
+
+        items = CohortUser.objects.filter(user=request.user)
+
+        data = [{
+            'cohort': {
+                'id': cohort_user.cohort.id,
+                'slug': cohort_user.cohort.slug,
+            },
+            'history_log': cohort_user.history_log,
+        } for cohort_user in items]
+
+        return Response(data)
