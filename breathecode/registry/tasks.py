@@ -51,9 +51,9 @@ class BaseTaskWithRetry(Task):
 
 
 @shared_task
-def async_pull_from_github(asset_slug, user_id=None):
+def async_pull_from_github(asset_slug, user_id=None, override_meta=False):
     logger.debug(f'Synching asset {asset_slug} with data found on github')
-    sync_status = pull_from_github(asset_slug)
+    sync_status = pull_from_github(asset_slug, override_meta=override_meta)
     return sync_status != 'ERROR'
 
 

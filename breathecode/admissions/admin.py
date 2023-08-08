@@ -27,7 +27,7 @@ from django.db.models import Q
 logger = getLogger(__name__)
 
 # Register your models here.
-admin.site.site_header = 'BreatheCode'
+admin.site.site_header = '4Geeks'
 admin.site.index_title = 'Administration Portal'
 admin.site.site_title = 'Administration Portal'
 

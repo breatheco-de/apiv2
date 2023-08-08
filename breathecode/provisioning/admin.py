@@ -2,7 +2,7 @@ import logging, secrets
 from django.contrib import admin, messages
 from django import forms
 from django.utils.html import format_html
-
+from breathecode.utils.admin import change_field
 from breathecode.provisioning import tasks
 from .models import (ProvisioningConsumptionEvent, ProvisioningConsumptionKind, ProvisioningPrice,
                      ProvisioningUserConsumption, ProvisioningVendor, ProvisioningMachineTypes,
@@ -101,7 +101,9 @@ class ProvisioningBillAdmin(admin.ModelAdmin):
                     'invoice_url')
     search_fields = ['academy__name', 'academy__slug', 'id', 'title']
     list_filter = ['academy', 'status', 'vendor']
-    actions = [force_calculate_bill, reverse_bill]
+
+    actions = [force_calculate_bill, reverse_bill] + change_field(['DUE', 'DISPUTED', 'PAID', 'PENDING'],
+                                                                  name='status')
 
     def invoice_url(self, obj):
         return format_html(

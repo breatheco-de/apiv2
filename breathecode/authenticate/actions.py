@@ -540,6 +540,9 @@ def sync_organization_members(academy_id, only_status=[]):
                         storage_action__in=['DELETE', 'IGNORE']).exclude(id=_member.id).first()
                 if added_elsewhere is None:
                     try:
+                        logger.debug(
+                            f'Deleting github member {_member.user.email} because it was not added or invited on any other of the following academies:  {",".join(academy_slugs)}'
+                        )
                         gb.delete_org_member(github.username)
                     except Exception as e:
                         settings.add_error('Error deleting member from org: ' + str(e))
@@ -592,7 +595,7 @@ def sync_organization_members(academy_id, only_status=[]):
     return True
 
 
-def accept_invite(accepting_ids=None, email=None, first_name=None, last_name=None):
+def accept_invite(accepting_ids=None, user=None):
     if accepting_ids is not None:
         invites = UserInvite.objects.filter(id__in=accepting.split(','), email=email, status='PENDING')
     else:

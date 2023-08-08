@@ -36,6 +36,8 @@ from .serializers import (
     MentorUpdateSerializer,
     SessionPUTSerializer,
     SessionSerializer,
+    GETSessionBigSerializer,
+    SessionBigSerializer,
     ServicePOSTSerializer,
     GETMentorBigSerializer,
     GETServiceBigSerializer,
@@ -549,7 +551,7 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
-            lookup['status'] = param
+            lookup['status__in'] = param.split(',')
 
         name = request.GET.get('name', None)
         if name is not None:
@@ -889,7 +891,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
                                           code=404,
                                           slug='not-found')
 
-            serializer = SessionSerializer(session)
+            serializer = SessionBigSerializer(session)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         items = MentorshipSession.objects.filter(mentor__services__academy__id=academy_id)
@@ -945,8 +947,8 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
                                            'academy_id': academy_id
                                        })
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            session = serializer.save()
+            return Response(SessionBigSerializer(session).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_mentorship_session')
