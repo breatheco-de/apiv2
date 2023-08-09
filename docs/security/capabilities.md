@@ -2,10 +2,15 @@
 
 Authenticated users must belong to at least one academy with a specific role, each role has a series of capabilities that specify what any user with that role will be "capable" of doing.
 
+```cypher
+ExpiringTokenAuthentication -> @capable_of -> view
+```
+
 Authenticated methods must be decorated with the `@capable_of` decorator in increase security validation. For example:
 
 ```python
     from breathecode.utils import capable_of
+
     @capable_of('crud_member')
     def post(self, request, academy_id=None):
         serializer = StaffPOSTSerializer(data=request.data)
