@@ -136,7 +136,7 @@ def validate_email(email, lang):
                 'El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico',
                 slug='invalid-email'))
 
-    if 'score' in data and data['score'] < 50:
+    if 'score' in data and data['score'] < 0.60:
         raise ValidationException(
             translation(
                 lang,
