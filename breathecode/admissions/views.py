@@ -1,4 +1,5 @@
 import logging
+import json
 
 import pytz
 from django.contrib.auth.models import AnonymousUser, User
@@ -33,6 +34,7 @@ from .serializers import (
     SyllabusSchedulePUTSerializer, SyllabusScheduleSerializer, SyllabusScheduleTimeSlotSerializer,
     SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer, UserDJangoRestSerializer,
     UserMeSerializer)
+from breathecode.services.google_cloud import BigQuery
 from .utils import CohortLog
 
 logger = logging.getLogger(__name__)
@@ -1758,3 +1760,30 @@ class AcademyCohortHistoryView(APIView):
             raise ValidationException(str(e))
 
         return Response(cohort_log.serialize())
+
+
+class AttendanceQuery(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_cohort_log')
+    def get(self, request, cohort_id, academy_id):
+
+        query = request.GET.get('query', None)
+        if not query:
+            raise ValidationException('Query was not provided', code=400, slug='not-query')
+        queryData = json.loads(query)
+
+        ds = request.GET.get('ds', None)
+        if not ds:
+            raise ValidationException('Ds was not provided', code=400, slug='not-ds')
+
+        columns = request.GET.get('columns', None)
+        if not columns:
+            raise ValidationException('columns were not provided', code=400, slug='not-columns')
+        bigquery = BigQuery()
+        rows = bigquery.query_dataset(query, ds, columns, '')
+        item = None
+
+        return Response(CohortLog(item).serialize())
