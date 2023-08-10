@@ -604,7 +604,7 @@ def sync_organization_members(academy_id, only_status=[]):
 
 def accept_invite(accepting_ids=None, user=None):
     if accepting_ids is not None:
-        invites = UserInvite.objects.filter(id__in=accepting.split(','), email=user.email, status='PENDING')
+        invites = UserInvite.objects.filter(id__in=accepting_ids.split(','), email=user.email, status='PENDING')
     else:
         invites = UserInvite.objects.filter(email=user.email, status='PENDING')
 
