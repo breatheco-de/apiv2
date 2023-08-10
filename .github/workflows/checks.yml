@@ -60,13 +60,10 @@ jobs:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
 
-      - name: Set PATH
-        run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
-
       - name: Check migrations
         run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
           python ./scripts/pending_migrations.py
 
   dependencies:
@@ -98,7 +95,7 @@ jobs:
       - name: Set PATH
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
-          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
+          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
@@ -136,7 +133,7 @@ jobs:
       - name: Set PATH
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
-          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
+          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
 
       - name: Run tests
         run: |
@@ -185,7 +182,7 @@ jobs:
       - name: Set PATH
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
-          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
+          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
 
       - name: Linter
         run: |
@@ -220,7 +217,7 @@ jobs:
       - name: Set PATH
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
-          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
+          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
 
       - name: Deploy docs
         run: pipenv run mkdocs gh-deploy --force
