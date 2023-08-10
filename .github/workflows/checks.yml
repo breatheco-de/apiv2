@@ -62,8 +62,8 @@ jobs:
 
       - name: Check migrations
         run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
+          # VENV_NAME=$(ls ${WORKON_HOME})
+          # source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
           pipenv run python ./scripts/pending_migrations.py
 
   dependencies:
