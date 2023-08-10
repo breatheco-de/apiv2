@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat, PublicFormat
 
 from .models import (App, CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Role, Token, UserSetting,
-                     AcademyAuthSettings, GithubAcademyUser)
+                     AcademyAuthSettings, GithubAcademyUser, UserInvite)
 
 logger = logging.getLogger(__name__)
 
