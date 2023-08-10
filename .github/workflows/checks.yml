@@ -31,10 +31,14 @@ jobs:
         run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
 
       - name: Upload Python packages as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: python-packages
           path: ${{ env.SITE_PACKAGES_DIR }}
+
+      - name:
+        run: |
+          echo ${{ env.SITE_PACKAGES_DIR }}
 
   migrations:
     needs: setup_dependencies
@@ -58,7 +62,7 @@ jobs:
         run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.SITE_PACKAGES_DIR }}
@@ -93,7 +97,7 @@ jobs:
         run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.SITE_PACKAGES_DIR }}
@@ -131,7 +135,7 @@ jobs:
         run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.SITE_PACKAGES_DIR }}
@@ -180,7 +184,7 @@ jobs:
         run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.SITE_PACKAGES_DIR }}
@@ -215,7 +219,7 @@ jobs:
         run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.SITE_PACKAGES_DIR }}
