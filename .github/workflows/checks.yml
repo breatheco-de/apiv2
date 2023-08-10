@@ -10,6 +10,7 @@ on:
 env:
   PYTHON_VERSION: 3.11
   WORKON_HOME: /home/runner/.virtualenv
+  PIPENV_VENV_IN_PROJECT: true
 
 # setup_dependencies > migrations & dependencies > tests > pages & linter & dockerhub
 
@@ -30,13 +31,13 @@ jobs:
 
       - name: print
         run: |
-          ls ${{ env.WORKON_HOME }}
+          ls .venv
 
       - name: Upload Python packages as artifact
         uses: actions/upload-artifact@v3
         with:
           name: python-packages
-          path: ${{ env.WORKON_HOME }}
+          path: .venv
 
   migrations:
     needs: setup_dependencies
@@ -58,7 +59,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: ${{ env.WORKON_HOME }}
+          path: .venv
 
       - name: Check migrations
         run: |
@@ -90,7 +91,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: ${{ env.WORKON_HOME }}
+          path: .venv
 
       - name: Set PATH
         run: |
@@ -128,7 +129,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: ${{ env.WORKON_HOME }}
+          path: .venv
 
       - name: Set PATH
         run: |
@@ -177,7 +178,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: ${{ env.WORKON_HOME }}
+          path: .venv
 
       - name: Set PATH
         run: |
@@ -212,7 +213,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: ${{ env.WORKON_HOME }}
+          path: .venv
 
       - name: Set PATH
         run: |
