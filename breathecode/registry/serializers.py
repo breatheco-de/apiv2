@@ -2,7 +2,8 @@ import serpy, base64
 from slugify import slugify
 
 from breathecode.utils.shorteners import C
-from .models import Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory
+from .models import (Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster,
+                     AssetCategory, ContentVariable)
 from django.db.models import Count
 from django.utils import timezone
 from breathecode.authenticate.models import ProfileAcademy
@@ -43,6 +44,16 @@ class OriginalityScanSerializer(serpy.Serializer):
     status_text = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+
+class VariableSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    key = serpy.Field()
+    value = serpy.Field()
+    default_value = serpy.Field()
+    lang = serpy.Field()
 
 
 class KeywordSmallSerializer(serpy.Serializer):
@@ -621,6 +632,13 @@ class AssetListSerializer(serializers.ListSerializer):
         ]
 
         return result
+
+
+class VariableSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ContentVariable
+        exclude = ('academy', )
 
 
 class AssetPUTSerializer(serializers.ModelSerializer):

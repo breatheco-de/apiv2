@@ -10,14 +10,15 @@ from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils.i18n import translation
 from breathecode.authenticate.actions import get_user_language
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
-                     AssetKeyword, AssetComment, SEOReport, OriginalityScan)
+                     AssetKeyword, AssetComment, SEOReport, OriginalityScan, ContentVariable)
 
 from .actions import (AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github,
                       clean_asset_readme, scan_asset_originality)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
-from .caches import AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache, CategoryCache
+from .caches import (AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache,
+                     CategoryCache, ContentVariableCache)
 
 from rest_framework.permissions import AllowAny
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
@@ -27,7 +28,8 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
                           PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
-                          KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer)
+                          KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer,
+                          VariableSmallSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -382,6 +384,62 @@ class AssetThumbnailView(APIView):
 
         url, permanent = generator.get_thumbnail_url()
         return redirect(url, permanent=permanent)
+
+    # this method will force to reset the thumbnail
+    @capable_of('crud_asset')
+    def post(self, request, asset_slug, academy_id):
+
+        width = int(request.GET.get('width', '0'))
+        height = int(request.GET.get('height', '0'))
+
+        asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
+        if asset is None:
+            raise ValidationException(f'Asset with slug {asset_slug} not found for this academy',
+                                      slug='asset-slug-not-found',
+                                      code=400)
+
+        generator = AssetThumbnailGenerator(asset, width, height)
+
+        # wait one second
+        asset = generator.create(delay=1500)
+
+        serializer = AcademyAssetSerializer(asset)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyContentVariableView(APIView):
+    """
+    get:
+        Get content variables thumbnail.
+    """
+    extensions = APIViewExtensions(cache=ContentVariableCache, paginate=True)
+
+    @capable_of('read_content_variables')
+    def get(self, request, academy_id, variable_slug=None):
+        handler = self.extensions(request)
+
+        if variable_slug is not None:
+            variable = ContentVariable.objects.filter(slug=variable_slug).first()
+            if variable is None:
+                raise ValidationException(f'Variable {variable_slug} not found for this academy',
+                                          status.HTTP_404_NOT_FOUND)
+
+            serializer = VariableSmallSerializer(variable)
+            return handler.response(serializer.data)
+
+        items = ContentVariable.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        if 'lang' in self.request.GET:
+            param = self.request.GET.get('lang')
+            lookup['lang'] = param
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = VariableSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
     # this method will force to reset the thumbnail
     @capable_of('crud_asset')
