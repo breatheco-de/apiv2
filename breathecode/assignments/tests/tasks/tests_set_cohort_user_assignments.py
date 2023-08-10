@@ -10,6 +10,7 @@ from logging import Logger
 
 from ..mixins import AssignmentsTestCase
 from ...tasks import set_cohort_user_assignments
+from breathecode.utils.service import Service
 
 
 class MediaTestSuite(AssignmentsTestCase):
@@ -259,6 +260,229 @@ class MediaTestSuite(AssignmentsTestCase):
             call('History log saved'),
         ])
         self.assertEqual(Logger.error.call_args_list, [])
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
+    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test__rigobot_not_found(self):
+        task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
+        task = {
+            'task_status': 'PENDING',
+            'task_type': task_type,
+            'github_url': self.bc.fake.url(),
+        }
+        cohort_user = {
+            'history_log': {
+                'delivered_assignments': [
+                    {
+                        'id': 3,
+                        'type': task_type,
+                    },
+                ],
+                'pending_assignments': [
+                    {
+                        'id': 2,
+                        'type': task_type,
+                    },
+                ],
+            }
+        }
+        model = self.bc.database.create(task=task, cohort_user=cohort_user, credentials_github=1)
+
+        Logger.info.call_args_list = []
+
+        set_cohort_user_assignments.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            {
+                **self.bc.format.to_dict(model.cohort_user),
+                'history_log': {
+                    'delivered_assignments': [
+                        {
+                            'id': 3,
+                            'type': task_type,
+                        },
+                    ],
+                    'pending_assignments': [
+                        {
+                            'id': 2,
+                            'type': task_type,
+                        },
+                        {
+                            'id': 1,
+                            'type': task_type,
+                        },
+                    ],
+                },
+            },
+        ])
+        self.assertEqual(Logger.info.call_args_list, [
+            call('Executing set_cohort_user_assignments'),
+            call('History log saved'),
+        ])
+        self.assertEqual(Logger.error.call_args_list, [call('App Rigobot not found')])
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
+    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch.multiple('breathecode.utils.service.Service',
+                    __init__=MagicMock(return_value=None),
+                    post=MagicMock(return_value=None),
+                    put=MagicMock(return_value=None))
+    def test__rigobot_cancelled_revision(self):
+        task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
+        task = {
+            'task_status': 'PENDING',
+            'task_type': task_type,
+            'github_url': self.bc.fake.url(),
+        }
+        cohort_user = {
+            'history_log': {
+                'delivered_assignments': [
+                    {
+                        'id': 3,
+                        'type': task_type,
+                    },
+                ],
+                'pending_assignments': [
+                    {
+                        'id': 2,
+                        'type': task_type,
+                    },
+                ],
+            }
+        }
+        model = self.bc.database.create(task=task, cohort_user=cohort_user, credentials_github=1)
+
+        Logger.info.call_args_list = []
+
+        set_cohort_user_assignments.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            {
+                **self.bc.format.to_dict(model.cohort_user),
+                'history_log': {
+                    'delivered_assignments': [
+                        {
+                            'id': 3,
+                            'type': task_type,
+                        },
+                    ],
+                    'pending_assignments': [
+                        {
+                            'id': 2,
+                            'type': task_type,
+                        },
+                        {
+                            'id': 1,
+                            'type': task_type,
+                        },
+                    ],
+                },
+            },
+        ])
+        self.assertEqual(Logger.info.call_args_list, [
+            call('Executing set_cohort_user_assignments'),
+            call('History log saved'),
+        ])
+        self.assertEqual(Logger.error.call_args_list, [])
+        self.bc.check.calls(Service.__init__.call_args_list, [call('rigobot', 1)])
+        self.bc.check.calls(Service.post.call_args_list, [])
+        self.bc.check.calls(Service.put.call_args_list, [
+            call('/v1/finetuning/me/repository/',
+                 json={
+                     'url': model.task.github_url,
+                     'activity_status': 'INACTIVE'
+                 })
+        ])
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
+    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch.multiple('breathecode.utils.service.Service',
+                    __init__=MagicMock(return_value=None),
+                    post=MagicMock(return_value=None),
+                    put=MagicMock(return_value=None))
+    def test__rigobot_schedule_revision(self):
+        task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
+        task = {
+            'task_status': 'DONE',
+            'task_type': task_type,
+            'github_url': self.bc.fake.url(),
+        }
+        cohort_user = {
+            'history_log': {
+                'delivered_assignments': [
+                    {
+                        'id': 3,
+                        'type': task_type,
+                    },
+                ],
+                'pending_assignments': [
+                    {
+                        'id': 2,
+                        'type': task_type,
+                    },
+                ],
+            }
+        }
+        model = self.bc.database.create(task=task, cohort_user=cohort_user, credentials_github=1)
+
+        Logger.info.call_args_list = []
+
+        set_cohort_user_assignments.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
+            {
+                **self.bc.format.to_dict(model.cohort_user),
+                'history_log': {
+                    'delivered_assignments': [
+                        {
+                            'id': 3,
+                            'type': task_type,
+                        },
+                        {
+                            'id': 1,
+                            'type': task_type,
+                        },
+                    ],
+                    'pending_assignments': [
+                        {
+                            'id': 2,
+                            'type': task_type,
+                        },
+                    ],
+                },
+            },
+        ])
+        self.assertEqual(Logger.info.call_args_list, [
+            call('Executing set_cohort_user_assignments'),
+            call('History log saved'),
+        ])
+        self.assertEqual(Logger.error.call_args_list, [])
+        self.bc.check.calls(Service.__init__.call_args_list, [call('rigobot', 1)])
+        self.bc.check.calls(
+            Service.post.call_args_list,
+            [call('/v1/finetuning/me/repository/', json={
+                'url': model.task.github_url,
+                'watchers': None
+            })])
+        self.bc.check.calls(Service.put.call_args_list, [])
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())

@@ -29,6 +29,7 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                              user_setting=False,
                              consumption_session=False,
                              provisioning_container=False,
+                             app_user_agreement=False,
                              profile_academy='',
                              user_kwargs={},
                              group_kwargs={},
@@ -55,9 +56,9 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
         if not 'user' in models and (is_valid(user) or is_valid(authenticate) or is_valid(profile_academy)
                                      or is_valid(manual_authenticate) or is_valid(cohort_user)
                                      or is_valid(task) or is_valid(slack_team) or is_valid(mentor_profile)
-                                     or is_valid(consumable) or is_valid(invoice) or is_valid(subscription)
-                                     or is_valid(bag) or is_valid(user_setting)
-                                     or is_valid(consumption_session) or is_valid(provisioning_container)):
+                                     or is_valid(consumable) or is_valid(invoice) or is_valid(subscription) or
+                                     is_valid(bag) or is_valid(user_setting) or is_valid(consumption_session)
+                                     or is_valid(provisioning_container) or is_valid(app_user_agreement)):
             kargs = {}
 
             if 'group' in models:

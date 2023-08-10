@@ -1,0 +1,90 @@
+{% load button %}
+{% load scopes %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Academy Invite</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .buttons {
+            margin-top: 16px;
+        }
+
+        .question {
+            margin-top: 3px;
+            font-size: 10px;
+            vertical-align: top;
+        }
+
+        .disable-shadow:focus {
+            box-shadow: inset 0 calc(-1 * var(--bs-accordion-border-width)) 0 var(--bs-accordion-border-color);
+        }
+
+        .disable-shadow.collapsed:focus {
+            box-shadow: inset 0 0 0 var(--bs-accordion-border-color);
+        }
+
+        .container-sm {
+            max-width: 540px;
+            padding-top: 50px;
+        }
+
+        .accordion-button:focus {
+            outline: none;
+        }
+
+        .accordion-button:not(.collapsed) {
+            color: var(--bs-accordion-btn-color);
+            background-color: var(--bs-accordion-btn-bg);
+
+        }
+
+        .text-justify {
+            text-align: justify;
+        }
+    </style>
+
+</html>
+
+<body>
+    <div class="container-sm">
+        <form method="post">
+            {% csrf_token %}
+            <h1 class="text-center">
+                <span class="badge bg-secondary">{{app.name}}</span>
+            </h1>
+
+            <p class="fw-normal text-center">
+                This app is requesting permission to access your account.
+            </p>
+
+            <p class="fw-lighter text-justify">
+                {{app.description}}
+            </p>
+
+            {% scopes scopes=required_scopes id='required' title='Required permissions' disabled=True new_scopes=new_scopes %}
+            {% scopes scopes=optional_scopes id='optional' title='Optional permissions' disabled=False new_scopes=new_scopes selected_scopes=selected_scopes %}
+
+            <div class="gap-2 d-md-flex buttons">
+                {% button type="link" className="btn-danger offset-2 col-4" href=reject_url value="Reject" %}
+                {% button type="submit" className="btn-primary col-4" value="Accept" %}
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm"
+        crossorigin="anonymous"></script>
+
+    <script>
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl)
+        })
+    </script>
+</body>

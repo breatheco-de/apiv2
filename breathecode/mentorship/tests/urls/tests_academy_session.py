@@ -1204,9 +1204,10 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
-                                        cohort_user=1,
+                                        consumable=1,
                                         mentorship_bill=1,
                                         mentorship_service=1,
+                                        mentorship_service_set=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
@@ -1254,14 +1255,15 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test__post__creating_a_element__passing_all_the_fields(self):
         utc_now = timezone.now()
-        cohort_user = {'user_id': 2, 'cohort_id': 1}
+        consumable = {'user_id': 2}
         model = self.bc.database.create(user=2,
                                         role=1,
                                         capability='crud_mentorship_session',
                                         mentor_profile=1,
-                                        cohort_user=cohort_user,
+                                        consumable=consumable,
                                         mentorship_bill=1,
                                         mentorship_service=1,
+                                        mentorship_service_set=1,
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
