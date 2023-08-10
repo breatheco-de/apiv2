@@ -1,12 +1,10 @@
 <h1 align="center">
   <br>
-  <a href="https://breatheco.de/"><img src="https://assets.breatheco.de/apis/img/images.php?blob&random&cat=icon&tags=breathecode,128" alt="BreatheCode" width="128"></a>
-  <br>
-  BreatheCode
+  <a href="https://breatheco.de/"><img src="https://raw.githubusercontent.com/breatheco-de/apiv2/main/breathecode/static/assets/logo.png" alt="4Geeks" width="128"></a>
   <br>
 </h1>
 
-<h4 align="center">BreatheCode's mission is to <b>accelerate the way junior developers learn and evolve</b> using technology.</h4>
+<h4 align="center">4Geeks's mission is to <b>accelerate the way junior developers learn and evolve</b> using technology.</h4>
 
 <p align="center">
   <a href="https://coveralls.io/github/breatheco-de/apiv2">
@@ -43,98 +41,46 @@ Check out the [Postman docs](https://documenter.getpostman.com/view/2432393/T1LP
 
 The documentation is divided into several sections:
 
--   [No Installation (with gitpod)](#working-inside-gitpod-no-instalation)
-    -   [How to work Gitpod](#how-to-work-gitpod)
-    -   [Add the browser extension](#add-the-browser-extension)
-    -   [How to use Gitpod browser extension](#how-to-use-gitpod-browser-extension)
--   [Installation inside Docker (easier)](#working-inside-docker-easier)
-    -   [Build BreatheCode Dev docker image](#build-breathecode-dev-docker-image)
-    -   [Testing inside BreatheCode Dev](#testing-inside-breathecode-dev)
-    -   [Run BreatheCode API as docker service](#run-breathecode-api-as-docker-service)
--   [Installation in your local machine (a bit harder but more performant)](#working-in-your-local-machine-recomended)
-    -   [Installation in your local machine](#installation-in-your-local-machine)
-    -   [Testing in your local machine](#testing-in-your-local-machine)
-    -   [Run BreatheCode API in your local machine](#run-breathecode-api-in-your-local-machine)
 
-## Working inside Gitpod (no installation)
+-   [Run 4Geeks in Codespaces (no installation)](#run-4geeks-in-codespaces-no-instalation)
+-   [Install Docker](#install-docker)
+-   [Run 4Geeks API as docker service](#run-4geeks-api-as-docker-service)
+-   [Run 4Geeks in your local machine](#run-4geeks-api-in-your-local-machine)
+    -   [Installation](#installation)
+    -   [Run 4Geeks API](#run-4geeks-api)
+-   [Run tests](#run-tests)
 
-### `How to work Gitpod`
+## Run 4Geeks in Codespaces (no installation)
 
-Creating a workspace is as easy as prefixing any GitHub URL with `gitpod.io/#`.
+Click `Code` -> `Codespaces` -> `Create namespace on {BRANCH_NAME}`.
 
-### `Add the browser extension`
+![Codespaces](docs/images/codespaces.png)
 
-Gitpod provide the extension for:
+## Install Docker
 
--   [Chrome](https://chrome.google.com/webstore/detail/gitpod-online-ide/dodmmooeoklaejobgleioelladacbeki) - also works for Edge, Brave and other Chromium-based browsers.
--   [Firefox](https://addons.mozilla.org/firefox/addon/gitpod/)
+Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
-### `How to use Gitpod browser extension`
+## Running 4geeks
 
-For convenience, Gitpod developed a Gitpod browser extension. It adds a button to GitHub, GitLab or Bitbucket that does the prefixing for you - as simple as that.
-
-![How to use gitpod extension](https://www.gitpod.io/images/docs/browser-extension-lense.png)
-
-## Working inside Docker (easier)
-
-### `Build BreatheCode Dev docker image`
-
-For mac and pc users install [docker desktop](https://www.docker.com/products/docker-desktop), else, for linux find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+### `Run 4Geeks API as docker service`
 
 ```bash
-# Check which dependencies you need install in you operating system
-python -m scripts.doctor
-
-# Generate the BreatheCode Dev docker image
-docker-compose build bc-dev
-```
-
-### `Testing inside BreatheCode Dev`
-
-```bash
-# Open the BreatheCode Dev, this shell don't export the port 8000
-docker-compose run bc-dev fish
-
-# Testing
-pipenv run test ./breathecode/activity  # path
-
-# Testing in parallel
-pipenv run ptest ./breathecode/activity  # path
-
-# Coverage
-pipenv run cov breathecode.activity  # python module path
-
-# Coverage in parallel
-pipenv run pcov breathecode.activity  # python module path
-```
-
-### `Run BreatheCode API as docker service`
-
-```bash
-# open BreatheCode API as a service and export the port 8000
-docker-compose up -d bc-dev
-
-# open the BreatheCode Dev, this shell don't export the port 8000
-docker-compose run bc-dev fish
+# open 4Geeks API as a service and export the port 8000
+docker-compose up -d
 
 # create super user
-pipenv run python manage.py createsuperuser
-
-# Close the BreatheCode Dev
-exit
+sudo docker compose run 4geeks python manage.py createsuperuser
 
 # See the output of Django
-docker-compose logs -f bc-dev
+docker-compose logs -f 4geeks
 
 # open localhost:8000 to view the api
 # open localhost:8000/admin to view the admin
 ```
 
-## Working in your local machine (recommended)
+### `Run 4Geeks in your local machine`
 
-### `Installation in your local machine`
-
-Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+#### Installation
 
 ```bash
 # Check which dependencies you need install in your operating system
@@ -147,23 +93,9 @@ docker-compose up -d redis postgres
 python -m scripts.install
 ```
 
-### `Testing in your local machine`
+#### Run 4Geeks API
 
-```bash
-# Testing
-pipenv run test ./breathecode/activity  # path
-
-# Testing in parallel
-pipenv run ptest ./breathecode/activity  # path
-
-# Coverage
-pipenv run cov breathecode.activity  # python module path
-
-# Coverage in parallel
-pipenv run pcov breathecode.activity  # python module path
-```
-
-### `Run BreatheCode API in your local machine`
+You must up Redis and Postgres before open 4Geeks.
 
 ```bash
 # Collect statics
@@ -183,4 +115,32 @@ pipenv run start
 
 # open localhost:8000 to view the api
 # open localhost:8000/admin to view the admin
+```
+
+### `Testing in your local machine`
+
+#### Installation
+
+```bash
+# Check which dependencies you need install in your operating system
+python -m scripts.doctor
+
+# Install and setting up your development environment (this command replace your .env file)
+python -m scripts.install
+```
+
+#### Run tests
+
+```bash
+# Testing
+pipenv run test ./breathecode/activity  # path
+
+# Testing in parallel
+pipenv run ptest ./breathecode/activity  # path
+
+# Coverage
+pipenv run cov breathecode.activity  # python module path
+
+# Coverage in parallel
+pipenv run pcov breathecode.activity  # python module path
 ```

@@ -1,8 +1,10 @@
 import logging, os
+from typing import Any
 from celery import shared_task, Task
 
 from breathecode.authenticate.models import ProfileAcademy, Role
-from .models import Cohort, CohortUser, SyllabusVersion
+from breathecode.utils.decorators.task import task
+from .models import Academy, Cohort, CohortUser, SyllabusVersion
 from .actions import test_syllabus
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -53,8 +55,8 @@ def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
             })
 
 
-@shared_task
-def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT') -> None:
+@task()
+def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: Any) -> None:
     logger.info(f'Starting build_cohort_user for cohort {cohort_id} and user {user_id}')
 
     bad_stages = ['DELETED', 'ENDED', 'FINAL_PROJECT', 'STARTED']
@@ -93,6 +95,42 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT') -> No
     role = Role.objects.filter(slug=role).first()
 
     profile, created = ProfileAcademy.objects.get_or_create(academy=cohort.academy,
+                                                            user=user,
+                                                            role=role,
+                                                            defaults={
+                                                                'email': user.email,
+                                                                'first_name': user.first_name,
+                                                                'last_name': user.last_name,
+                                                                'last_name': user.last_name,
+                                                                'status': 'ACTIVE',
+                                                            })
+
+    if profile.status != 'ACTIVE':
+        profile.status = 'ACTIVE'
+        profile.save()
+        logger.info('ProfileAcademy mark as active')
+
+    if created:
+        logger.info('ProfileAcademy added')
+
+
+@task()
+def build_profile_academy(academy_id: int, user_id: int, role: str = 'student', **_: Any) -> None:
+    logger.info(f'Starting build_profile_academy for cohort {academy_id} and user {user_id}')
+
+    if not (user := User.objects.filter(id=user_id, is_active=True).first()):
+        logger.error(f'User with id {user_id} not found')
+        return
+
+    if not (academy := Academy.objects.filter(id=academy_id).first()):
+        logger.error(f'Academy with id {academy_id} not found')
+        return
+
+    if not (role := Role.objects.filter(slug=role).first()):
+        logger.error(f'Role with slug {role} not found')
+        return
+
+    profile, created = ProfileAcademy.objects.get_or_create(academy=academy,
                                                             user=user,
                                                             role=role,
                                                             defaults={

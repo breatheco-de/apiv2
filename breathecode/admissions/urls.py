@@ -1,11 +1,11 @@
 from django.urls import path
 from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserView, AcademyCohortView,
-                    SyllabusVersionView, SyllabusView, get_timezones, UserView, UserMeView,
-                    AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView, SyllabusScheduleView,
-                    get_all_academies, get_cohorts, AcademyCohortTimeSlotView, handle_test_syllabus,
-                    AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
-                    get_public_syllabus, SyllabusAssetView, PublicCohortUserView, AcademyCohortHistoryView,
-                    AcademyTeacherView)
+                    MeCohortUserHistoryView, SyllabusVersionView, SyllabusView, get_timezones, UserView,
+                    UserMeView, AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView,
+                    SyllabusScheduleView, get_all_academies, get_cohorts, AcademyCohortTimeSlotView,
+                    handle_test_syllabus, AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView,
+                    AcademyReportView, get_public_syllabus, SyllabusAssetView, PublicCohortUserView,
+                    AcademyCohortHistoryView, AcademyTeacherView)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -17,6 +17,12 @@ urlpatterns = [
     path('cohort/user', CohortUserView.as_view(), name='cohort_user'),
     path('cohort/<int:cohort_id>/user/<int:user_id>', CohortUserView.as_view(), name='cohort_id_user_id'),
     path('cohort/<int:cohort_id>/user', CohortUserView.as_view(), name='cohort_id_user'),
+
+    # me
+    path('me/cohort/user/log', MeCohortUserHistoryView.as_view(), name='me_cohort_user_log'),
+    path('me/cohort/<int:cohort_id>/user/log',
+         MeCohortUserHistoryView.as_view(),
+         name='me_cohort_id_user_log'),
 
     # new endpoints (replacing above)
     path('academy/cohort/user', AcademyCohortUserView.as_view(), name='academy_cohort_user'),

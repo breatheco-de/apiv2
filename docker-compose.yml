@@ -1,27 +1,10 @@
 version: "3.8"
 
 services:
-  breathecode:
+  4geeks:
     image: geeksacademy/breathecode:development
     env_file:
       - ./.env
-    environment:
-      - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
-      - CELERY_DISABLE_SCHEDULER=
-      - ALLOW_UNSAFE_CYPRESS_APP=True
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-      - redis
-
-  bc-dev:
-    build:
-      context: .
-      dockerfile: .dev.Dockerfile
-    volumes:
-      - ./:/home/shell/apiv2
     environment:
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
