@@ -1,5 +1,5 @@
 from breathecode.utils import Cache
-from .models import Asset, AssetComment, AssetTechnology, AssetKeyword, KeywordCluster, AssetCategory
+from .models import Asset, AssetComment, AssetTechnology, AssetKeyword, KeywordCluster, AssetCategory, ContentVariable
 
 
 class AssetCache(Cache):
@@ -16,6 +16,12 @@ class AssetCommentCache(Cache):
 
 class TechnologyCache(Cache):
     model = AssetTechnology
+    depends = []
+    parents = []
+
+
+class ContentVariableCache(Cache):
+    model = ContentVariable
     depends = []
     parents = []
 

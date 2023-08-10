@@ -15,7 +15,7 @@ from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage, OriginalityScan, ContentVariables
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage, OriginalityScan, ContentVariable
 from .serializers import AssetBigSerializer
 from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
                     ArticleValidator, OriginalityWrapper)
@@ -387,7 +387,7 @@ def clean_content_variables(asset):
     logger.debug('Original text:' + markdown_text)
 
     variables_dict = {}
-    variables = ContentVariables.objects.filter(
+    variables = ContentVariable.objects.filter(
         academy=asset.academy).filter(Q(lang__isnull=True) | Q(lang=asset.lang))
     for varia in variables:
         if varia.value is None:
@@ -407,6 +407,8 @@ def clean_content_variables(asset):
         if len(variable_parts) > 1:
             default_value = variable_parts[1].strip()
         else:
+            asset.log_error('missing-variable',
+                            f'Variable {variable_name} is missing and it has not default value')
             default_value = '{% ' + variable_name + ' %}'
 
         value = variables_dict.get(variable_name, default_value)

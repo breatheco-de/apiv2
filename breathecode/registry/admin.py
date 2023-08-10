@@ -13,7 +13,7 @@ from breathecode.services.seo import SEOAnalyzer
 
 from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment, SEOReport, AssetImage, OriginalityScan,
-                     CredentialsOriginality, SyllabusVersionProxy, ContentVariables)
+                     CredentialsOriginality, SyllabusVersionProxy, ContentVariable)
 from .tasks import (async_pull_from_github, async_test_asset, async_execute_seo_report,
                     async_regenerate_asset_readme, async_download_readme_images, async_remove_img_from_cloud,
                     async_upload_image_to_bucket)
@@ -723,7 +723,7 @@ class SyllabusVersionAdmin(admin.ModelAdmin):
     actions = [add_translations_into_json]
 
 
-@admin.register(ContentVariables)
+@admin.register(ContentVariable)
 class ContentVariablesAdmin(admin.ModelAdmin):
     list_display = ['key', 'academy', 'lang', 'real_value']
     search_fields = ('key', )

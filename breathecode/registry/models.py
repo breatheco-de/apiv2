@@ -875,11 +875,13 @@ CONTENT_VAR_STATUS = (
 )
 
 
-class ContentVariables(models.Model):
+class ContentVariable(models.Model):
 
     key = models.CharField(max_length=100)
     value = models.TextField()
-    default_value = models.TextField()
+    default_value = models.TextField(
+        help_text=
+        'If the variable type is fetch or code and the processing fails, the default value will be used')
 
     lang = models.CharField(max_length=2,
                             blank=True,
