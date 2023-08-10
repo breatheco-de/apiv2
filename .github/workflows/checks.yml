@@ -8,7 +8,7 @@ on:
   pull_request: {}
 
 env:
-  PYTHON_VERSION: 3.11.4
+  PYTHON_VERSION: 3.11
   WORKON_HOME: /home/runner/.virtualenv
 
 # setup_dependencies > migrations & dependencies > tests > pages & linter & dockerhub
@@ -28,9 +28,6 @@ jobs:
           PYTHONUNBUFFERED=1
           pipenv install --dev
 
-      # - name: Determine pipenv site-packages directory
-      #   run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
-
       - name: print
         run: |
           ls ${{ env.WORKON_HOME }}
@@ -40,10 +37,6 @@ jobs:
         with:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
-
-      # - name:
-      #   run: |
-      #     echo ${{ env.SITE_PACKAGES_DIR }}
 
   migrations:
     needs: setup_dependencies
@@ -61,10 +54,10 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      # This is where you'll restore the site-packages.
-      # For clarity, we'll define the path to site-packages again (though it's the same as before).
-      # - name: Define site-packages directory
-      #   run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
@@ -96,10 +89,10 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      # This is where you'll restore the site-packages.
-      # For clarity, we'll define the path to site-packages again (though it's the same as before).
-      # - name: Define site-packages directory
-      #   run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
@@ -134,16 +127,16 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      # This is where you'll restore the site-packages.
-      # For clarity, we'll define the path to site-packages again (though it's the same as before).
-      - name: Define site-packages directory
-        run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: ${{ env.SITE_PACKAGES_DIR }}
+          path: ${{ env.WORKON_HOME }}
 
       - name: Run tests
         run: |
@@ -183,16 +176,16 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      # This is where you'll restore the site-packages.
-      # For clarity, we'll define the path to site-packages again (though it's the same as before).
-      - name: Define site-packages directory
-        run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: ${{ env.SITE_PACKAGES_DIR }}
+          path: ${{ env.WORKON_HOME }}
 
       - name: Linter
         run: |
@@ -218,16 +211,16 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      # This is where you'll restore the site-packages.
-      # For clarity, we'll define the path to site-packages again (though it's the same as before).
-      - name: Define site-packages directory
-        run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: ${{ env.SITE_PACKAGES_DIR }}
+          path: ${{ env.WORKON_HOME }}
 
       - name: Deploy docs
         run: pipenv run mkdocs gh-deploy --force
