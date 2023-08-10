@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, StreamingHttpResponse
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 import logging, hashlib, os
@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
 from django.contrib import messages
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils import ValidationException, capable_of, localize_query, GenerateLookupsMixin, response_207
+from breathecode.utils import ValidationException, capable_of, localize_query, GenerateLookupsMixin, num_to_roman, response_207
 from breathecode.admissions.models import Academy, CohortUser, Cohort
 from breathecode.authenticate.models import Token
 from rest_framework.exceptions import PermissionDenied
@@ -17,6 +17,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils import APIException
+from breathecode.utils.service import Service
 from .models import Task, FinalProject, UserAttachment
 from .actions import deliver_task
 from .caches import TaskCache
@@ -822,3 +823,92 @@ class SubtaskMeView(APIView):
         item.save()
 
         return Response(item.subtasks)
+
+
+class MeCodeRevisionView(APIView):
+
+    def get(self, request):
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
+        s = Service('rigobot', request.user.id)
+        response = s.get('/v1/finetuning/me/coderevision', params=params, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
+
+
+class MeTaskCodeRevisionView(APIView):
+
+    def get(self, request, task_id):
+        if not (task := Task.objects.filter(id=task_id, user__id=request.user.id).first()):
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
+        params['repo'] = task.github_url
+
+        s = Service('rigobot', request.user.id)
+        response = s.get(f'/v1/finetuning/coderevision', params=params, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
+
+
+class AcademyTaskCodeRevisionView(APIView):
+
+    @capable_of('read_assignment')
+    def get(self, request, task_id, academy_id):
+        if not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).first()):
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
+        params['repo'] = task.github_url
+
+        s = Service('rigobot')
+        response = s.get(f'/v1/finetuning/coderevision', params=params, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource

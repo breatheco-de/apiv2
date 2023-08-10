@@ -1141,10 +1141,11 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.database.delete('mentorship.MentorshipSession')
 
     """
-    🔽🔽🔽 POST creating a element, passing all the fields
+    🔽🔽🔽 POST creating a element, no cohort user
     """
 
-    def test__post__creating_a_element__passing_all_the_fields(self):
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    def test__post__creating_a_element__no_cohort_user(self):
         utc_now = timezone.now()
         model = self.bc.database.create(user=1,
                                         role=1,
@@ -1185,7 +1186,148 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         response = self.client.post(url, data)
 
         json = response.json()
-        expected = post_serializer(data)
+        expected = {'detail': 'mentee-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [])
+
+    """
+    🔽🔽🔽 POST creating a element, mentor and mentee can be same person
+    """
+
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    def test__post__creating_a_element__mentor_and_mentee_can_be_same_person(self):
+        utc_now = timezone.now()
+        model = self.bc.database.create(user=1,
+                                        role=1,
+                                        capability='crud_mentorship_session',
+                                        mentor_profile=1,
+                                        consumable=1,
+                                        mentorship_bill=1,
+                                        mentorship_service=1,
+                                        mentorship_service_set=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        accounted_duration = timedelta(minutes=random.randint(1, 180))
+        starts_at = append_delta_to_datetime(utc_now)
+        ends_at = append_delta_to_datetime(utc_now)
+        data = {
+            'mentor': 1,
+            'service': 1,
+            'mentee': 1,
+            'bill': 1,
+            'name': self.bc.fake.name(),
+            'is_online': bool(random.getrandbits(1)),
+            'latitude': get_base_number() * random.random() * 1000,
+            'longitude': get_base_number() * random.random() * 1000,
+            'online_meeting_url': self.bc.fake.url(),
+            'online_recording_url': self.bc.fake.url(),
+            'status': random.choice(['PENDING', 'STARTED', 'COMPLETED', 'FAILED', 'IGNORED']),
+            'online_recording_url': self.bc.fake.url(),
+            'allow_billing': bool(random.getrandbits(1)),
+            'accounted_duration': '0' + str(accounted_duration),
+            'agenda': self.bc.fake.text(),
+            'summary': self.bc.fake.text(),
+            'starts_at': self.bc.datetime.to_iso_string(starts_at),
+            'ends_at': self.bc.datetime.to_iso_string(ends_at),
+        }
+
+        url = reverse_lazy('mentorship:academy_session')
+        response = self.client.post(url, data)
+
+        json = response.json()
+        expected = {'detail': 'mentor-mentee-same-person', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [])
+
+    """
+    🔽🔽🔽 POST creating a element, passing all the fields
+    """
+
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    def test__post__creating_a_element__passing_all_the_fields(self):
+        utc_now = timezone.now()
+        consumable = {'user_id': 2}
+        model = self.bc.database.create(user=2,
+                                        role=1,
+                                        capability='crud_mentorship_session',
+                                        mentor_profile=1,
+                                        consumable=consumable,
+                                        mentorship_bill=1,
+                                        mentorship_service=1,
+                                        mentorship_service_set=1,
+                                        profile_academy=1)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user[0])
+
+        minutes = random.randint(1, 180)
+        accounted_duration = timedelta(minutes=minutes)
+        starts_at = append_delta_to_datetime(utc_now)
+        ends_at = append_delta_to_datetime(utc_now)
+        data = {
+            'mentor': 1,
+            'service': 1,
+            'mentee': 2,
+            'bill': 1,
+            'name': self.bc.fake.name(),
+            'is_online': bool(random.getrandbits(1)),
+            'latitude': get_base_number() * random.random() * 1000,
+            'longitude': get_base_number() * random.random() * 1000,
+            'online_meeting_url': self.bc.fake.url(),
+            'online_recording_url': self.bc.fake.url(),
+            'status': random.choice(['PENDING', 'STARTED', 'COMPLETED', 'FAILED', 'IGNORED']),
+            'online_recording_url': self.bc.fake.url(),
+            'allow_billing': bool(random.getrandbits(1)),
+            'accounted_duration': '0' + str(accounted_duration),
+            'agenda': self.bc.fake.text(),
+            'summary': self.bc.fake.text(),
+            'starts_at': self.bc.datetime.to_iso_string(starts_at),
+            'ends_at': self.bc.datetime.to_iso_string(ends_at),
+        }
+
+        url = reverse_lazy('mentorship:academy_session')
+        response = self.client.post(url, data)
+
+        json = response.json()
+        expected = post_serializer({
+            **data,
+            'accounted_duration': f'{minutes * 60}.0',
+            'bill': {
+                'id': 1,
+                'status': 'DUE'
+            },
+            'service': {
+                'id': model.mentorship_service.id,
+                'name': model.mentorship_service.name,
+                'slug': model.mentorship_service.slug,
+            },
+            'mentor': {
+                'id': model.mentor_profile.id,
+                'slug': model.mentor_profile.slug,
+                'status': model.mentor_profile.status,
+                'user': {
+                    'first_name': model.mentor_profile.user.first_name,
+                    'last_name': model.mentor_profile.user.last_name,
+                    'email': model.mentor_profile.user.email,
+                    'id': model.mentor_profile.user.id,
+                }
+            },
+            'mentee': {
+                'email': model.user[1].email,
+                'first_name': model.user[1].first_name,
+                'id': model.user[1].id,
+                'last_name': model.user[1].last_name,
+            },
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
