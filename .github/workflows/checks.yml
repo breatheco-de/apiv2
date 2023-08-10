@@ -31,6 +31,10 @@ jobs:
       # - name: Determine pipenv site-packages directory
       #   run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
 
+      - name: print
+        run: |
+          ls ${{ env.WORKON_HOME }}
+
       - name: Upload Python packages as artifact
         uses: actions/upload-artifact@v3
         with:
