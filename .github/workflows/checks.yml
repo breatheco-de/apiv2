@@ -54,16 +54,16 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      - name: Set PYTHONPATH
-        run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
-
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
+
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Check migrations
         run: |
@@ -89,16 +89,16 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      - name: Set PYTHONPATH
-        run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
-
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
+
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
@@ -127,16 +127,16 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      - name: Set PYTHONPATH
-        run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
-
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
+
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Run tests
         run: |
@@ -176,16 +176,16 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      - name: Set PYTHONPATH
-        run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
-
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
+
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Linter
         run: |
@@ -211,16 +211,16 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
-      - name: Set PYTHONPATH
-        run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
-
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
         with:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
+
+      - name: Set PYTHONPATH
+        run: |
+          VENV_NAME=$(ls ${WORKON_HOME})
+          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
 
       - name: Deploy docs
         run: pipenv run mkdocs gh-deploy --force
