@@ -1,14 +1,11 @@
-from datetime import timedelta
 import math
 import random
 from unittest.mock import MagicMock, call, patch
-from rest_framework.authtoken.models import Token
 from breathecode.payments import tasks
 from django.urls import reverse_lazy
 from rest_framework import status
 from breathecode.payments import actions
-
-from breathecode.payments import signals
+from breathecode.admissions import tasks as admissions_tasks
 
 from django.utils import timezone
 from ..mixins import PaymentsTestCase
@@ -118,6 +115,8 @@ class SignalTestSuite(PaymentsTestCase):
     """
 
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_auth(self):
         url = reverse_lazy('payments:pay')
         response = self.client.post(url)
@@ -132,12 +131,17 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Get with zero Bag, without passing token
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__without_passing_token(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
@@ -159,12 +163,17 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Get with zero Bag, passing token
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__passing_token(self):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
@@ -187,12 +196,17 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Get with zero Bag, passing token, without Plan and ServiceItem
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__passing_token__empty_bag(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -224,12 +238,17 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Get with zero Bag, passing token, with Plan and ServiceItem
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__passing_token__with_bag_filled__without_free_trial(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -265,12 +284,17 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Get with zero Bag, passing token, with Plan and ServiceItem, passing chosen_period
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__passing_token__passing_chosen_period__bad_value(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -305,11 +329,16 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__passing_token__passing_chosen_period__good_value__free_trial_without_plan_offer(
             self):
         bag = {
@@ -352,11 +381,16 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__passing_token__free_trial(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -408,11 +442,16 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [call(1, 1)])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__passing_token__free_plan__is_renewable(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -464,11 +503,16 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [call(1, 1)])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__passing_token__free_plan__not_is_renewable(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -520,6 +564,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [call(1, 1)])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
@@ -527,6 +574,8 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__without_bag__passing_token__passing_chosen_period__good_value__amount_set(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -582,6 +631,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
@@ -589,6 +641,8 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__passing_token__passing_how_many_installments__not_found(self):
         bag = {
             'token': 'xdxdxdxdxdxdxdxdxdxd',
@@ -634,6 +688,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [])
 
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
     @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
@@ -641,6 +698,8 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
     @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
     @patch('breathecode.payments.actions.check_dependencies_in_bag', MagicMock())
+    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__passing_token__passing_how_many_installments__found(self):
         how_many_installments = random.randint(1, 12)
         charge = random.random() * 99 + 1
@@ -703,3 +762,6 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [call(1, 1)])
         self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
         self.assertEqual(actions.check_dependencies_in_bag.call_args_list, [call(model.bag, 'en')])
+
+        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])

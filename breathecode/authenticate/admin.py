@@ -1,15 +1,15 @@
 import base64, os, urllib.parse, logging, datetime
 from django.contrib import admin
 from django.utils import timezone
-from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
 from .actions import (delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password,
                       sync_organization_members)
 from django.utils.html import format_html
-from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy,
-                     Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy,
-                     GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog)
+from .models import (App, AppOptionalScope, AppRequiredScope, AppUserAgreement, CredentialsGithub, DeviceId,
+                     LegacyKey, OptionalScopeSet, Scope, Token, UserProxy, Profile, CredentialsSlack,
+                     ProfileAcademy, Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle,
+                     AcademyProxy, GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog)
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
@@ -100,8 +100,8 @@ class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name']
     raw_id_fields = ['user']
     list_filter = ['academy', 'role', 'status', 'process_status']
-    list_display = ('email', 'is_email_validated', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at',
-                    'invite_url')
+    list_display = ('email', 'is_email_validated', 'first_name', 'last_name', 'status', 'academy', 'token',
+                    'created_at', 'invite_url')
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list]
 
     def invite_url(self, obj):
@@ -444,3 +444,57 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         return format_html(
             f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.github_callback}&scope={scopes}'>connect owner</a>"
         )
+
+
+@admin.register(Scope)
+class ScopeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug')
+    search_fields = ['name', 'slug']
+    actions = []
+
+
+@admin.register(App)
+class AppAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'algorithm', 'strategy', 'schema', 'agreement_version',
+                    'require_an_agreement')
+    search_fields = ['name', 'slug']
+    list_filter = ['algorithm', 'strategy', 'schema', 'require_an_agreement']
+
+
+@admin.register(AppRequiredScope)
+class AppRequiredScopeAdmin(admin.ModelAdmin):
+    list_display = ('app', 'scope', 'agreed_at')
+    search_fields = ['app__name', 'app__slug', 'scope__name', 'scope__slug']
+    list_filter = ['app', 'scope']
+
+
+@admin.register(AppOptionalScope)
+class AppOptionalScopeAdmin(admin.ModelAdmin):
+    list_display = ('app', 'scope', 'agreed_at')
+    search_fields = ['app__name', 'app__slug', 'scope__name', 'scope__slug']
+    list_filter = ['app', 'scope']
+
+
+@admin.register(LegacyKey)
+class LegacyKeyAdmin(admin.ModelAdmin):
+    list_display = ('app', 'algorithm', 'strategy', 'schema')
+    search_fields = ['app__name', 'app__slug']
+    list_filter = ['algorithm', 'strategy', 'schema']
+    actions = []
+
+
+@admin.register(OptionalScopeSet)
+class OptionalScopeSetAdmin(admin.ModelAdmin):
+    list_display = ('id', )
+    search_fields = ['optional_scopes__name', 'optional_scopes__slug']
+    actions = []
+
+
+@admin.register(AppUserAgreement)
+class AppUserAgreementAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'app', 'optional_scope_set', 'agreement_version')
+    search_fields = [
+        'user__username', 'user__email', 'user__first_name', 'user__last_name', 'app__name', 'app__slug'
+    ]
+    list_filter = ['app']
+    actions = []

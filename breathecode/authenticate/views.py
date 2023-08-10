@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import urllib.parse
-from datetime import timedelta, timezone
+from datetime import timedelta
 from urllib.parse import parse_qs, urlencode
 
 import requests
@@ -17,7 +17,7 @@ from django.db.models.functions import Now
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
-from rest_framework import serializers, status
+from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import (APIException, PermissionDenied, ValidationError)
@@ -39,24 +39,29 @@ from breathecode.utils import (GenerateLookupsMixin, HeaderLimitOffsetPagination
 from breathecode.utils.api_view_extensions.api_view_extensions import \
     APIViewExtensions
 from breathecode.utils.decorators import has_permission
+from breathecode.utils.decorators.scope import scope
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils.service import Service
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
-from .actions import (generate_academy_token, get_user_language, resend_invite, reset_password,
+from .actions import (generate_academy_token, get_app, get_user_language, resend_invite, reset_password,
                       set_gitpod_user_expiration, update_gitpod_users, sync_organization_members,
                       get_github_scopes)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
-from .models import (CredentialsFacebook, CredentialsGithub, CredentialsGoogle, CredentialsSlack, GitpodUser,
-                     Profile, ProfileAcademy, Role, Token, UserInvite, GithubAcademyUser, AcademyAuthSettings)
-from .serializers import (AuthSerializer, GetGitpodUserSerializer, GetProfileAcademySerializer,
-                          GetProfileAcademySmallSerializer, GetProfileSerializer, GitpodUserSmallSerializer,
-                          MemberPOSTSerializer, MemberPUTSerializer, ProfileAcademySmallSerializer,
-                          ProfileSerializer, RoleBigSerializer, RoleSmallSerializer, StudentPOSTSerializer,
+from .models import (App, AppOptionalScope, AppRequiredScope, AppUserAgreement, CredentialsFacebook,
+                     CredentialsGithub, CredentialsGoogle, CredentialsSlack, GitpodUser, OptionalScopeSet,
+                     Profile, ProfileAcademy, Role, Scope, Token, UserInvite, GithubAcademyUser,
+                     AcademyAuthSettings)
+from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerializer,
+                          GetProfileAcademySerializer, GetProfileAcademySmallSerializer, GetProfileSerializer,
+                          GitpodUserSmallSerializer, MemberPOSTSerializer, MemberPUTSerializer,
+                          ProfileAcademySmallSerializer, ProfileSerializer, RoleBigSerializer,
+                          RoleSmallSerializer, SmallAppUserAgreementSerializer, StudentPOSTSerializer,
                           TokenSmallSerializer, UserInviteSerializer, UserInviteShortSerializer,
                           UserInviteSmallSerializer, UserInviteWaitingListSerializer, UserMeSerializer,
                           UserSerializer, UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
@@ -2287,3 +2292,167 @@ class GithubMeView(APIView):
         instance.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+# app/user/:id
+class AppUserView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(paginate=True)
+
+    @scope(['read:user'])
+    def get(self, request, app: dict, token: dict, user_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        extra = {}
+        if app.require_an_agreement:
+            extra['appuseragreement__app__id'] = app.id
+
+        if token.sub:
+            extra['id'] = token.sub
+
+        if user_id:
+            if token.sub and token.sub != user_id:
+                raise ValidationException(translation(lang,
+                                                      en='This user does not have access to this resource',
+                                                      es='Este usuario no tiene acceso a este recurso'),
+                                          code=403,
+                                          slug='user-with-no-access',
+                                          silent=True)
+
+            if 'id' not in extra:
+                extra['id'] = user_id
+
+            user = User.objects.filter(**extra).first()
+            if not user:
+                raise ValidationException(translation(lang, en='User not found', es='Usuario no encontrado'),
+                                          code=404,
+                                          slug='user-not-found',
+                                          silent=True)
+
+            serializer = AppUserSerializer(user, many=False)
+            return Response(serializer.data)
+
+        # test this path
+        items = User.objects.filter(**extra)
+        items = handler.queryset(items)
+        serializer = AppUserSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class AppUserAgreementView(APIView):
+    extensions = APIViewExtensions(paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        items = AppUserAgreement.objects.filter(user=request.user, app__require_an_agreement=True)
+        items = handler.queryset(items)
+        serializer = SmallAppUserAgreementSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+# app/webhook
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@scope(['webhook'], mode='signature')
+def app_webhook(request, app: dict):
+    # {'type': 'user:updated', 'kind': 'user', 'data': {'id': 1, 'name': 'John'}}
+    # {'type': 'bug', 'kind': 'bug', 'url': 'https://xyz.io/bug/123'}
+
+    # save the webhook
+    ...
+
+    # send the webhook to celery
+    ...
+
+    return Response({'message': 'ok'})
+
+
+@private_view()
+def authorize_view(request, token=None, app_slug=None):
+    try:
+        app = get_app(app_slug)
+
+    except:
+        return render_message(request,
+                              'App not found',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=APP_URL,
+                              status=404)
+
+    if not app.require_an_agreement:
+        return render_message(request,
+                              'App not found',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=APP_URL,
+                              status=404)
+
+    agreement = AppUserAgreement.objects.filter(app=app, user=request.user).first()
+    selected_scopes = [x.slug
+                       for x in agreement.optional_scope_set.optional_scopes.all()] if agreement else []
+
+    required_scopes = Scope.objects.filter(m2m_required_scopes__app=app)
+    optional_scopes = Scope.objects.filter(m2m_optional_scopes__app=app)
+
+    new_scopes = [
+        x.slug for x in Scope.objects.filter(
+            Q(m2m_required_scopes__app=app, m2m_required_scopes__agreed_at__gt=agreement.agreed_at),
+            Q(m2m_optional_scopes__app=app, m2m_optional_scopes__agreed_at__gt=agreement.agreed_at))
+    ] if agreement else []
+
+    if request.method == 'GET':
+        return render(
+            request, 'authorize.html', {
+                'app': app,
+                'required_scopes': required_scopes,
+                'optional_scopes': optional_scopes,
+                'selected_scopes': selected_scopes,
+                'new_scopes': new_scopes,
+                'reject_url': app.redirect_url + '?app=4geeks&status=rejected',
+            })
+
+    if request.method == 'POST':
+        items = set()
+        for key in request.POST:
+            if key == 'csrfmiddlewaretoken':
+                continue
+
+            items.add(key)
+
+        items = sorted(list(items))
+        query = Q()
+
+        for item in items:
+            query |= Q(optional_scopes__slug=item)
+
+        created = False
+        cache = OptionalScopeSet.objects.filter(query).first()
+        if cache is None or cache.optional_scopes.count() != len(items):
+            cache = OptionalScopeSet()
+            cache.save()
+
+            created = True
+
+            for s in items:
+                scope = Scope.objects.filter(slug=s).first()
+                cache.optional_scopes.add(scope)
+
+        if (agreement := AppUserAgreement.objects.filter(app=app, user=request.user).first()):
+            if created:
+                agreement.agreed_at = timezone.now()
+
+            agreement.optional_scope_set = cache
+            agreement.agreement_version = app.agreement_version
+            agreement.save()
+
+        else:
+            agreement = AppUserAgreement.objects.create(app=app,
+                                                        user=request.user,
+                                                        agreed_at=timezone.now(),
+                                                        agreement_version=app.agreement_version,
+                                                        optional_scope_set=cache)
+
+        return redirect(app.redirect_url + '?app=4geeks&status=authorized')

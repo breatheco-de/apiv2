@@ -137,15 +137,14 @@ def validate_email(email, lang):
                 slug='invalid-email'))
 
     if 'score' in data and data['score'] < 0.60:
-        raise ValidationException(
-            translation(
-                lang,
-                en=
-                'The email address seems to have poor quality. Are you able to provide a different email address?',
-                es=
-                'El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?',
-                slug='invalid-email'),
-            data=data)
+        raise ValidationException(translation(
+            lang,
+            en=
+            'The email address seems to have poor quality. Are you able to provide a different email address?',
+            es=
+            'El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?',
+            slug='invalid-email'),
+                                  data=data)
 
     return data
 
