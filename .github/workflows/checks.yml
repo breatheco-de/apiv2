@@ -64,7 +64,7 @@ jobs:
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
           source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
-          python ./scripts/pending_migrations.py
+          pipenv run python ./scripts/pending_migrations.py
 
   dependencies:
     needs: setup_dependencies
