@@ -60,10 +60,10 @@ jobs:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
 
-      - name: Set PYTHONPATH
+      - name: Set PATH
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
+          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
 
       - name: Check migrations
         run: |
@@ -95,10 +95,10 @@ jobs:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
 
-      - name: Set PYTHONPATH
+      - name: Set PATH
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
+          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
@@ -133,10 +133,10 @@ jobs:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
 
-      - name: Set PYTHONPATH
+      - name: Set PATH
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
+          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
 
       - name: Run tests
         run: |
@@ -182,10 +182,10 @@ jobs:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
 
-      - name: Set PYTHONPATH
+      - name: Set PATH
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
+          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
 
       - name: Linter
         run: |
@@ -217,10 +217,10 @@ jobs:
           name: python-packages
           path: ${{ env.WORKON_HOME }}
 
-      - name: Set PYTHONPATH
+      - name: Set PATH
         run: |
           VENV_NAME=$(ls ${WORKON_HOME})
-          echo "PYTHONPATH=${WORKON_HOME}/${VENV_NAME}/lib/python${PYTHON_VERSION}/site-packages/" >> $GITHUB_ENV
+          echo "${WORKON_HOME}/${VENV_NAME}/bin" >> $GITHUB_PATH
 
       - name: Deploy docs
         run: pipenv run mkdocs gh-deploy --force
