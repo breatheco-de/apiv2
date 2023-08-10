@@ -1,4 +1,5 @@
 import inspect
+import logging
 from typing import Callable
 from breathecode.utils.exceptions import ProgrammingError
 from celery import shared_task
@@ -6,7 +7,13 @@ from django.db import transaction
 from django.utils import timezone
 import copy
 
-__all__ = ['task']
+__all__ = ['task', 'AbortTask']
+
+logger = logging.getLogger(__name__)
+
+
+class AbortTask(Exception):
+    pass
 
 
 class Task(object):
@@ -87,8 +94,24 @@ class Task(object):
                     try:
                         return function(*args, **kwargs)
 
+                    except AbortTask as e:
+                        transaction.savepoint_rollback(sid)
+
+                        x.status = 'ABORTED'
+                        x.status_message = str(e)[:255]
+                        x.save()
+
+                        logger.exception(str(e))
+
+                        # avoid reattempts
+                        return
+
                     except Exception as e:
                         transaction.savepoint_rollback(sid)
+
+                        x.status = 'ERROR'
+                        x.status_message = str(e)[:255]
+                        x.save()
 
                         # fallback
                         if self.fallback:
@@ -97,7 +120,30 @@ class Task(object):
                         # behavior by default
                         raise e
 
-            res = function(*args, **kwargs)
+            try:
+                res = function(*args, **kwargs)
+
+            except AbortTask as e:
+                x.status = 'ABORTED'
+                x.status_message = str(e)[:255]
+                x.save()
+
+                logger.exception(str(e))
+
+                # avoid reattempts
+                return
+
+            except Exception as e:
+                x.status = 'ERROR'
+                x.status_message = str(e)[:255]
+                x.save()
+
+                # fallback
+                if self.fallback:
+                    return self.fallback(*args, **kwargs, exception=e)
+
+                # behavior by default
+                raise e
 
             if x.total_pages == x.current_page:
                 x.status = 'DONE'

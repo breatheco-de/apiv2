@@ -5,11 +5,12 @@ import logging
 import math
 import os
 from typing import Any
+from dateutil.relativedelta import relativedelta
 
 from celery import Task, shared_task
 import pandas as pd
 from breathecode.payments.services.stripe import Stripe
-from breathecode.utils.decorators import task
+from breathecode.utils.decorators import task, AbortTask
 
 from breathecode.provisioning import actions
 from breathecode.provisioning.models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningUserConsumption
@@ -250,3 +251,20 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
 
     elif not ProvisioningUserConsumption.objects.filter(hash=hash, status='ERROR').exists():
         calculate_bill_amounts.delay(hash)
+
+
+@task()
+def archive_provisioning_bill(bill_id: int, **_: Any):
+    logger.info(f'Starting archive_provisioning_bills for bill id {bill_id}')
+
+    now = timezone.now()
+    bill = ProvisioningBill.objects.filter(id=bill_id,
+                                           status='PAID',
+                                           paid_at__gte=now - relativedelta(months=1),
+                                           archived_at__isnull=True).first()
+
+    if not bill:
+        raise AbortTask(f'Bill {bill_id} not found or requirements not met')
+
+    bill.archived_at = now
+    bill.save()

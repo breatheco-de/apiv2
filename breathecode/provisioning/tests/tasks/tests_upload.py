@@ -216,6 +216,7 @@ def provisioning_bill_data(data={}):
         'started_at': None,
         'ended_at': None,
         'title': None,
+        'archived_at': None,
         **data,
     }
 

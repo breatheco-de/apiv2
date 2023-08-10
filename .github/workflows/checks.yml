@@ -1,0 +1,256 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Dependencies
+
+on:
+  push: {}
+  pull_request: {}
+
+env:
+  PYTHON_VERSION: 3.11.4
+
+# setup_dependencies > migrations & dependencies > tests > pages & linter & dockerhub
+
+jobs:
+  setup_dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ... other setup steps ...
+
+      - name: Install pipenv
+        run: pip install pipenv
+
+      - name: Install dependencies using pipenv
+        run: |
+          PYTHONUNBUFFERED=1
+          pipenv install --dev
+
+      - name: Determine pipenv site-packages directory
+        run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+
+      - name: Upload Python packages as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: python-packages
+          path: ${{ env.SITE_PACKAGES_DIR }}
+
+  migrations:
+    needs: setup_dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install pipenv
+        run: pip install pipenv
+
+      # This is where you'll restore the site-packages.
+      # For clarity, we'll define the path to site-packages again (though it's the same as before).
+      - name: Define site-packages directory
+        run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+
+      - name: Download Python packages artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: python-packages
+          path: ${{ env.SITE_PACKAGES_DIR }}
+
+      - name: Check migrations
+        run: |
+          python ./scripts/pending_migrations.py
+
+  dependencies:
+    needs: setup_dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pipenv" # caching pip dependencies
+
+      - name: Calculate initial MD5 for Pipfile.lock
+        id: calculate-md5-1
+        run: echo "MD5_1=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
+
+      - name: Install pipenv
+        run: pip install pipenv
+
+      # This is where you'll restore the site-packages.
+      # For clarity, we'll define the path to site-packages again (though it's the same as before).
+      - name: Define site-packages directory
+        run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+
+      - name: Download Python packages artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: python-packages
+          path: ${{ env.SITE_PACKAGES_DIR }}
+
+      - name: Calculate updated MD5 for Pipfile.lock
+        id: calculate-md5-2
+        run: echo "MD5_2=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
+
+      - name: Check Pipfile.lock is up-to-date
+        run: |
+          if [ "$MD5_1" != "$MD5_2" ]; then
+            echo "Pipfile.lock is out of date. Please run 'pipenv lock --dev' and commit the updated Pipfile.lock.";
+            exit 1;
+          fi
+
+  tests:
+    needs: [migrations, dependencies]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install pipenv
+        run: pip install pipenv
+
+      # This is where you'll restore the site-packages.
+      # For clarity, we'll define the path to site-packages again (though it's the same as before).
+      - name: Define site-packages directory
+        run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+
+      - name: Download Python packages artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: python-packages
+          path: ${{ env.SITE_PACKAGES_DIR }}
+
+      - name: Run tests
+        run: |
+          pipenv run pcov_ci
+
+      - uses: codecov/codecov-action@v3
+        if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./coverage.xml # optional
+          flags: unittests # optional
+          name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+
+      - name: Upload coverage data to coveralls.io
+        if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
+        run: |
+          pipenv run coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  linter:
+    needs: tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install pipenv
+        run: pip install pipenv
+
+      # This is where you'll restore the site-packages.
+      # For clarity, we'll define the path to site-packages again (though it's the same as before).
+      - name: Define site-packages directory
+        run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+
+      - name: Download Python packages artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: python-packages
+          path: ${{ env.SITE_PACKAGES_DIR }}
+
+      - name: Linter
+        run: |
+          pipenv run format
+
+  pages:
+    needs: tests
+    if: >-
+      github.repository == 'breatheco-de/apiv2' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/development'
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pipenv" # caching pip dependencies
+
+      - name: Install pipenv
+        run: pip install pipenv
+
+      # This is where you'll restore the site-packages.
+      # For clarity, we'll define the path to site-packages again (though it's the same as before).
+      - name: Define site-packages directory
+        run: echo "SITE_PACKAGES_DIR=$(pipenv --venv)/lib/python$(python --version | cut -d ' ' -f 2 | cut -d '.' -f 1-2)/site-packages" >> $GITHUB_ENV
+
+      - name: Download Python packages artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: python-packages
+          path: ${{ env.SITE_PACKAGES_DIR }}
+
+      - name: Deploy docs
+        run: pipenv run mkdocs gh-deploy --force
+
+  dockerhub:
+    needs: tests
+    runs-on: ubuntu-latest
+    if: >-
+      github.repository == 'breatheco-de/apiv2' &&
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development')
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: geeksacademy/breathecode
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
