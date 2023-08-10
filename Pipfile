@@ -31,6 +31,8 @@ docs="mkdocs serve --livereload"
 generate_docs="mkdocs build"
 doctor="python -m scripts.doctor"
 docs_deploy="mkdocs gh-deploy -c"
+sign_jwt="python manage.py sign_jwt"
+sign_request="python manage.py sign_request"
 
 [dev-packages]
 pytest-cov = "*"

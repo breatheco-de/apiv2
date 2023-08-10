@@ -1,0 +1,7 @@
+{% if type == 'link' %}
+<a class="btn {{className}}" type="button" href="{{href}}" onclick="{{onclick}}"
+  >{{value}}</a
+>
+{% else %}
+<button class="btn {{className}}" type="{{type}}">{{value}}</button>
+{% endif %}

@@ -1,65 +1,30 @@
 # Getting started
 
-## Working inside Docker (slower)
-
-### `Build 4Geeks Dev docker image`
+## Install Docker
 
 Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
-```bash
-# Check which dependencies you need install in your operating system
-python -m scripts.doctor
-
-# Generate the 4Geeks Dev docker image
-docker-compose build bc-dev
-```
-
-### `Testing inside 4Geeks Dev`
-
-```bash
-# Open the 4Geeks Dev, this shell don't export the port 8000
-docker-compose run bc-dev fish
-
-# Testing
-pipenv run test ./breathecode/activity  # path
-
-# Testing in parallel
-pipenv run ptest ./breathecode/activity  # path
-
-# Coverage
-pipenv run cov breathecode.activity  # python module path
-
-# Coverage in parallel
-pipenv run pcov breathecode.activity  # python module path
-```
+## Running 4geeks
 
 ### `Run 4Geeks API as docker service`
 
 ```bash
 # open 4Geeks API as a service and export the port 8000
-docker-compose up -d bc-dev
-
-# open the 4Geeks Dev, this shell don't export the port 8000
-docker-compose run bc-dev fish
+docker-compose up -d
 
 # create super user
-pipenv run python manage.py createsuperuser
-
-# Close the 4Geeks Dev
-exit
+sudo docker compose run 4geeks python manage.py createsuperuser
 
 # See the output of Django
-docker-compose logs -f bc-dev
+docker-compose logs -f 4geeks
 
 # open localhost:8000 to view the api
 # open localhost:8000/admin to view the admin
 ```
 
-## Working in your local machine (recomended)
+### `Run 4Geeks in your local machine`
 
-### `Installation in your local machine`
-
-Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+#### Installation
 
 ```bash
 # Check which dependencies you need install in your operating system
@@ -72,23 +37,9 @@ docker-compose up -d redis postgres
 python -m scripts.install
 ```
 
-### `Testing in your local machine`
+#### Run 4Geeks API
 
-```bash
-# Testing
-pipenv run test ./breathecode/activity  # path
-
-# Testing in parallel
-pipenv run ptest ./breathecode/activity  # path
-
-# Coverage
-pipenv run cov breathecode.activity  # python module path
-
-# Coverage in parallel
-pipenv run pcov breathecode.activity  # python module path
-```
-
-### `Run 4Geeks API in your local machine`
+You must up Redis and Postgres before open 4Geeks.
 
 ```bash
 # Collect statics
@@ -108,4 +59,32 @@ pipenv run start
 
 # open localhost:8000 to view the api
 # open localhost:8000/admin to view the admin
+```
+
+### `Testing in your local machine`
+
+#### Installation
+
+```bash
+# Check which dependencies you need install in your operating system
+python -m scripts.doctor
+
+# Install and setting up your development environment (this command replace your .env file)
+python -m scripts.install
+```
+
+#### Run tests
+
+```bash
+# Testing
+pipenv run test ./breathecode/activity  # path
+
+# Testing in parallel
+pipenv run ptest ./breathecode/activity  # path
+
+# Coverage
+pipenv run cov breathecode.activity  # python module path
+
+# Coverage in parallel
+pipenv run pcov breathecode.activity  # python module path
 ```

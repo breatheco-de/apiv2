@@ -1,4 +1,5 @@
 import serpy
+from breathecode.payments.models import Consumable
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
 import breathecode.mentorship.actions as actions
@@ -724,10 +725,15 @@ class SessionSerializer(SessionPUTSerializer):
 
         mentee = None
         if 'mentee' in data:
-            if data['mentee'] and isinstance(data['mentee'], str) and not data['mentee'].isnumeric():
-                mentee = CohortUser.objects.filter(email=data['mentee']).first()
+            if not data['mentee'].isnumeric():
+                mentee = Consumable.objects.filter(
+                    mentorship_service_set__mentorship_services__id=data['service'],
+                    user__email=data['mentee']).first()
+
             else:
-                mentee = CohortUser.objects.filter(user__id=data['mentee']).first()
+                mentee = Consumable.objects.filter(
+                    mentorship_service_set__mentorship_services__id=data['service'],
+                    user__id=data['mentee']).first()
 
             if mentee is None:
                 raise ValidationException(translation(

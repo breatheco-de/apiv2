@@ -10,7 +10,7 @@ nav:
   - Installation:
       - 'installation/environment-variables.md'
       - 'installation/fixtures.md'
-  - Deployment:
+  - Deployments:
       - 'deployment/environment-variables.md'
       - 'deployment/configuring-the-github-secrets.md'
   - Apps:
@@ -20,7 +20,10 @@ nav:
     - 'apps/activities.md'
     - 'apps/admissions.md'
   - Security:
+    - 'security/introduction.md'
+    - 'security/authentication-class.md'
     - 'security/capabilities.md'
+    - 'security/schema-link.md'
   - Services:
     - Google Cloud:
       - 'services/google_cloud/google-cloud-functions.md'
