@@ -9,7 +9,6 @@ on:
 
 env:
   PYTHON_VERSION: 3.11
-  WORKON_HOME: /home/runner/.virtualenv
   PIPENV_VENV_IN_PROJECT: true
 
 # setup_dependencies > migrations & dependencies > tests > pages & linter & dockerhub
@@ -29,15 +28,11 @@ jobs:
           PYTHONUNBUFFERED=1
           pipenv install --dev
 
-      - name: print
-        run: |
-          ls .venv
-
       - name: Upload Python packages as artifact
         uses: actions/upload-artifact@v3
         with:
           name: python-packages
-          path: .venv
+          path: .venv/
 
   migrations:
     needs: setup_dependencies
@@ -59,7 +54,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: .venv
+          path: ./
 
       - name: Check migrations
         run: |
@@ -91,7 +86,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: .venv
+          path: ./
 
       - name: Set PATH
         run: |
@@ -129,7 +124,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: .venv
+          path: ./
 
       - name: Set PATH
         run: |
@@ -178,7 +173,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: .venv
+          path: ./
 
       - name: Set PATH
         run: |
@@ -213,7 +208,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-packages
-          path: .venv
+          path: ./
 
       - name: Set PATH
         run: |
