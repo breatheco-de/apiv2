@@ -183,7 +183,7 @@ class Event(models.Model):
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
     free_for_bootcamps = models.BooleanField(
-        default=None,
+        default=True,
         blank=True,
         null=True,
         help_text=
