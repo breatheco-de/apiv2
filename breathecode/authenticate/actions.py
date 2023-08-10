@@ -637,9 +637,9 @@ def accept_invite(accepting_ids=None, user=None):
             if invite.role is not None and invite.role.slug != 'student':
                 role = invite.role.slug.upper()
 
-            cu = CohortUser.objects.filter(user=token.user, cohort=invite.cohort).first()
+            cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None:
-                cu = CohortUser(user=token.user, cohort=invite.cohort, role=role, educational_status='ACTIVE')
+                cu = CohortUser(user=user, cohort=invite.cohort, role=role, educational_status='ACTIVE')
                 cu.save()
 
         if user is not None and invite.user is None:
