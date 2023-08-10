@@ -642,6 +642,9 @@ def accept_invite(accepting_ids=None, user=None):
                 cu = CohortUser(user=token.user, cohort=invite.cohort, role=role, educational_status='ACTIVE')
                 cu.save()
 
+        if user is not None and invite.user is None:
+            invite.user = user
+
         invite.status = 'ACCEPTED'
         invite.save()
 
