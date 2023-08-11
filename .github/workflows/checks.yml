@@ -58,9 +58,6 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Set PIPENV_VENV_IN_PROJECT
-        run: echo "PIPENV_VENV_IN_PROJECT=1" >> $GITHUB_ENV
-
         # Cache Pipenv packages
       - name: Cache Pipenv packages
         uses: actions/cache@v2
@@ -79,6 +76,12 @@ jobs:
         run: |
           pip install pipenv
           pipenv install --dev
+
+      # Install Pipenv
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: |
+          pip install pipenv
 
       - name: Check migrations
         run: |
