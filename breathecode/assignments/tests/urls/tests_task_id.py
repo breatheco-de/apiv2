@@ -20,6 +20,7 @@ def get_serializer(self, task, user):
         'task_type': task.task_type,
         'title': task.title,
         'description': task.description,
+        'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
         'user': {
             'first_name': user.first_name,
             'id': user.id,
@@ -45,6 +46,7 @@ def put_serializer(self, task, data={}):
         'attachments': [],
         'subtasks': task.subtasks,
         'title': task.title,
+        'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
         **data,
     }
 
@@ -63,6 +65,7 @@ def task_row(task, data={}):
         'cohort_id': task.cohort.id if task.cohort else None,
         'user_id': task.user.id,
         'subtasks': task.subtasks,
+        'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
         **data,
     }
 

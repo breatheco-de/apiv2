@@ -65,6 +65,7 @@ class Task(models.Model):
     github_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     live_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=450, blank=True)
+    opened_at = models.DateTimeField(null=True, blank=True, default=None)
 
     subtasks = models.JSONField(
         default=None,
