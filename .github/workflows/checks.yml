@@ -10,10 +10,10 @@ on:
 env:
   PYTHON_VERSION: 3.11
 
-# setup_dependencies > migrations & dependencies > tests > pages & linter & dockerhub
+# cache > migrations & dependencies > tests > pages & linter & dockerhub
 
 jobs:
-  setup_dependencies:
+  cache:
     runs-on: ubuntu-latest
 
     outputs:
@@ -61,7 +61,7 @@ jobs:
         run: ls -al ~/.local/share/virtualenvs
 
   migrations:
-    needs: setup_dependencies
+    needs: cache
     runs-on: ubuntu-latest
 
     steps:
@@ -97,7 +97,7 @@ jobs:
           pipenv run python ./scripts/pending_migrations.py
 
   dependencies:
-    needs: setup_dependencies
+    needs: cache
     runs-on: ubuntu-latest
 
     steps:
