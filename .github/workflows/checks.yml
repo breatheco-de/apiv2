@@ -142,6 +142,28 @@ jobs:
             exit 1;
           fi
 
+  check-undefined:
+    needs: cache
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Check for undefined variables
+        run: flake8 --select=F821 **/*.py
+
+        # For example, if you want to check all .py files in your repository:
+        # run: flake8 --select=F821 **/*.py
+
   tests:
     needs: [migrations, dependencies]
     runs-on: ubuntu-latest
