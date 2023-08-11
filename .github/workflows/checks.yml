@@ -84,6 +84,7 @@ jobs:
 
       - name: Check migrations
         run: |
+          ls  ~/.local/share/virtualenvs
           pipenv run python ./scripts/pending_migrations.py
 
   dependencies:
