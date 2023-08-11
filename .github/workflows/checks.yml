@@ -79,7 +79,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: requirements.txt
-          path: requirements.txt
+          path: .
 
       - name: x
         run: |
