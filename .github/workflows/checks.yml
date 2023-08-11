@@ -47,6 +47,10 @@ jobs:
           pip install pipenv
           pipenv install --dev
 
+      - name: Determine Pipenv virtual environment location
+        run: |
+          echo "Virtualenv location: $(pipenv --venv)"
+
       - name: Debug - List virtualenvs directory
         run: ls -al ~/.local/share/virtualenvs
 
