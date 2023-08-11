@@ -37,11 +37,11 @@ jobs:
           PYTHONUNBUFFERED=1
           pipenv install --dev
 
-      - name: Upload Python packages as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: python-packages
-          path: .venv/
+      # - name: Upload Python packages as artifact
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: python-packages
+      #     path: .venv/
 
       - name: Upload Python packages as artifact
         uses: actions/upload-artifact@v3
