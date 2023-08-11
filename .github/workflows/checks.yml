@@ -9,7 +9,7 @@ on:
 
 env:
   PYTHON_VERSION: 3.11
-  PIPENV_VENV_IN_PROJECT: true
+  PIPENV_VENV_IN_PROJECT: 1
 
 # setup_dependencies > migrations & dependencies > tests > pages & linter & dockerhub
 
@@ -34,6 +34,12 @@ jobs:
           name: python-packages
           path: .venv/
 
+      - name: Upload Python packages as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: deps
+          path: .venv/lib/python${{ env.PYTHON_VERSION }}/site-packages/
+
   migrations:
     needs: setup_dependencies
     runs-on: ubuntu-latest
@@ -50,11 +56,14 @@ jobs:
       - name: Install pipenv
         run: pip install pipenv
 
+      - name: Init virtualenv
+        run: python -m venv .venv
+
       - name: Download Python packages artifact
         uses: actions/download-artifact@v3
         with:
-          name: python-packages
-          path: .venv/
+          name: deps
+          path: .venv/lib/python${{ env.PYTHON_VERSION }}/site-packages/
 
       - name: x
         run: which python
