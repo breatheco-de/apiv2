@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2c9908db9735d954c6f04606cd7239c4067924f4c76d301659918fdde7a85457"
+            "sha256": "93a3f6b177026b1d3ddc554256b17bd216ffb659bb6163ef92a166b8983f3841"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -2725,6 +2725,14 @@
         }
     },
     "develop": {
+        "attrs": {
+            "hashes": [
+                "sha256:1f28b4522cdc2fb4256ac1a020c78acf9cba2c6b461ccd2c126f3aa8e8335d04",
+                "sha256:6279836d581513a26f1bf235f9acd333bc9115683f14f7e8fae46c98fc50e015"
+            ],
+            "markers": "python_version >= '3.7'",
+            "version": "==23.1.0"
+        },
         "certifi": {
             "hashes": [
                 "sha256:539cc1d13202e33ca466e88b2807e29f4c13049d6d87031a3c110744495cb082",
@@ -2939,6 +2947,14 @@
             "index": "pypi",
             "version": "==6.1.0"
         },
+        "flake8-bugbear": {
+            "hashes": [
+                "sha256:0ebdc7d8ec1ca8bd49347694562381f099f4de2f8ec6bda7a7dca65555d9e0d4",
+                "sha256:d99d005114020fbef47ed5e4aebafd22f167f9a0fbd0d8bf3c9e90612cb25c34"
+            ],
+            "index": "pypi",
+            "version": "==23.7.10"
+        },
         "flake8-docstrings": {
             "hashes": [
                 "sha256:4c8cc748dc16e6869728699e5d0d685da9a10b0ea718e090b1ba088e67a941af",
@@ -3071,7 +3087,7 @@
                 "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325",
                 "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e"
             ],
-            "markers": "python_version >= '3.6'",
+            "index": "pypi",
             "version": "==0.7.0"
         },
         "mergedeep": {
@@ -3153,6 +3169,14 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==0.11.2"
+        },
+        "pep8-naming": {
+            "hashes": [
+                "sha256:1705f046dfcd851378aac3be1cd1551c7c1e5ff363bacad707d43007877fa971",
+                "sha256:1a86b8c71a03337c97181917e2b472f0f5e4ccb06844a0d6f0a33522549e7a80"
+            ],
+            "index": "pypi",
+            "version": "==0.13.3"
         },
         "platformdirs": {
             "hashes": [

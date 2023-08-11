@@ -902,7 +902,7 @@ def refund_mentoring_session(session_id: int):
         logger.error(f'ConsumptionSession already cancelled for mentorship session {session_id}')
         return
 
-    consumption_session.status == 'CANCELLED'
+    consumption_session.status = 'CANCELLED'
     consumption_session.save()
 
     if consumption_session.status == 'DONE':

@@ -49,6 +49,9 @@ pytest-xdist = "*"
 mkdocstrings-python = "*"
 flake8 = "*"
 flake8-docstrings = "*"
+mccabe = "*"
+pep8-naming = "*"
+flake8-bugbear = "*"
 
 [packages]
 django = "~=3.2.20"
