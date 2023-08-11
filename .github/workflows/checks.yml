@@ -22,10 +22,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -58,19 +58,16 @@ jobs:
         run: |
           echo "Virtualenv location: $(pipenv --venv)"
 
-      - name: Debug - List virtualenvs directory
-        run: ls -al ~/.local/share/virtualenvs
-
   migrations:
     needs: cache
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -94,7 +91,6 @@ jobs:
 
       - name: Check migrations
         run: |
-          ls  ~/.local/share/virtualenvs
           pipenv run python ./scripts/pending_migrations.py
 
   dependencies:
@@ -155,14 +151,26 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install flake8
-        run: pip install flake8
+      # Cache Pipenv packages
+      - name: Cache Pipenv packages
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            ~/.local/share/virtualenvs
+            ~/.cache/pip
+          key: ${{ runner.os }}-pipenv1-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv1-
+
+      # Install Pipenv
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: |
+          pip install pipenv
 
       - name: Check for undefined variables
-        run: flake8 --select=F821 **/*.py
-
-        # For example, if you want to check all .py files in your repository:
-        # run: flake8 --select=F821 **/*.py
+        run: pipenv run flake8 .
 
   tests:
     needs: [migrations, dependencies]
@@ -170,10 +178,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -223,10 +231,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
