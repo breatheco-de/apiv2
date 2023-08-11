@@ -38,7 +38,7 @@ jobs:
             ~/.cache/pip
           key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-
+            ${{ runner.os }}-pipenv-1
 
       # Install dependencies using Pipenv
       - name: Install dependencies
@@ -83,7 +83,7 @@ jobs:
             ~/.cache/pip
           key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-
+            ${{ runner.os }}-pipenv-1
 
       - name: Debug - List virtualenvs directory after cache
         run: ls -al ~/.local/share/virtualenvs
