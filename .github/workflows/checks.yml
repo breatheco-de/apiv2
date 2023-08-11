@@ -37,17 +37,21 @@ jobs:
           PYTHONUNBUFFERED=1
           pipenv install --dev
 
+      - name: Get requirements.txt
+        run: |
+          pipenv run pip freeze --requirement requirements.txt > requirements.txt
+
       # - name: Upload Python packages as artifact
       #   uses: actions/upload-artifact@v3
       #   with:
       #     name: python-packages
       #     path: .venv/
 
-      - name: Upload Python packages as artifact
+      - name: Upload requirements.txt as artifact
         uses: actions/upload-artifact@v3
         with:
-          name: deps
-          path: .venv/lib/python${{ env.PYTHON_VERSION }}/site-packages/
+          name: requirements.txt
+          path: requirements.txt
 
   migrations:
     needs: setup_dependencies
@@ -71,20 +75,22 @@ jobs:
       - name: Init virtualenv
         run: python -m venv .venv
 
-      - name: Download Python packages artifact
+      - name: Download requirements.txt artifact
         uses: actions/download-artifact@v3
         with:
-          name: deps
-          path: .venv/lib/python${{ env.PYTHON_VERSION }}/site-packages/
+          name: requirements.txt
+          path: requirements.txt
 
       - name: x
-        run: which python
+        run: |
+          source .venv/bin/activate
+          pip install -r requirements.txt
 
       - name: Check migrations
         run: |
+          source .venv/bin/activate
           ls . -a
           echo $PWD
-          source .venv/bin/activate
           which python
           # VENV_NAME=$(ls ${WORKON_HOME})
           # source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
