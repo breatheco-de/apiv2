@@ -490,7 +490,7 @@ class CohortUser(models.Model):
 
     educational_status = models.CharField(max_length=15,
                                           choices=EDU_STATUS,
-                                          default=None,
+                                          default=ACTIVE,
                                           null=True,
                                           blank=True)
 
@@ -510,6 +510,10 @@ class CohortUser(models.Model):
     def save(self, *args, **kwargs):
         # check the fields before saving
         self.full_clean()
+
+        # If the CohortUser is being created (Not modified)
+        if self.id is None and self.educational_status is None:
+            self.educational_status = ACTIVE
 
         edu_status_updated = False
         if self.pk is None or self.__old_edu_status != self.educational_status:

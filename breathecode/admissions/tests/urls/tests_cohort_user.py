@@ -798,7 +798,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': None,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'watching': False,
             'history_log': {},
         }])
@@ -826,7 +826,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': None,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'watching': False,
             'history_log': {},
         }])
@@ -847,7 +847,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         expected = [{
             'id': 1,
             'role': 'STUDENT',
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'watching': False,
         }]
@@ -871,7 +871,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': None,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'watching': False,
             'history_log': {},
         }])
@@ -924,7 +924,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                            m.user,
                            m.profile_academy,
                            data={
-                               'educational_status': None if m.cohort.id == 1 else 'GRADUATED',
+                               'educational_status': 'ACTIVE' if m.cohort.id == 1 else 'GRADUATED',
                                'finantial_status': 'LATE' if m.cohort.id == 1 else None,
                            }) for m in model
         ]
@@ -937,7 +937,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'role': 'STUDENT',
             'finantial_status': 'LATE',
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'watching': False,
             'history_log': {},
         }, {

@@ -36,7 +36,7 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             cohort.available_as_saas,
         },
         'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-        'educational_status': None,
+        'educational_status': 'ACTIVE',
         'finantial_status': None,
         'id': 1,
         'profile_academy': {
@@ -61,7 +61,7 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
 def cohort_user_field(data={}):
     return {
         'cohort_id': 0,
-        'educational_status': None,
+        'educational_status': 'ACTIVE',
         'finantial_status': None,
         'id': 0,
         'role': 'STUDENT',
@@ -108,7 +108,7 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
                                    **additional_data,
                                })
 
-    expected['educational_status'] = None
+    expected['educational_status'] = 'ACTIVE'
     expected['finantial_status'] = None
 
     self.assertEqual(json, expected)
@@ -127,7 +127,7 @@ def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, upda
     else:
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': 'TEACHER',
@@ -420,7 +420,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': 'STUDENT',
@@ -464,7 +464,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': 'STUDENT',
@@ -473,7 +473,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'history_log': {},
         }, {
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 2,
             'role': 'STUDENT',
