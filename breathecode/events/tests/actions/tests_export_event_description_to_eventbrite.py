@@ -33,11 +33,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (400, eventbrite_post_url, eventbrite_bad_post_event),
-               (200, eventbrite_get_url, eventbrite_get_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (400, eventbrite_post_url, eventbrite_bad_post_event),
+            (200, eventbrite_get_url, eventbrite_get_event),
+        ]))
     def test_export_event_description_to_eventbrite__without_event(self):
         import logging
         import requests
@@ -57,11 +58,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (400, eventbrite_post_url, eventbrite_bad_post_event),
-               (200, eventbrite_get_url, eventbrite_get_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (400, eventbrite_post_url, eventbrite_bad_post_event),
+            (200, eventbrite_get_url, eventbrite_get_event),
+        ]))
     def test_export_event_description_to_eventbrite__without_eventbrite_id(self):
         import logging
         import requests
@@ -86,11 +88,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (400, eventbrite_post_url, eventbrite_bad_post_event),
-               (200, eventbrite_get_url, eventbrite_get_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (400, eventbrite_post_url, eventbrite_bad_post_event),
+            (200, eventbrite_get_url, eventbrite_get_event),
+        ]))
     def test_export_event_description_to_eventbrite__with_event(self):
         import logging
         import requests
@@ -116,11 +119,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (400, eventbrite_post_url, eventbrite_bad_post_event),
-               (200, eventbrite_get_url, eventbrite_get_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (400, eventbrite_post_url, eventbrite_bad_post_event),
+            (200, eventbrite_get_url, eventbrite_get_event),
+        ]))
     def test_export_event_description_to_eventbrite__empty_description(self):
         import logging
         import requests
@@ -147,11 +151,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (400, eventbrite_post_url, eventbrite_bad_post_event),
-               (200, eventbrite_get_url, {}),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (400, eventbrite_post_url, eventbrite_bad_post_event),
+            (200, eventbrite_get_url, {}),
+        ]))
     def test_export_event_description_to_eventbrite__the_get_not_return_page_version_number(self):
         import logging
         import requests
@@ -189,11 +194,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (400, eventbrite_post_url, eventbrite_bad_post_event),
-               (200, eventbrite_get_url, eventbrite_get_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (400, eventbrite_post_url, eventbrite_bad_post_event),
+            (200, eventbrite_get_url, eventbrite_get_event),
+        ]))
     def test_export_event_description_to_eventbrite__post_with_400(self):
         import logging
         import requests
@@ -252,11 +258,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (200, eventbrite_post_url, eventbrite_good_post_event),
-               (200, eventbrite_get_url, eventbrite_get_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (200, eventbrite_post_url, eventbrite_good_post_event),
+            (200, eventbrite_get_url, eventbrite_get_event),
+        ]))
     def test_export_event_description_to_eventbrite(self):
         import logging
         import requests

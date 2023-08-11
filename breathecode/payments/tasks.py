@@ -90,9 +90,10 @@ def renew_consumables(self, scheduler_id: int):
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
             and scheduler.plan_handler.handler.plan.time_of_life
             and scheduler.plan_handler.handler.plan.time_of_life_unit
-            and scheduler.plan_handler.plan_financing.created_at + actions.calculate_relative_delta(
-                scheduler.plan_handler.handler.plan.time_of_life,
-                scheduler.plan_handler.handler.plan.time_of_life_unit) < utc_now):
+            and scheduler.plan_handler.plan_financing.created_at +
+            actions.calculate_relative_delta(scheduler.plan_handler.handler.plan.time_of_life,
+                                             scheduler.plan_handler.handler.plan.time_of_life_unit)
+            < utc_now):
         logger.info(
             f'The services related to PlanFinancing {scheduler.plan_handler.plan_financing.id} is over')
         return

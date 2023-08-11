@@ -388,11 +388,12 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'PROVISIONING_CREDIT_PRICE': CREDIT_PRICE,
-               'STRIPE_PRICE_ID': STRIPE_PRICE_ID,
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'PROVISIONING_CREDIT_PRICE': CREDIT_PRICE,
+            'STRIPE_PRICE_ID': STRIPE_PRICE_ID,
+        })))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
@@ -551,11 +552,12 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'PROVISIONING_CREDIT_PRICE': CREDIT_PRICE,
-               'STRIPE_PRICE_ID': STRIPE_PRICE_ID,
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'PROVISIONING_CREDIT_PRICE': CREDIT_PRICE,
+            'STRIPE_PRICE_ID': STRIPE_PRICE_ID,
+        })))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
