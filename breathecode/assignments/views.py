@@ -366,9 +366,6 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
         if student is not None:
             lookup['user__cohortuser__user__id__in'] = student.split(',')
             lookup['user__cohortuser__role'] = 'STUDENT'
-
-        distinct = request.GET.get('distinct', None)
-        if distinct is not None and distinct == 'true':
             items = items.distinct()
 
         items = items.filter(**lookup)
