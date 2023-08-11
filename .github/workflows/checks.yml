@@ -138,7 +138,7 @@ jobs:
             exit 1;
           fi
 
-  check-undefined:
+  check-undefined-and-unused:
     needs: cache
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -170,7 +170,7 @@ jobs:
           pip install pipenv
 
       - name: Check for undefined variables
-        run: pipenv run flake8 .
+        run: pipenv run flake8 --select=F
 
   tests:
     needs: [migrations, dependencies]

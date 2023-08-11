@@ -48,6 +48,7 @@ mkdocstrings = "*"
 pytest-xdist = "*"
 mkdocstrings-python = "*"
 flake8 = "*"
+flake8-docstrings = "*"
 
 [packages]
 django = "~=3.2.20"
