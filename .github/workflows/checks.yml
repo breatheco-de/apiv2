@@ -73,7 +73,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-        # Cache Pipenv packages
+      # Cache Pipenv packages
       - name: Cache Pipenv packages
         uses: actions/cache@v2
         id: cache
@@ -84,9 +84,6 @@ jobs:
           key: ${{ runner.os }}-pipenv1-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pipenv1-
-
-      - name: Debug - List virtualenvs directory after cache
-        run: ls -al ~/.local/share/virtualenvs
 
       # Install Pipenv
       - name: Install dependencies
@@ -110,25 +107,28 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pipenv" # caching pip dependencies
 
       - name: Calculate initial MD5 for Pipfile.lock
         id: calculate-md5-1
         run: echo "MD5_1=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
 
-      - name: Install pipenv
-        run: pip install pipenv
-
-      - name: Download Python packages artifact
-        uses: actions/download-artifact@v3
+      # Cache Pipenv packages
+      - name: Cache Pipenv packages
+        uses: actions/cache@v2
+        id: cache
         with:
-          name: python-packages
-          path: .venv/
+          path: |
+            ~/.local/share/virtualenvs
+            ~/.cache/pip
+          key: ${{ runner.os }}-pipenv1-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv1-
 
-      - name: Set PATH
+      # Install Pipenv
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
         run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
+          pip install pipenv
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
@@ -154,19 +154,23 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install pipenv
-        run: pip install pipenv
-
-      - name: Download Python packages artifact
-        uses: actions/download-artifact@v3
+      # Cache Pipenv packages
+      - name: Cache Pipenv packages
+        uses: actions/cache@v2
+        id: cache
         with:
-          name: python-packages
-          path: .venv/
+          path: |
+            ~/.local/share/virtualenvs
+            ~/.cache/pip
+          key: ${{ runner.os }}-pipenv1-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv1-
 
-      - name: Set PATH
+      # Install Pipenv
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
         run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
+          pip install pipenv
 
       - name: Run tests
         run: |
@@ -203,19 +207,23 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install pipenv
-        run: pip install pipenv
-
-      - name: Download Python packages artifact
-        uses: actions/download-artifact@v3
+      # Cache Pipenv packages
+      - name: Cache Pipenv packages
+        uses: actions/cache@v2
+        id: cache
         with:
-          name: python-packages
-          path: .venv/
+          path: |
+            ~/.local/share/virtualenvs
+            ~/.cache/pip
+          key: ${{ runner.os }}-pipenv1-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv1-
 
-      - name: Set PATH
+      # Install Pipenv
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
         run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
+          pip install pipenv
 
       - name: Linter
         run: |
@@ -236,21 +244,24 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pipenv" # caching pip dependencies
 
-      - name: Install pipenv
-        run: pip install pipenv
-
-      - name: Download Python packages artifact
-        uses: actions/download-artifact@v3
+      # Cache Pipenv packages
+      - name: Cache Pipenv packages
+        uses: actions/cache@v2
+        id: cache
         with:
-          name: python-packages
-          path: .venv/
+          path: |
+            ~/.local/share/virtualenvs
+            ~/.cache/pip
+          key: ${{ runner.os }}-pipenv1-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv1-
 
-      - name: Set PATH
+      # Install Pipenv
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
         run: |
-          VENV_NAME=$(ls ${WORKON_HOME})
-          source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
+          pip install pipenv
 
       - name: Deploy docs
         run: pipenv run mkdocs gh-deploy --force
