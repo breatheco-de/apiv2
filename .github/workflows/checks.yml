@@ -47,6 +47,12 @@ jobs:
           pip install pipenv
           pipenv install --dev
 
+      # Install Pipenv
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: |
+          pip install pipenv
+
       - name: Determine Pipenv virtual environment location
         run: |
           echo "Virtualenv location: $(pipenv --venv)"
