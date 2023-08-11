@@ -56,6 +56,9 @@ jobs:
           name: python-packages
           path: ./
 
+      - name: x
+        run: which python
+
       - name: Check migrations
         run: |
           # VENV_NAME=$(ls ${WORKON_HOME})
