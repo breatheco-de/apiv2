@@ -61,6 +61,7 @@ jobs:
 
       - name: Check migrations
         run: |
+          ls .
           source .venv/bin/activate
           which python
           # VENV_NAME=$(ls ${WORKON_HOME})
