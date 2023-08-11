@@ -47,6 +47,9 @@ jobs:
           pip install pipenv
           pipenv install --dev
 
+      - name: Debug - List virtualenvs directory
+        run: ls -al ~/.local/share/virtualenvs
+
   migrations:
     needs: setup_dependencies
     runs-on: ubuntu-latest
@@ -72,12 +75,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pipenv-
 
-      # Install dependencies using Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          pip install pipenv
-          pipenv install --dev
+      - name: Debug - List virtualenvs directory after cache
+        run: ls -al ~/.local/share/virtualenvs
 
       # Install Pipenv
       - name: Install dependencies
