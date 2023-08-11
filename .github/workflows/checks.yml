@@ -26,32 +26,24 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Set PIPENV_VENV_IN_PROJECT
-        run: echo "PIPENV_VENV_IN_PROJECT=1" >> $GITHUB_ENV
-
-      - name: Install pipenv
-        run: pip install pipenv
-
-      - name: Install dependencies using pipenv
-        run: |
-          PYTHONUNBUFFERED=1
-          pipenv install --dev
-
-      - name: Get requirements.txt
-        run: |
-          pipenv run pip freeze --requirement requirements.txt > requirements.txt
-
-      # - name: Upload Python packages as artifact
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: python-packages
-      #     path: .venv/
-
-      - name: Upload requirements.txt as artifact
-        uses: actions/upload-artifact@v3
+      # Cache Pipenv packages
+      - name: Cache Pipenv packages
+        uses: actions/cache@v2
+        id: cache
         with:
-          name: requirements.txt
-          path: requirements.txt
+          path: |
+            ~/.local/share/virtualenvs
+            ~/.cache/pip
+          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv-
+
+      # Install dependencies using Pipenv
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          pip install pipenv
+          pipenv install --dev
 
   migrations:
     needs: setup_dependencies
@@ -69,32 +61,28 @@ jobs:
       - name: Set PIPENV_VENV_IN_PROJECT
         run: echo "PIPENV_VENV_IN_PROJECT=1" >> $GITHUB_ENV
 
-      - name: Install pipenv
-        run: pip install pipenv
-
-      - name: Init virtualenv
-        run: python -m venv .venv
-
-      - name: Download requirements.txt artifact
-        uses: actions/download-artifact@v3
+        # Cache Pipenv packages
+      - name: Cache Pipenv packages
+        uses: actions/cache@v2
+        id: cache
         with:
-          name: requirements.txt
-          path: .
+          path: |
+            ~/.local/share/virtualenvs
+            ~/.cache/pip
+          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv-
 
-      - name: x
+      # Install dependencies using Pipenv
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          source .venv/bin/activate
-          pip install -r requirements.txt
+          pip install pipenv
+          pipenv install --dev
 
       - name: Check migrations
         run: |
-          source .venv/bin/activate
-          ls . -a
-          echo $PWD
-          which python
-          # VENV_NAME=$(ls ${WORKON_HOME})
-          # source "${WORKON_HOME}/${VENV_NAME}/bin/activate"
-          .venv/bin/python ./scripts/pending_migrations.py
+          pipenv run python ./scripts/pending_migrations.py
 
   dependencies:
     needs: setup_dependencies
