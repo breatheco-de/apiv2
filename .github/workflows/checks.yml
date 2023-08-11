@@ -9,7 +9,6 @@ on:
 
 env:
   PYTHON_VERSION: 3.11
-  PIPENV_VENV_IN_PROJECT: 1
 
 # setup_dependencies > migrations & dependencies > tests > pages & linter & dockerhub
 
