@@ -396,10 +396,10 @@ class AcademyAcademyServiceView(APIView):
         items = AcademyService.objects.filter(academy__id=academy_id)
 
         if mentorship_service_set := request.GET.get('mentorship_service_set'):
-            items = items.filter(mentorship_service_set in available_mentorship_service_sets)
+            items = items.filter(available_mentorship_service_sets__slug__exact=mentorship_service_set)
 
         if event_type_set := request.GET.get('event_type_set'):
-            items = items.filter(event_type_set in available_event_type_sets)
+            items = items.filter(available_event_type_sets__slug__exact=event_type_set)
 
         items = handler.queryset(items)
         serializer = GetAcademyServiceSmallSerializer(items, many=True)
@@ -1562,6 +1562,11 @@ class PayView(APIView):
 
                 for cohort in bag.selected_cohorts.all():
                     admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
+
+                if (plans := bag.plans.all()) and not bag.selected_cohorts.exists():
+                    for plan in plans:
+                        if plan.owner:
+                            admissions_tasks.build_profile_academy.delay(plan.owner.id, bag.user.id)
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
                 return Response(serializer.data, status=201)

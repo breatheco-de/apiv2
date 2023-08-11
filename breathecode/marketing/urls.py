@@ -15,6 +15,7 @@ urlpatterns = [
     path('app/<slug:app_slug>/validate', validate_email_from_app, name='app_email_validate'),
     path('app/lead', create_lead_from_app, name='app_lead'),
     path('lead/all', get_leads, name='lead_all'),
+    path('alias', AcademyAliasView.as_view(), name='alias'),
     path('academy/lead', AcademyLeadView.as_view(), name='academy_lead'),
     path('academy/upload', UploadView.as_view(), name='upload'),
     path('academy/lead/<int:lead_id>', AcademyLeadView.as_view(), name='academy_lead_id'),

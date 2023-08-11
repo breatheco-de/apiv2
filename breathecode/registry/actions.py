@@ -15,7 +15,7 @@ from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage, OriginalityScan
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage, OriginalityScan, ContentVariable
 from .serializers import AssetBigSerializer
 from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
                     ArticleValidator, OriginalityWrapper)
@@ -65,10 +65,10 @@ def generate_external_readme(a):
     if not a.external:
         return False
 
-    if a.lang == "us":
-      readme = get_template('external.md')
+    if a.lang == 'us':
+        readme = get_template('external.md')
     else:
-      readme = get_template(f'external.{a.lang}.md')
+        readme = get_template(f'external.{a.lang}.md')
     a.set_readme(readme.render(AssetBigSerializer(a).data))
     a.save()
     return True
@@ -364,6 +364,7 @@ def clean_asset_readme(asset):
         asset = clean_readme_relative_paths(asset)
         asset = clean_readme_hide_comments(asset)
         asset = clean_h1s(asset)
+        asset = clean_content_variables(asset)
         readme = asset.get_readme(parse=True)
         if 'html' in readme:
             asset.html = readme['html']
@@ -375,6 +376,47 @@ def clean_asset_readme(asset):
         asset.cleaning_status_details = str(e)
         asset.save()
 
+    return asset
+
+
+def clean_content_variables(asset):
+    logger.debug(f'Clearning content variables for readme for asset {asset.slug}')
+    readme = asset.get_readme()
+    pattern = r'{%\s+([^\s%]+)\s+%}'  # This regex pattern matches {% variable_name %} or {% variable_name:"default_value" %}
+    markdown_text = readme['decoded']
+    logger.debug('Original text:' + markdown_text)
+
+    variables_dict = {}
+    variables = ContentVariable.objects.filter(
+        academy=asset.academy).filter(Q(lang__isnull=True) | Q(lang=asset.lang))
+    for varia in variables:
+        if varia.value is None:
+            variables_dict[varia.key] = varia.default_value
+        else:
+            variables_dict[varia.key] = varia.value
+
+    logger.debug('Variables')
+    logger.debug(variables_dict)
+
+    def replace(match):
+        variable_data = match.group(1).strip()
+        variable_parts = variable_data.split(':', 1)  # Split variable name and default value
+
+        variable_name = variable_parts[0].strip()
+        logger.debug('Found variable ' + variable_name)
+        if len(variable_parts) > 1:
+            default_value = variable_parts[1].strip()
+        else:
+            asset.log_error('missing-variable',
+                            f'Variable {variable_name} is missing and it has not default value')
+            default_value = '{% ' + variable_name + ' %}'
+
+        value = variables_dict.get(variable_name, default_value)
+        return value if value is not None else match.group(0)
+
+    replaced_text = re.sub(pattern, replace, markdown_text)
+    logger.debug('Replaced text:' + replaced_text)
+    asset.set_readme(replaced_text)
     return asset
 
 

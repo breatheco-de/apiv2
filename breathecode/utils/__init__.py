@@ -27,3 +27,4 @@ from .payment_exception import *
 from .i18n import *
 from .custom_serpy import *
 from .shorteners import *
+from .service import *

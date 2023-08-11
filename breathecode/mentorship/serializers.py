@@ -1,4 +1,5 @@
 import serpy
+from breathecode.payments.models import Consumable
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
 import breathecode.mentorship.actions as actions
@@ -303,7 +304,7 @@ class SessionBigSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     status = serpy.Field()
-    bill = serpy.Field()
+    bill = TinyBillSerializer(required=False)
     # mentor = serpy.Field()
     # mentee = serpy.Field()
     mentor = GETMentorTinyTinySerializer()
@@ -724,10 +725,15 @@ class SessionSerializer(SessionPUTSerializer):
 
         mentee = None
         if 'mentee' in data:
-            if data['mentee'] and isinstance(data['mentee'], str) and not data['mentee'].isnumeric():
-                mentee = CohortUser.objects.filter(email=data['mentee']).first()
+            if not data['mentee'].isnumeric():
+                mentee = Consumable.objects.filter(
+                    mentorship_service_set__mentorship_services__id=data['service'],
+                    user__email=data['mentee']).first()
+
             else:
-                mentee = CohortUser.objects.filter(id=data['mentee']).first()
+                mentee = Consumable.objects.filter(
+                    mentorship_service_set__mentorship_services__id=data['service'],
+                    user__id=data['mentee']).first()
 
             if mentee is None:
                 raise ValidationException(translation(
@@ -736,14 +742,17 @@ class SessionSerializer(SessionPUTSerializer):
                     es='El usuario que quieres agregar a la mentoría no pertenece a 4Geeks.com',
                     slug='mentee-not-found'),
                                           code=400)
+            mentee = mentee.user
 
-        if mentee is not None and mentor.user.id == mentee.id:
+        if mentee is not None and mentor.id == mentee.id:
             raise ValidationException(translation(
                 lang,
                 en='Mentee and mentor cannot be the same person in the same session',
                 es='El mentor y el estudiante no pueden ser la misma persona',
                 slug='mentor-mentee-same-person'),
                                       code=400)
+
+        print({**data, 'service': service, 'mentor': mentor, 'mentee': mentee})
 
         return super().validate({**data, 'service': service, 'mentor': mentor, 'mentee': mentee})
 
