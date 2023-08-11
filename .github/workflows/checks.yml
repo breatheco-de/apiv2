@@ -18,7 +18,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ... other setup steps ...
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set PIPENV_VENV_IN_PROJECT
+        run: echo "PIPENV_VENV_IN_PROJECT=1" >> $GITHUB_ENV
 
       - name: Install pipenv
         run: pip install pipenv
@@ -52,6 +61,9 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set PIPENV_VENV_IN_PROJECT
+        run: echo "PIPENV_VENV_IN_PROJECT=1" >> $GITHUB_ENV
 
       - name: Install pipenv
         run: pip install pipenv
