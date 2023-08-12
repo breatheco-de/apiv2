@@ -8,10 +8,10 @@ repos:
         args: [-i, -vv]
         types: [python]
         additional_dependencies: ['toml']
-  # -   repo: https://gitlab.com/pycqa/flake8
-  #     rev: 3.9.2  # pick the desired flake8 version
-  #     hooks:
-  #     -   id: flake8
+  -   repo: https://github.com/PyCQA/flake8
+      rev: 6.1.0  # pick the desired flake8 version
+      hooks:
+      -   id: flake8
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     # docs https://pre-commit.com/hooks.html

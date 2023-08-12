@@ -1,13 +1,12 @@
-from datetime import date, datetime
-from io import BytesIO, StringIO
-import json
+from datetime import datetime
+from io import BytesIO
 import logging
 import math
 import os
 from typing import Any
 from dateutil.relativedelta import relativedelta
 
-from celery import Task, shared_task
+from celery import Task
 import pandas as pd
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils.decorators import task, AbortTask
@@ -187,7 +186,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
     pending_bills = bills.exclude(status__in=['DISPUTED', 'IGNORED', 'PAID'])
 
     if force and pending_bills.count() != bills.count():
-        logger.error(f'Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID')
+        logger.error('Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID')
         return
 
     if force:
@@ -260,7 +259,7 @@ def archive_provisioning_bill(bill_id: int, **_: Any):
     now = timezone.now()
     bill = ProvisioningBill.objects.filter(id=bill_id,
                                            status='PAID',
-                                           paid_at__gte=now - relativedelta(months=1),
+                                           paid_at__lte=now - relativedelta(months=1),
                                            archived_at__isnull=True).first()
 
     if not bill:

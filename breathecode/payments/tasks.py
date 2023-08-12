@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta
 import os
-import traceback
 from typing import Any, Optional
 from django.utils import timezone
 
@@ -12,7 +11,6 @@ from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from dateutil.relativedelta import relativedelta
-from django.db.models import Q
 from breathecode.payments.signals import consume_service
 from breathecode.utils.decorators import task
 from breathecode.utils.i18n import translation
@@ -293,7 +291,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         s.set_language_from_settings(settings)
         invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
 
-    except Exception as e:
+    except Exception:
         subject = translation(settings.lang,
                               en='Your 4Geeks subscription could not be renewed',
                               es='Tu suscripción 4Geeks no pudo ser renovada')
@@ -407,7 +405,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
         invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
 
-    except Exception as e:
+    except Exception:
         subject = translation(settings.lang,
                               en='Your 4Geeks subscription could not be renewed',
                               es='Tu suscripción 4Geeks no pudo ser renovada')
@@ -769,8 +767,6 @@ def build_free_subscription(self, bag_id: int, invoice_id: int):
         if not mentorship_service_set:
             mentorship_service_set = plan.mentorship_service_set
 
-        status = 'FREE_TRIAL' if is_free_trial else 'ACTIVE'
-
         if is_free_trial:
             extra = {
                 'status': 'FREE_TRIAL',
@@ -903,13 +899,12 @@ def refund_mentoring_session(session_id: int):
         logger.error(f'ConsumptionSession already cancelled for mentorship session {session_id}')
         return
 
-    consumption_session.status = 'CANCELLED'
-    consumption_session.save()
-
     if consumption_session.status == 'DONE':
         logger.info('Refunding consumption session because it was discounted')
 
         how_many = consumption_session.how_many
         consumable = consumption_session.consumable
         reimburse_service_units.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
-        return
+
+    consumption_session.status = 'CANCELLED'
+    consumption_session.save()

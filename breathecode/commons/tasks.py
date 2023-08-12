@@ -89,7 +89,7 @@ def mark_task_as_paused(task_manager_id):
 # do not use our own task decorator
 @shared_task(bind=False)
 def mark_task_as_pending(task_manager_id, *, attempts=0):
-    logger.info(f'Running mark_task_as_reversed for {task_manager_id}')
+    logger.info(f'Running mark_task_as_pending for {task_manager_id}')
 
     x = TaskManager.objects.filter(id=task_manager_id).first()
     if x is None:

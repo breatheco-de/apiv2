@@ -1,13 +1,8 @@
-import os, requests, sys, pytz
-from datetime import datetime
-from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
+import os
+from django.core.management.base import BaseCommand
+from breathecode.provisioning.models import ProvisioningBill
 
 from breathecode.provisioning.tasks import archive_provisioning_bill
-from ...models import ProvisioningBill, Task
-from ...actions import sync_student_tasks
-from breathecode.admissions.models import CohortUser
-from django.db.models import Count
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
@@ -22,9 +17,17 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         now = timezone.now()
-        bills = ProvisioningBill.objects.filter(status='PAID',
-                                                paid_at__gte=now - relativedelta(months=1),
-                                                archived_at__isnull=True)
+        ids = ProvisioningBill.objects.filter(status='PAID',
+                                              paid_at__lte=now - relativedelta(months=1),
+                                              archived_at__isnull=True).values_list('id', flat=True)
 
-        for bill in bills:
-            archive_provisioning_bill.delay(bill.id)
+        for id in ids:
+            archive_provisioning_bill.delay(id)
+
+        if ids:
+            msg = self.style.SUCCESS(f"Cleaning {', '.join([str(id) for id in ids])} provisioning bills")
+
+        else:
+            msg = self.style.SUCCESS('No provisioning bills to clean')
+
+        self.stdout.write(self.style.SUCCESS(msg))
