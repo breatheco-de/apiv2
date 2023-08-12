@@ -2,7 +2,6 @@
 
 import os
 import sys
-from time import sleep
 
 from scripts.utils.get_pip_path import get_pip_path
 
