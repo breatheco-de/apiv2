@@ -126,7 +126,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Starting calculate_bill_amounts for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call(f'Does not exists bills for hash {slug}'),
+            call(f'Does not exists bills for hash {slug}', exc_info=True),
         ])
 
     # Given 1 ProvisioningBill
@@ -158,7 +158,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Starting calculate_bill_amounts for hash {bad_slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call(f'Does not exists bills for hash {bad_slug}'),
+            call(f'Does not exists bills for hash {bad_slug}', exc_info=True),
         ])
 
     # Given 1 ProvisioningBill
@@ -542,7 +542,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             call(f'Starting calculate_bill_amounts for hash {slug}'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call(f'Does not exists bills for hash {slug}'),
+            call(f'Does not exists bills for hash {slug}', exc_info=True),
         ])
 
     # Given 1 ProvisioningBill and 2 ProvisioningActivity
@@ -711,5 +711,5 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             call(f'Starting calculate_bill_amounts for hash {slug}'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call(f'Does not exists bills for hash {slug}'),
+            call(f'Does not exists bills for hash {slug}', exc_info=True),
         ])

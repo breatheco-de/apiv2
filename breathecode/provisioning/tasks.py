@@ -58,8 +58,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         bills = bills.exclude(status__in=['DISPUTED', 'IGNORED', 'PAID'])
 
     if not bills.exists():
-        logger.error(f'Does not exists bills for hash {hash}')
-        return
+        raise AbortTask(f'Does not exists bills for hash {hash}')
 
     if bills[0].vendor.name == 'Gitpod':
         fields = ['id', 'credits', 'startTime', 'endTime', 'kind', 'userName', 'contextURL']
@@ -73,22 +72,21 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     storage = Storage()
     cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
     if not cloud_file.exists():
-        logger.error(f'File {hash} not found')
-        return
+        raise AbortTask(f'File {hash} not found')
 
-    csvStringIO = BytesIO()
-    cloud_file.download(csvStringIO)
-    csvStringIO = cut_csv(csvStringIO, first=1)
-    csvStringIO.seek(0)
+    csv_string_io = BytesIO()
+    cloud_file.download(csv_string_io)
+    csv_string_io = cut_csv(csv_string_io, first=1)
+    csv_string_io.seek(0)
 
-    df1 = pd.read_csv(csvStringIO, sep=',', usecols=fields)
+    df1 = pd.read_csv(csv_string_io, sep=',', usecols=fields)
 
-    csvStringIO = BytesIO()
-    cloud_file.download(csvStringIO)
-    csvStringIO = cut_csv(csvStringIO, last=1)
-    csvStringIO.seek(0)
+    csv_string_io = BytesIO()
+    cloud_file.download(csv_string_io)
+    csv_string_io = cut_csv(csv_string_io, last=1)
+    csv_string_io.seek(0)
 
-    df2 = pd.read_csv(csvStringIO, sep=',', usecols=fields)
+    df2 = pd.read_csv(csv_string_io, sep=',', usecols=fields)
 
     if bills[0].vendor.name == 'Gitpod':
         first = df2['startTime'][0].split('-')
@@ -175,19 +173,16 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
     storage = Storage()
     cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
     if not cloud_file.exists():
-        logger.error(f'File {hash} not found')
-        return
+        raise AbortTask(f'File {hash} not found')
 
     bills = ProvisioningBill.objects.filter(hash=hash).exclude(status='PENDING')
     if bills.exists() and not force:
-        logger.error(f'File {hash} already processed')
-        return
+        raise AbortTask(f'File {hash} already processed')
 
     pending_bills = bills.exclude(status__in=['DISPUTED', 'IGNORED', 'PAID'])
 
     if force and pending_bills.count() != bills.count():
-        logger.error('Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID')
-        return
+        raise AbortTask('Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID')
 
     if force:
         for bill in pending_bills:
@@ -195,12 +190,12 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
 
         pending_bills.delete()
 
-    csvStringIO = BytesIO()
-    cloud_file.download(csvStringIO)
-    csvStringIO = cut_csv(csvStringIO, start=start, end=end)
-    csvStringIO.seek(0)
+    csv_string_io = BytesIO()
+    cloud_file.download(csv_string_io)
+    csv_string_io = cut_csv(csv_string_io, start=start, end=end)
+    csv_string_io.seek(0)
 
-    df = pd.read_csv(csvStringIO, sep=',')
+    df = pd.read_csv(csv_string_io, sep=',')
 
     handler = None
 
@@ -218,8 +213,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         handler = actions.add_codespaces_activity
 
     if not handler:
-        logger.error(f'File {hash} has an unsupported origin or the provider had changed the file format')
-        return
+        raise AbortTask(f'File {hash} has an unsupported origin or the provider had changed the file format')
 
     prev_bill = ProvisioningBill.objects.filter(hash=hash).first()
     if prev_bill:
@@ -236,10 +230,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
                 break
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        logger.error(f'File {hash} cannot be processed due to: {str(e)}')
-        return
+        raise AbortTask(f'File {hash} cannot be processed due to: {str(e)}')
 
     for bill in context['provisioning_bills'].values():
         if not ProvisioningUserConsumption.objects.filter(bills=bill).exists():

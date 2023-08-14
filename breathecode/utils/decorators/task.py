@@ -95,8 +95,6 @@ class Task(object):
                         return function(*args, **kwargs)
 
                     except AbortTask as e:
-                        transaction.savepoint_rollback(sid)
-
                         x.status = 'ABORTED'
                         x.status_message = str(e)[:255]
                         x.save()

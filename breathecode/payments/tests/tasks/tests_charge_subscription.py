@@ -113,7 +113,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting charge_subscription for subscription 1'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Subscription with id 1 not found')])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Subscription with id 1 not found', exc_info=True),
+        ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -142,7 +144,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting charge_subscription for subscription 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Error getting bag from subscription 1: subscription-has-no-invoices'),
+            call('Error getting bag from subscription 1: subscription-has-no-invoices', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
@@ -323,7 +325,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting charge_subscription for subscription 1'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('The subscription 1 is over')])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('The subscription 1 is over', exc_info=True),
+        ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
             self.bc.format.to_dict(model.bag),

@@ -273,7 +273,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call(f'File {slug} not found'),
+            call(f'File {slug} not found', exc_info=True),
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
@@ -316,7 +316,8 @@ class RandomFileTestSuite(ProvisioningTestCase):
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call(f'File {slug} has an unsupported origin or the provider had changed the file format'),
+            call(f'File {slug} has an unsupported origin or the provider had changed the file format',
+                 exc_info=True),
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
@@ -365,9 +366,11 @@ class RandomFileTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'), [])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
+        self.bc.check.calls(logging.Logger.info.call_args_list, [
+            call(f'Starting upload for hash {slug}'),
+        ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call(f'File {slug} already processed'),
+            call(f'File {slug} already processed', exc_info=True),
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
@@ -419,9 +422,12 @@ class RandomFileTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'), [])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
+        self.bc.check.calls(logging.Logger.info.call_args_list, [
+            call(f'Starting upload for hash {slug}'),
+        ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID'),
+            call('Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID',
+                 exc_info=True),
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])

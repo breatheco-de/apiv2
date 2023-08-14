@@ -3,7 +3,7 @@ from typing import Any
 from celery import shared_task, Task
 
 from breathecode.authenticate.models import ProfileAcademy, Role
-from breathecode.utils.decorators.task import task
+from breathecode.utils.decorators.task import AbortTask, task
 from .models import Academy, Cohort, CohortUser, SyllabusVersion
 from .actions import test_syllabus
 from django.utils import timezone
@@ -24,7 +24,7 @@ class BaseTaskWithRetry(Task):
 
 @shared_task
 def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
-    logger.debug(f'Process async_test_syllabus')
+    logger.debug('Process async_test_syllabus')
 
     syl_version = SyllabusVersion.objects.filter(syllabus__slug=syllabus_slug,
                                                  version=syllabus_version).first()
@@ -62,12 +62,10 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: 
     bad_stages = ['DELETED', 'ENDED', 'FINAL_PROJECT', 'STARTED']
 
     if not (cohort := Cohort.objects.filter(id=cohort_id).exclude(stage__in=bad_stages).first()):
-        logger.error(f'Cohort with id {cohort_id} not found')
-        return
+        raise AbortTask(f'Cohort with id {cohort_id} not found')
 
     if not (user := User.objects.filter(id=user_id, is_active=True).first()):
-        logger.error(f'User with id {user_id} not found')
-        return
+        raise AbortTask(f'User with id {user_id} not found')
 
     _, created = CohortUser.objects.get_or_create(cohort=cohort,
                                                   user=user,
@@ -101,7 +99,6 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: 
                                                                 'email': user.email,
                                                                 'first_name': user.first_name,
                                                                 'last_name': user.last_name,
-                                                                'last_name': user.last_name,
                                                                 'status': 'ACTIVE',
                                                             })
 
@@ -119,16 +116,13 @@ def build_profile_academy(academy_id: int, user_id: int, role: str = 'student', 
     logger.info(f'Starting build_profile_academy for cohort {academy_id} and user {user_id}')
 
     if not (user := User.objects.filter(id=user_id, is_active=True).first()):
-        logger.error(f'User with id {user_id} not found')
-        return
+        raise AbortTask(f'User with id {user_id} not found')
 
     if not (academy := Academy.objects.filter(id=academy_id).first()):
-        logger.error(f'Academy with id {academy_id} not found')
-        return
+        raise AbortTask(f'Academy with id {academy_id} not found')
 
     if not (role := Role.objects.filter(slug=role).first()):
-        logger.error(f'Role with slug {role} not found')
-        return
+        raise AbortTask(f'Role with slug {role} not found')
 
     profile, created = ProfileAcademy.objects.get_or_create(academy=academy,
                                                             user=user,
@@ -136,7 +130,6 @@ def build_profile_academy(academy_id: int, user_id: int, role: str = 'student', 
                                                             defaults={
                                                                 'email': user.email,
                                                                 'first_name': user.first_name,
-                                                                'last_name': user.last_name,
                                                                 'last_name': user.last_name,
                                                                 'status': 'ACTIVE',
                                                             })
