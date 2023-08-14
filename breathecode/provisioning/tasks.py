@@ -41,6 +41,9 @@ MONTHS = [
     'November', 'December'
 ]
 
+PANDAS_ROWS_LIMIT = 100
+DELETE_LIMIT = 10000
+
 
 @task()
 def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
@@ -139,9 +142,6 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         bill.ended_at = last
         bill.title = f'{month} {first.year}'
         bill.save()
-
-
-PANDAS_ROWS_LIMIT = 100
 
 
 def reverse_upload(hash: str, **_: Any):
@@ -264,6 +264,10 @@ def archive_provisioning_bill(bill_id: int, **_: Any):
 
     if not bill:
         raise AbortTask(f'Bill {bill_id} not found or requirements not met')
+
+    q = ProvisioningConsumptionEvent.objects.filter(provisioninguserconsumption__hash=bill.hash)
+    while (pks_to_delete := q[:DELETE_LIMIT].values_list('pk', flat=True)):
+        ProvisioningConsumptionEvent.objects.filter(pk__in=list(pks_to_delete)).delete()
 
     bill.archived_at = now
     bill.save()
