@@ -5,17 +5,20 @@ from ...models import TaskManager
 from datetime import datetime
 from datetime import timedelta
 
+TOLERANCE = 30
+
 
 class Command(BaseCommand):
-    help = 'Delete logs and other garbage'
+    help = 'Rerun all the tasks that are pending and were run in the last 10 minutes'
 
     def handle(self, *args, **options):
         utc_now = datetime.utcnow()
-        tolerance = timedelta(minutes=10)
-        ids = TaskManager.objects.filter(last_run__gt=utc_now - tolerance).values_list('id', flat=True)
+        tolerance = timedelta(minutes=TOLERANCE)
+        ids = TaskManager.objects.filter(last_run__gt=utc_now - tolerance,
+                                         status='PENDING').values_list('id', flat=True)
 
         for id in ids:
-            mark_task_as_pending.delay(id)
+            mark_task_as_pending.delay(id, force=True)
 
         if ids:
             msg = self.style.SUCCESS(f"Rerunning TaskManager's {', '.join([str(id) for id in ids])}")
