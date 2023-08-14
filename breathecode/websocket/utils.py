@@ -58,7 +58,7 @@ class SyncBreathecodeConsumerMixin(CommonBreathecodeConsumerMixin):
 
     def setup(self):
         """
-        This configure all the related tasks in the `connect` method of consumer
+        This configure all the related tasks in the `connect` method of consumer.
         """
         super().setup()
 

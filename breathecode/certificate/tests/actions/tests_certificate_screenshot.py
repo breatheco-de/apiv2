@@ -28,10 +28,11 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     🔽🔽🔽 Zero UserSpecialty
     """
 
-    @patch('requests.get',
-           apply_requests_get_mock([
-               (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
-           ]))
+    @patch(
+        'requests.get',
+        apply_requests_get_mock([
+            (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
+        ]))
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch('requests.get',
            apply_requests_get_mock([(200, f'https://api.screenshotmachine.com?{query_string}')]))
@@ -65,10 +66,11 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     🔽🔽🔽 Invalid preview_url, equal to ''
     """
 
-    @patch('requests.get',
-           apply_requests_get_mock([
-               (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
-           ]))
+    @patch(
+        'requests.get',
+        apply_requests_get_mock([
+            (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
+        ]))
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch('requests.get',
            apply_requests_get_mock([(200, f'https://api.screenshotmachine.com?{query_string}')]))
@@ -119,10 +121,11 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     🔽🔽🔽 Invalid preview_url, equal to None
     """
 
-    @patch('requests.get',
-           apply_requests_get_mock([
-               (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
-           ]))
+    @patch(
+        'requests.get',
+        apply_requests_get_mock([
+            (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
+        ]))
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
@@ -171,10 +174,11 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     🔽🔽🔽 Invalid preview_url, the object exists in gcloud
     """
 
-    @patch('requests.get',
-           apply_requests_get_mock([
-               (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
-           ]))
+    @patch(
+        'requests.get',
+        apply_requests_get_mock([
+            (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
+        ]))
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
@@ -221,10 +225,11 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     🔽🔽🔽 Correct preview_url
     """
 
-    @patch('requests.get',
-           apply_requests_get_mock([
-               (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
-           ]))
+    @patch(
+        'requests.get',
+        apply_requests_get_mock([
+            (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
+        ]))
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),

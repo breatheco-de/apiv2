@@ -3,7 +3,7 @@ import os
 
 os.environ['ENV'] = 'test'
 
-from breathecode.settings import *
+from breathecode.settings import *  # noqa: F401
 
 DATABASE_URL = os.getenv('DATABASE_URL', None)
 # only use SQL Lite in localhost

@@ -38,7 +38,7 @@ class AcademyActivateTestSuite(AdmissionsTestCase):
         ])
 
         self.bc.check.calls(Logger.error.call_args_list, [
-            call('User with id 1 not found'),
+            call('User with id 1 not found', exc_info=True),
         ])
 
     @patch('logging.Logger.info', MagicMock())
@@ -57,7 +57,7 @@ class AcademyActivateTestSuite(AdmissionsTestCase):
         ])
 
         self.bc.check.calls(Logger.error.call_args_list, [
-            call('Academy with id 1 not found'),
+            call('Academy with id 1 not found', exc_info=True),
         ])
 
     @patch('logging.Logger.info', MagicMock())
@@ -76,7 +76,7 @@ class AcademyActivateTestSuite(AdmissionsTestCase):
         ])
 
         self.bc.check.calls(Logger.error.call_args_list, [
-            call('Role with slug None not found'),
+            call('Role with slug None not found', exc_info=True),
         ])
 
     @patch('logging.Logger.info', MagicMock())
