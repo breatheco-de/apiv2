@@ -12,11 +12,11 @@ env:
   PYTHONUNBUFFERED: 1
 
 # cache ------------------------------------
-# |                                        |> migrations & dependencies
-# |> undefined-and-unused-variables           |
-# |> bad-docstrings                           |> tests -------|> pages
-# |> code-complexity                          |> linter       |> dockerhub
-# |> naming-conventions
+# |                                        |> migrations --------
+# |> undefined-and-unused-variables        |> dependencies ------
+# |> bad-docstrings                                             |
+# |> code-complexity                                            |> tests -------|> pages
+# |> naming-conventions                                         |> linter       |> dockerhub
 # |> unexpected-behaviors
 
 jobs:
