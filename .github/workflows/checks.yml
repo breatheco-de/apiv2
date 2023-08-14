@@ -11,7 +11,13 @@ env:
   PYTHON_VERSION: 3.11
   PYTHONUNBUFFERED: 1
 
-# cache > migrations & dependencies > tests > pages & linter & dockerhub
+# cache ------------------------------------
+# |                                        |> migrations & dependencies
+# |> undefined-and-unused-variables           |
+# |> bad-docstrings                           |> tests -------|> pages
+# |> code-complexity                          |> linter       |> dockerhub
+# |> naming-conventions
+# |> unexpected-behaviors
 
 jobs:
   cache:
@@ -274,7 +280,7 @@ jobs:
       - name: Check for undefined variables
         run: pipenv run flake8 --select=N
 
-  bugs-and-unexpected-behaviors:
+  unexpected-behaviors:
     needs: cache
     runs-on: ubuntu-latest
     continue-on-error: true
