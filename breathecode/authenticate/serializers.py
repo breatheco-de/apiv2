@@ -587,18 +587,36 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                                   slug='last-name-not-found'),
                                       code=400)
 
-        if data['event'] is not None:
-            event = Event.objects.get(id=data['event'])
-            if event is None:
+        event = data['event']
+        if event is not None:
+            try:
+                args = {}
+                if isinstance(event, int):
+                    args['id'] = event
+                else:
+                    args['slug'] = event
+
+                event = Event.objects.filter(**args).get()
+
+            except Exception as e:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Event',
                                                       es='Imposible encontrar el Evento dado',
                                                       slug='event-not-found'),
                                           code=400)
 
-        if data['asset'] is not None:
-            asset = Asset.objects.get(id=data['asset'])
-            if asset is None:
+        asset = data['asset']
+        if asset is not None:
+            try:
+                args = {}
+                if isinstance(asset, int):
+                    args['id'] = asset
+                else:
+                    args['slug'] = asset
+
+                asset = Asset.objects.filter(**args).get()
+
+            except Exception as e:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Asset',
                                                       es='Imposible encontrar el Asset dado',
