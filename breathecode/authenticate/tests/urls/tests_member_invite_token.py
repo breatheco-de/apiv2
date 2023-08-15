@@ -585,7 +585,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': 'REVIEWER',
@@ -641,7 +641,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': model.role.slug.upper(),
@@ -701,7 +701,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': model.role.slug.upper(),
@@ -756,7 +756,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 2,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': model.role.slug.upper(),
@@ -813,7 +813,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': 'STUDENT',
