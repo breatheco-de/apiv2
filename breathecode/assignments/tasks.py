@@ -122,19 +122,22 @@ def set_cohort_user_assignments(task_id: int):
             s = Service('rigobot', task.user.id)
 
         if s and task.task_status == 'DONE':
-            s.post('/v1/finetuning/me/repository/',
-                   json={
-                       'url': task.github_url,
-                       'watchers': task.user.credentialsgithub.username,
-                   })
+            response = s.post('/v1/finetuning/me/repository/',
+                              json={
+                                  'url': task.github_url,
+                                  'watchers': task.user.credentialsgithub.username,
+                              })
+            data = response.json()
 
         elif s:
-            s.put('/v1/finetuning/me/repository/',
-                  json={
-                      'url': task.github_url,
-                      'activity_status': 'INACTIVE',
-                  })
-    except:
+            response = s.put('/v1/finetuning/me/repository/',
+                             json={
+                                 'url': task.github_url,
+                                 'activity_status': 'INACTIVE',
+                             })
+            data = response.json()
+            task.rigobot_repository_id = data['id']
+    except Exception:
         logger.error('App Rigobot not found')
 
     logger.info('History log saved')
