@@ -587,7 +587,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                                   slug='last-name-not-found'),
                                       code=400)
 
-        event = data['event']
+        event = data.get('event', None)
         if event is not None:
             try:
                 args = {}
@@ -605,7 +605,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                                       slug='event-not-found'),
                                           code=400)
 
-        asset = data['asset']
+        asset = data.get('asset', None)
         if asset is not None:
             try:
                 args = {}
@@ -623,7 +623,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                                       slug='asset-not-found'),
                                           code=400)
 
-        conversion_info = data['conversion_info']
+        conversion_info = data.get('conversion_info', None)
         if conversion_info is not None:
             if not isinstance(conversion_info, dict):
                 raise ValidationException(translation(lang,
