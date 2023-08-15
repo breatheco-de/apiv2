@@ -847,6 +847,25 @@ class MeCodeRevisionView(APIView):
 
         return resource
 
+    def post(self, request):
+        s = Service('rigobot', request.user.id)
+        response = s.post('/v1/finetuning/coderevision/', data=request.data, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
+
 
 class MeTaskCodeRevisionView(APIView):
 
@@ -861,7 +880,7 @@ class MeTaskCodeRevisionView(APIView):
         params['repo'] = task.github_url
 
         s = Service('rigobot', request.user.id)
-        response = s.get(f'/v1/finetuning/coderevision', params=params, stream=True)
+        response = s.get('/v1/finetuning/coderevision', params=params, stream=True)
         resource = StreamingHttpResponse(
             response.raw,
             status=response.status_code,
@@ -882,18 +901,72 @@ class MeTaskCodeRevisionView(APIView):
 class AcademyTaskCodeRevisionView(APIView):
 
     @capable_of('read_assignment')
-    def get(self, request, task_id, academy_id):
-        if not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).first()):
+    def get(self, request, academy_id, task_id=None):
+        if task_id and not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).first()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        params['repo'] = task.github_url
+        if task_id:
+            params['repo'] = task.github_url
 
         s = Service('rigobot')
-        response = s.get(f'/v1/finetuning/coderevision', params=params, stream=True)
+        response = s.get('/v1/finetuning/coderevision', params=params, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
+
+
+class MeCodeRevisionRateView(APIView):
+
+    def post(self, request, coderevision_id):
+        s = Service('rigobot', request.user.id)
+        response = s.post(f'/v1/finetuning/rate/coderevision/{coderevision_id}',
+                          data=request.data,
+                          stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
+
+
+class MeCommitFileView(APIView):
+
+    def get(self, request, commitfile_id=None):
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
+        s = Service('rigobot', request.user.id)
+        url = '/v1/finetuning/commitfile'
+        if commitfile_id:
+            url = f'{url}/{commitfile_id}'
+        response = s.get(url, params=params, stream=True)
         resource = StreamingHttpResponse(
             response.raw,
             status=response.status_code,
