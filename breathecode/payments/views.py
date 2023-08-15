@@ -954,12 +954,15 @@ class CardView(APIView):
                                                   slug='missing-card-information'),
                                       code=404)
 
-        if not token:
-            #TODO: this throw a exception
-            token = s.create_card_token(card_number, exp_month, exp_year, cvc)
+        try:
+            if not token:
+                token = s.create_card_token(card_number, exp_month, exp_year, cvc)
 
-        #TODO: this throw a exception
-        s.add_payment_method(request.user, token)
+            s.add_payment_method(request.user, token)
+
+        except Exception as e:
+            raise ValidationException(str(e), code=400)
+
         return Response({'status': 'ok'})
 
 
