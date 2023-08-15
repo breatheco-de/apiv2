@@ -112,7 +112,6 @@ def get_alias(request, slug=None):
     if academy is not None:
         items = items.filter(academy__slug__in=academy.split(','))
 
-    items = items.order_by('created_at')
     serializer = AcademyAliasSmallSerializer(items, many=True)
     return Response(serializer.data)
 
