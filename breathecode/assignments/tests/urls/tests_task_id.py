@@ -12,6 +12,7 @@ def get_serializer(self, task, user):
     return {
         'associated_slug': task.associated_slug,
         'created_at': self.bc.datetime.to_iso_string(task.created_at),
+        'updated_at': self.bc.datetime.to_iso_string(task.updated_at),
         'github_url': task.github_url,
         'id': task.id,
         'live_url': task.live_url,
