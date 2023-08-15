@@ -46,6 +46,7 @@ class TaskGETSerializer(serpy.Serializer):
     opened_at = serpy.Field()
 
     created_at = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class TaskGETSmallSerializer(serpy.Serializer):
