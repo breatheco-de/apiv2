@@ -4,7 +4,7 @@ from .views import (CourseView, create_lead, sync_tags_with_active_campaign,
                     AcademyLeadView, AcademyWonLeadView, AcademyTagView, AcademyAutomationView,
                     activecampaign_webhook, googleads_enrollments, googleads_csv, get_downloadable,
                     ShortLinkView, create_lead_from_app, UTMView, AcademyProcessView, AcademyAppView,
-                    AcademyAliasView, ActiveCampaignView, UploadView, validate_email_from_app)
+                    AcademyAliasView, ActiveCampaignView, UploadView, validate_email_from_app, get_alias)
 from rest_framework.authtoken import views
 
 app_name = 'marketing'
