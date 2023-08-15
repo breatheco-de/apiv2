@@ -95,7 +95,7 @@ def get_events(request):
     else:
         lookup['status'] = 'ACTIVE'
 
-    online_event = self.request.GET.get('online_event', '')
+    online_event = request.GET.get('online_event', None)
     if online_event == 'true':
         lookup['online_event'] = True
     elif online_event == 'false':
