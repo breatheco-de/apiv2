@@ -65,7 +65,7 @@ def generate_external_readme(a):
     if not a.external:
         return False
 
-    readme_lang = lower(a.lang)
+    readme_lang = a.lang.lower()
 
     if readme_lang == 'us':
         readme = get_template('external.md')
