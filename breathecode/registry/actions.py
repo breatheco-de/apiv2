@@ -65,10 +65,12 @@ def generate_external_readme(a):
     if not a.external:
         return False
 
-    if a.lang == 'us':
+    readme_lang = lower(a.lang)
+
+    if readme_lang == 'us':
         readme = get_template('external.md')
     else:
-        readme = get_template(f'external.{a.lang}.md')
+        readme = get_template(f'external.{readme_lang}.md')
     a.set_readme(readme.render(AssetBigSerializer(a).data))
     a.save()
     return True
