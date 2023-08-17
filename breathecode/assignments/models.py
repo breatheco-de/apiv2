@@ -59,6 +59,8 @@ class Task(models.Model):
     associated_slug = models.SlugField(max_length=150)
     title = models.CharField(max_length=150)
 
+    rigobot_repository_id = models.IntegerField(null=True, blank=True, default=None)
+
     task_status = models.CharField(max_length=15, choices=TASK_STATUS, default=PENDING)
     revision_status = models.CharField(max_length=15, choices=REVISION_STATUS, default=PENDING)
     task_type = models.CharField(max_length=15, choices=TASK_TYPE)
