@@ -95,6 +95,12 @@ def get_events(request):
     else:
         lookup['status'] = 'ACTIVE'
 
+    online_event = request.GET.get('online_event', None)
+    if online_event == 'true':
+        lookup['online_event'] = True
+    elif online_event == 'false':
+        lookup['online_event'] = False
+
     lookup['ending_at__gte'] = timezone.now()
     if 'past' in request.GET:
         if request.GET.get('past') == 'true':
