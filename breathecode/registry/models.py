@@ -697,6 +697,7 @@ class AssetErrorLog(models.Model):
     SLUG_NOT_FOUND = 'slug-not-found'
     DIFFERENT_TYPE = 'different-type'
     EMPTY_README = 'empty-readme'
+    EMPTY_HTML = 'empty-html'
     INVALID_URL = 'invalid-url'
     INVALID_README_URL = 'invalid-readme-url'
     README_SYNTAX = 'readme-syntax-error'

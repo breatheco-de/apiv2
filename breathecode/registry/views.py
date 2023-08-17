@@ -289,22 +289,32 @@ def render_readme(request, asset_slug, extension='raw'):
 
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
-        raise ValidationException('Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
-
-    is_parse = True
-    if asset.asset_type == 'QUIZ':
-        is_parse = False
-    readme = asset.get_readme(parse=is_parse,
-                              remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
+        raise ValidationException(f'Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
     response = HttpResponse('Invalid extension format', content_type='text/html')
     if extension == 'raw':
+        readme = asset.get_readme()
         response = HttpResponse(readme['decoded_raw'], content_type='text/markdown')
+
     if extension == 'html':
-        response = HttpResponse(readme['html'], content_type='text/html')
+        if asset.html is not None and asset.html != '':
+            response = HttpResponse(asset.html, content_type='text/html')
+        else:
+            asset.log_error(AssetErrorLog.EMPTY_HTML,
+                            status_text='Someone requested the asset HTML via API and it was empty')
+            readme = asset.get_readme(parse=True,
+                                      remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
+            asset.html = readme['html']
+            asset.save()
+            response = HttpResponse(readme['html'], content_type='text/html')
+
     elif extension in ['md', 'mdx', 'txt']:
+        readme = asset.get_readme(parse=True,
+                                  remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
         response = HttpResponse(readme['decoded'], content_type='text/markdown')
+
     elif extension == 'ipynb':
+        readme = asset.get_readme()
         response = HttpResponse(readme['decoded'], content_type='application/json')
 
     return response
