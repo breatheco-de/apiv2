@@ -128,6 +128,7 @@ def set_cohort_user_assignments(task_id: int):
                                   'watchers': task.user.credentialsgithub.username,
                               })
             data = response.json()
+            task.rigobot_repository_id = data['id']
 
         elif s:
             response = s.put('/v1/finetuning/me/repository/',
@@ -137,6 +138,7 @@ def set_cohort_user_assignments(task_id: int):
                              })
             data = response.json()
             task.rigobot_repository_id = data['id']
+
     except Exception:
         logger.error('App Rigobot not found')
 

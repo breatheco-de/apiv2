@@ -72,6 +72,7 @@ def put_serializer(self, task, data={}):
         'task_status': task.task_status,
         'task_type': task.task_type,
         'title': task.title,
+        'rigobot_repository_id': task.rigobot_repository_id,
         'attachments': [],
         'subtasks': task.subtasks,
         'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
