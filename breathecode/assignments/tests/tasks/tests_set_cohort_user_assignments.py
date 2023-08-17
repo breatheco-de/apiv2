@@ -336,8 +336,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch.multiple('breathecode.utils.service.Service',
                     __init__=MagicMock(return_value=None),
-                    post=MagicMock(return_value=None),
-                    put=MagicMock(return_value=None))
+                    post=MagicMock(),
+                    put=MagicMock())
     def test__rigobot_cancelled_revision(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -415,8 +415,8 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch.multiple('breathecode.utils.service.Service',
                     __init__=MagicMock(return_value=None),
-                    post=MagicMock(return_value=None),
-                    put=MagicMock(return_value=None))
+                    post=MagicMock(),
+                    put=MagicMock())
     def test__rigobot_schedule_revision(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {

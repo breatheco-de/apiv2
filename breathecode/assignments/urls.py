@@ -1,8 +1,8 @@
 from django.urls import path
 from .views import (AcademyTaskCodeRevisionView, MeCodeRevisionRateView, MeCodeRevisionView, MeCommitFileView,
-                    MeTaskCodeRevisionView, TaskMeView, sync_cohort_tasks_view, TaskTeacherView,
-                    deliver_assignment_view, TaskMeDeliverView, FinalProjectMeView, CohortTaskView,
-                    SubtaskMeView, TaskMeAttachmentView, FinalProjectScreenshotView)
+                    TaskMeView, sync_cohort_tasks_view, TaskTeacherView, deliver_assignment_view,
+                    TaskMeDeliverView, FinalProjectMeView, CohortTaskView, SubtaskMeView,
+                    TaskMeAttachmentView, FinalProjectScreenshotView)
 
 app_name = 'assignments'
 urlpatterns = [
@@ -15,15 +15,13 @@ urlpatterns = [
     path('user/me/final_project/<int:project_id>', FinalProjectMeView.as_view(), name='user_me_project'),
     path('user/me/task/<int:task_id>', TaskMeView.as_view(), name='user_me_task_id'),
     path('user/me/task/<int:task_id>/subtasks', SubtaskMeView.as_view(), name='user_me_task_id'),
-    path('me/commitfile', MeCommitFileView.as_view(), name='me_commitfile'),
+    path('me/task/<int:task_id>/commitfile', MeCommitFileView.as_view(), name='me_task_id_commitfile'),
     path('me/commitfile/<int:commitfile_id>', MeCommitFileView.as_view(), name='me_commitfile_id'),
     path('me/coderevision', MeCodeRevisionView.as_view(), name='me_coderevision'),
+    path('me/task/<int:task_id>/coderevision', MeCodeRevisionView.as_view(), name='me_task_id_coderevision'),
     path('me/coderevision/<int:coderevision_id>/rate',
          MeCodeRevisionRateView.as_view(),
          name='me_coderevision_id_rate'),
-    path('me/task/<int:task_id>/coderevision',
-         MeTaskCodeRevisionView.as_view(),
-         name='me_task_id_coderevision'),
     path('academy/coderevision', AcademyTaskCodeRevisionView.as_view(), name='academy_coderevision'),
     path('academy/task/<int:task_id>/coderevision',
          AcademyTaskCodeRevisionView.as_view(),

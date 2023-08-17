@@ -28,9 +28,9 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
 
-    # When: auth in get
+    # When: no github account
     # Then: response 200
-    def test__get__auth(self):
+    def test__no_github_account(self):
         expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
         query = {
             self.bc.fake.slug(): self.bc.fake.slug(),
@@ -55,17 +55,16 @@ class MediaTestSuite(AssignmentsTestCase):
                             __init__=MagicMock(return_value=None),
                             get=MagicMock(return_value=mock)):
             response = self.client.get(url)
-            self.bc.check.calls(Service.get.call_args_list, [
-                call('/v1/finetuning/me/coderevision', params=query, stream=True),
-            ])
+            self.bc.check.calls(Service.get.call_args_list, [])
 
-        self.assertEqual(response.getvalue().decode('utf-8'), json.dumps(expected))
-        self.assertEqual(response.status_code, code)
+        self.assertEqual(response.getvalue().decode('utf-8'),
+                         '{"detail":"github-account-not-connected","status_code":400}')
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
-    # When: auth in post
+    # When: auth in get
     # Then: response 200
-    def test__post__auth(self):
+    def test__get__auth(self):
         expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
         query = {
             self.bc.fake.slug(): self.bc.fake.slug(),
@@ -81,17 +80,23 @@ class MediaTestSuite(AssignmentsTestCase):
         mock.reason = 'OK'
 
         task = {'github_url': self.bc.fake.url()}
-        model = self.bc.database.create(profile_academy=1, task=task)
+        credentials_github = {'username': self.bc.fake.slug()}
+        model = self.bc.database.create(profile_academy=1, task=task, credentials_github=credentials_github)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('assignments:me_coderevision')
+        url = reverse_lazy('assignments:me_coderevision') + '?' + self.bc.format.querystring(query)
 
         with patch.multiple('breathecode.utils.service.Service',
                             __init__=MagicMock(return_value=None),
-                            post=MagicMock(return_value=mock)):
-            response = self.client.post(url, query, format='json')
-            self.bc.check.calls(Service.post.call_args_list, [
-                call('/v1/finetuning/coderevision/', data=query, stream=True),
+                            get=MagicMock(return_value=mock)):
+            response = self.client.get(url)
+            self.bc.check.calls(Service.get.call_args_list, [
+                call('/v1/finetuning/me/coderevision',
+                     params={
+                         **query,
+                         'github_username': model.credentials_github.username,
+                     },
+                     stream=True),
             ])
 
         self.assertEqual(response.getvalue().decode('utf-8'), json.dumps(expected))
