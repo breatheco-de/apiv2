@@ -62,6 +62,8 @@ def get_all_academies(request, id=None):
 @permission_classes([AllowAny])
 def get_single_academy(request, academy_id=None):
     item = Academy.objects.get(id=academy_id)
+    if item is None:
+        raise ValidationException(f'Academy {academy_id} not found', slug='academy-not-found')
 
     serializer = GetBigAcademySerializer(item)
     return Response(serializer.data)
