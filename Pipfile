@@ -111,3 +111,7 @@ openai = "*"
 launchdarkly-server-sdk = "*"
 async-timeout = "*"
 exceptiongroup = "*"
+pip = "*"
+sqlalchemy-bigquery = {version = "*", extras = ["bqstorage"]}
+drf-yasg = "*"
+google-cloud-firestore = "*"

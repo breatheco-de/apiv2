@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.postgres',
     'django.contrib.admindocs',
+    'drf_yasg',
     'rest_framework',
     'phonenumber_field',
     'corsheaders',

@@ -14,6 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 import os
+from breathecode.utils.router import versioning
 from breathecode.utils.views import get_root_schema_view
 from breathecode.utils.urls import mount_app_openapi
 
@@ -23,6 +24,8 @@ from django.views.generic import TemplateView
 from django.conf.urls.static import static
 from django.conf import settings
 
+versions, schemas = versioning('breathecode.activity.urls')
+
 apps = [
     ('v1/auth/', 'breathecode.authenticate.urls', 'auth'),
     ('v1/admissions/', 'breathecode.admissions.urls', 'admissions'),
@@ -30,7 +33,7 @@ apps = [
     ('v1/freelance/', 'breathecode.freelance.urls', 'freelance'),
     ('v1/events/', 'breathecode.events.urls', 'events'),
     ('v1/registry/', 'breathecode.registry.urls', 'registry'),
-    ('v1/activity/', 'breathecode.activity.urls', 'activity'),
+    # ('v1/activity/', 'breathecode.activity.urls', 'activity'),
     ('v1/feedback/', 'breathecode.feedback.urls', 'feedback'),
     ('v1/messaging/', 'breathecode.notify.urls', 'notify'),
     ('v1/assessment/', 'breathecode.assessment.urls', 'assessment'),
@@ -49,6 +52,8 @@ apps = [
 urlpatterns_apps = [path(url, include(urlconf, namespace=namespace)) for url, urlconf, namespace in apps]
 
 urlpatterns_app_openapi = [mount_app_openapi(url, urlconf, namespace) for url, urlconf, namespace in apps]
+urlpatterns_app_openapi += schemas
+assert 0
 
 urlpatterns_docs = [
     path('openapi.json',
@@ -75,8 +80,7 @@ urlpatterns_django = [
 ]
 
 urlpatterns_static = static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
-urlpatterns = (urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django +
+urlpatterns = (versions + urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django +
                urlpatterns_static)
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or os.environ.get('ENV') == 'test':

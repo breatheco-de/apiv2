@@ -8,6 +8,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from yaml.loader import FullLoader
 
+from breathecode.utils.router import NAMESPACES
+
 __all__ = ['get_root_schema_view']
 cache = None
 
@@ -16,7 +18,12 @@ class Cache:
     pass
 
 
-def get_root_schema_view(elements, extend={}):
+def get_root_schema_view(elements, extend=None):
+    if extend is None:
+        extend = {}
+
+    elements = elements + list(NAMESPACES)
+
     host = os.getenv('API_URL', '')
     if host.endswith('/'):
         host = host[:-1]
@@ -47,10 +54,12 @@ def get_root_schema_view(elements, extend={}):
         if hasattr(Cache, 'openapi'):
             return Response(Cache.openapi)
 
+        print(elements)
         schema_urls = [reverse(f'{element}-openapi-schema') for element in elements]
 
         schema_dicts = []
         for element in schema_urls:
+            print(element)
             response = requests.get(host + element, timeout=2)
 
             if response.status_code >= 300:

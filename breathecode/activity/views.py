@@ -70,7 +70,7 @@ class ActivityViewMixin(APIView):
         try:
             # this parse prevent a call to the db if the cohort slug doesn't exist
             cohort_id = int(cohort_id_or_slug)
-        except:
+        except Exception:
             raise ValidationException('Cohort not found', slug='cohort-not-found')
 
         slug = Cohort.objects.filter(academy__id=academy_id, pk=cohort_id).values_list('slug',
@@ -98,7 +98,7 @@ class ActivityViewMixin(APIView):
 
                     slugs.append(c.slug)
 
-                except:
+                except Exception:
                     raise ValidationException('Cohort not found', slug='cohort-not-found')
 
             slugs.append(cohort)
@@ -515,3 +515,14 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
             new_activities.append(add_student_activity(cohort_user.user, activity, academy_id))
 
         return Response(new_activities, status=status.HTTP_201_CREATED)
+
+
+class V2ActivityView(APIView):
+
+    @capable_of('read_activity')
+    def get(self, request, academy_id=None):
+        from breathecode.services.google_cloud import Datastore
+
+        kwargs = {'kind': 'student_activity'}
+
+        slug = request.GET.get('slug')
