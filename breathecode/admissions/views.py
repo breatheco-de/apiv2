@@ -53,6 +53,10 @@ def get_all_academies(request, id=None):
     status = request.GET.get('status')
     if status:
         items = items.filter(status__in=status.upper().split(','))
+    
+    academy_ids = request.GET.get('academy_id')
+    if academy_ids:
+        items = items.filter(id__in=academy_id.split(','))
 
     serializer = AcademySerializer(items, many=True)
     return Response(serializer.data)
