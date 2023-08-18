@@ -58,6 +58,15 @@ def get_all_academies(request, id=None):
     return Response(serializer.data)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_single_academy(request, academy_id=None):
+    item = Academy.objects.get(id=academy_id)
+
+    serializer = GetBigAcademySerializer(item)
+    return Response(serializer.data)
+
+
 class AcademyTeacherView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
