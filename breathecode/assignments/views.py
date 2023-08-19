@@ -279,7 +279,7 @@ class FinalProjectMeView(APIView):
                                 es='Falta la cohorte del proyecto final',
                                 slug='cohort-missing'))
             project_cohort = Cohort.objects.filter(id=data['cohort']).first()
-            staff = ProfileAcademy.objects.filter(~Q(role='STUDENT'),
+            staff = ProfileAcademy.objects.filter(~Q(role__slug='student'),
                                                   academy__id=project_cohort.academy.id,
                                                   user__id=request.user.id).first()
 
