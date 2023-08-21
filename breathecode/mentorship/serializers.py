@@ -765,21 +765,21 @@ class SessionSerializer(SessionPUTSerializer):
                                       code=400)
 
         calendlyOrganization = CalendlyOrganization.objects.filter(academy=self.context['academy_id']).first()
-        max_sessions = calendlyOrganization.max_concurrent_sessions
-        if calendlyOrganization is not None and max_sessions is not None and max_sessions > 0:
-            total_service_mentorships = MentorshipSession.objects.filter(academy=self.context['academy_id'],
-                                                                         status='PENDING',
-                                                                         mentee=mentee,
-                                                                         service=service).count()
-            if max_sessions <= total_service_mentorships:
-                raise ValidationException(translation(
-                    lang,
-                    en=
-                    f'You can only schedule {max_sessions} mentoring sessions in advanced. Fix this by cancelling an upcoming session or waiting for it to happen before booking a new one. ',
-                    es=
-                    f'Sólo puedes agendar un máximo de {max_sessions} sessiones de mentoría por adelantado. Soluciona esto cancelando una de tus próximas sesiones o espera a que alguna ocurra antes de volver a agendar',
-                    slug='max-concurrent-sessions'),
-                                          code=400)
+        if calendlyOrganization is not None:
+            max_sessions = calendlyOrganization.max_concurrent_sessions
+            if max_sessions is not None and max_sessions > 0:
+                total_service_mentorships = MentorshipSession.objects.filter(
+                    academy=self.context['academy_id'], status='PENDING', mentee=mentee,
+                    service=service).count()
+                if max_sessions <= total_service_mentorships:
+                    raise ValidationException(translation(
+                        lang,
+                        en=
+                        f'You can only schedule {max_sessions} mentoring sessions in advanced. Fix this by cancelling an upcoming session or waiting for it to happen before booking a new one. ',
+                        es=
+                        f'Sólo puedes agendar un máximo de {max_sessions} sessiones de mentoría por adelantado. Soluciona esto cancelando una de tus próximas sesiones o espera a que alguna ocurra antes de volver a agendar',
+                        slug='max-concurrent-sessions'),
+                                              code=400)
 
         return super().validate({**data, 'service': service, 'mentor': mentor, 'mentee': mentee})
 
