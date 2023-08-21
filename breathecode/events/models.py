@@ -1,5 +1,6 @@
 import binascii
 import os
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from .signals import event_status_updated, new_event_order, new_event_attendee
@@ -171,6 +172,8 @@ class Event(models.Model):
         super(Event, self).__init__(*args, **kwargs)
         self.__old_status = self.status
 
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+
     slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
@@ -267,13 +270,8 @@ class Event(models.Model):
 
         created = not self.id
 
-        if self.title:
-            if not self.id:
-                super().save(*args, **kwargs)
-
-            new_slug = f'{slugify(self.title).lower()}-{self.id}'
-            if self.slug != new_slug:
-                self.slug = new_slug
+        if created:
+            self.slug = f'{slugify(self.title).lower()}-{self.uuid}'
 
         super().save(*args, **kwargs)
 
