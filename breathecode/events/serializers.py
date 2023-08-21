@@ -483,7 +483,8 @@ class EventSerializer(serializers.ModelSerializer):
         if 'event_type' in data:
             data['lang'] = data['event_type'].lang
 
-        data['slug'] = slug
+        if not self.instance:
+            data['slug'] = slug
 
         return data
 

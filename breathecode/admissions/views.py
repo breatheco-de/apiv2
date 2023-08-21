@@ -53,8 +53,23 @@ def get_all_academies(request, id=None):
     status = request.GET.get('status')
     if status:
         items = items.filter(status__in=status.upper().split(','))
+    
+    academy_ids = request.GET.get('academy_id')
+    if academy_ids:
+        items = items.filter(id__in=academy_id.split(','))
 
     serializer = AcademySerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_single_academy(request, academy_id=None):
+    item = Academy.objects.filter(id=academy_id).first()
+    if item is None:
+        raise ValidationException(f'Academy {academy_id} not found', slug='academy-not-found')
+
+    serializer = GetBigAcademySerializer(item)
     return Response(serializer.data)
 
 
