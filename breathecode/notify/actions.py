@@ -257,8 +257,8 @@ def sync_slack_team_channel(team_id):
     })
 
     channels = data['channels']
-    while 'response_metadata' in data and 'next_cursor' in data[
-            'response_metadata'] and data['response_metadata']['next_cursor'] != '':
+    while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data[
+            'response_metadata']['next_cursor'] != '':
         print('Next cursor: ', data['response_metadata']['next_cursor'])
         data = api.get(
             'conversations.list', {
@@ -307,8 +307,8 @@ def sync_slack_team_users(team_id):
     data = api.get('users.list', {'limit': 300})
 
     members = data['members']
-    while 'response_metadata' in data and 'next_cursor' in data[
-            'response_metadata'] and data['response_metadata']['next_cursor'] != '':
+    while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data[
+            'response_metadata']['next_cursor'] != '':
         print('Next cursor: ', data['response_metadata']['next_cursor'])
         data = api.get('users.list', {'limit': 300, 'cursor': data['response_metadata']['next_cursor']})
         members = members + data['members']

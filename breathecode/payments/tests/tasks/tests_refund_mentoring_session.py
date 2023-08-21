@@ -240,7 +240,10 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
+            {
+                **self.bc.format.to_dict(model.consumption_session),
+                'status': 'CANCELLED',
+            },
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
@@ -291,7 +294,10 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
+            {
+                **self.bc.format.to_dict(model.consumption_session),
+                'status': 'CANCELLED',
+            },
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [{
@@ -396,7 +402,10 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
+            {
+                **self.bc.format.to_dict(model.consumption_session),
+                'status': 'CANCELLED',
+            },
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [{

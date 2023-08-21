@@ -43,8 +43,10 @@ class TaskGETSerializer(serpy.Serializer):
     live_url = serpy.Field()
     task_type = serpy.Field()
     user = UserSmallSerializer()
+    opened_at = serpy.Field()
 
     created_at = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class TaskGETSmallSerializer(serpy.Serializer):

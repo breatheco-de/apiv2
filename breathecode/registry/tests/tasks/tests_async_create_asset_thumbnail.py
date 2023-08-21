@@ -111,11 +111,12 @@ class RegistryTestSuite(RegistryTestCase):
                     download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
                     url=MagicMock(return_value='https://uio.io/path'),
                     create=True)
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'SCREENSHOTS_BUCKET': 'random-bucket'
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'SCREENSHOTS_BUCKET': 'random-bucket'
+        })))
     def test__with_asset__good_function_response(self):
         hash = '65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5'
         asset_category = {'preview_generation_url': self.bc.fake.url()}

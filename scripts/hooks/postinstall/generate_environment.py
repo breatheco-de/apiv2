@@ -3,8 +3,6 @@ from pathlib import Path
 
 from shutil import which, copyfile
 
-__all__ = ['main']
-
 api_path = os.getcwd()
 env_path = Path(f'{api_path}/.env').resolve()
 env_example_path = Path(f'{api_path}/.env.example').resolve()

@@ -27,6 +27,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         self.assertEqual(context.exception.slug, 'invalid-cohort-user')
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_add_to_organization_success(self):
         """
         When a student enters into a cohort, but he was not in the academy
@@ -42,6 +43,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
         self.assertEqual('PENDING', users[0]['storage_status'])
         self.assertEqual('ADD', users[0]['storage_action'])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_add_to_organization_already_added(self):
         """
         No need to double add student if it was already added previously
@@ -59,6 +61,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
         self.assertEqual('SYNCHED', users[0]['storage_status'])
         self.assertEqual('ADD', users[0]['storage_action'])
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_add_to_organization_success_previously_errored(self):
         """
         It there was a previous error, we should still try and re-attempt
@@ -90,6 +93,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         self.assertEqual(context.exception.slug, 'invalid-cohort-user')
 
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_remove_from_organization__no_org_user(self):
         """
         If user its not part of an organization, it cannot be removed
@@ -456,5 +460,4 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         # already deleted from github
         unknown = GithubAcademyUser.objects.filter(academy__id=models.academy.id, storage_status='UNKNOWN')
-        print('unknown', unknown)
         self.assertEqual(unknown.count(), 2)

@@ -96,11 +96,12 @@ class AuthenticateTestSuite(AuthTestCase):
         self.bc.garbage_collector.collect()
         super().tearDown()
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'PROFILE_BUCKET': 'https://dot.dot',
-               'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'PROFILE_BUCKET': 'https://dot.dot',
+            'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
+        })))
     def test__without_auth(self):
         url = reverse_lazy('authenticate:profile_me_picture')
         response = self.client.put(url)
@@ -118,11 +119,12 @@ class AuthenticateTestSuite(AuthTestCase):
     🔽🔽🔽 Put without permission
     """
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'PROFILE_BUCKET': 'https://dot.dot',
-               'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'PROFILE_BUCKET': 'https://dot.dot',
+            'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
+        })))
     def test__without_permission(self):
         model = self.bc.database.create(user=1)
 
@@ -155,11 +157,12 @@ class AuthenticateTestSuite(AuthTestCase):
         url=MagicMock(
             return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'PROFILE_BUCKET': 'https://dot.dot',
-               'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'PROFILE_BUCKET': 'https://dot.dot',
+            'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
+        })))
     def test__without_passing_file(self):
         permission = {'codename': 'update_my_profile'}
         model = self.bc.database.create(user=1, permission=permission)
@@ -204,11 +207,12 @@ class AuthenticateTestSuite(AuthTestCase):
         url=MagicMock(
             return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'PROFILE_BUCKET': 'https://dot.dot',
-               'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'PROFILE_BUCKET': 'https://dot.dot',
+            'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
+        })))
     def test__passing_file__file_exists(self):
         # random_image
         file, self.filename = self.bc.random.file()
@@ -255,11 +259,12 @@ class AuthenticateTestSuite(AuthTestCase):
         url=MagicMock(
             return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'PROFILE_BUCKET': 'https://dot.dot',
-               'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'PROFILE_BUCKET': 'https://dot.dot',
+            'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
+        })))
     def test__passing_file__with_profile__file_exists(self):
         exts = ['png', 'jpg', 'jpeg']
         permission = {'codename': 'update_my_profile'}
@@ -325,11 +330,12 @@ class AuthenticateTestSuite(AuthTestCase):
         url=MagicMock(
             return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'PROFILE_BUCKET': 'https://dot.dot',
-               'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'PROFILE_BUCKET': 'https://dot.dot',
+            'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
+        })))
     @patch('google.oauth2.id_token.fetch_id_token', MagicMock(return_value='blablabla'))
     @patch('requests.request', apply_requests_request_mock([(200, SHAPE_OF_URL, {'shape': 'Square'})]))
     @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
@@ -388,11 +394,12 @@ class AuthenticateTestSuite(AuthTestCase):
         url=MagicMock(
             return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'PROFILE_BUCKET': 'https://dot.dot',
-               'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'PROFILE_BUCKET': 'https://dot.dot',
+            'GCLOUD_SHAPE_OF_IMAGE': SHAPE_OF_URL
+        })))
     @patch('google.oauth2.id_token.fetch_id_token', MagicMock(return_value='blablabla'))
     @patch('requests.request', apply_requests_request_mock([(200, SHAPE_OF_URL, {'shape': 'Rectangle'})]))
     @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())

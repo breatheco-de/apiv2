@@ -5,12 +5,16 @@ DONE = 'DONE'
 CANCELLED = 'CANCELLED'
 REVERSED = 'REVERSED'
 PAUSED = 'PAUSED'
+ABORTED = 'ABORTED'
+ERROR = 'ERROR'
 TASK_STATUS = (
     (PENDING, 'Pending'),
     (DONE, 'Done'),
     (CANCELLED, 'Cancelled'),
     (REVERSED, 'Reversed'),
     (PAUSED, 'Paused'),
+    (ABORTED, 'Aborted'),
+    (ERROR, 'Error'),
 )
 
 
@@ -26,6 +30,7 @@ class TaskManager(models.Model):
 
     arguments = models.JSONField(default=dict, blank=True, null=True)
     status = models.CharField(max_length=20, choices=TASK_STATUS, default=PENDING)
+    status_message = models.TextField(blank=True, null=True, max_length=255)
 
     killed = models.BooleanField(default=False)
     last_run = models.DateTimeField()
