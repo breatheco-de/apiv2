@@ -85,7 +85,7 @@ GROUPS = [
     },
     {
         'name': 'Student',
-        'permissions': ['get_my_certificate', 'get_containers'],
+        'permissions': ['get_my_certificate', 'get_containers', 'get_my_mentoring_sessions'],
         'inherit': []
     },
     {
