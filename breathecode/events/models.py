@@ -172,7 +172,7 @@ class Event(models.Model):
         super(Event, self).__init__(*args, **kwargs)
         self.__old_status = self.status
 
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=False)
 
     slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
