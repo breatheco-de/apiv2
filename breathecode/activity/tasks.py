@@ -1,10 +1,15 @@
+from datetime import timedelta
 import logging, os
+from typing import Optional
 from celery import shared_task, Task
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
-from .models import Activity
+from breathecode.services.google_cloud.big_query import BigQuery
+from breathecode.utils.decorators import task, AbortTask
+from .models import StudentActivity
 from breathecode.utils import NDB
-from breathecode.admissions.utils import CohortLog
+from django.utils import timezone
+from django.apps import apps
 
 API_URL = os.getenv('API_URL', '')
 
@@ -13,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception, )
-    #                                           seconds
     retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
     retry_backoff = True
 
@@ -44,13 +48,16 @@ def get_attendancy_log(self, cohort_id: int):
             duration_in_days = day.get('duration_in_days')
             assert isinstance(duration_in_days, int) or duration_in_days == None
             assert isinstance(day['label'], str)
-    except:
+
+    except Exception:
         logger.error(f'Cohort {cohort.slug} have syllabus with bad format')
         return
 
-    client = NDB(Activity)
-    attendance = client.fetch([Activity.cohort == cohort.slug, Activity.slug == 'classroom_attendance'])
-    unattendance = client.fetch([Activity.cohort == cohort.slug, Activity.slug == 'classroom_unattendance'])
+    client = NDB(StudentActivity)
+    attendance = client.fetch(
+        [StudentActivity.cohort == cohort.slug, StudentActivity.slug == 'classroom_attendance'])
+    unattendance = client.fetch(
+        [StudentActivity.cohort == cohort.slug, StudentActivity.slug == 'classroom_unattendance'])
 
     days = {}
 
@@ -130,3 +137,51 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     cohort_user.save()
 
     logger.info('History log saved')
+
+
+@task()
+def add_activity(user_id: int,
+                 kind: str,
+                 resource: Optional[str] = None,
+                 resource_id: Optional[str | int] = None):
+    from .models import Activity
+
+    if (resource and not resource_id) or (resource_id and not resource):
+        raise AbortTask('resource and resource_id must be both present or both absent')
+
+    meta = {}
+    timestamp = timezone.now()
+
+    if resource:
+        app_label, model_name = resource.split('.')
+        model = apps.get_model(app_label, model_name)
+
+    if resource and not model:
+        raise AbortTask(f'{resource} is not a valid model')
+
+    # fill meta based on resource and kind
+    if resource == 'auth.User':
+        user = model.objects.filter(id=resource_id).first()
+        if not user:
+            raise AbortTask(f'User {resource_id} not found')
+
+        meta = {
+            'email': user.email,
+            'username': user.username,
+        }
+
+    duration = None
+
+    if kind == 'login':
+        duration = timedelta(days=1)
+
+    with BigQuery.session() as session:
+        session.add(
+            Activity(user_id=user_id,
+                     kind=kind,
+                     resource=resource,
+                     resource_id=resource_id,
+                     meta=meta,
+                     timestamp=timestamp,
+                     duration=duration))
+        session.commit()

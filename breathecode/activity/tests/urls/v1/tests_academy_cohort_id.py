@@ -10,7 +10,7 @@ from rest_framework import status
 
 from breathecode.services.google_cloud import Datastore
 
-from ..mixins import MediaTestCase
+from ...mixins import MediaTestCase
 import random
 
 TOTAL = 15
@@ -51,7 +51,6 @@ def datastore_fetch_mock(first_fetch=[]):
             offset = kwargs['offset'] if 'offset' in kwargs else 0
             try:
                 limit = kwargs['limit']
-                # offset = kwargs['offset']
             except:
                 return result
             if limit is not None:

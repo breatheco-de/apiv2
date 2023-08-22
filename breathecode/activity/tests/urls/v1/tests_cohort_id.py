@@ -1,7 +1,7 @@
 """
 Test /answer
 """
-from breathecode.activity.models import Activity
+from breathecode.activity.models import StudentActivity
 from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
@@ -13,7 +13,7 @@ from rest_framework import status
 from breathecode.services.google_cloud import Datastore
 from breathecode.utils import NDB
 
-from ..mixins import MediaTestCase
+from ...mixins import MediaTestCase
 
 DATASTORE_PRIVATE_SEED = [
     {
@@ -143,7 +143,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(ndb_init_mock.call_args_list, [call(Activity)])
+        self.assertEqual(ndb_init_mock.call_args_list, [call(StudentActivity)])
         self.assertEqual(mock.fetch.call_args_list, [
             call([FilterNode('cohort', '=', model.cohort.slug)], limit=None, offset=None),
         ])
@@ -175,7 +175,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(ndb_init_mock.call_args_list, [call(Activity)])
+        self.assertEqual(ndb_init_mock.call_args_list, [call(StudentActivity)])
         self.assertEqual(mock.fetch.call_args_list, [
             call([FilterNode('cohort', '=', model.cohort.slug)], limit=None, offset=None),
         ])
@@ -207,7 +207,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(ndb_init_mock.call_args_list, [call(Activity)])
+        self.assertEqual(ndb_init_mock.call_args_list, [call(StudentActivity)])
         self.assertEqual(mock.fetch.call_args_list, [
             call([FilterNode('slug', '=', 'breathecode_login'),
                   FilterNode('cohort', '=', model.cohort.slug)],
@@ -238,7 +238,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(ndb_init_mock.call_args_list, [call(Activity)])
+        self.assertEqual(ndb_init_mock.call_args_list, [call(StudentActivity)])
         self.assertEqual(mock.fetch.call_args_list, [
             call([
                 FilterNode('slug', '=', 'classroom_attendance'),
@@ -284,7 +284,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(ndb_init_mock.call_args_list, [call(Activity)])
+        self.assertEqual(ndb_init_mock.call_args_list, [call(StudentActivity)])
         self.assertEqual(mock.fetch.call_args_list,
                          [call([FilterNode('cohort', '=', model.cohort.slug)], limit=5, offset=0)])
         self.assertEqual(mock.count.call_args_list, [call([FilterNode('cohort', '=', model.cohort.slug)])])
@@ -321,7 +321,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(ndb_init_mock.call_args_list, [call(Activity)])
+        self.assertEqual(ndb_init_mock.call_args_list, [call(StudentActivity)])
         self.assertEqual(mock.fetch.call_args_list,
                          [call([FilterNode('cohort', '=', model.cohort.slug)], limit=5, offset=5)])
         self.assertEqual(mock.count.call_args_list, [call([FilterNode('cohort', '=', model.cohort.slug)])])
@@ -358,7 +358,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(ndb_init_mock.call_args_list, [call(Activity)])
+        self.assertEqual(ndb_init_mock.call_args_list, [call(StudentActivity)])
         self.assertEqual(mock.fetch.call_args_list,
                          [call([FilterNode('cohort', '=', model.cohort.slug)], limit=5, offset=10)])
         self.assertEqual(mock.count.call_args_list, [call([FilterNode('cohort', '=', model.cohort.slug)])])
