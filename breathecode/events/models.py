@@ -172,9 +172,8 @@ class Event(models.Model):
         super(Event, self).__init__(*args, **kwargs)
         self.__old_status = self.status
 
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-
     slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
+    uuid = models.UUIDField(blank=True, null=True, unique=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
@@ -271,6 +270,13 @@ class Event(models.Model):
         created = not self.id
 
         if created:
+            while True:
+                unique_uuid = uuid.uuid4()
+                if Event.objects.filter(uuid=unique_uuid).first() is not None:
+                    continue
+                self.uuid = unique_uuid
+                break
+
             self.slug = f'{slugify(self.title).lower()}-{self.uuid}'
 
         super().save(*args, **kwargs)
