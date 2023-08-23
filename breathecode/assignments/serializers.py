@@ -63,6 +63,7 @@ class TaskGETSmallSerializer(serpy.Serializer):
     task_type = serpy.Field()
 
     created_at = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class TaskGETDeliverSerializer(TaskGETSerializer):

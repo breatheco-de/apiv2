@@ -925,6 +925,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'task_status': model['task'].task_status,
                 'revision_status': model['task'].revision_status,
                 'created_at': re.sub(r'\+00:00$', 'Z', model['task'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['task'].updated_at.isoformat()),
                 'title': model['task'].title,
             }],
             'cohort': {
