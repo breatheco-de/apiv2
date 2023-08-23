@@ -25,13 +25,16 @@ def process_cohort_history_log(sender: Type[Cohort], instance: Cohort, **kwargs:
 def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs: Any):
     logger.info('Processing available as saas student\'s tasks and marking as GRADUATED if it is')
 
+    if instance.cohort is None:
+        return
+
     cohort = Cohort.objects.filter(id=instance.cohort.id).first()
 
     if not cohort.available_as_saas:
         return
 
     syllabus_assets = get_assets_on_syllabus(cohort.syllabus_version.id, True)
-    tasks = Task.objects.filter(cohort=cohort.id, task_status='DONE')
+    tasks = Task.objects.filter(cohort=cohort.id, user=instance.user.id, task_status='DONE')
 
     if len(syllabus_assets) == len(tasks):
         cohort_user = CohortUser.objects.filter(user=instance.user.id, cohort=cohort.id).first()
