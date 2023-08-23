@@ -525,6 +525,7 @@ class V2MeActivityView(APIView):
 
         with BigQuery.session() as session:
             results = session.query(Activity).filter().offset(offset).limit(limit).all()
+            # results = session.query(Activity).filter()  #.offset(offset).limit(limit).all()
             serializer = ActivitySerializer(results, many=True)
 
         return Response(serializer.data)

@@ -125,6 +125,14 @@ MIDDLEWARE = [
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 
+if ENVIRONMENT != 'production':
+    MIDDLEWARE.append('silk.middleware.SilkyMiddleware')
+    INSTALLED_APPS.append('silk')
+    SILKY_PYTHON_PROFILER = True
+    SILKY_PYTHON_PROFILER_BINARY = True
+    SILKY_PYTHON_PROFILER_RESULT_PATH = '/tmp'
+    SILKY_AUTHENTICATION = True
+
 AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
 
 ROOT_URLCONF = 'breathecode.urls'

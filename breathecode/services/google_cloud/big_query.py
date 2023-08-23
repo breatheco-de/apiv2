@@ -9,18 +9,35 @@ engine = None
 __all__ = ['BigQuery']
 
 
-class BigQuery:
+def is_test_env():
+    return os.getenv('ENV') == 'test' or True
+
+
+class BigQueryMeta(type):
+
+    def __init__(cls, name, bases, clsdict):
+        super().__init__(name, bases, clsdict)
+        cls.setup_engine()
+
+
+class BigQuery(metaclass=BigQueryMeta):
+
+    @classmethod
+    def setup_engine(cls):
+        global engine
+
+        if not engine and is_test_env():
+            engine = create_engine('sqlite:///:memory:', echo=True)
+
+        if not engine:
+            project = os.getenv('GOOGLE_PROJECT_ID', '')
+            engine = create_engine(f'bigquery://{project}')
 
     @staticmethod
     def session():
         global engine
 
         credentials.resolve_credentials()
-
-        if not engine:
-            project = os.getenv('GOOGLE_PROJECT_ID', '')
-            engine = create_engine(f'bigquery://{project}')
-
         session = sessionmaker(bind=engine)
         return session()
 
@@ -29,9 +46,4 @@ class BigQuery:
         global engine
 
         credentials.resolve_credentials()
-
-        if not engine:
-            project = os.getenv('GOOGLE_PROJECT_ID', '')
-            engine = create_engine(f'bigquery://{project}')
-
         return engine.connect()

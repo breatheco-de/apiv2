@@ -115,3 +115,6 @@ pip = "*"
 sqlalchemy-bigquery = {version = "*", extras = ["bqstorage"]}
 drf-yasg = "*"
 google-cloud-firestore = "*"
+install = "*"
+django-silk = "*"
+django-debug-toolbar = "*"
