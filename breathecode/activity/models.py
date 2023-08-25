@@ -29,13 +29,7 @@ class StudentActivity(ndb.Model):
 
 class ActivityMeta(BigQueryBase):
     __tablename__ = '4geeks.activity_nested'
-    # if is_test_env():
-    #     __tablename__ = '4geeks_activity_nested'
 
-    # else:
-    #     __tablename__ = '4geeks.activity_nested'
-
-    #
     email = Column(String(36), primary_key=True)
     related = Column(Integer, nullable=False)
     related_pk = Column(String(25), nullable=False)
@@ -49,13 +43,7 @@ class ActivityMeta(BigQueryBase):
 
 class Activity(BigQueryBase):
     __tablename__ = '4geeks.activity'
-    # if is_test_env():
-    #     __tablename__ = '4geeks_activity'
 
-    # else:
-    #     __tablename__ = '4geeks.activity'
-
-    #
     id = Column(String(36), primary_key=True)
     user_id = Column(Integer, nullable=False)
     kind = Column(String(25), nullable=False)
