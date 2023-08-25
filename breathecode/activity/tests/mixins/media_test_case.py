@@ -7,6 +7,7 @@ from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixi
                                       HeadersMixin, DatetimeMixin, Sha256Mixin, BreathecodeMixin)
 from breathecode.utils.sqlalchemy import BigQueryBase
 from sqlalchemy import create_engine
+from breathecode.services.google_cloud import BigQuery
 
 
 class MediaTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
@@ -14,14 +15,12 @@ class MediaTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, Ge
     """FeedbackTestCase with auth methods"""
 
     def tearDown(self):
-        BigQueryBase.metadata.drop_all(self.engine)
         self.clear_cache()
+        BigQuery.teardown()
 
     def setUp(self):
         self.generate_queries()
         os.environ['MEDIA_GALLERY_BUCKET'] = 'bucket-name'
         self.set_test_instance(self)
 
-        self.engine = create_engine('sqlite:///:memory:', echo=True)
-        BigQueryBase.metadata.bind = self.engine
-        BigQueryBase.metadata.create_all()  # Create tables
+        BigQuery.setup()

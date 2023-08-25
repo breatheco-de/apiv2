@@ -1,4 +1,5 @@
 import logging
+import os
 
 import pytz
 from django.contrib.auth.models import AnonymousUser, User
@@ -238,6 +239,12 @@ def get_cohorts(request, id=None):
                   key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
 
     return Response(data)
+
+
+if os.getenv('ENV') == 'development':
+    from silk.profiling.profiler import silk_profile
+
+    get_cohorts = silk_profile()(get_cohorts)
 
 
 class AcademyReportView(APIView):

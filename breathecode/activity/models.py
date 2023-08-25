@@ -3,7 +3,7 @@ import os
 from google.cloud import ndb
 from sqlalchemy import Column, Integer, String, TIMESTAMP, JSON
 
-from breathecode.utils.sqlalchemy import BigQueryBase
+from breathecode.utils.sqlalchemy import BigQueryBase, test_support
 
 
 def is_test_env():
@@ -28,12 +28,12 @@ class StudentActivity(ndb.Model):
 
 
 class ActivityMeta(BigQueryBase):
+    __tablename__ = '4geeks.activity_nested'
     # if is_test_env():
-    #     __tablename__ = '4geeks_activity'
+    #     __tablename__ = '4geeks_activity_nested'
 
     # else:
-    #     __tablename__ = '4geeks.activity'
-    __tablename__ = '4geeks.activity_nested'
+    #     __tablename__ = '4geeks.activity_nested'
 
     #
     email = Column(String(36), primary_key=True)
@@ -48,12 +48,12 @@ class ActivityMeta(BigQueryBase):
 
 
 class Activity(BigQueryBase):
+    __tablename__ = '4geeks.activity'
     # if is_test_env():
     #     __tablename__ = '4geeks_activity'
 
     # else:
     #     __tablename__ = '4geeks.activity'
-    __tablename__ = '4geeks.activity'
 
     #
     id = Column(String(36), primary_key=True)
@@ -74,3 +74,6 @@ class Activity(BigQueryBase):
     @json.setter
     def json(self, value):
         self.meta = json.dumps(value)
+
+
+test_support(__name__)

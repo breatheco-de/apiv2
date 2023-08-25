@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from breathecode.services.google_cloud import credentials
+from breathecode.utils.sqlalchemy import BigQueryBase
 
 engine = None
 
@@ -22,12 +23,21 @@ class BigQueryMeta(type):
 
 class BigQuery(metaclass=BigQueryMeta):
 
+    @staticmethod
+    def setup():
+        BigQueryBase.metadata.bind = engine
+        BigQueryBase.metadata.create_all()
+
+    @staticmethod
+    def teardown():
+        BigQueryBase.metadata.drop_all(engine)
+
     @classmethod
     def setup_engine(cls):
         global engine
 
         if not engine and is_test_env():
-            engine = create_engine('sqlite:///:memory:', echo=True)
+            engine = create_engine('sqlite:///:memory:', echo=False)
 
         if not engine:
             project = os.getenv('GOOGLE_PROJECT_ID', '')

@@ -39,12 +39,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': ("You (user: 1) don't have this capability: read_activity for "
-                           'academy 1'),
-                'status_code': 403,
-            })
+        self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     # """

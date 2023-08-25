@@ -23,6 +23,8 @@ from django.views.generic import TemplateView
 from django.conf.urls.static import static
 from django.conf import settings
 
+ENVIRONMENT = os.environ.get('ENV')
+
 versions = {
     'v2': [
         path('activity/', include('breathecode.activity.urls.v2', namespace='activity')),
@@ -81,13 +83,12 @@ urlpatterns_django = [
     #
 ]
 
-if settings.DEBUG:
-    print(settings.DEBUG)
-    # import debug_toolbar
-    urlpatterns_django.append(path('silk/', include('silk.urls', namespace='silk')))
-    # urlpatterns_django.append(path('__debug__/', include(debug_toolbar.urls)))
+if ENVIRONMENT == 'development':
+    import debug_toolbar
+    debug_toolbar.urls
 
-    # urlpatterns_django.append(path('__debug__/', include(debug_toolbar.urls)))
+    urlpatterns_django.append(path('silk/', include('silk.urls', namespace='silk')))
+    urlpatterns_django.append(path('__debug__/', include('debug_toolbar.urls', namespace='debug')))
 
 urlpatterns_static = static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns = (urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django +
