@@ -4,7 +4,7 @@ from .views import (CourseView, create_lead, sync_tags_with_active_campaign,
                     AcademyLeadView, AcademyWonLeadView, AcademyTagView, AcademyAutomationView,
                     activecampaign_webhook, googleads_enrollments, googleads_csv, get_downloadable,
                     ShortLinkView, create_lead_from_app, UTMView, AcademyProcessView, AcademyAppView,
-                    AcademyAliasView, ActiveCampaignView, UploadView, validate_email_from_app)
+                    AcademyAliasView, ActiveCampaignView, UploadView, validate_email_from_app, get_alias)
 from rest_framework.authtoken import views
 
 app_name = 'marketing'
@@ -15,14 +15,14 @@ urlpatterns = [
     path('app/<slug:app_slug>/validate', validate_email_from_app, name='app_email_validate'),
     path('app/lead', create_lead_from_app, name='app_lead'),
     path('lead/all', get_leads, name='lead_all'),
-    path('alias', AcademyAliasView.as_view(), name='alias'),
+    path('alias', get_alias, name='alias'),
     path('academy/lead', AcademyLeadView.as_view(), name='academy_lead'),
     path('academy/upload', UploadView.as_view(), name='upload'),
     path('academy/lead/<int:lead_id>', AcademyLeadView.as_view(), name='academy_lead_id'),
     path('academy/lead/process', AcademyProcessView.as_view(), name='academy_process_lead'),
     path('academy/lead/won', AcademyWonLeadView.as_view(), name='academy_won_lead'),
     path('academy/app', AcademyAppView.as_view(), name='app'),
-    path('academy/alias', AcademyAliasView.as_view(), name='alias'),
+    path('academy/alias', AcademyAliasView.as_view(), name='academy_alias'),
     path('academy/<int:academy_id>/tag/sync', sync_tags_with_active_campaign, name='academy_id_tag_sync'),
     path('academy/<int:academt_id>/automation/sync',
          sync_automations_with_active_campaign,

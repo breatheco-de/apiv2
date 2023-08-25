@@ -46,11 +46,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (201, eventbrite_post_url, eventbrite_event),
-               (200, eventbrite_put_url, eventbrite_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (201, eventbrite_post_url, eventbrite_event),
+            (200, eventbrite_put_url, eventbrite_event),
+        ]))
     def test_export_event_to_eventbrite__without_academy(self):
         import logging
 
@@ -76,11 +77,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (201, eventbrite_post_url, eventbrite_event),
-               (200, eventbrite_put_url, eventbrite_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (201, eventbrite_post_url, eventbrite_event),
+            (200, eventbrite_put_url, eventbrite_event),
+        ]))
     def test_export_event_to_eventbrite__with_event(self):
         import logging
 
@@ -116,11 +118,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (201, eventbrite_post_url, eventbrite_event),
-               (200, eventbrite_put_url, eventbrite_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (201, eventbrite_post_url, eventbrite_event),
+            (200, eventbrite_put_url, eventbrite_event),
+        ]))
     def test_export_event_to_eventbrite__check_the_payload__without_eventbrite_id(self):
         import logging
         from breathecode.events.utils import Eventbrite
@@ -176,11 +179,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (201, eventbrite_post_url, eventbrite_event),
-               (200, eventbrite_put_url, eventbrite_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (201, eventbrite_post_url, eventbrite_event),
+            (200, eventbrite_put_url, eventbrite_event),
+        ]))
     def test_export_event_to_eventbrite__check_the_payload__with_eventbrite_id(self):
         import logging
         from breathecode.events.utils import Eventbrite
@@ -236,11 +240,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (201, eventbrite_post_url, eventbrite_event),
-               (200, eventbrite_put_url, eventbrite_event),
-           ]))
+    @patch(
+        REQUESTS_PATH['request'],
+        apply_requests_request_mock([
+            (201, eventbrite_post_url, eventbrite_event),
+            (200, eventbrite_put_url, eventbrite_event),
+        ]))
     def test_export_event_to_eventbrite__check_the_payload__with_organizer_id(self):
         import logging
         from breathecode.events.utils import Eventbrite

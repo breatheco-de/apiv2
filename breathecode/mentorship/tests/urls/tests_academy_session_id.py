@@ -81,6 +81,7 @@ def put_serializer(data={}):
         'id': 0,
         'is_online': False,
         'latitude': None,
+        'calendly_uuid': None,
         'longitude': None,
         'mentee': 0,
         'mentee_left_at': None,

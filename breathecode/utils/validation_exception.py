@@ -2,7 +2,6 @@ import logging
 import os
 from typing import Optional
 from django.db.models import QuerySet
-from django.utils.translation import gettext_lazy as _
 
 from rest_framework.exceptions import APIException
 from .shorteners import C

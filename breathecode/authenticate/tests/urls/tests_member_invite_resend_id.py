@@ -347,10 +347,11 @@ class AuthenticateTestSuite(AuthTestCase):
         all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]
         self.assertEqual(all_user_invite, [])
 
-    @patch('requests.post',
-           apply_requests_post_mock([
-               (201, f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages", {})
-           ]))
+    @patch(
+        'requests.post',
+        apply_requests_post_mock([
+            (201, f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages", {})
+        ]))
     def test_resend_invite_with_invitation(self):
         """Test """
         self.headers(academy=1)

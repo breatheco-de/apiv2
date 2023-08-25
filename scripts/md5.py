@@ -2,7 +2,6 @@
 
 from __future__ import absolute_import
 import hashlib
-import os
 import sys
 
 if __name__ == '__main__':
@@ -16,4 +15,3 @@ if __name__ == '__main__':
 
     hash = hashlib.md5(content).hexdigest()
     print(hash)
-1

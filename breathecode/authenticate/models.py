@@ -284,7 +284,7 @@ class App(models.Model):
 class AppRequiredScope(models.Model):
     app = models.ForeignKey(App, on_delete=models.CASCADE, related_name='m2m_required_scopes')
     scope = models.ForeignKey(Scope, on_delete=models.CASCADE, related_name='m2m_required_scopes')
-    agreed_at = models.DateTimeField()
+    agreed_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
         return f'{self.app.name} ({self.app.slug}) -> {self.scope.name} ({self.scope.slug})'
@@ -293,7 +293,7 @@ class AppRequiredScope(models.Model):
 class AppOptionalScope(models.Model):
     app = models.ForeignKey(App, on_delete=models.CASCADE, related_name='m2m_optional_scopes')
     scope = models.ForeignKey(Scope, on_delete=models.CASCADE, related_name='m2m_optional_scopes')
-    agreed_at = models.DateTimeField()
+    agreed_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
         return f'{self.app.name} ({self.app.slug}) -> {self.scope.name} ({self.scope.slug})'

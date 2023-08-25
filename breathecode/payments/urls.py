@@ -47,7 +47,7 @@ urlpatterns = [
     path('me/invoice/<int:invoice_id>', MeInvoiceView.as_view()),
     path('academy/invoice', AcademyInvoiceView.as_view()),
     path('academy/invoice/<int:invoice_id>', AcademyInvoiceView.as_view()),
-    path('card', CardView.as_view()),
+    path('card', CardView.as_view(), name='card'),
     path('bag', BagView.as_view()),
     path('checking', CheckingView.as_view(), name='checking'),
     path('pay', PayView.as_view(), name='pay'),

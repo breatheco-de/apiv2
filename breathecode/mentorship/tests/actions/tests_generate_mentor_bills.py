@@ -42,6 +42,7 @@ def mentorship_session_field(data={}):
         'longitude': None,
         'mentor_id': 0,
         'service_id': None,
+        'calendly_uuid': None,
         'mentee_id': None,
         'online_meeting_url': None,
         'online_recording_url': None,

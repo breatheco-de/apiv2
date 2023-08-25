@@ -99,8 +99,10 @@ def get_payload(app, date, signed_headers, request):
         'method': request.method,
         'params': dict(request.GET),
         'body': request.data if request.data is not None else None,
-        'headers': {k: v
-                    for k, v in headers.items() if k in signed_headers},
+        'headers': {
+            k: v
+            for k, v in headers.items() if k in signed_headers
+        },
     }
 
     return payload

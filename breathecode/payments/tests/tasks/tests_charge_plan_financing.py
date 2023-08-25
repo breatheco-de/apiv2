@@ -113,7 +113,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting charge_plan_financing for id 1'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('PlanFinancing with id 1 not found')])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('PlanFinancing with id 1 not found', exc_info=True),
+        ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -148,7 +150,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting charge_plan_financing for id 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Error getting bag from plan financing 1: plan-financing-has-no-invoices'),
+            call('Error getting bag from plan financing 1: plan-financing-has-no-invoices', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
@@ -327,7 +329,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting charge_plan_financing for id 1'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('PlanFinancing with id 1 is over')])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('PlanFinancing with id 1 is over', exc_info=True),
+        ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
             self.bc.format.to_dict(model.bag),
