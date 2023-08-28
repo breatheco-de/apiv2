@@ -9,6 +9,7 @@ from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
 from django.core.exceptions import ValidationError
 from slugify import slugify
+import uuid as uuid_lib
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
@@ -164,8 +165,6 @@ CURRENCIES = (
     (EUR, 'EUR'),
     (UYU, 'UYU'),
 )
-
-import uuid as uuid_lib
 
 
 class Event(models.Model):
