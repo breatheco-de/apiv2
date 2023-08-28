@@ -54,14 +54,15 @@ class RegistryTestSuite(RegistryTestCase):
             'download_status': 'ERROR'
         }]
 
-    @patch('requests.get',
-           apply_requests_get_mock([(200, original_url, {
-               'headers': {
-                   'content-type': 'image/png'
-               }
-           }, {
-               'content-type': 'image/png'
-           })]))
+    @patch(
+        'requests.get',
+        apply_requests_get_mock([(200, original_url, {
+            'headers': {
+                'content-type': 'image/png'
+            }
+        }, {
+            'content-type': 'image/png'
+        })]))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
@@ -74,11 +75,12 @@ class RegistryTestSuite(RegistryTestCase):
                     upload=MagicMock(),
                     url=MagicMock(return_value='https://xyz/hardcoded_url'),
                     create=True)
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_download_status_no_asset_image(self):
         model = self.bc.database.create(asset={'slug': 'fake_slug'})
@@ -103,14 +105,15 @@ class RegistryTestSuite(RegistryTestCase):
             'name': 'www.google.com',
         }])
 
-    @patch('requests.get',
-           apply_requests_get_mock([(200, original_url, {
-               'headers': {
-                   'content-type': 'image/png'
-               }
-           }, {
-               'content-type': 'image/png'
-           })]))
+    @patch(
+        'requests.get',
+        apply_requests_get_mock([(200, original_url, {
+            'headers': {
+                'content-type': 'image/png'
+            }
+        }, {
+            'content-type': 'image/png'
+        })]))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
@@ -123,11 +126,12 @@ class RegistryTestSuite(RegistryTestCase):
                     upload=MagicMock(),
                     url=MagicMock(return_value='https://xyz/hardcoded_url'),
                     create=True)
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test__with_download_status_not_ok(self):
         asset_image = {'name': 'john', 'original_url': original_url, 'bucket_url': 'https://www.f.com'}
         start_of_readme = 'hi '
@@ -170,14 +174,15 @@ class RegistryTestSuite(RegistryTestCase):
             'name': 'john',
         }])
 
-    @patch('requests.get',
-           apply_requests_get_mock([(200, original_url, {
-               'headers': {
-                   'content-type': 'image/png'
-               }
-           }, {
-               'content-type': 'image/png'
-           })]))
+    @patch(
+        'requests.get',
+        apply_requests_get_mock([(200, original_url, {
+            'headers': {
+                'content-type': 'image/png'
+            }
+        }, {
+            'content-type': 'image/png'
+        })]))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
@@ -190,11 +195,12 @@ class RegistryTestSuite(RegistryTestCase):
                     upload=MagicMock(),
                     url=MagicMock(return_value='https://xyz/hardcoded_url'),
                     create=True)
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test__with_download_status_not_ok_many_images(self):
         asset_image = {'name': 'john', 'original_url': original_url, 'bucket_url': 'https://www.f.com'}
         start_of_readme = 'hi '
@@ -238,11 +244,12 @@ class RegistryTestSuite(RegistryTestCase):
     🔽🔽🔽 GET with status ok
     """
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test__with_ok_download_status(self):
         asset_image = {'name': 'john', 'bucket_url': 'https://www.f.com', 'download_status': 'OK'}
         fake_readme = 'hi https://www.f.com'

@@ -319,10 +319,11 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(actions.send_email_message.call_args_list, generate_send_email_message(self, model))
 
-    @patch('requests.post',
-           apply_requests_post_mock([
-               (201, f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages", {})
-           ]))
+    @patch(
+        'requests.post',
+        apply_requests_post_mock([
+            (201, f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages", {})
+        ]))
     def test_resend_invite_with_invitation(self):
         """Test """
         self.headers(academy=1)

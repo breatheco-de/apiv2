@@ -1,5 +1,6 @@
 from rest_framework.views import exception_handler
 from django.core.exceptions import ValidationError
+from breathecode.utils.payment_exception import PaymentException
 
 from breathecode.utils.validation_exception import ValidationException
 
@@ -35,7 +36,8 @@ def breathecode_exception_handler(exc, context):
 
     # Now add the HTTP status code to the response.
     if response is not None:
-        if isinstance(exc, ValidationException) and isinstance(exc.detail, list):
+        is_our_exception = isinstance(exc, ValidationException) or isinstance(exc, PaymentException)
+        if is_our_exception and isinstance(exc.detail, list):
 
             items = []
 
@@ -61,7 +63,7 @@ def breathecode_exception_handler(exc, context):
 
             response.data = items
 
-        elif isinstance(exc, ValidationException):
+        elif is_our_exception:
             response.data['status_code'] = response.status_code
 
             if exc.silent:

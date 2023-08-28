@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta
 import os
-import traceback
 from typing import Any, Optional
 from django.utils import timezone
 
@@ -12,9 +11,8 @@ from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from dateutil.relativedelta import relativedelta
-from django.db.models import Q
 from breathecode.payments.signals import consume_service
-from breathecode.utils.decorators import task
+from breathecode.utils.decorators import task, AbortTask
 from breathecode.utils.i18n import translation
 
 from .models import AbstractIOweYou, Bag, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription, SubscriptionServiceItem
@@ -36,9 +34,7 @@ def get_app_url():
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def renew_consumables(self, scheduler_id: int):
-    """
-    The purpose of this function is renew every service items belongs to a subscription.
-    """
+    """Renew consumables."""
 
     def get_resource_lookup(i_owe_you: AbstractIOweYou, service: Service):
         lookups = {}
@@ -90,9 +86,10 @@ def renew_consumables(self, scheduler_id: int):
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
             and scheduler.plan_handler.handler.plan.time_of_life
             and scheduler.plan_handler.handler.plan.time_of_life_unit
-            and scheduler.plan_handler.plan_financing.created_at + actions.calculate_relative_delta(
-                scheduler.plan_handler.handler.plan.time_of_life,
-                scheduler.plan_handler.handler.plan.time_of_life_unit) < utc_now):
+            and scheduler.plan_handler.plan_financing.created_at +
+            actions.calculate_relative_delta(scheduler.plan_handler.handler.plan.time_of_life,
+                                             scheduler.plan_handler.handler.plan.time_of_life_unit)
+            < utc_now):
         logger.info(
             f'The services related to PlanFinancing {scheduler.plan_handler.plan_financing.id} is over')
         return
@@ -179,9 +176,7 @@ def renew_consumables(self, scheduler_id: int):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def renew_subscription_consumables(self, subscription_id: int):
-    """
-    The purpose of this function is renew every service items belongs to a subscription.
-    """
+    """Renew consumables belongs to a subscription."""
 
     logger.info(f'Starting renew_subscription_consumables for id {subscription_id}')
 
@@ -207,9 +202,7 @@ def renew_subscription_consumables(self, subscription_id: int):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def renew_plan_financing_consumables(self, plan_financing_id: int):
-    """
-    The purpose of this function is renew every service items belongs to a subscription.
-    """
+    """Renew consumables belongs to a plan financing."""
 
     logger.info(f'Starting renew_plan_financing_consumables for id {plan_financing_id}')
 
@@ -258,32 +251,27 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
 
 @task(bind=True, base=BaseTaskWithRetry, transaction=True, fallback=fallback_charge_subscription)
 def charge_subscription(self, subscription_id: int, **_: Any):
-    """
-    The purpose of this function is just to renew a subscription, not more than this.
-    """
+    """Renews a subscription."""
 
     logger.info(f'Starting charge_subscription for subscription {subscription_id}')
 
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
-        logger.error(f'Subscription with id {subscription_id} not found')
-        return
+        raise AbortTask(f'Subscription with id {subscription_id} not found')
 
     utc_now = timezone.now()
 
     if subscription.valid_until and subscription.valid_until < utc_now:
-        logger.error(f'The subscription {subscription.id} is over')
-        return
+        raise AbortTask(f'The subscription {subscription.id} is over')
 
     settings = get_user_settings(subscription.user.id)
 
     try:
         bag = actions.get_bag_from_subscription(subscription, settings)
     except Exception as e:
-        logger.error(f'Error getting bag from subscription {subscription_id}: {e}')
         subscription.status = 'ERROR'
         subscription.status_message = str(e)
         subscription.save()
-        return
+        raise AbortTask(f'Error getting bag from subscription {subscription_id}: {e}')
 
     amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
@@ -292,7 +280,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         s.set_language_from_settings(settings)
         invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
 
-    except Exception as e:
+    except Exception:
         subject = translation(settings.lang,
                               en='Your 4Geeks subscription could not be renewed',
                               es='Tu suscripción 4Geeks no pudo ser renovada')
@@ -371,32 +359,28 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
 
 @task(bind=True, base=BaseTaskWithRetry, transaction=True, fallback=fallback_charge_plan_financing)
 def charge_plan_financing(self, plan_financing_id: int, **_: Any):
-    """
-    The purpose of this function is just to renew a subscription, not more than this.
-    """
+    """Renew a plan financing."""
 
     logger.info(f'Starting charge_plan_financing for id {plan_financing_id}')
 
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
-        logger.error(f'PlanFinancing with id {plan_financing_id} not found')
-        return
+        raise AbortTask(f'PlanFinancing with id {plan_financing_id} not found')
 
     utc_now = timezone.now()
 
     if plan_financing.valid_until < utc_now:
-        logger.error(f'PlanFinancing with id {plan_financing_id} is over')
-        return
+        raise AbortTask(f'PlanFinancing with id {plan_financing_id} is over')
 
     settings = get_user_settings(plan_financing.user.id)
 
     try:
         bag = actions.get_bag_from_plan_financing(plan_financing, settings)
     except Exception as e:
-        logger.error(f'Error getting bag from plan financing {plan_financing_id}: {e}')
         plan_financing.status = 'ERROR'
         plan_financing.status_message = str(e)
         plan_financing.save()
-        return
+
+        raise AbortTask(f'Error getting bag from plan financing {plan_financing_id}: {e}')
 
     amount = plan_financing.monthly_price
 
@@ -406,7 +390,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
         invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
 
-    except Exception as e:
+    except Exception:
         subject = translation(settings.lang,
                               en='Your 4Geeks subscription could not be renewed',
                               es='Tu suscripción 4Geeks no pudo ser renovada')
@@ -462,9 +446,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 def build_service_stock_scheduler_from_subscription(self,
                                                     subscription_id: int,
                                                     user_id: Optional[int] = None):
-    """
-    This builds the service stock scheduler for a subscription.
-    """
+    """Build service stock scheduler for a subscription."""
 
     logger.info(
         f'Starting build_service_stock_scheduler_from_subscription for subscription {subscription_id}')
@@ -539,9 +521,8 @@ def build_service_stock_scheduler_from_subscription(self,
 def build_service_stock_scheduler_from_plan_financing(self,
                                                       plan_financing_id: int,
                                                       user_id: Optional[int] = None):
-    """
-    This builds the service stock scheduler for a plan financing.
-    """
+    """Build service stock scheduler for a plan financing."""
+
     logger.info(
         f'Starting build_service_stock_scheduler_from_plan_financing for subscription {plan_financing_id}')
 
@@ -768,8 +749,6 @@ def build_free_subscription(self, bag_id: int, invoice_id: int):
         if not mentorship_service_set:
             mentorship_service_set = plan.mentorship_service_set
 
-        status = 'FREE_TRIAL' if is_free_trial else 'ACTIVE'
-
         if is_free_trial:
             extra = {
                 'status': 'FREE_TRIAL',
@@ -902,13 +881,12 @@ def refund_mentoring_session(session_id: int):
         logger.error(f'ConsumptionSession already cancelled for mentorship session {session_id}')
         return
 
-    consumption_session.status == 'CANCELLED'
-    consumption_session.save()
-
     if consumption_session.status == 'DONE':
         logger.info('Refunding consumption session because it was discounted')
 
         how_many = consumption_session.how_many
         consumable = consumption_session.consumable
         reimburse_service_units.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
-        return
+
+    consumption_session.status = 'CANCELLED'
+    consumption_session.save()

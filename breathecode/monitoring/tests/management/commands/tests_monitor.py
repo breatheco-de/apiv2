@@ -1128,11 +1128,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    @patch('builtins.open',
-           mock_open(read_data='\n'.join([
-               'from breathecode.utils import ScriptNotification',
-               "raise ScriptNotification('thus spoke kishibe rohan', status='MINOR')"
-           ])))
+    @patch(
+        'builtins.open',
+        mock_open(read_data='\n'.join([
+            'from breathecode.utils import ScriptNotification',
+            "raise ScriptNotification('thus spoke kishibe rohan', status='MINOR')"
+        ])))
     def tests_monitor_with_entity_scripts_in_file_with_minor_error(self):
         mock_mailgun = MAILGUN_INSTANCES['post']
         mock_mailgun.call_args_list = []
@@ -1173,11 +1174,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    @patch('builtins.open',
-           mock_open(read_data='\n'.join([
-               'from breathecode.utils import ScriptNotification',
-               "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
-           ])))
+    @patch(
+        'builtins.open',
+        mock_open(read_data='\n'.join([
+            'from breathecode.utils import ScriptNotification',
+            "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
+        ])))
     def tests_monitor_with_entity_scripts_in_file_with_critical_error(self):
         mock_mailgun = MAILGUN_INSTANCES['post']
         mock_mailgun.call_args_list = []
@@ -1218,11 +1220,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    @patch('builtins.open',
-           mock_open(read_data='\n'.join([
-               'from breathecode.utils import ScriptNotification',
-               "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
-           ])))
+    @patch(
+        'builtins.open',
+        mock_open(read_data='\n'.join([
+            'from breathecode.utils import ScriptNotification',
+            "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
+        ])))
     def tests_monitor_with_entity_scripts_in_file_with_critical_error_with_notify(self):
         mock_mailgun = MAILGUN_INSTANCES['post']
         mock_mailgun.call_args_list = []

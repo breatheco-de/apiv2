@@ -40,9 +40,9 @@ def check_conections():
     import subprocess
     result = subprocess.run(['docker', 'image', 'ls'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    print(f'docker =>', status(not result.stderr, 'up', 'down'))
-    print(f'postgres =>', status(port_is_open('localhost', 5432), 'up', 'down'))
-    print(f'redis =>', status(port_is_open('localhost', 6379), 'up', 'down'))
+    print('docker =>', status(not result.stderr, 'up', 'down'))
+    print('postgres =>', status(port_is_open('localhost', 5432), 'up', 'down'))
+    print('redis =>', status(port_is_open('localhost', 6379), 'up', 'down'))
 
 
 def main():

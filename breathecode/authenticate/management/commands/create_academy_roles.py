@@ -409,7 +409,23 @@ CAPABILITIES = [
     },
     {
         'slug': 'crud_provisioning_bill',
-        'description': 'Crud Provisioning Bills'
+        'description': 'Crud Provisioning Bills',
+    },
+    {
+        'slug': 'read_calendly_organization',
+        'description': 'Access info about the calendly integration'
+    },
+    {
+        'slug': 'create_calendly_organization',
+        'description': 'Add a new calendly integration'
+    },
+    {
+        'slug': 'reset_calendly_organization',
+        'description': 'Reset the calendly token'
+    },
+    {
+        'slug': 'delete_calendly_organization',
+        'description': 'Delete calendly integration'
     },
 ]
 
@@ -451,6 +467,7 @@ ROLES = [
             'read_keywordcluster',
             'crud_academyservice',
             'crud_mentorship_session',
+            'read_calendly_organization',
         ],
     },
     {
@@ -727,6 +744,10 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_freelance_projects',
             'sync_organization_users',
             'read_provisioning_bill',
+            'read_calendly_organization',
+            'reset_calendly_organization',
+            'create_calendly_organization',
+            'delete_calendly_organization',
         ]
     })
     roles.append({

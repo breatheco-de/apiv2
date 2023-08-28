@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils.html import format_html
 import breathecode.events.tasks as tasks
-from .models import Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
+from .models import (Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin,
+                     Organization, Organizer, EventbriteWebhook)
 from .actions import sync_org_venues, sync_org_events
 from breathecode.utils import AdminExportCsvMixin
 import breathecode.marketing.tasks as marketing_tasks

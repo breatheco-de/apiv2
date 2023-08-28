@@ -241,11 +241,12 @@ class ActionGetScrapedDataOfPlatformTestCase(CareerTestCase):
                 call('Status 400 - no-return-json-data')
             ])
 
-    @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([
-               (200, 'https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json', JOBS),
-               (200, 'https://storage.scrapinghub.com/items/223344/3/34?apikey=1234567&format=json', JOBS)
-           ]))
+    @patch(
+        REQUESTS_PATH['get'],
+        apply_requests_get_mock([
+            (200, 'https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json', JOBS),
+            (200, 'https://storage.scrapinghub.com/items/223344/3/34?apikey=1234567&format=json', JOBS)
+        ]))
     def test_fetch_data__with_two_num_jobs(self):
         import requests
 
@@ -271,14 +272,15 @@ class ActionGetScrapedDataOfPlatformTestCase(CareerTestCase):
             call('https://storage.scrapinghub.com/items/223344/3/34?apikey=1234567&format=json', timeout=2)
         ])
 
-    @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([
-               (400, 'https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json', [{
-                   'status_code':
-                   400,
-                   'data': []
-               }])
-           ]))
+    @patch(
+        REQUESTS_PATH['get'],
+        apply_requests_get_mock([
+            (400, 'https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json', [{
+                'status_code':
+                400,
+                'data': []
+            }])
+        ]))
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('logging.Logger.error', MagicMock())

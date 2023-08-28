@@ -26,6 +26,7 @@ def format_mentorship_session_attrs(attrs={}):
         'allow_billing': True,
         'bill_id': None,
         'ended_at': None,
+        'calendly_uuid': None,
         'ends_at': None,
         'id': 0,
         'is_online': False,
