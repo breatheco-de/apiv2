@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def is_test_env():
-    return os.getenv('ENV') == 'test' or True
+    return os.getenv('ENV') == 'test'
 
 
 class ValidationException(APIException):
