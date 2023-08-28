@@ -1713,7 +1713,6 @@ def render_invite(request, token, member_id=None):
                 cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
                 cu.save()
 
-            # assert 0
             plan = Plan.objects.filter(available_cohorts=invite.cohort, invites=invite).first()
 
             if plan and invite.user and invite.cohort.academy.main_currency and (
