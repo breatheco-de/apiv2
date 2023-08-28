@@ -18,6 +18,7 @@ def course_translation_serializer(course_translation):
         'description': course_translation.description,
         'lang': course_translation.lang,
         'title': course_translation.title,
+        'landing_url': course_translation.landing_url,
     }
 
 

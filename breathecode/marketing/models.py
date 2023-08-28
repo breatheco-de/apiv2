@@ -821,6 +821,13 @@ class CourseTranslation(models.Model):
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
+    landing_url = models.URLField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text=
+        'Landing URL used on call to actions where the course is shown. A URL is needed per each translation.'
+    )
     course_modules = models.JSONField(
         default=None,
         blank=True,
