@@ -837,8 +837,6 @@ class CourseTranslation(models.Model):
                 raise Exception(f'The module does not have a name.')
             if course_module['slug'] is None or course_module['slug'] == '':
                 raise Exception(f'The module {course_module["name"]} does not have a slug.')
-            if course_module['icon_url'] is None or course_module['icon_url'] == '':
-                raise Exception(f'The module {course_module["name"]} does not have an icon_url.')
             if course_module['description'] is None or course_module['description'] == '':
                 raise Exception(f'The module {course_module["name"]} does not have a description.')
 
