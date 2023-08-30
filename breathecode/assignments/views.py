@@ -357,6 +357,10 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
         if revision_status is not None:
             lookup['revision_status__in'] = revision_status.split(',')
 
+        educational_status = request.GET.get('educational_status', None)
+        if educational_status is not None:
+            lookup['user__cohortuser__educational_status__in'] = educational_status.split(',')
+
         like = request.GET.get('like', None)
         if like is not None and like != 'undefined' and like != '':
             items = items.filter(Q(associated_slug__icontains=like) | Q(title__icontains=like))
