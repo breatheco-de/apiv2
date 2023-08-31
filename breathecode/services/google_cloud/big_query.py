@@ -23,7 +23,12 @@ class BigQueryMeta(type):
 
     def __init__(cls, name, bases, clsdict):
         super().__init__(name, bases, clsdict)
-        cls._setup_engine()
+
+        try:
+            cls._setup_engine()
+
+        except Exception:
+            pass
 
 
 class BigQuery(metaclass=BigQueryMeta):
