@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
 
-from breathecode.activity.actions import get_activity_meta
+from breathecode.activity.actions import FillActivityMeta, get_activity_meta
 from faker import Faker
 
 from breathecode.utils.decorators.task import AbortTask
@@ -86,7 +86,7 @@ class MediaTestSuite(MediaTestCase):
         kind = self.bc.fake.slug()
 
         for path, func, kind, obj in ALLOWED_TYPES:
-            with patch.object(actions.FillActivityMeta, func, MagicMock(return_value=obj)) as mock:
+            with patch.object(FillActivityMeta, func, MagicMock(return_value=obj)) as mock:
                 meta = get_activity_meta(kind, related_type=path, related_id=1)
 
                 self.bc.check.calls(mock.call_args_list, [call(kind, 1, None)])
