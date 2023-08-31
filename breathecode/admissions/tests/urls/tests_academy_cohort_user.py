@@ -18,7 +18,7 @@ UTC_NOW = timezone.now()
 def cohort_user_item(data={}):
     return {
         'cohort_id': 0,
-        'educational_status': None,
+        'educational_status': 'ACTIVE',
         'finantial_status': None,
         'id': 0,
         'role': 'STUDENT',
@@ -49,7 +49,7 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             cohort.available_as_saas,
         },
         'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-        'educational_status': None,
+        'educational_status': 'ACTIVE',
         'finantial_status': None,
         'id': 1,
         'profile_academy': {
@@ -925,6 +925,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'task_status': model['task'].task_status,
                 'revision_status': model['task'].revision_status,
                 'created_at': re.sub(r'\+00:00$', 'Z', model['task'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['task'].updated_at.isoformat()),
                 'title': model['task'].title,
             }],
             'cohort': {
@@ -1108,7 +1109,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                            m.user,
                            m.profile_academy,
                            data={
-                               'educational_status': None if m.cohort.id == 1 else 'GRADUATED',
+                               'educational_status': 'ACTIVE' if m.cohort.id == 1 else 'GRADUATED',
                                'finantial_status': 'LATE' if m.cohort.id == 1 else None,
                            }) for m in model
         ]

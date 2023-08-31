@@ -276,6 +276,14 @@ CAPABILITIES = [
         'description': 'Update, create and delete registry assets'
     },
     {
+        'slug': 'read_content_variables',
+        'description': 'Read all academy content variables used in the asset markdowns'
+    },
+    {
+        'slug': 'crud_content_variables',
+        'description': 'Update, create and delete content variables used in the asset markdowns'
+    },
+    {
         'slug': 'read_tag',
         'description': 'Read marketing tags and their details'
     },
@@ -401,7 +409,23 @@ CAPABILITIES = [
     },
     {
         'slug': 'crud_provisioning_bill',
-        'description': 'Crud Provisioning Bills'
+        'description': 'Crud Provisioning Bills',
+    },
+    {
+        'slug': 'read_calendly_organization',
+        'description': 'Access info about the calendly integration'
+    },
+    {
+        'slug': 'create_calendly_organization',
+        'description': 'Add a new calendly integration'
+    },
+    {
+        'slug': 'reset_calendly_organization',
+        'description': 'Reset the calendly token'
+    },
+    {
+        'slug': 'delete_calendly_organization',
+        'description': 'Delete calendly integration'
     },
 ]
 
@@ -443,6 +467,7 @@ ROLES = [
             'read_keywordcluster',
             'crud_academyservice',
             'crud_mentorship_session',
+            'read_calendly_organization',
         ],
     },
     {
@@ -556,7 +581,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'caps':
         extend(roles, ['basic']) + [
             'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
-            'read_asset', 'crud_asset', 'read_category', 'crud_category'
+            'read_asset', 'crud_asset', 'read_category', 'crud_category', 'read_content_variables',
+            'crud_content_variables'
         ]
     })
 
@@ -718,6 +744,10 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_freelance_projects',
             'sync_organization_users',
             'read_provisioning_bill',
+            'read_calendly_organization',
+            'reset_calendly_organization',
+            'create_calendly_organization',
+            'delete_calendly_organization',
         ]
     })
     roles.append({

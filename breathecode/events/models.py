@@ -1,5 +1,6 @@
 import binascii
 import os
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from .signals import event_status_updated, new_event_order, new_event_attendee
@@ -8,6 +9,7 @@ from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
 from django.core.exceptions import ValidationError
 from slugify import slugify
+import uuid as uuid_lib
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
@@ -172,6 +174,7 @@ class Event(models.Model):
         self.__old_status = self.status
 
     slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
+    uuid = models.UUIDField(default=uuid_lib.uuid4, editable=False, unique=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
@@ -183,7 +186,7 @@ class Event(models.Model):
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
     free_for_bootcamps = models.BooleanField(
-        default=None,
+        default=True,
         blank=True,
         null=True,
         help_text=
@@ -267,13 +270,8 @@ class Event(models.Model):
 
         created = not self.id
 
-        if self.title:
-            if not self.id:
-                super().save(*args, **kwargs)
-
-            new_slug = f'{slugify(self.title).lower()}-{self.id}'
-            if self.slug != new_slug:
-                self.slug = new_slug
+        if self.title and not self.slug:
+            self.slug = f'{slugify(self.title).lower()}-{self.uuid}'
 
         super().save(*args, **kwargs)
 

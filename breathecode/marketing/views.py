@@ -95,6 +95,19 @@ def get_downloadable(request, slug=None):
     return Response(serializer.data)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_alias(request):
+
+    items = AcademyAlias.objects.all()
+    academy = request.GET.get('academy', None)
+    if academy is not None:
+        items = items.filter(academy__id__in=academy.split(','))
+
+    serializer = AcademyAliasSmallSerializer(items, many=True)
+    return Response(serializer.data)
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):

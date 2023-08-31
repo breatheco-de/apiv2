@@ -279,7 +279,7 @@ class FinalProjectMeView(APIView):
                                 es='Falta la cohorte del proyecto final',
                                 slug='cohort-missing'))
             project_cohort = Cohort.objects.filter(id=data['cohort']).first()
-            staff = ProfileAcademy.objects.filter(~Q(role='STUDENT'),
+            staff = ProfileAcademy.objects.filter(~Q(role__slug='student'),
                                                   academy__id=project_cohort.academy.id,
                                                   user__id=request.user.id).first()
 
@@ -356,6 +356,10 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
         revision_status = request.GET.get('revision_status', None)
         if revision_status is not None:
             lookup['revision_status__in'] = revision_status.split(',')
+
+        educational_status = request.GET.get('educational_status', None)
+        if educational_status is not None:
+            lookup['user__cohortuser__educational_status__in'] = educational_status.split(',')
 
         like = request.GET.get('like', None)
         if like is not None and like != 'undefined' and like != '':

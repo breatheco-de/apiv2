@@ -697,6 +697,7 @@ class AssetErrorLog(models.Model):
     SLUG_NOT_FOUND = 'slug-not-found'
     DIFFERENT_TYPE = 'different-type'
     EMPTY_README = 'empty-readme'
+    EMPTY_HTML = 'empty-html'
     INVALID_URL = 'invalid-url'
     INVALID_README_URL = 'invalid-readme-url'
     README_SYNTAX = 'readme-syntax-error'
@@ -856,6 +857,56 @@ class OriginalityScan(models.Model):
                               default='PENDING',
                               help_text='Scan for originality')
     status_text = models.TextField(default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+VARIABLE_TYPE = (
+    ('MARKDOWN', 'Markdown'),
+    ('PYTHON_CODE', 'Python'),
+    ('FETCH_JSON', 'Fetch json from url'),
+    ('FETCH_TEXT', 'Fetch text from url'),
+)
+
+CONTENT_VAR_STATUS = (
+    ('PENDING', 'Pending'),
+    ('ERROR', 'Error'),
+    ('COMPLETED', 'Completed'),
+)
+
+
+class ContentVariable(models.Model):
+
+    key = models.CharField(max_length=100)
+    value = models.TextField()
+    default_value = models.TextField(
+        help_text=
+        'If the variable type is fetch or code and the processing fails, the default value will be used')
+
+    lang = models.CharField(max_length=2,
+                            blank=True,
+                            default=None,
+                            null=True,
+                            help_text='Leave blank if will be shown in all languages')
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    var_type = models.CharField(max_length=20,
+                                choices=VARIABLE_TYPE,
+                                default='MARKDOWN',
+                                help_text='Code vars accept python code, Fetch vars accept HTTP GET')
+
+    status = models.CharField(max_length=20,
+                              choices=CONTENT_VAR_STATUS,
+                              default='PENDING',
+                              help_text='Code vars accept python code, Fetch vars accept HTTP GET')
+
+    status_text = models.TextField(
+        null=True,
+        default=None,
+        blank=True,
+        help_text='If the var is code or fetch here will be the error processing info')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

@@ -19,6 +19,7 @@ from django.http.response import HttpResponse
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.cache import Cache
 from django.utils import timezone
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from breathecode.utils.decorators import has_permission
@@ -94,6 +95,12 @@ def get_events(request):
         lookup['status__in'] = value.split(',')
     else:
         lookup['status'] = 'ACTIVE'
+
+    online_event = request.GET.get('online_event', None)
+    if online_event == 'true':
+        lookup['online_event'] = True
+    elif online_event == 'false':
+        lookup['online_event'] = False
 
     lookup['ending_at__gte'] = timezone.now()
     if 'past' in request.GET:

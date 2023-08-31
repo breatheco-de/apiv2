@@ -2249,7 +2249,7 @@ class ProfileMePictureView(APIView):
 
             if json['shape'] != 'Square':
                 cloud_file.delete()
-                raise ValidationException(f'just can upload square images', slug='not-square-image')
+                raise ValidationException('just can upload square images', slug='not-square-image')
 
             func = FunctionV1(region='us-central1', project_id=get_google_project_id(), name='resize-image')
 
@@ -2257,7 +2257,7 @@ class ProfileMePictureView(APIView):
                 'width': 100,
                 'filename': hash,
                 'bucket': get_profile_bucket(),
-            }, timeout=10)
+            }, timeout=28)
 
             cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
             cloud_file_thumbnail_url = cloud_file_thumbnail.url()

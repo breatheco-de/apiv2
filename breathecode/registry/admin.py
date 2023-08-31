@@ -13,12 +13,12 @@ from breathecode.services.seo import SEOAnalyzer
 
 from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment, SEOReport, AssetImage, OriginalityScan,
-                     CredentialsOriginality, SyllabusVersionProxy)
+                     CredentialsOriginality, SyllabusVersionProxy, ContentVariable)
 from .tasks import (async_pull_from_github, async_test_asset, async_execute_seo_report,
                     async_regenerate_asset_readme, async_download_readme_images, async_remove_img_from_cloud,
                     async_upload_image_to_bucket)
 from .actions import (pull_from_github, get_user_from_github_username, test_asset, AssetThumbnailGenerator,
-                      scan_asset_originality, add_syllabus_translations)
+                      scan_asset_originality, add_syllabus_translations, clean_asset_readme)
 
 logger = logging.getLogger(__name__)
 lang_flags = {
@@ -80,7 +80,8 @@ def async_regenerate_readme(modeladmin, request, queryset):
     queryset.update(cleaning_status='PENDING', cleaning_status_details='Starting to clean...')
     assets = queryset.all()
     for a in assets:
-        async_regenerate_asset_readme.delay(a.slug)
+        #async_regenerate_asset_readme.delay(a.slug)
+        clean_asset_readme(a)
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -720,3 +721,20 @@ class SyllabusVersionAdmin(admin.ModelAdmin):
     # raw_id_fields = ['assets']
     list_filter = ['syllabus']
     actions = [add_translations_into_json]
+
+
+@admin.register(ContentVariable)
+class ContentVariablesAdmin(admin.ModelAdmin):
+    list_display = ['key', 'academy', 'lang', 'real_value']
+    search_fields = ('key', )
+    # raw_id_fields = ['assets']
+    list_filter = ['academy']
+
+    def real_value(self, obj):
+        _values = {
+            'MARKDOWN': obj.value[:200],
+            'PYTHON_CODE': 'python code',
+            'FETCH_JSON': 'JSON from: ' + obj.value,
+            'FETCH_TEXT': 'Fetch from: ' + obj.value,
+        }
+        return format_html(f'{_values[obj.var_type]}')

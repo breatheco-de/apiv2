@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils.html import format_html
 import breathecode.events.tasks as tasks
-from .models import Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
+from .models import (Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin,
+                     Organization, Organizer, EventbriteWebhook)
 from .actions import sync_org_venues, sync_org_events
 from breathecode.utils import AdminExportCsvMixin
 import breathecode.marketing.tasks as marketing_tasks
@@ -103,7 +104,7 @@ class EventTypeAdmin(admin.ModelAdmin):
 # Register your models here.
 @admin.register(EventCheckin)
 class EventCheckinAdmin(admin.ModelAdmin):
-    list_display = ('email', 'attendee', 'event', 'status', 'created_at', 'attended_at')
+    list_display = ('id', 'email', 'attendee', 'event', 'status', 'created_at', 'attended_at')
     list_filter = ['status']
     search_fields = ['email', 'event__title', 'event__slug']
     raw_id_fields = ['event', 'attendee']
