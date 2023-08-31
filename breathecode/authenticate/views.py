@@ -724,8 +724,7 @@ class LoginView(ObtainAuthToken):
         user = serializer.validated_data['user']
         token, created = Token.get_or_create(user=user, token_type='login')
 
-        # tasks_activity.add_activity.delay(user.id, 'login', related_type='auth.User', related_id=user.id)
-        tasks_activity.add_activity(user.id, 'login', related_type='auth.User', related_id=user.id)
+        tasks_activity.add_activity.delay(user.id, 'login', related_type='auth.User', related_id=user.id)
 
         return Response({
             'token': token.key,
