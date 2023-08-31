@@ -104,7 +104,7 @@ class EventTypeAdmin(admin.ModelAdmin):
 # Register your models here.
 @admin.register(EventCheckin)
 class EventCheckinAdmin(admin.ModelAdmin):
-    list_display = ('email', 'attendee', 'event', 'status', 'created_at', 'attended_at')
+    list_display = ('id','email', 'attendee', 'event', 'status', 'created_at', 'attended_at')
     list_filter = ['status']
     search_fields = ['email', 'event__title', 'event__slug']
     raw_id_fields = ['event', 'attendee']

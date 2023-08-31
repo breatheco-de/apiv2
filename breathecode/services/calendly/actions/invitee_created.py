@@ -52,7 +52,8 @@ def invitee_created(self, webhook, payload: dict):
     mentor = MentorProfile.objects.filter(academy=academy).filter(
         Q(calendly_uuid=mentor_uuid) | Q(email=mentor_email) | Q(user__email=mentor_email)).first()
     if mentor is None:
-        raise Exception(f'Mentor not found with uuid {mentor_uuid} and email {mentee_email}')
+        raise Exception(f'Mentor not found with uuid {mentor_uuid} and email {mentor_email}')
+
     if mentor.status in ['INVITED', 'INNACTIVE']:
         raise Exception(f'Mentor status is {mentor.status}')
 

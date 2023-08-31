@@ -170,6 +170,7 @@ def mentor_profile_columns(data={}):
         'id': 0,
         'name': '',
         'one_line_bio': None,
+        'calendly_uuid': None,
         'online_meeting_url': None,
         'price_per_hour': 0,
         'rating': None,

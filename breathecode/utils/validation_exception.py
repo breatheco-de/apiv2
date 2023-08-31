@@ -2,7 +2,6 @@ import logging
 import os
 from typing import Optional
 from django.db.models import QuerySet
-from django.utils.translation import gettext_lazy as _
 
 from rest_framework.exceptions import APIException
 from .shorteners import C
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def is_test_env():
-    return os.getenv('ENV') == 'test' or True
+    return os.getenv('ENV') == 'test'
 
 
 class ValidationException(APIException):

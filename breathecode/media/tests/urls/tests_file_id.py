@@ -63,11 +63,12 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(self.all_media_dict(), [])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__without_data__with_mask_true(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -85,11 +86,12 @@ class MediaTestSuite(MediaTestCase):
     🔽🔽🔽 With data
     """
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -106,11 +108,12 @@ class MediaTestSuite(MediaTestCase):
                          }])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     @patch(REQUESTS_PATH['get'], apply_requests_get_mock([(200, 'https://potato.io', 'ok')]))
     def test_file_id_with_mask_true(self):
         """Test /answer without auth"""
@@ -133,11 +136,12 @@ class MediaTestSuite(MediaTestCase):
     🔽🔽🔽 Width in querystring
     """
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_width_in_querystring__bad_mime(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -155,11 +159,12 @@ class MediaTestSuite(MediaTestCase):
         }])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_width_in_querystring(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -203,11 +208,12 @@ class MediaTestSuite(MediaTestCase):
             'width': 1000,
         }])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_width_in_querystring__resolution_exist(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -240,11 +246,12 @@ class MediaTestSuite(MediaTestCase):
                 'hits': model['media_resolution'].hits + 1,
             }])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_width_in_querystring__bad_mime(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -288,11 +295,12 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(self.all_media_resolution_dict(), [])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_width_in_querystring__cloud_function_error(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -341,11 +349,12 @@ class MediaTestSuite(MediaTestCase):
     🔽🔽🔽 Height in querystring
     """
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_height_in_querystring__bad_mime(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -363,11 +372,12 @@ class MediaTestSuite(MediaTestCase):
         }])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_height_in_querystring(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -411,11 +421,12 @@ class MediaTestSuite(MediaTestCase):
             'width': 1000,
         }])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_height_in_querystring__resolution_exist(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -448,11 +459,12 @@ class MediaTestSuite(MediaTestCase):
                 'hits': model['media_resolution'].hits + 1,
             }])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_height_in_querystring__bad_mime(self):
         """Test /answer without auth"""
         self.headers(academy=1)
@@ -496,11 +508,12 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(self.all_media_resolution_dict(), [])
 
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'GOOGLE_PROJECT_ID': 'labor-day-story',
-               'MEDIA_GALLERY_BUCKET': 'bucket-name',
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'GOOGLE_PROJECT_ID': 'labor-day-story',
+            'MEDIA_GALLERY_BUCKET': 'bucket-name',
+        })))
     def test_file_id__with_height_in_querystring__cloud_function_error(self):
         """Test /answer without auth"""
         self.headers(academy=1)

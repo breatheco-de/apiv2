@@ -1276,7 +1276,8 @@ class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
     @has_permission('get_my_mentoring_sessions')
     def get(self, request):
 
-        items = MentorshipSession.objects.filter(mentor__user__id=request.user.id)
+        items = MentorshipSession.objects.filter(
+            Q(mentor__user__id=request.user.id) | Q(mentee__id=request.user.id))
         lookup = {}
 
         _status = request.GET.get('status', '')
@@ -1302,6 +1303,10 @@ class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
         mentee = request.GET.get('mentee', None)
         if mentee is not None:
             lookup['mentee__id__in'] = mentee.split(',')
+
+        mentor = request.GET.get('mentor', None)
+        if mentee is not None:
+            lookup['mentor__id__in'] = mentor.split(',')
 
         items = items.filter(**lookup).order_by('-created_at')
 

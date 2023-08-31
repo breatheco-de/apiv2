@@ -827,6 +827,13 @@ class CourseTranslation(models.Model):
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
+    landing_url = models.URLField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text=
+        'Landing URL used on call to actions where the course is shown. A URL is needed per each translation.'
+    )
     course_modules = models.JSONField(
         default=None,
         blank=True,
@@ -843,8 +850,6 @@ class CourseTranslation(models.Model):
                 raise Exception(f'The module does not have a name.')
             if course_module['slug'] is None or course_module['slug'] == '':
                 raise Exception(f'The module {course_module["name"]} does not have a slug.')
-            if course_module['icon_url'] is None or course_module['icon_url'] == '':
-                raise Exception(f'The module {course_module["name"]} does not have an icon_url.')
             if course_module['description'] is None or course_module['description'] == '':
                 raise Exception(f'The module {course_module["name"]} does not have a description.')
 

@@ -493,8 +493,8 @@ def save_get_geolocal(contact, form_entry=None):
 
     if 'latitude' not in form_entry or 'longitude' not in form_entry:
         return False
-    if form_entry['latitude'] == '' or form_entry[
-            'longitude'] == '' or form_entry['latitude'] is None or form_entry['longitude'] is None:
+    if form_entry['latitude'] == '' or form_entry['longitude'] == '' or form_entry[
+            'latitude'] is None or form_entry['longitude'] is None:
         return False
 
     result = {}

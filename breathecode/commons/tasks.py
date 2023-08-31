@@ -88,8 +88,8 @@ def mark_task_as_paused(task_manager_id):
 
 # do not use our own task decorator
 @shared_task(bind=False)
-def mark_task_as_pending(task_manager_id, *, attempts=0):
-    logger.info(f'Running mark_task_as_reversed for {task_manager_id}')
+def mark_task_as_pending(task_manager_id, *, attempts=0, force=False):
+    logger.info(f'Running mark_task_as_pending for {task_manager_id}')
 
     x = TaskManager.objects.filter(id=task_manager_id).first()
     if x is None:
@@ -100,7 +100,8 @@ def mark_task_as_pending(task_manager_id, *, attempts=0):
         logger.warn(f'TaskManager {task_manager_id} was already DONE')
         return
 
-    if not x.last_run < timezone.now() - timedelta(minutes=TOLERANCE) and not x.killed and attempts < 10:
+    if force is False and not x.last_run < timezone.now() - timedelta(
+            minutes=TOLERANCE) and not x.killed and attempts < 10:
         logger.warn(f'TaskManager {task_manager_id} was not killed, scheduling to run again')
 
         mark_task_as_pending.apply_async(args=(task_manager_id, ),
