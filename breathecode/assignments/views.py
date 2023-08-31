@@ -360,6 +360,7 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
         educational_status = request.GET.get('educational_status', None)
         if educational_status is not None:
             lookup['user__cohortuser__educational_status__in'] = educational_status.split(',')
+            items = items.distinct()
 
         like = request.GET.get('like', None)
         if like is not None and like != 'undefined' and like != '':
