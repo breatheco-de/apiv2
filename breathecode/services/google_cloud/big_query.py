@@ -55,6 +55,8 @@ class BigQuery(metaclass=BigQueryMeta):
         global engine
         global client
 
+        credentials.resolve_credentials()
+
         if not engine and is_test_env():
             engine = create_engine('sqlite:///:memory:', echo=False)
 
@@ -72,30 +74,39 @@ class BigQuery(metaclass=BigQueryMeta):
             credentials.resolve_credentials()
             client = bigquery.Client(location='us-central1')
 
-    @staticmethod
-    def session() -> sessionmaker:
+    @classmethod
+    def session(cls) -> sessionmaker:
         """Get a BigQuery session instance."""
 
         global engine
+
+        if not engine:
+            cls._setup_engine()
 
         credentials.resolve_credentials()
         session = sessionmaker(bind=engine)
         return session()
 
-    @staticmethod
-    def connection() -> MockConnection:
+    @classmethod
+    def connection(cls) -> MockConnection:
         """Get a BigQuery connection instance."""
 
         global engine
 
+        if not engine:
+            cls._setup_engine()
+
         credentials.resolve_credentials()
         return engine.connect()
 
-    @staticmethod
-    def client() -> tuple[bigquery.Client, str]:
+    @classmethod
+    def client(cls) -> tuple[bigquery.Client, str]:
         """Get a BigQuery client instance and project id."""
 
         global client
+
+        if not client:
+            cls._setup_engine()
 
         credentials.resolve_credentials()
         return client, os.getenv('GOOGLE_PROJECT_ID', 'test'), os.getenv('BIGQUERY_DATASET', '')
