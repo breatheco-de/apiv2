@@ -10,7 +10,7 @@ from rest_framework import status
 
 from breathecode.services.google_cloud import Datastore
 
-from ..mixins import MediaTestCase
+from ...mixins import MediaTestCase
 
 DATASTORE_SHARED_SEED = [
     {

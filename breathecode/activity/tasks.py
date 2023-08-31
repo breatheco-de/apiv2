@@ -1,10 +1,17 @@
+from datetime import date, datetime
 import logging, os
+from typing import Optional
+from uuid import uuid4
 from celery import shared_task, Task
+from breathecode.activity import actions
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
-from .models import Activity
+from breathecode.services.google_cloud.big_query import BigQuery
+from breathecode.utils.decorators import task, AbortTask
+from .models import StudentActivity
 from breathecode.utils import NDB
-from breathecode.admissions.utils import CohortLog
+from django.utils import timezone
+from google.cloud import bigquery
 
 API_URL = os.getenv('API_URL', '')
 
@@ -13,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception, )
-    #                                           seconds
     retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
     retry_backoff = True
 
@@ -44,13 +50,16 @@ def get_attendancy_log(self, cohort_id: int):
             duration_in_days = day.get('duration_in_days')
             assert isinstance(duration_in_days, int) or duration_in_days == None
             assert isinstance(day['label'], str)
-    except:
+
+    except Exception:
         logger.error(f'Cohort {cohort.slug} have syllabus with bad format')
         return
 
-    client = NDB(Activity)
-    attendance = client.fetch([Activity.cohort == cohort.slug, Activity.slug == 'classroom_attendance'])
-    unattendance = client.fetch([Activity.cohort == cohort.slug, Activity.slug == 'classroom_unattendance'])
+    client = NDB(StudentActivity)
+    attendance = client.fetch(
+        [StudentActivity.cohort == cohort.slug, StudentActivity.slug == 'classroom_attendance'])
+    unattendance = client.fetch(
+        [StudentActivity.cohort == cohort.slug, StudentActivity.slug == 'classroom_unattendance'])
 
     days = {}
 
@@ -130,3 +139,80 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     cohort_user.save()
 
     logger.info('History log saved')
+
+
+@task()
+def add_activity(user_id: int,
+                 kind: str,
+                 related_type: Optional[str] = None,
+                 related_id: Optional[str | int] = None,
+                 related_slug: Optional[str] = None,
+                 **_):
+    logger.info('Executing add_activity')
+
+    if related_type and not (bool(related_id) ^ bool(related_slug)):
+        raise AbortTask(
+            'If related_type is provided, either related_id or related_slug must be provided, but not both.')
+
+    if not related_type and (related_id or related_slug):
+        raise AbortTask(
+            'If related_type is not provided, both related_id and related_slug must also be absent.')
+
+    client, project_id, dataset = BigQuery.client()
+
+    job_config = bigquery.QueryJobConfig(
+        destination=f'{project_id}.{dataset}.activity',
+        schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+        query_parameters=[
+            bigquery.ScalarQueryParameter('id', 'STRING',
+                                          uuid4().hex),
+            bigquery.ScalarQueryParameter('user_id', 'INT64', user_id),
+            bigquery.ScalarQueryParameter('kind', 'STRING', kind),
+            bigquery.ScalarQueryParameter('timestamp', 'TIMESTAMP',
+                                          timezone.now().isoformat()),
+            bigquery.ScalarQueryParameter('related_type', 'STRING', related_type),
+            bigquery.ScalarQueryParameter('related_id', 'INT64', related_id),
+            bigquery.ScalarQueryParameter('related_slug', 'STRING', related_slug),
+        ])
+
+    meta = actions.get_activity_meta(kind, related_type, related_id, related_slug)
+
+    meta_struct = ''
+
+    for key in meta:
+        t = 'STRING'
+        if isinstance(meta[key], str):
+            pass
+        elif isinstance(meta[key], int):
+            t = 'INT64'
+        elif isinstance(meta[key], float):
+            t = 'FLOAT64'
+        elif isinstance(meta[key], bool):
+            t = 'BOOL'
+        elif isinstance(meta[key], datetime):
+            t = 'TIMESTAMP'
+        elif isinstance(meta[key], date):
+            t = 'DATE'
+
+        job_config.query_parameters.append(bigquery.ScalarQueryParameter(key, t, meta[key]))
+        meta_struct += f'@{key} as {key}, '
+
+    if meta_struct:
+        meta_struct = meta_struct[:-2]
+
+    query = f"""
+        SELECT
+            @id as id,
+            @user_id as user_id,
+            @kind as kind,
+            @timestamp as timestamp,
+            STRUCT(
+                @related_type as type,
+                @related_id as id,
+                @related_slug as slug) as related,
+            STRUCT({meta_struct}) as meta
+    """
+
+    query_job = client.query(query, job_config=job_config)
+    query_job.result()

@@ -107,7 +107,7 @@ class Check:
         ```
         """
 
-        # assert len(first) == len(second), f'not have same length than {first}\n{second}'
+        assert len(first) == len(second), f'not have same length than {first}\n{second}'
         self._parent.assertEqual(len(first),
                                  len(second),
                                  msg=f'Does not have same length\n\n{first}\n\n!=\n\n{second}')

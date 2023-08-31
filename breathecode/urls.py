@@ -23,6 +23,14 @@ from django.views.generic import TemplateView
 from django.conf.urls.static import static
 from django.conf import settings
 
+ENVIRONMENT = os.environ.get('ENV')
+
+versions = {
+    'v2': [
+        path('activity/', include('breathecode.activity.urls.v2', namespace='activity')),
+    ],
+}
+
 apps = [
     ('v1/auth/', 'breathecode.authenticate.urls', 'auth'),
     ('v1/admissions/', 'breathecode.admissions.urls', 'admissions'),
@@ -30,7 +38,7 @@ apps = [
     ('v1/freelance/', 'breathecode.freelance.urls', 'freelance'),
     ('v1/events/', 'breathecode.events.urls', 'events'),
     ('v1/registry/', 'breathecode.registry.urls', 'registry'),
-    ('v1/activity/', 'breathecode.activity.urls', 'activity'),
+    ('v1/activity/', 'breathecode.activity.urls.v1', 'activity'),
     ('v1/feedback/', 'breathecode.feedback.urls', 'feedback'),
     ('v1/messaging/', 'breathecode.notify.urls', 'notify'),
     ('v1/assessment/', 'breathecode.assessment.urls', 'assessment'),
@@ -72,12 +80,19 @@ urlpatterns_docs = [
 urlpatterns_django = [
     path('admin/', admin.site.urls),
     path('explorer/', include('explorer.urls')),
+    #
 ]
 
-urlpatterns_static = static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+if ENVIRONMENT == 'development':
+    urlpatterns_django.append(path('silk/', include('silk.urls', namespace='silk')))
 
+urlpatterns_static = static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns = (urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django +
                urlpatterns_static)
+
+for version in versions:
+    x = path(f'{version}/', include((versions[version], version), namespace=version))
+    urlpatterns.append(x)
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or os.environ.get('ENV') == 'test':
     urlpatterns.append(path('v1/cypress/', include('breathecode.cypress.urls', namespace='cypress')))
