@@ -340,6 +340,34 @@ class SessionBigSerializer(serpy.Serializer):
     mentee_left_at = serpy.Field()
 
 
+class SessionHookSerializer(serpy.Serializer):
+    id = serpy.Field()
+    name = serpy.Field()
+    status = serpy.Field()
+    bill = TinyBillSerializer(required=False)
+    # mentor = serpy.Field()
+    # mentee = serpy.Field()
+    mentor = GETMentorTinyTinySerializer()
+    mentee = GetUserSmallSerializer(required=False)
+    latitude = serpy.Field()
+    longitude = serpy.Field()
+    is_online = serpy.Field()
+    mentor_joined_at = serpy.Field()
+    mentor_left_at = serpy.Field()
+    service = GETServiceTinyTinySerializer(required=False)
+    starts_at = serpy.Field()
+    allow_billing = serpy.Field()
+    online_meeting_url = serpy.Field()
+    online_recording_url = serpy.Field()
+    agenda = serpy.Field()
+    summary = serpy.Field()
+    started_at = serpy.Field()
+    accounted_duration = serpy.Field()
+    ended_at = serpy.Field()
+    ends_at = serpy.Field()
+    mentee_left_at = serpy.Field()
+
+
 class GETSessionBigSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()

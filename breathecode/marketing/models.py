@@ -1,4 +1,4 @@
-import re, uuid
+import re, uuid, hashlib
 import secrets
 from django.db import models
 from datetime import timedelta
@@ -479,8 +479,9 @@ class FormEntry(models.Model):
 
     won_at = models.DateTimeField(default=None, null=True, blank=True)
 
-    attribution_id = models.BigIntegerField(
+    attribution_id = models.CharField(
         null=True,
+        max_length=30,
         default=None,
         blank=True,
         help_text=
@@ -529,7 +530,7 @@ class FormEntry(models.Model):
 
     def set_attribution_id(self):
         """
-        well keep the attribution id consistent as long as there is not sale made
+        We'll keep the attribution id consistent as long as there is not sale made.
         """
 
         if self.email is None:
@@ -538,22 +539,27 @@ class FormEntry(models.Model):
         previously_not_won = FormEntry.objects.filter(email=self.email,
                                                       won_at__isnull=True).order_by('-created_at').first()
 
+        # Generate a 30-character hash
+        def generate_hash():
+            hash_object = hashlib.sha256(uuid.uuid4().bytes)
+            return hash_object.hexdigest()[:30]
+
         # if there is any other attribution_id recently used
         if previously_not_won is not None and previously_not_won.attribution_id is not None:
             self.attribution_id = previously_not_won.attribution_id
         else:
-            self.attribution_id = int(uuid.uuid4().int & (2**63 - 1))
+            self.attribution_id = generate_hash()
 
-        # has the attriution id already been attributed to a previous won lead?
-        # if true, we need a new one to reset attribution cycle
+        # has the attribution id already been attributed to a previous won lead?
+        # if true, we need a new one to reset the attribution cycle
         if FormEntry.objects.filter(email=self.email,
                                     attribution_id=self.attribution_id,
                                     won_at__isnull=False).exists():
             # if true, reset
-            self.attribution_id = int(uuid.uuid4().int & (2**63 - 1))
+            self.attribution_id = generate_hash()
 
         if self.attribution_id is None:
-            self.attribution_id = int(uuid.uuid4().int & (2**63 - 1))
+            self.attribution_id = generate_hash()
 
         return self.attribution_id
 
