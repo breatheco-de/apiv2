@@ -84,11 +84,7 @@ urlpatterns_django = [
 ]
 
 if ENVIRONMENT == 'development':
-    import debug_toolbar
-    debug_toolbar.urls
-
     urlpatterns_django.append(path('silk/', include('silk.urls', namespace='silk')))
-    urlpatterns_django.append(path('__debug__/', include('debug_toolbar.urls', namespace='debug')))
 
 urlpatterns_static = static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns = (urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django +
