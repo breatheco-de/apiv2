@@ -39,5 +39,12 @@ services:
     depends_on:
       - postgres
 
+  bigquery:
+    image: ghcr.io/goccy/bigquery-emulator:latest
+    command: --project=test --dataset=4geeks
+    ports:
+      - "9050:9050"
+      - "9060:9060"
+
 volumes:
   postgres_data:

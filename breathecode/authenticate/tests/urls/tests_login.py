@@ -1,10 +1,12 @@
 """
 Test cases for /user
 """
+from unittest.mock import MagicMock, call, patch
 from rest_framework import status
 from django.urls.base import reverse_lazy
 from django.contrib.auth.hashers import make_password
 from ..mixins.new_auth_test_case import AuthTestCase
+from breathecode.activity import tasks as activity_tasks
 
 
 def user_invite_serializer(self, user_invite, academy=None, cohort=None):
@@ -26,6 +28,7 @@ def user_invite_serializer(self, user_invite, academy=None, cohort=None):
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
 
+    @patch('breathecode.activity.tasks.add_activity.delay', MagicMock())
     def test_login_with_bad_credentials(self):
         """Test /login with incorrect credentials"""
 
@@ -41,7 +44,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
+    @patch('breathecode.activity.tasks.add_activity.delay', MagicMock())
     def test_login_without_email(self):
         """Test /login with incorrect credentials"""
 
@@ -57,7 +62,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
+    @patch('breathecode.activity.tasks.add_activity.delay', MagicMock())
     def test_login_without_password(self):
         """Test /login with incorrect credentials"""
 
@@ -73,7 +80,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
+    @patch('breathecode.activity.tasks.add_activity.delay', MagicMock())
     def test_login_email_not_verified__no_invites(self):
         """Test /login"""
 
@@ -90,7 +99,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
+    @patch('breathecode.activity.tasks.add_activity.delay', MagicMock())
     def test_login_email_not_verified__no_invites(self):
         """Test /login"""
 
@@ -113,7 +124,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
+    @patch('breathecode.activity.tasks.add_activity.delay', MagicMock())
     def test_login_email_not_verified__with_invites(self):
         """Test /login"""
 
@@ -144,7 +157,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
+    @patch('breathecode.activity.tasks.add_activity.delay', MagicMock())
     def test_login_lowercase_email(self):
         """Test /login"""
 
@@ -168,7 +183,11 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'login', related_type='auth.User', related_id=1),
+        ])
 
+    @patch('breathecode.activity.tasks.add_activity.delay', MagicMock())
     def test_login_uppercase_email(self):
         """Test /login"""
 
@@ -192,3 +211,6 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'login', related_type='auth.User', related_id=1),
+        ])

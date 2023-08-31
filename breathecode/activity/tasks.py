@@ -1,7 +1,9 @@
-from datetime import timedelta
+from datetime import date, datetime
 import logging, os
 from typing import Optional
+from uuid import uuid4
 from celery import shared_task, Task
+from breathecode.activity import actions
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from breathecode.services.google_cloud.big_query import BigQuery
@@ -9,7 +11,7 @@ from breathecode.utils.decorators import task, AbortTask
 from .models import StudentActivity
 from breathecode.utils import NDB
 from django.utils import timezone
-from django.apps import apps
+from google.cloud import bigquery
 
 API_URL = os.getenv('API_URL', '')
 
@@ -142,46 +144,75 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
 @task()
 def add_activity(user_id: int,
                  kind: str,
-                 resource: Optional[str] = None,
-                 resource_id: Optional[str | int] = None):
-    from .models import Activity
+                 related_type: Optional[str] = None,
+                 related_id: Optional[str | int] = None,
+                 related_slug: Optional[str] = None,
+                 **_):
+    logger.info('Executing add_activity')
 
-    if (resource and not resource_id) or (resource_id and not resource):
-        raise AbortTask('resource and resource_id must be both present or both absent')
+    if related_type and not (bool(related_id) ^ bool(related_slug)):
+        raise AbortTask(
+            'If related_type is provided, either related_id or related_slug must be provided, but not both.')
 
-    meta = {}
-    timestamp = timezone.now()
+    if not related_type and (related_id or related_slug):
+        raise AbortTask(
+            'If related_type is not provided, both related_id and related_slug must also be absent.')
 
-    if resource:
-        app_label, model_name = resource.split('.')
-        model = apps.get_model(app_label, model_name)
+    client, project_id, dataset = BigQuery.client()
 
-    if resource and not model:
-        raise AbortTask(f'{resource} is not a valid model')
+    job_config = bigquery.QueryJobConfig(
+        destination=f'{project_id}.{dataset}.activity',
+        schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+        query_parameters=[
+            bigquery.ScalarQueryParameter('id', 'STRING',
+                                          uuid4().hex),
+            bigquery.ScalarQueryParameter('user_id', 'INT64', user_id),
+            bigquery.ScalarQueryParameter('kind', 'STRING', kind),
+            bigquery.ScalarQueryParameter('timestamp', 'TIMESTAMP',
+                                          timezone.now().isoformat()),
+            bigquery.ScalarQueryParameter('related_type', 'STRING', related_type),
+            bigquery.ScalarQueryParameter('related_id', 'INT64', related_id),
+            bigquery.ScalarQueryParameter('related_slug', 'STRING', related_slug),
+        ])
 
-    # fill meta based on resource and kind
-    if resource == 'auth.User':
-        user = model.objects.filter(id=resource_id).first()
-        if not user:
-            raise AbortTask(f'User {resource_id} not found')
+    meta = actions.get_activity_meta(kind, related_type, related_id, related_slug)
 
-        meta = {
-            'email': user.email,
-            'username': user.username,
-        }
+    meta_struct = ''
 
-    duration = None
+    for key in meta:
+        t = 'STRING'
+        if isinstance(meta[key], str):
+            pass
+        elif isinstance(meta[key], int):
+            t = 'INT64'
+        elif isinstance(meta[key], float):
+            t = 'FLOAT64'
+        elif isinstance(meta[key], bool):
+            t = 'BOOL'
+        elif isinstance(meta[key], datetime):
+            t = 'TIMESTAMP'
+        elif isinstance(meta[key], date):
+            t = 'DATE'
 
-    if kind == 'login':
-        duration = timedelta(days=1)
+        job_config.query_parameters.append(bigquery.ScalarQueryParameter(key, t, meta[key]))
+        meta_struct += f'@{key} as {key}, '
 
-    with BigQuery.session() as session:
-        session.add(
-            Activity(user_id=user_id,
-                     kind=kind,
-                     resource=resource,
-                     resource_id=resource_id,
-                     meta=meta,
-                     timestamp=timestamp,
-                     duration=duration))
-        session.commit()
+    if meta_struct:
+        meta_struct = meta_struct[:-2]
+
+    query = f"""
+        SELECT
+            @id as id,
+            @user_id as user_id,
+            @kind as kind,
+            @timestamp as timestamp,
+            STRUCT(
+                @related_type as type,
+                @related_id as id,
+                @related_slug as slug) as related,
+            STRUCT({meta_struct}) as meta
+    """
+
+    query_job = client.query(query, job_config=job_config)
+    query_job.result()

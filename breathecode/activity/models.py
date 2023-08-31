@@ -3,7 +3,8 @@ import os
 from google.cloud import ndb
 from sqlalchemy import Column, Integer, String, TIMESTAMP, JSON
 
-from breathecode.utils.sqlalchemy import BigQueryBase, test_support
+from breathecode.utils.sqlalchemy import BigQueryBase
+from google.cloud import bigquery
 
 
 def is_test_env():
@@ -41,19 +42,17 @@ class ActivityMeta(BigQueryBase):
     timestamp = Column(TIMESTAMP, nullable=False)
 
 
+# this model is a example, it's useless because google can't support JSON on they own SQLAlchemy dialect
 class Activity(BigQueryBase):
     __tablename__ = '4geeks.activity'
 
     id = Column(String(36), primary_key=True)
     user_id = Column(Integer, nullable=False)
     kind = Column(String(25), nullable=False)
-    # related
-    resource = Column(String(30), nullable=True)
-    resource_id = Column(String(30), nullable=True)
+    related = Column(String(30), nullable=True)
+    related_id = Column(String(30), nullable=True)
     meta = Column(String, default='\{\}')
-    meta = Column(JSON, default='\{\}')
     timestamp = Column(TIMESTAMP, nullable=False)
-    # duration = Column(String(17), nullable=True)
 
     @property
     def json(self):
@@ -64,4 +63,27 @@ class Activity(BigQueryBase):
         self.meta = json.dumps(value)
 
 
-test_support(__name__)
+# it's required to transform all BigQuery models to SQLite, but it also is useless because it doesn't support JSON
+# test_support(__name__)
+
+ACTIVITY = [
+    bigquery.SchemaField('id', 'STRING', mode='REQUIRED'),
+    bigquery.SchemaField('user_id', 'INTEGER', mode='REQUIRED'),
+    bigquery.SchemaField('kind', 'STRING', mode='REQUIRED'),
+    bigquery.SchemaField('related',
+                         'RECORD',
+                         mode='NULLABLE',
+                         fields=[
+                             bigquery.SchemaField('type', 'STRING', mode='NULLABLE'),
+                             bigquery.SchemaField('id', 'INT64', mode='NULLABLE'),
+                             bigquery.SchemaField('slug', 'STRING', mode='NULLABLE'),
+                         ]),
+    bigquery.SchemaField('meta',
+                         'RECORD',
+                         mode='REQUIRED',
+                         fields=[
+                             bigquery.SchemaField('email', 'STRING', mode='NULLABLE'),
+                             bigquery.SchemaField('username', 'STRING', mode='NULLABLE'),
+                         ]),
+    bigquery.SchemaField('timestamp', 'TIMESTAMP', mode='REQUIRED'),
+]

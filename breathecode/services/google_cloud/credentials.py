@@ -14,15 +14,19 @@ prev_path = None
 prev_key = None
 
 
+def is_test_env():
+    return os.getenv('ENV') == 'test'
+
+
 def resolve_credentials():
     """Resolve Google Cloud credentials, returns True if it's successfully."""
 
     global prev_path, prev_key
 
     # avoid manage credentials if they are already set
-    if (prev_path and prev_path == os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-            and ((prev_key and prev_key == os.getenv('GOOGLE_SERVICE_KEY')) or
-                 (prev_key == None and os.getenv('GOOGLE_SERVICE_KEY') == None))):
+    if is_test_env() is False and (prev_path and prev_path == os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and
+                                   ((prev_key and prev_key == os.getenv('GOOGLE_SERVICE_KEY')) or
+                                    (prev_key == None and os.getenv('GOOGLE_SERVICE_KEY') == None))):
         logger.info('GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_SERVICE_KEY are already set')
         return True
 

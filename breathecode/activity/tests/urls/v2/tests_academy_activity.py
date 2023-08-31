@@ -49,6 +49,7 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None):
             SELECT *
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
+                AND meta.academy = @academy_id
                 {'AND meta.kind = @kind' if kind else ''}
             ORDER BY id DESC
             LIMIT @limit
@@ -61,15 +62,23 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None):
 class MediaTestSuite(MediaTestCase):
 
     def test_no_auth(self):
-        url = reverse_lazy('v2:activity:me_activity')
+        url = reverse_lazy('v2:activity:academy_activity')
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_get_two(self):
-        url = reverse_lazy('v2:activity:me_activity')
-        self.generate_models(authenticate=True)
+        model = self.bc.database.create(user=1,
+                                        academy=1,
+                                        profile_academy=1,
+                                        capability='read_activity',
+                                        role=1)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        url = reverse_lazy('v2:activity:academy_activity')
 
         val = bigquery_client_mock(self, n=2, user_id=1)
         (client_mock, result_mock, query, project_id, dataset, expected) = val
@@ -81,6 +90,7 @@ class MediaTestSuite(MediaTestCase):
 
             self.bc.check.calls(BigQuery.client.call_args_list, [call()])
             assert client_mock.query.call_args[0][0] == query
+            assert 'AND meta.kind = @kind' not in query
             self.bc.check.calls(result_mock.result.call_args_list, [call()])
 
         self.assertEqual(json, expected)
@@ -88,12 +98,18 @@ class MediaTestSuite(MediaTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_filter_by_kind(self):
-        model = self.bc.database.create(user=1, academy=1)
+        model = self.bc.database.create(user=1,
+                                        academy=1,
+                                        profile_academy=1,
+                                        capability='read_activity',
+                                        role=1)
 
         self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
         kind = self.bc.fake.slug()
 
-        url = reverse_lazy('v2:activity:me_activity') + f'?kind={kind}'
+        url = reverse_lazy('v2:activity:academy_activity') + f'?kind={kind}'
 
         val = bigquery_client_mock(self, n=2, user_id=1, kind=kind)
         (client_mock, result_mock, query, project_id, dataset, expected) = val

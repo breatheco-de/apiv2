@@ -4,12 +4,15 @@ from google.cloud.ndb.query import OR
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from google.cloud import bigquery
 
-from breathecode.activity.models import Activity, StudentActivity
+from breathecode.activity.models import StudentActivity
 from breathecode.activity.serializers import ActivitySerializer
 from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.authenticate.actions import get_user_language
 from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils import (HeaderLimitOffsetPagination, ValidationException, capable_of, getLogger)
+from breathecode.utils.i18n import translation
 
 from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,
@@ -514,20 +517,65 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
 class V2MeActivityView(APIView):
 
     def get(self, request, activity_id=None):
+        lang = get_user_language(request)
+        client, project_id, dataset = BigQuery.client()
+
         if activity_id:
-            with BigQuery.session() as session:
-                results = session.query(Activity).filter(Activity.id == activity_id).first()
-                serializer = ActivitySerializer(results, many=False)
-                return Response(serializer.data)
+            # Define a query
+            query = f"""
+                SELECT *
+                FROM `{project_id}.{dataset}.activity`
+                WHERE id = @activity_id
+                    AND user_id = @user_id
+                ORDER BY id DESC
+                LIMIT 1
+            """
 
-        offset = (int(request.GET.get('page', 1)) - 1) * 100
+            job_config = bigquery.QueryJobConfig(query_parameters=[
+                bigquery.ScalarQueryParameter('activity_id', 'STRING', activity_id),
+                bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            ])
+
+            # Run the query
+            query_job = client.query(query, job_config=job_config)
+            results = query_job.result()
+
+            result = next(results)
+            if not result:
+                raise ValidationException(translation(lang,
+                                                      en='activity not found',
+                                                      es='actividad no encontrada',
+                                                      slug='activity-not-found'),
+                                          code=404)
+
+            serializer = ActivitySerializer(result, many=False)
+            return Response(serializer.data)
+
         limit = int(request.GET.get('limit', 100))
+        offset = (int(request.GET.get('page', 1)) - 1) * limit
+        kind = request.GET.get('kind', None)
 
-        with BigQuery.session() as session:
-            results = session.query(Activity).filter().offset(offset).limit(limit).all()
-            # results = session.query(Activity).filter()  #.offset(offset).limit(limit).all()
-            serializer = ActivitySerializer(results, many=True)
+        query = f"""
+            SELECT *
+            FROM `{project_id}.{dataset}.activity`
+            WHERE user_id = @user_id
+                {'AND meta.kind = @kind' if kind else ''}
+            ORDER BY id DESC
+            LIMIT @limit
+            OFFSET @offset
+        """
 
+        job_config = bigquery.QueryJobConfig(query_parameters=[
+            bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            bigquery.ScalarQueryParameter('limit', 'INT64', limit),
+            bigquery.ScalarQueryParameter('offset', 'INT64', offset),
+        ])
+
+        # Run the query
+        query_job = client.query(query, job_config=job_config)
+        results = query_job.result()
+
+        serializer = ActivitySerializer(results, many=True)
         return Response(serializer.data)
 
 
@@ -535,19 +583,70 @@ class V2AcademyActivityView(APIView):
 
     @capable_of('read_activity')
     def get(self, request, activity_id=None, academy_id=None):
+        lang = get_user_language(request)
+        client, project_id, dataset = BigQuery.client()
+
         if activity_id:
-            with BigQuery.session() as session:
-                results = session.query(Activity).filter(
-                    Activity.id == activity_id, Activity.meta.contains(f'"academy": {academy_id}')).first()
-                serializer = ActivitySerializer(results, many=False)
-                return Response(serializer.data)
+            # Define a query
+            query = f"""
+                SELECT *
+                FROM `{project_id}.{dataset}.activity`
+                WHERE id = @activity_id
+                    AND user_id = @user_id
+                    AND meta.academy = @academy_id
+                ORDER BY id DESC
+                LIMIT 1
+            """
 
-        offset = (int(request.GET.get('page', 1)) - 1) * 100
+            job_config = bigquery.QueryJobConfig(query_parameters=[
+                bigquery.ScalarQueryParameter('activity_id', 'STRING', activity_id),
+                bigquery.ScalarQueryParameter('academy_id', 'INT64', academy_id),
+                bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            ])
+
+            # Run the query
+            query_job = client.query(query, job_config=job_config)
+            results = query_job.result()
+
+            result = next(results)
+            if not result:
+                raise ValidationException(translation(lang,
+                                                      en='activity not found',
+                                                      es='actividad no encontrada',
+                                                      slug='activity-not-found'),
+                                          code=404)
+
+            serializer = ActivitySerializer(result, many=False)
+            return Response(serializer.data)
+
         limit = int(request.GET.get('limit', 100))
+        offset = (int(request.GET.get('page', 1)) - 1) * limit
+        kind = request.GET.get('kind', None)
 
-        with BigQuery.session() as session:
-            results = session.query(Activity).filter(
-                Activity.meta.contains(f'"academy": {academy_id}')).offset(offset).limit(limit).all()
-            serializer = ActivitySerializer(results, many=True)
+        query = f"""
+            SELECT *
+            FROM `{project_id}.{dataset}.activity`
+            WHERE user_id = @user_id
+                AND meta.academy = @academy_id
+                {'AND meta.kind = @kind' if kind else ''}
+            ORDER BY id DESC
+            LIMIT @limit
+            OFFSET @offset
+        """
 
+        job_config = bigquery.QueryJobConfig(query_parameters=[
+            bigquery.ScalarQueryParameter('academy_id', 'INT64', academy_id),
+            bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            bigquery.ScalarQueryParameter('limit', 'INT64', limit),
+            bigquery.ScalarQueryParameter('offset', 'INT64', offset),
+        ])
+
+        if kind:
+            job_config.query_parameters.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
+
+        # Run the query
+        query_job = client.query(query, job_config=job_config)
+        results = query_job.result()
+
+        serializer = ActivitySerializer(results, many=True)
         return Response(serializer.data)

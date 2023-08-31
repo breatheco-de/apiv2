@@ -5,12 +5,14 @@ from breathecode.utils.exceptions import TestError
 import numpy as np
 from PIL import Image
 from faker import Faker
+from urllib3.connectionpool import HTTPConnectionPool
 
 # set ENV as test before run django
 os.environ['ENV'] = 'test'
 
 FAKE = Faker()
 pytest_plugins = ('celery.contrib.pytest', )
+urlopen = HTTPConnectionPool.urlopen
 
 
 @pytest.fixture(autouse=True)
@@ -18,6 +20,14 @@ def no_http_requests(monkeypatch):
 
     def urlopen_mock(self, method, url, *args, **kwargs):
         # this prevent a tester left pass a request to a third party service
+        allow = [
+            ('0.0.0.0', 9050, None),
+        ]
+
+        for host, port, path in allow:
+            if host == self.host and port == self.port and (path == url or path == None):
+                return urlopen(self, method, url, *args, **kwargs)
+
         raise TestError(f'Avoid make a real request to {method} {self.scheme}://{self.host}{url}')
 
     monkeypatch.setattr('urllib3.connectionpool.HTTPConnectionPool.urlopen', urlopen_mock)
