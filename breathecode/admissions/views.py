@@ -161,8 +161,7 @@ def get_public_syllabus(request, id=None):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_cohorts(request, id=None):
-    items = Cohort.objects.filter(
-        private=False).select_related('syllabus_version__syllabus').prefetch_related('cohorttimeslot_set')
+    items = Cohort.objects.filter(private=False).select_related('syllabus_version__syllabus')
 
     items = items.annotate(longitude=Value(None, output_field=FloatField()),
                            latitude=Value(None, output_field=FloatField()))
