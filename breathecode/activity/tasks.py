@@ -34,7 +34,7 @@ def get_attendancy_log(self, cohort_id: int):
         return
 
     if not cohort.syllabus_version:
-        logger.error(f'Cohort {cohort.slug} not have syllabus too')
+        logger.error(f'Cohort {cohort.slug} does not have syllabus assigned')
         return
 
     try:

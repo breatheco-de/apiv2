@@ -5,6 +5,7 @@ from breathecode.authenticate.signals import invite_status_updated
 from breathecode.authenticate.models import UserInvite
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
+from breathecode.mentorship.serializers import SessionHookSerializer
 from breathecode.marketing.signals import form_entry_won_or_lost
 from breathecode.marketing.models import FormEntry
 from breathecode.marketing.serializers import FormEntryHookSerializer
@@ -14,8 +15,9 @@ from breathecode.registry.signals import asset_status_updated
 from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.events.models import EventCheckin, Event
 from breathecode.events.signals import new_event_attendee, new_event_order, event_status_updated
-from breathecode.events.serializers import EventHookSerializer
-from breathecode.admissions.models import CohortUser
+from breathecode.events.serializers import EventHookSerializer, EventHookCheckinSerializer
+from breathecode.admissions.models import CohortUser, Cohort
+from breathecode.admissions.signals import cohort_log_saved
 from breathecode.admissions.serializers import CohortUserHookSerializer
 from .tasks import send_mentorship_starting_notification
 from .utils.hook_manager import HookManager
@@ -29,6 +31,14 @@ def post_mentoring_session_status(sender, instance, **kwargs):
     if instance.status == 'STARTED':
         logger.debug('Mentorship has started, notifying the mentor')
         send_mentorship_starting_notification.delay(instance.id)
+
+    model_label = get_model_label(instance)
+    serializer = SessionHookSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'mentorship_session_status',
+                                    payload_override=serializer.data,
+                                    academy_override=instance.mentor.academy)
 
 
 def get_model_label(instance):
@@ -74,14 +84,26 @@ def form_entry_updated(sender, instance, **kwargs):
 
 @receiver(new_event_attendee, sender=EventCheckin)
 def handle_new_event_attendee(sender, instance, **kwargs):
+    logger.debug('Sending new event attendance')
     model_label = get_model_label(instance)
-    HookManager.process_model_event(instance, model_label, 'new_attendee')
+    serializer = EventHookCheckinSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'new_event_attendee',
+                                    payload_override=serializer.data,
+                                    academy_override=instance.event.academy)
 
 
 @receiver(new_event_order, sender=EventCheckin)
 def handle_new_event_order(sender, instance, **kwargs):
+    logger.debug('Sending new event order')
     model_label = get_model_label(instance)
-    HookManager.process_model_event(instance, model_label, 'new_event_order')
+    serializer = EventHookCheckinSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'new_event_order',
+                                    payload_override=serializer.data,
+                                    academy_override=instance.event.academy)
 
 
 @receiver(event_status_updated, sender=Event)
