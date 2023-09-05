@@ -339,12 +339,13 @@ class CreateFormEntryTestSuite(MarketingTestCase):
 
         del data['academy']
 
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'),
-                         [form_entry_field({
-                             **data,
-                             'attribution_id': 1000,
-                             'academy_id': 1,
-                         })])
+        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
+            form_entry_field({
+                **data,
+                'attribution_id': '75b36c508866d18732305da14fe9a0',
+                'academy_id': 1,
+            })
+        ])
         self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
                          [{
                              **self.bc.format.to_dict(model.csv_upload),
@@ -357,9 +358,10 @@ class CreateFormEntryTestSuite(MarketingTestCase):
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.persist_single_lead.delay.call_args_list, [
-            call(form_entry_serializer(self, {
-                **data,
-                'academy': 1,
-                'attribution_id': 1000,
-            })),
+            call(
+                form_entry_serializer(self, {
+                    **data,
+                    'academy': 1,
+                    'attribution_id': '75b36c508866d18732305da14fe9a0',
+                })),
         ])

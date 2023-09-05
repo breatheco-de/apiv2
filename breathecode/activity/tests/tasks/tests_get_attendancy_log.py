@@ -84,7 +84,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(logging.Logger.info.call_args_list, [call('Executing get_attendancy_log')])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call(f'Cohort {model.cohort.slug} not have syllabus too'),
+            call(f'Cohort {model.cohort.slug} does not have syllabus assigned'),
         ])
 
         self.assertEqual(NDB.__init__.call_args_list, [])
