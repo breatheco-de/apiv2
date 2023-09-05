@@ -3,7 +3,7 @@ from typing import Annotated, Optional
 
 from logging import Logger as BaseLogger, root, getLogger as getBaseLogger
 
-IS_TEST_ENV = os.environ['ENV'] == 'test'
+IS_TEST_ENV = 'ENV' in os.environ and os.environ['ENV'] == 'test'
 
 __all__ = ['getLogger', 'Logger']
 
