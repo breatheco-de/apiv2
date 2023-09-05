@@ -505,7 +505,7 @@ def update_or_create_event(data, org):
 
 def publish_event_from_eventbrite(data, org: Organization) -> None:
     if not data:  #skip if no data
-        logger.debug('Ignored event')
+        logger.info('Ignored event')
         raise ValueError('data is empty')
 
     now = get_current_iso_string()
@@ -521,7 +521,7 @@ def publish_event_from_eventbrite(data, org: Organization) -> None:
             event.eventbrite_sync_description = now
             event.eventbrite_sync_status = 'PERSISTED'
             event.save()
-            logger.debug(f'The events with the eventbrite id `{data["id"]}` were saved')
+            logger.info(f'The events with the eventbrite id `{data["id"]}` were saved')
         return events.first()
 
     except Warning as e:

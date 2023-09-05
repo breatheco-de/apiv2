@@ -31,41 +31,43 @@ class SendCohortSurvey(FeedbackTestCase):
 
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_survey_is_none(self):
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.generate_models(cohort=1)
+            logging.Logger.info.call_args_list = []
 
         send_cohort_survey(user_id=None, survey_id=None)
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Survey not found')])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list, [])
 
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_user_is_none(self):
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.generate_models(cohort=1, survey=1)
+            logging.Logger.info.call_args_list = []
 
         send_cohort_survey(survey_id=1, user_id=None)
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('User not found')])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list, [])
 
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_survey_has_expired(self):
@@ -75,6 +77,7 @@ class SendCohortSurvey(FeedbackTestCase):
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.generate_models(cohort=1, survey={'duration': duration}, user=1)
+            logging.Logger.info.call_args_list = []
 
         model.survey.created_at = created
 
@@ -82,14 +85,14 @@ class SendCohortSurvey(FeedbackTestCase):
 
         send_cohort_survey(survey_id=1, user_id=1)
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('This survey has already expired')])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list, [])
 
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
@@ -97,10 +100,11 @@ class SendCohortSurvey(FeedbackTestCase):
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.generate_models(cohort=1, user=1, survey=1)
+            logging.Logger.info.call_args_list = []
 
         send_cohort_survey(survey_id=1, user_id=1)
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
         self.assertEqual(logging.Logger.error.call_args_list,
                          [call('This student does not belong to this cohort')])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
@@ -110,7 +114,7 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': 'https://hello.com'})))
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
@@ -119,10 +123,11 @@ class SendCohortSurvey(FeedbackTestCase):
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.generate_models(cohort=1, user=1, survey=1, cohort_user={'role': 'STUDENT'})
+            logging.Logger.info.call_args_list = []
 
         send_cohort_survey(survey_id=1, user_id=1)
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list,
@@ -143,7 +148,7 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': 'https://hello.com'})))
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
@@ -158,10 +163,11 @@ class SendCohortSurvey(FeedbackTestCase):
 
             with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
                 model = self.generate_models(cohort=1, user=1, survey=1, cohort_user=cohort_users)
+                logging.Logger.info.call_args_list = []
 
             send_cohort_survey(survey_id=model.survey.id, user_id=model.user.id)
 
-            self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
+            self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
             self.assertEqual(logging.Logger.error.call_args_list, [])
             self.assertEqual(self.bc.database.list_of('feedback.Survey'),
                              [self.bc.format.to_dict(model.survey)])
@@ -180,7 +186,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     })
             ])
 
-            logging.Logger.debug.call_args_list = []
+            logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []
             tasks.generate_user_cohort_survey_answers.call_args_list = []
             actions.send_email_message.call_args_list = []
@@ -189,7 +195,7 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': 'https://hello.com'})))
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.notify.actions.send_slack', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
@@ -210,10 +216,11 @@ class SendCohortSurvey(FeedbackTestCase):
                                              user=1,
                                              survey=1,
                                              cohort_user=cohort_user)
+                logging.Logger.info.call_args_list = []
 
             send_cohort_survey(survey_id=model.survey.id, user_id=model.user.id)
 
-            self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting send_cohort_survey')])
+            self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
             self.assertEqual(logging.Logger.error.call_args_list, [])
             self.assertEqual(self.bc.database.list_of('feedback.Survey'),
                              [self.bc.format.to_dict(model.survey)])
@@ -251,7 +258,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     })
             ])
 
-            logging.Logger.debug.call_args_list = []
+            logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []
             tasks.generate_user_cohort_survey_answers.call_args_list = []
             actions.send_email_message.call_args_list = []
