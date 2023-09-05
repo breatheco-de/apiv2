@@ -257,12 +257,6 @@ def get_cohorts(request, id=None):
     return Response(data)
 
 
-if os.getenv('ENV') == 'development':
-    from silk.profiling.profiler import silk_profile
-
-    get_cohorts = silk_profile()(get_cohorts)
-
-
 class AcademyReportView(APIView):
 
     @capable_of('academy_reporting')
