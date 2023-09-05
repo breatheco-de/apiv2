@@ -24,7 +24,7 @@ class BaseTaskWithRetry(CeleryTask):
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def student_task_notification(self, task_id):
     """Notify if the task was change"""
-    logger.debug('Starting student_task_notification')
+    logger.info('Starting student_task_notification')
 
     task = Task.objects.filter(id=task_id).first()
     if not task_is_valid_for_notifications(task):

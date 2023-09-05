@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+from datetime import date, datetime
 import logging
 from unittest.mock import MagicMock, call, patch
 from uuid import uuid4
@@ -40,15 +41,15 @@ def bigquery_client_mock(user_id=1,
         schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
         write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
         query_parameters=[
-            bigquery.ScalarQueryParameter('id', 'STRING',
+            bigquery.ScalarQueryParameter('x__id', 'STRING',
                                           uuid4().hex),
-            bigquery.ScalarQueryParameter('user_id', 'INT64', user_id),
-            bigquery.ScalarQueryParameter('kind', 'STRING', kind),
-            bigquery.ScalarQueryParameter('timestamp', 'TIMESTAMP',
+            bigquery.ScalarQueryParameter('x__user_id', 'INT64', user_id),
+            bigquery.ScalarQueryParameter('x__kind', 'STRING', kind),
+            bigquery.ScalarQueryParameter('x__timestamp', 'TIMESTAMP',
                                           timezone.now().isoformat()),
-            bigquery.ScalarQueryParameter('related_type', 'STRING', related_type),
-            bigquery.ScalarQueryParameter('related_id', 'INT64', related_id),
-            bigquery.ScalarQueryParameter('related_slug', 'STRING', related_slug),
+            bigquery.ScalarQueryParameter('x__related_type', 'STRING', related_type),
+            bigquery.ScalarQueryParameter('x__related_id', 'INT64', related_id),
+            bigquery.ScalarQueryParameter('x__related_slug', 'STRING', related_slug),
         ])
 
     for key in meta:
@@ -74,14 +75,14 @@ def bigquery_client_mock(user_id=1,
 
     query = f"""
         SELECT
-            @id as id,
-            @user_id as user_id,
-            @kind as kind,
-            @timestamp as timestamp,
+            @x__id as id,
+            @x__user_id as user_id,
+            @x__kind as kind,
+            @x__timestamp as timestamp,
             STRUCT(
-                @related_type as type,
-                @related_id as id,
-                @related_slug as slug) as related,
+                @x__related_type as type,
+                @x__related_id as id,
+                @x__related_slug as slug) as related,
             STRUCT({meta_struct}) as meta
     """
 

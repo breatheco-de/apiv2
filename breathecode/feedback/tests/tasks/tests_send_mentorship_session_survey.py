@@ -52,7 +52,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -63,7 +63,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         send_mentorship_session_survey.delay(1)
 
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [call('without-mentorship-session')])
         self.assertEqual(actions.send_email_message.call_args_list, [])
 
@@ -72,7 +72,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -81,11 +81,12 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         from logging import Logger
 
         self.bc.database.create(mentorship_session=1)
+        Logger.info.call_args_list = []
 
         send_mentorship_session_survey.delay(1)
 
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [call('mentorship-session-without-mentee')])
         self.assertEqual(actions.send_email_message.call_args_list, [])
 
@@ -94,7 +95,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -107,10 +108,11 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
             'started_at': UTC_NOW,
         }
         self.bc.database.create(mentorship_session=mentorship_session, user=1)
+        Logger.info.call_args_list = []
 
         send_mentorship_session_survey.delay(1)
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [
             call('mentorship-session-without-started-at-or-ended-at'),
         ])
@@ -124,7 +126,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -137,10 +139,11 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
             'ended_at': UTC_NOW,
         }
         self.bc.database.create(mentorship_session=mentorship_session, user=1)
+        Logger.info.call_args_list = []
 
         send_mentorship_session_survey.delay(1)
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [
             call('mentorship-session-without-started-at-or-ended-at'),
         ])
@@ -154,7 +157,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -168,10 +171,11 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
             'ended_at': UTC_NOW + timedelta(minutes=5),
         }
         self.bc.database.create(mentorship_session=mentorship_session, user=1)
+        Logger.info.call_args_list = []
 
         send_mentorship_session_survey.delay(1)
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [
             call('mentorship-session-duration-less-or-equal-than-five-minutes'),
         ])
@@ -185,7 +189,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -198,10 +202,11 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
             'ended_at': UTC_NOW + timedelta(minutes=5, seconds=1),
         }
         model = self.bc.database.create(mentorship_session=mentorship_session, user=1)
+        Logger.info.call_args_list = []
 
         send_mentorship_session_survey.delay(1)
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [
             call('mentorship-session-not-have-a-service-associated-with-it'),
         ])
@@ -218,7 +223,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -232,10 +237,11 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
             'ended_at': UTC_NOW + timedelta(minutes=5, seconds=1),
         }
         model = self.bc.database.create(mentorship_session=mentorship_session, user=1, mentorship_service=1)
+        Logger.info.call_args_list = []
 
         send_mentorship_session_survey.delay(1)
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [])
 
         fullname_of_mentor = (model.mentorship_session.mentor.user.first_name + ' ' +
@@ -278,7 +284,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -294,10 +300,11 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
                                         user=1,
                                         answer=1,
                                         mentorship_service=1)
+        Logger.info.call_args_list = []
 
         send_mentorship_session_survey.delay(1)
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting send_mentorship_session_survey')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [])
 
         token = self.bc.database.get('authenticate.Token', 1, dict=False)
@@ -331,7 +338,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -348,10 +355,11 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
                                         user=1,
                                         answer=answer,
                                         mentorship_service=1)
+        Logger.info.call_args_list = []
 
         send_mentorship_session_survey.delay(1)
 
-        self.assertEqual(Logger.debug.call_args_list, [
+        self.assertEqual(Logger.info.call_args_list, [
             call('Starting send_mentorship_session_survey'),
             call('answer-with-status-answered'),
         ])

@@ -101,7 +101,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         models = self.bc.database.create(
             user=True,
-            cohort=True,
+            cohort={'never_ends': True},
             cohort_user=True,
             # github_academy_user={ 'storage_status': 'ERROR'}
         )

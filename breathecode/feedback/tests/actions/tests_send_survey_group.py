@@ -183,7 +183,17 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_when_survey_is_none(self):
 
-        model = self.generate_models(cohort=1, cohort_user=[{'role': 'TEACHER'}, {'role': 'STUDENT'}])
+        model = self.generate_models(cohort=1,
+                                     cohort_user=[
+                                         {
+                                             'role': 'TEACHER',
+                                             'educational_status': 'SUSPENDED',
+                                         },
+                                         {
+                                             'role': 'STUDENT',
+                                             'educational_status': 'SUSPENDED',
+                                         },
+                                     ])
 
         result = send_survey_group(cohort=model.cohort)
 

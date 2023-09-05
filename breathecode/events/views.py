@@ -206,7 +206,7 @@ class EventMeView(APIView):
                     return render_message(request, 'Event not found or you dont have access')
                 if single_event.live_stream_url is None or single_event.live_stream_url == '':
                     return render_message(request, 'Event live stream URL is not found')
-                return redirect(single_event.live_stream_url, permanent=True)
+                return redirect(single_event.live_stream_url)
 
             serializer = EventBigSerializer(single_event, many=False)
             return Response(serializer.data)
@@ -282,7 +282,7 @@ def join_live_class(request, token, live_class, lang):
             'event': LiveClassJoinSerializer(live_class).data,
         })
 
-    return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
+    return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
 
 class AcademyLiveClassView(APIView):
@@ -399,7 +399,7 @@ class AcademyLiveClassJoinView(APIView):
                                   slug='no-meeting-url')
             return render_message(request, message, status=400)
 
-        return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
+        return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
 
 class AcademyEventView(APIView, GenerateLookupsMixin):
@@ -612,7 +612,7 @@ class AcademyEventJoinView(APIView):
                                   slug='no-live-stream-url')
             return render_message(request, message, status=400)
 
-        return redirect(event.live_stream_url, permanent=True)
+        return redirect(event.live_stream_url)
 
 
 class EventTypeView(APIView):
@@ -826,7 +826,7 @@ def join_event(request, token, event):
         checkin.attended_at = now
         checkin.save()
 
-    return redirect(event.live_stream_url, permanent=True)
+    return redirect(event.live_stream_url)
 
 
 class EventCheckinView(APIView):

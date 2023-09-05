@@ -143,6 +143,7 @@ if ENVIRONMENT != 'production':
             end_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             delta_mem = end_mem - start_mem
             print(f'Memory usage for this request: {delta_mem} KB')
+            response['X-Memory-Usage'] = f'{delta_mem} KB'
             return response
 
     MIDDLEWARE += [
@@ -415,9 +416,10 @@ HOOK_EVENTS = {
     'user_invite.invite_status_updated': 'authenticate.UserInvite.invite_status_updated',
     'asset.asset_status_updated': 'registry.Asset.asset_status_updated',
     'event.event_status_updated': 'events.Event.event_status_updated',
-    'event.new_order': 'events.Event.new_event_order',
-    'event.new_attendee': 'events.Event.new_event_attendee',
+    'event.new_event_order': 'events.EventCheckin.new_event_order',
+    'event.new_event_attendee': 'events.EventCheckin.new_event_attendee',
     'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
+    'session.mentorship_session_status': 'mentorship.MentorshipSession.mentorship_session_status',
 }
 
 # Websocket

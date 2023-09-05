@@ -5,6 +5,7 @@ from unittest.mock import call
 from rest_framework.test import APITestCase
 from django.db.models import Model
 from django.db.models.query import QuerySet
+from django.db import connections
 from . import interfaces
 
 from ..sha256_mixin import Sha256Mixin
@@ -209,3 +210,20 @@ class Check:
             self._parent.fail('The first argument is not a list')
 
         self._parent.assertEqual([x.pk for x in query], pks)
+
+    def count_queries(self, n, db='default', verbose=False):
+        queries = [query['sql'] for query in connections[db].queries]
+
+        if not verbose:
+            self._parent.assertEqual(n, len(queries),
+                                     'different number of queries, use verbose=True to see more info')
+
+        if verbose and n != len(queries):
+            result = '\n'
+            result += '---------------- Queries ----------------\n\n'
+            for query in connections[db].queries:
+                result += f'{query["time"]} {query["sql"]}\n\n'
+            result += '----------------- Count -----------------\n\n'
+            result += f'Queries: {len(connections[db].queries)}\n\n'
+            result += '-----------------------------------------\n\n'
+            self._parent.fail(result)
