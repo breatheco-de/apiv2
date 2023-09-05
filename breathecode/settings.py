@@ -143,6 +143,7 @@ if ENVIRONMENT != 'production':
             end_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             delta_mem = end_mem - start_mem
             print(f'Memory usage for this request: {delta_mem} KB')
+            response['X-Memory-Usage'] = f'{delta_mem} KB'
             return response
 
     MIDDLEWARE += [

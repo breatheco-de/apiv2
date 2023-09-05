@@ -17,7 +17,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__without_tasks(self):
@@ -28,7 +28,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
         self.assertEqual(send_email_message.call_args_list, [])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [call('Task not found')])
         self.assertEqual(signals.assignment_created.send.call_args_list, [])
 
@@ -37,7 +37,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__with_task(self):
@@ -46,11 +46,13 @@ class MediaTestSuite(AssignmentsTestCase):
 
         model = self.bc.database.create(task=1)
 
+        Logger.info.call_args_list = []
+
         student_task_notification.delay(1)
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [])
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [call('Can\'t determine the student cohort')])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
@@ -60,7 +62,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__pending__with_task__with_cohort(self):
@@ -71,7 +73,7 @@ class MediaTestSuite(AssignmentsTestCase):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(task=task, cohort=1)
 
-        Logger.debug.call_args_list = []
+        Logger.info.call_args_list = []
 
         student_task_notification.delay(1)
 
@@ -84,13 +86,13 @@ class MediaTestSuite(AssignmentsTestCase):
                 })
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__with_task__pending__with_cohort__url_ends_with_slash(self):
@@ -101,6 +103,8 @@ class MediaTestSuite(AssignmentsTestCase):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(task=task, cohort=1)
 
+        Logger.info.call_args_list = []
+
         student_task_notification.delay(1)
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
@@ -112,13 +116,13 @@ class MediaTestSuite(AssignmentsTestCase):
                 })
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__with_task__pending__with_cohort__lang_es(self):
@@ -129,6 +133,8 @@ class MediaTestSuite(AssignmentsTestCase):
         cohort = {'language': 'es'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(task=task, cohort=cohort)
+
+        Logger.info.call_args_list = []
 
         student_task_notification.delay(1)
 
@@ -141,7 +147,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 })
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
@@ -151,7 +157,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__approved__with_task__with_cohort(self):
@@ -162,6 +168,8 @@ class MediaTestSuite(AssignmentsTestCase):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(task=task, cohort=1)
 
+        Logger.info.call_args_list = []
+
         student_task_notification.delay(1)
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
@@ -173,13 +181,13 @@ class MediaTestSuite(AssignmentsTestCase):
                 })
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__with_task__approved__with_cohort__url_ends_with_slash(self):
@@ -190,6 +198,8 @@ class MediaTestSuite(AssignmentsTestCase):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(task=task, cohort=1)
 
+        Logger.info.call_args_list = []
+
         student_task_notification.delay(1)
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
@@ -201,13 +211,13 @@ class MediaTestSuite(AssignmentsTestCase):
                 })
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__with_task__approved__with_cohort__lang_es(self):
@@ -218,6 +228,8 @@ class MediaTestSuite(AssignmentsTestCase):
         cohort = {'language': 'es'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(task=task, cohort=cohort)
+
+        Logger.info.call_args_list = []
 
         student_task_notification.delay(1)
 
@@ -230,7 +242,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 })
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
@@ -240,7 +252,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__rejected__with_task__with_cohort(self):
@@ -251,6 +263,8 @@ class MediaTestSuite(AssignmentsTestCase):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(task=task, cohort=1)
 
+        Logger.info.call_args_list = []
+
         student_task_notification.delay(1)
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
@@ -262,13 +276,13 @@ class MediaTestSuite(AssignmentsTestCase):
                 })
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__with_task__rejected__with_cohort__url_ends_with_slash(self):
@@ -279,6 +293,8 @@ class MediaTestSuite(AssignmentsTestCase):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(task=task, cohort=1)
 
+        Logger.info.call_args_list = []
+
         student_task_notification.delay(1)
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
@@ -290,13 +306,13 @@ class MediaTestSuite(AssignmentsTestCase):
                 })
         ])
 
-        self.assertEqual(str(Logger.debug.call_args_list), str([call('Starting student_task_notification')]))
+        self.assertEqual(str(Logger.info.call_args_list), str([call('Starting student_task_notification')]))
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.assignments.signals.assignment_created', MagicMock())
     def test_student_task_notification__with_task__rejected__with_cohort__lang_es(self):
@@ -307,6 +323,8 @@ class MediaTestSuite(AssignmentsTestCase):
         cohort = {'language': 'es'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(task=task, cohort=cohort)
+
+        Logger.info.call_args_list = []
 
         student_task_notification.delay(1)
 
@@ -319,7 +337,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 })
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
+        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(signals.assignment_created.send.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])

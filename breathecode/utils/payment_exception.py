@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def is_test_env():
-    return os.getenv('ENV') == 'test'
+    return os.environ['ENV'] == 'test'
 
 
 # New version
