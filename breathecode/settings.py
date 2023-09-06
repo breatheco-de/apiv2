@@ -373,9 +373,10 @@ HOOK_EVENTS = {
     'user_invite.invite_status_updated': 'authenticate.UserInvite.invite_status_updated',
     'asset.asset_status_updated': 'registry.Asset.asset_status_updated',
     'event.event_status_updated': 'events.Event.event_status_updated',
-    'event.new_order': 'events.Event.new_event_order',
-    'event.new_attendee': 'events.Event.new_event_attendee',
+    'event.new_event_order': 'events.EventCheckin.new_event_order',
+    'event.new_event_attendee': 'events.EventCheckin.new_event_attendee',
     'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
+    'session.mentorship_session_status': 'mentorship.MentorshipSession.mentorship_session_status',
 }
 
 # Websocket
