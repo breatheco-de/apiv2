@@ -28,3 +28,4 @@ from .i18n import *
 from .serpy import *
 from .shorteners import *
 from .service import *
+from .gcl_manifest_static_files_storage import *

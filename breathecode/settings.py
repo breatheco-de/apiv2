@@ -10,12 +10,16 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 from pathlib import Path
+# TODO: decouple file storage from django
+# from time import time
 import django_heroku
 import dj_database_url
 import json
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+# TODO: decouple file storage from django
+# from django.utils.http import http_date
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,9 +39,15 @@ DEBUG = (ENVIRONMENT == 'development' or ENVIRONMENT == 'test')
 
 ALLOWED_HOSTS = []
 
-# Application definition
+INSTALLED_APPS = []
 
-INSTALLED_APPS = [
+# TODO: decouple file storage from django
+# if ENVIRONMENT == 'test':
+#     INSTALLED_APPS += ['whitenoise.runserver_nostatic']
+
+# Application definition
+INSTALLED_APPS += [
+    # TODO: decouple file storage from django
     'whitenoise.runserver_nostatic',
     'breathecode.admin_styles',
     'django.contrib.admin',
@@ -68,11 +78,9 @@ INSTALLED_APPS = [
     'breathecode.mentorship',
     'breathecode.career',
     'breathecode.commons',
-    'breathecode.websocket',
     'breathecode.payments',
     'breathecode.provisioning',
     'explorer',
-    'channels',
 ]
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
@@ -88,7 +96,7 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER':
     'breathecode.utils.breathecode_exception_handler',
     'PAGE_SIZE':
-    100,
+    20,
     'DEFAULT_VERSION':
     'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -278,14 +286,14 @@ logging.config.dictConfig({
     }
 })
 
-ROLLBAR = {
-    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
-    'environment': 'development' if DEBUG else 'production',
-    'branch': 'master',
-    'root': BASE_DIR,
-    # parsed POST variables placed in your output for exception handling
-    'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
-}
+# ROLLBAR = {
+#     'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
+#     'environment': 'development' if DEBUG else 'production',
+#     'branch': 'master',
+#     'root': BASE_DIR,
+#     # parsed POST variables placed in your output for exception handling
+#     'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
+# }
 
 MESSAGE_TAGS = {
     messages.DEBUG: 'alert-info',
@@ -374,6 +382,41 @@ elif not IS_REDIS_WITH_SSL:
 
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
+# TODO: decouple file storage from django
+# if ENVIRONMENT != 'test':
+#     DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+#     STATICFILES_STORAGE = 'breathecode.utils.GCSManifestStaticFilesStorage'
+
+#     GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME', '')
+#     GS_FILE_OVERWRITE = False
+
+#     class StaticFileCacheMiddleware:
+
+#         def __init__(self, get_response):
+#             self.get_response = get_response
+
+#         def __call__(self, request):
+#             response = self.get_response(request)
+
+#             # Check if the response is for a static file
+#             if request.path.startswith("/static/"):
+#                 # Set the cache headers (1 year in this example)
+#                 max_age = 365 * 24 * 60 * 60
+#                 response["Cache-Control"] = f"public, max-age={max_age}"
+#                 response["Expires"] = http_date(time() + max_age)
+
+#             return response
+
+#     MIDDLEWARE += [
+#         'breathecode.settings.MemoryUsageMiddleware',
+#     ]
+
+# TODO: decouple file storage from django
+# else:
+#     # Simplified static file serving.
+#     # https://warehouse.python.org/project/whitenoise/
+#     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
@@ -432,22 +475,6 @@ heroku_redis_ssl_host = {
 
 if IS_REDIS_WITH_SSL:
     heroku_redis_ssl_host['address'] += '?ssl_cert_reqs=none'
-
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': (heroku_redis_ssl_host, ),
-        },
-    },
-}
-
-if IS_TEST_ENV:
-    del CHANNEL_LAYERS['default']['CONFIG']
-    CHANNEL_LAYERS['default'] = {
-        **CHANNEL_LAYERS['default'],
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    }
 
 # keep last part of the file
 django_heroku.settings(locals(), databases=False)
