@@ -113,30 +113,6 @@ REST_FRAMEWORK = {
 
 MIDDLEWARE = []
 
-if ENVIRONMENT == 'development':
-
-    def just_admin(request):
-        return request.user.is_staff
-
-    MIDDLEWARE += [
-        'silk.middleware.SilkyMiddleware',
-    ]
-
-    INSTALLED_APPS += [
-        'silk',
-    ]
-
-    SILKY_PYTHON_PROFILER = True
-    SILKY_PYTHON_PROFILER_BINARY = True
-    SILKY_PYTHON_PROFILER_RESULT_PATH = '/tmp'
-
-    SILKY_AUTHENTICATION = True
-    SILKY_AUTHORISATION = False
-    SILKY_AUTHORISATION_FUNCTION = just_admin
-
-    SILKY_META = True
-    SILKY_ANALYZE_QUERIES = True
-
 if ENVIRONMENT != 'production':
     import resource
 
