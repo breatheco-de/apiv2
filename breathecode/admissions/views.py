@@ -256,7 +256,7 @@ class PublicCohortView(APIView):
         data = sorted(serializer.data,
                       key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
 
-        return Response(data)
+        return handler.response(data)
 
 
 class AcademyReportView(APIView):
@@ -385,7 +385,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         items = handler.queryset(items)
         serializer = GetCohortUserSerializer(items, many=True)
-        return Response(serializer.data)
+        return handler.response(serializer.data)
 
     def post(self, request, cohort_id=None, user_id=None):
 
@@ -1722,7 +1722,7 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
         items = handler.queryset(items)
         serializer = GetPublicCohortUserSerializer(items, many=True)
-        return Response(serializer.data)
+        return handler.response(serializer.data)
 
 
 class AcademyCohortHistoryView(APIView):
