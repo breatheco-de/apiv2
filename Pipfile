@@ -118,3 +118,5 @@ drf-yasg = "*"
 google-cloud-firestore = "*"
 django-silk = "*"
 gevent = "*"
+django-storages = {extras = ["google"], version = "*"}
+newrelic = "*"
