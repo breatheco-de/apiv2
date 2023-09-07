@@ -1722,7 +1722,7 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
         items = handler.queryset(items)
         serializer = GetPublicCohortUserSerializer(items, many=True)
-        return Response(serializer.data)
+        return handler.response(serializer.data)
 
 
 class AcademyCohortHistoryView(APIView):
