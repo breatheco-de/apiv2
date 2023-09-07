@@ -279,7 +279,7 @@ class FinalProjectMeView(APIView):
                                 es='Falta la cohorte del proyecto final',
                                 slug='cohort-missing'))
             project_cohort = Cohort.objects.filter(id=data['cohort']).first()
-            staff = ProfileAcademy.objects.filter(~Q(role='STUDENT'),
+            staff = ProfileAcademy.objects.filter(~Q(role__slug='student'),
                                                   academy__id=project_cohort.academy.id,
                                                   user__id=request.user.id).first()
 
@@ -357,6 +357,10 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
         if revision_status is not None:
             lookup['revision_status__in'] = revision_status.split(',')
 
+        educational_status = request.GET.get('educational_status', None)
+        if educational_status is not None:
+            lookup['user__cohortuser__educational_status__in'] = educational_status.split(',')
+
         like = request.GET.get('like', None)
         if like is not None and like != 'undefined' and like != '':
             items = items.filter(Q(associated_slug__icontains=like) | Q(title__icontains=like))
@@ -366,6 +370,9 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
         if student is not None:
             lookup['user__cohortuser__user__id__in'] = student.split(',')
             lookup['user__cohortuser__role'] = 'STUDENT'
+
+        if educational_status is not None or student is not None:
+            items = items.distinct()
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
@@ -800,7 +807,7 @@ class SubtaskMeView(APIView):
                         f'Duplicated subtask id {t["id"]} for the assignment on position {found}',
                         code=404,
                         slug='duplicated-subtask-unique-id')
-                except:
+                except Exception:
                     subtasks_ids.append(t['id'])
 
             if not 'status' in t:
@@ -823,10 +830,26 @@ class SubtaskMeView(APIView):
 
 class MeCodeRevisionView(APIView):
 
-    def get(self, request):
+    def get(self, request, task_id=None):
+        lang = get_user_language(request)
         params = {}
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
+
+        if task_id and not (task := Task.objects.filter(id=task_id, user__id=request.user.id).first()):
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        elif not hasattr(request.user, 'credentialsgithub'):
+            raise ValidationException(translation(lang,
+                                                  en='You need to connect your Github account first',
+                                                  es='Necesitas conectar tu cuenta de Github primero',
+                                                  slug='github-account-not-connected'),
+                                      code=400)
+
+        if task_id and task:
+            params['repo'] = task.github_url
+
+        params['github_username'] = request.user.credentialsgithub.username
 
         s = Service('rigobot', request.user.id)
         response = s.get('/v1/finetuning/me/coderevision', params=params, stream=True)
@@ -846,21 +869,28 @@ class MeCodeRevisionView(APIView):
 
         return resource
 
-
-class MeTaskCodeRevisionView(APIView):
-
-    def get(self, request, task_id):
-        if not (task := Task.objects.filter(id=task_id, user__id=request.user.id).first()):
-            raise ValidationException('Task not found', code=404, slug='task-not-found')
-
+    def post(self, request, task_id):
+        lang = get_user_language(request)
         params = {}
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        params['repo'] = task.github_url
+        item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+        if item is None:
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        elif not hasattr(request.user, 'credentialsgithub'):
+            raise ValidationException(translation(lang,
+                                                  en='You need to connect your Github account first',
+                                                  es='Necesitas conectar tu cuenta de Github primero',
+                                                  slug='github-account-not-connected'),
+                                      code=400)
+
+        params['github_username'] = request.user.credentialsgithub.username
+        params['repo'] = item.github_url
 
         s = Service('rigobot', request.user.id)
-        response = s.get(f'/v1/finetuning/coderevision', params=params, stream=True)
+        response = s.post('/v1/finetuning/coderevision/', data=request.data, stream=True, params=params)
         resource = StreamingHttpResponse(
             response.raw,
             status=response.status_code,
@@ -881,18 +911,93 @@ class MeTaskCodeRevisionView(APIView):
 class AcademyTaskCodeRevisionView(APIView):
 
     @capable_of('read_assignment')
-    def get(self, request, task_id, academy_id):
-        if not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).first()):
+    def get(self, request, academy_id, task_id=None):
+        if task_id and not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).first()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        params['repo'] = task.github_url
+        if task_id:
+            params['repo'] = task.github_url
 
         s = Service('rigobot')
-        response = s.get(f'/v1/finetuning/coderevision', params=params, stream=True)
+        response = s.get('/v1/finetuning/coderevision', params=params, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
+
+
+class MeCodeRevisionRateView(APIView):
+
+    def post(self, request, coderevision_id):
+        s = Service('rigobot', request.user.id)
+        response = s.post(f'/v1/finetuning/rate/coderevision/{coderevision_id}',
+                          data=request.data,
+                          stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [
+            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
+            and x != 'Keep-Alive' and x != 'Connection'
+        ]
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
+
+
+class MeCommitFileView(APIView):
+
+    def get(self, request, commitfile_id=None, task_id=None):
+        lang = get_user_language(request)
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
+        s = Service('rigobot', request.user.id)
+        url = '/v1/finetuning/commitfile'
+        task = None
+        if commitfile_id is not None:
+            url = f'{url}/{commitfile_id}'
+
+        elif not (task := Task.objects.filter(id=task_id, user__id=request.user.id).first()):
+            raise ValidationException(translation(lang,
+                                                  en='Task not found',
+                                                  es='Tarea no encontrada',
+                                                  slug='task-not-found'),
+                                      code=404)
+
+        elif not hasattr(task.user, 'credentialsgithub'):
+            raise ValidationException(translation(lang,
+                                                  en='You need to connect your Github account first',
+                                                  es='Necesitas conectar tu cuenta de Github primero',
+                                                  slug='github-account-not-connected'),
+                                      code=400)
+
+        else:
+            params['repo'] = task.github_url
+            params['watcher'] = task.user.credentialsgithub.username
+
+        response = s.get(url, params=params, stream=True)
         resource = StreamingHttpResponse(
             response.raw,
             status=response.status_code,

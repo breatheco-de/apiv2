@@ -142,6 +142,7 @@ def put_serializer(data={}):
         'bill': None,
         'ended_at': None,
         'ends_at': None,
+        'calendly_uuid': None,
         'id': 0,
         'is_online': False,
         'latitude': None,
@@ -170,6 +171,7 @@ def mentorship_session_columns(data={}):
         'allow_billing': False,
         'bill_id': None,
         'ended_at': None,
+        'calendly_uuid': None,
         'ends_at': None,
         'id': 1,
         'is_online': False,
@@ -1486,6 +1488,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             'id': 1,
             'mentee': 1,
             'service': 1,
+            'calendly_uuid': None,
             **data[0],
         })]
 
@@ -1554,6 +1557,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             'id': 1,
             'mentee': 1,
             'service': 1,
+            'calendly_uuid': None,
             **data[0],
         })]
 

@@ -74,20 +74,23 @@ class TokenTestSuite(FeedbackTestCase):
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), self.bc.format.to_dict(model.survey))
 
         # this ignore the answers is not answered or opened
-        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [
-            self.bc.format.to_dict(answer_db[0]),
-            self.bc.format.to_dict(answer_db[1]),
-            self.bc.format.to_dict(answer_db[2]),
-            self.bc.format.to_dict(answer_db[6]),
-            self.bc.format.to_dict(answer_db[7]),
-            self.bc.format.to_dict(answer_db[8]),
-            self.bc.format.to_dict(answer_db[9]),
-            self.bc.format.to_dict(answer_db[10]),
-            self.bc.format.to_dict(answer_db[11]),
-            self.bc.format.to_dict(answer_db[15]),
-            self.bc.format.to_dict(answer_db[16]),
-            self.bc.format.to_dict(answer_db[17]),
-        ])
+        self.assertEqual(
+            self.bc.database.list_of('feedback.Answer'),
+            [
+                self.bc.format.to_dict(answer_db[0]),
+                self.bc.format.to_dict(answer_db[1]),
+                self.bc.format.to_dict(answer_db[2]),
+                # self.bc.format.to_dict(answer_db[3]),
+                self.bc.format.to_dict(answer_db[6]),
+                self.bc.format.to_dict(answer_db[7]),
+                self.bc.format.to_dict(answer_db[8]),
+                self.bc.format.to_dict(answer_db[9]),
+                self.bc.format.to_dict(answer_db[10]),
+                self.bc.format.to_dict(answer_db[11]),
+                self.bc.format.to_dict(answer_db[15]),
+                self.bc.format.to_dict(answer_db[16]),
+                self.bc.format.to_dict(answer_db[17]),
+            ])
 
         self.assertEqual(str(sys.stdout.write.call_args_list),
                          str([call('Successfully deleted invalid answers\n')]))

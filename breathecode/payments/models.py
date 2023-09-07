@@ -645,10 +645,12 @@ BAG_STATUS = [
 BAG = 'BAG'
 CHARGE = 'CHARGE'
 PREVIEW = 'PREVIEW'
+INVITED = 'INVITED'
 BAG_TYPE = [
     (BAG, 'Bag'),
     (CHARGE, 'Charge'),
     (PREVIEW, 'Preview'),
+    (INVITED, 'Invited'),
 ]
 
 NO_SET = 'NO_SET'

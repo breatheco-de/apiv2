@@ -1,13 +1,11 @@
 from django.urls import path
 
-from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyPlanView, AcademyServiceView,
-                    AcademyAcademyServiceView, AcademySubscriptionView, BagView, CardView, CheckingView,
-                    ConsumableCheckoutView, EventTypeSetView, MeConsumableView, MeInvoiceView,
-                    AcademyInvoiceView, MeSubscriptionCancelView, MeSubscriptionChargeView,
-                    MentorshipServiceSetView, PayView, PlanOfferView, PlanView, ServiceItemView, ServiceView,
-                    MeSubscriptionView)
+from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyServiceView, AcademyAcademyServiceView,
+                    AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableCheckoutView,
+                    EventTypeSetView, MeConsumableView, MeInvoiceView, AcademyInvoiceView,
+                    MeSubscriptionCancelView, MeSubscriptionChargeView, MentorshipServiceSetView, PayView,
+                    PlanOfferView, PlanView, ServiceItemView, ServiceView, MeSubscriptionView)
 
-# /v1/payment/offer
 app_name = 'payments'
 urlpatterns = [
     path('planoffer', PlanOfferView.as_view(), name='planoffer'),
@@ -18,8 +16,6 @@ urlpatterns = [
     path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view(), name='academy_plan_slug'),
     path('academy/plan/<int:plan_id>/cohort', AcademyPlanCohortView.as_view()),
     path('academy/plan/<slug:plan_slug>/cohort', AcademyPlanCohortView.as_view()),
-    #FIXME
-    # path('academy/plan/<slug:plan_slug>/financingoption', AcademyPlanView.as_view()),
     path('service', ServiceView.as_view()),
     path('service/<slug:service_slug>', ServiceView.as_view()),
     path('service/<slug:service_slug>/items', ServiceItemView.as_view()),
@@ -47,7 +43,7 @@ urlpatterns = [
     path('me/invoice/<int:invoice_id>', MeInvoiceView.as_view()),
     path('academy/invoice', AcademyInvoiceView.as_view()),
     path('academy/invoice/<int:invoice_id>', AcademyInvoiceView.as_view()),
-    path('card', CardView.as_view()),
+    path('card', CardView.as_view(), name='card'),
     path('bag', BagView.as_view()),
     path('checking', CheckingView.as_view(), name='checking'),
     path('pay', PayView.as_view(), name='pay'),

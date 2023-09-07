@@ -26,6 +26,7 @@ class LeadgenAppSmallSerializer(serpy.Serializer):
 
 
 class AcademyAliasSmallSerializer(serpy.Serializer):
+    academy = AcademySmallSerializer()
     slug = serpy.Field()
     active_campaign_slug = serpy.Field()
 
@@ -346,6 +347,7 @@ class GetCourseTranslationSerializer(serpy.Serializer):
     description = serpy.Field()
     lang = serpy.Field()
     course_modules = serpy.Field()
+    landing_url = serpy.Field()
 
 
 class GetCourseSmallSerializer(serpy.Serializer):

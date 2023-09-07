@@ -1,6 +1,8 @@
 class C:
     """
-    Shortener for a call, it'll be used to cover an api exception that returns multiple errors.
+    Shortener for a call.
+
+    It'll be used to cover an api exception that returns multiple errors.
     """
 
     args: tuple

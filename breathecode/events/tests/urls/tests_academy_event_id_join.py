@@ -137,7 +137,7 @@ class AcademyVenueTestSuite(EventTestCase):
                 f.write(expected)
 
         self.assertEqual(content, expected)
-        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, model.event.live_stream_url)
 
         self.assertEqual(self.bc.database.list_of('events.event'), [

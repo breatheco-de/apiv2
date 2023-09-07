@@ -177,12 +177,13 @@ class RunSpiderAdminTestSuite(CareerTestCase):
 
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
-    @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([
-               (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA),
-               (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS),
-               (200, 'https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json', JOBS2)
-           ]))
+    @patch(
+        REQUESTS_PATH['get'],
+        apply_requests_get_mock([
+            (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA),
+            (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS),
+            (200, 'https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json', JOBS2)
+        ]))
     @patch('breathecode.career.actions.fetch_sync_all_data', MagicMock())
     def test_fetch_sync_all_data_admin__with_two_spiders(self):
         from breathecode.career.actions import fetch_sync_all_data

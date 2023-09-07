@@ -12,7 +12,6 @@ from breathecode.activity.tasks import get_attendancy_log_per_cohort_user
 from breathecode.activity import tasks
 from breathecode.utils import NDB
 
-from ...models import Activity
 from ..mixins import MediaTestCase
 
 UTC_NOW = timezone.now()

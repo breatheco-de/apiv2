@@ -4,7 +4,7 @@ from breathecode.authenticate.models import Profile, ProfileTranslation
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-from .models import Event, EventType, LiveClass, Organization, EventbriteWebhook, EventCheckin
+from .models import (Event, EventType, LiveClass, Organization, EventbriteWebhook, EventCheckin)
 from breathecode.admissions.models import Academy
 from breathecode.admissions.serializers import UserPublicSerializer
 from slugify import slugify
@@ -411,6 +411,16 @@ class EventCheckinSerializer(serpy.Serializer):
     event = EventTinySerializer()
 
 
+class EventHookCheckinSerializer(serpy.Serializer):
+    id = serpy.Field()
+    email = serpy.Field()
+    status = serpy.Field()
+    created_at = serpy.Field()
+    attended_at = serpy.Field()
+    attendee = UserSerializer(required=False)
+    event = EventTinySerializer()
+
+
 class EventSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -483,7 +493,8 @@ class EventSerializer(serializers.ModelSerializer):
         if 'event_type' in data:
             data['lang'] = data['event_type'].lang
 
-        data['slug'] = slug
+        if not self.instance:
+            data['slug'] = slug
 
         return data
 

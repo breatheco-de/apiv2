@@ -3,7 +3,7 @@ from google.cloud import storage
 
 
 def resolve_credentials():
-    """Resolve Google Cloud Credentials"""
+    """Resolve Google Cloud Credentials."""
     path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
 
     if os.path.exists(path):

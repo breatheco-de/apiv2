@@ -2,10 +2,10 @@ from django.urls import path
 from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserView, AcademyCohortView,
                     MeCohortUserHistoryView, SyllabusVersionView, SyllabusView, get_timezones, UserView,
                     UserMeView, AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView,
-                    SyllabusScheduleView, get_all_academies, get_cohorts, AcademyCohortTimeSlotView,
+                    SyllabusScheduleView, get_all_academies, PublicCohortView, AcademyCohortTimeSlotView,
                     handle_test_syllabus, AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView,
                     AcademyReportView, get_public_syllabus, SyllabusAssetView, PublicCohortUserView,
-                    AcademyCohortHistoryView, AcademyTeacherView)
+                    AcademyCohortHistoryView, AcademyTeacherView, get_single_academy)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -13,7 +13,7 @@ urlpatterns = [
     path('academy/cohort/me', CohortMeView.as_view(), name='academy_cohort_me'),
     path('public/syllabus', get_public_syllabus),
     # deprecated methods, soon to be deleted
-    path('cohort/all', get_cohorts, name='cohort_all'),
+    path('cohort/all', PublicCohortView.as_view(), name='cohort_all'),
     path('cohort/user', CohortUserView.as_view(), name='cohort_user'),
     path('cohort/<int:cohort_id>/user/<int:user_id>', CohortUserView.as_view(), name='cohort_id_user_id'),
     path('cohort/<int:cohort_id>/user', CohortUserView.as_view(), name='cohort_id_user'),
@@ -56,6 +56,7 @@ urlpatterns = [
          name='academy_schedule_id_timeslot_id'),
     path('academy/teacher', AcademyTeacherView.as_view(), name='academy_teacher'),
     path('academy/', get_all_academies, name='academy'),
+    path('academy/<int:academy_id>', get_single_academy, name='single_academy'),
     path('academy/me', AcademyView.as_view(), name='academy_me'),
     path('academy/cohort', AcademyCohortView.as_view(), name='academy_cohort'),
     path('academy/activate', AcademyActivateView.as_view(), name='academy_activate'),

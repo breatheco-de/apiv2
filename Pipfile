@@ -33,6 +33,7 @@ doctor="python -m scripts.doctor"
 docs_deploy="mkdocs gh-deploy -c"
 sign_jwt="python manage.py sign_jwt"
 sign_request="python manage.py sign_request"
+flake8="flake8 ."
 
 [dev-packages]
 pytest-cov = "*"
@@ -46,6 +47,12 @@ mkdocs-material = "*"
 mkdocstrings = "*"
 pytest-xdist = "*"
 mkdocstrings-python = "*"
+flake8 = "*"
+flake8-docstrings = "*"
+mccabe = "*"
+pep8-naming = "*"
+flake8-bugbear = "*"
+pytest-gevent = "*"
 
 [packages]
 django = "~=3.2.20"
@@ -105,3 +112,10 @@ openai = "*"
 launchdarkly-server-sdk = "*"
 async-timeout = "*"
 exceptiongroup = "*"
+pip = "*"
+sqlalchemy-bigquery = {version = "*", extras = ["bqstorage"]}
+drf-yasg = "*"
+google-cloud-firestore = "*"
+gevent = "*"
+django-storages = {extras = ["google"], version = "*"}
+newrelic = "*"

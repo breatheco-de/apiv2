@@ -23,7 +23,7 @@ class LeadTestSuite(MarketingTestCase):
             {
                 'cohort_id': 1,
                 'educational_status': None,
-                'finantial_status': None,
+                'finantial_status': 'ACTIVE',
                 'history_log': {},
                 'id': 1,
                 'role': 'STUDENT',

@@ -21,4 +21,4 @@ class Command(BaseCommand):
             profile.avatar_url = avatar_url
             profile.save()
 
-        logger.debug(f'Fixing {pending.count()} avatars')
+        logger.info(f'Fixing {pending.count()} avatars')

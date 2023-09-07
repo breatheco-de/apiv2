@@ -202,11 +202,12 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         }])
 
     @patch('logging.Logger.error', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'SYSTEM_EMAIL': None,
-               'ADMIN_URL': 'https://www.whatever.com'
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'SYSTEM_EMAIL': None,
+            'ADMIN_URL': 'https://www.whatever.com'
+        })))
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores',
@@ -254,11 +255,12 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         }])
 
     @patch('logging.Logger.error', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'SYSTEM_EMAIL': 'test@email.com',
-               'ADMIN_URL': 'https://www.whatever.com'
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'SYSTEM_EMAIL': 'test@email.com',
+            'ADMIN_URL': 'https://www.whatever.com'
+        })))
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores',
@@ -305,11 +307,12 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         }])
 
     @patch('logging.Logger.error', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'SYSTEM_EMAIL': 'test@email.com',
-               'ADMIN_URL': 'https://www.whatever.com'
-           })))
+    @patch(
+        'os.getenv',
+        MagicMock(side_effect=apply_get_env({
+            'SYSTEM_EMAIL': 'test@email.com',
+            'ADMIN_URL': 'https://www.whatever.com'
+        })))
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores',

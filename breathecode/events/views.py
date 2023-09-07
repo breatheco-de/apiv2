@@ -19,6 +19,7 @@ from django.http.response import HttpResponse
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.cache import Cache
 from django.utils import timezone
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from breathecode.utils.decorators import has_permission
@@ -94,6 +95,12 @@ def get_events(request):
         lookup['status__in'] = value.split(',')
     else:
         lookup['status'] = 'ACTIVE'
+
+    online_event = request.GET.get('online_event', None)
+    if online_event == 'true':
+        lookup['online_event'] = True
+    elif online_event == 'false':
+        lookup['online_event'] = False
 
     lookup['ending_at__gte'] = timezone.now()
     if 'past' in request.GET:
@@ -199,7 +206,7 @@ class EventMeView(APIView):
                     return render_message(request, 'Event not found or you dont have access')
                 if single_event.live_stream_url is None or single_event.live_stream_url == '':
                     return render_message(request, 'Event live stream URL is not found')
-                return redirect(single_event.live_stream_url, permanent=True)
+                return redirect(single_event.live_stream_url)
 
             serializer = EventBigSerializer(single_event, many=False)
             return Response(serializer.data)
@@ -275,7 +282,7 @@ def join_live_class(request, token, live_class, lang):
             'event': LiveClassJoinSerializer(live_class).data,
         })
 
-    return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
+    return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
 
 class AcademyLiveClassView(APIView):
@@ -392,7 +399,7 @@ class AcademyLiveClassJoinView(APIView):
                                   slug='no-meeting-url')
             return render_message(request, message, status=400)
 
-        return redirect(live_class.cohort_time_slot.cohort.online_meeting_url, permanent=True)
+        return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
 
 class AcademyEventView(APIView, GenerateLookupsMixin):
@@ -605,7 +612,7 @@ class AcademyEventJoinView(APIView):
                                   slug='no-live-stream-url')
             return render_message(request, message, status=400)
 
-        return redirect(event.live_stream_url, permanent=True)
+        return redirect(event.live_stream_url)
 
 
 class EventTypeView(APIView):
@@ -819,7 +826,7 @@ def join_event(request, token, event):
         checkin.attended_at = now
         checkin.save()
 
-    return redirect(event.live_stream_url, permanent=True)
+    return redirect(event.live_stream_url)
 
 
 class EventCheckinView(APIView):

@@ -11,6 +11,7 @@ from django.http.request import HttpRequest
 from random import randint
 from breathecode.authenticate.forms import InviteForm
 from ..mixins.new_auth_test_case import AuthTestCase
+from breathecode.payments.tasks import build_plan_financing
 
 CSRF_TOKEN = str(randint(10000, 10000000000000))
 render_to_string = loader.render_to_string
@@ -585,7 +586,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': 'REVIEWER',
@@ -593,6 +594,154 @@ class AuthenticateTestSuite(AuthTestCase):
             'watching': False,
             'history_log': {},
         }])
+
+    """
+    🔽🔽🔽 POST Cohort saas
+    """
+
+    @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock(return_value=None))
+    def test__post__cohort_saas(self):
+        user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
+        plan = {'time_of_life': None, 'time_of_life_unit': None}
+        cohort = {'available_as_saas': True}
+        model = self.bc.database.create(user=user,
+                                        user_invite=user,
+                                        profile_academy=user,
+                                        role='reviewer',
+                                        plan=plan,
+                                        currency=1,
+                                        cohort=cohort)
+        url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite.token})
+        data = {
+            'first_name': 'abc',
+            'last_name': 'xyz',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
+        }
+        response = self.client.post(url, data)
+
+        content = self.bc.format.from_bytes(response.content)
+        expected = render_page_post_successfully()
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
+                         [{
+                             **self.bc.format.to_dict(model.user_invite),
+                             'status': 'ACCEPTED',
+                             'is_email_validated': True,
+                         }])
+
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
+            self.bc.format.to_dict(model.user),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
+                         [{
+                             **self.bc.format.to_dict(model.profile_academy),
+                             'first_name': model.user.first_name,
+                             'last_name': model.user.last_name,
+                             'status': 'ACTIVE',
+                         }])
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
+            'cohort_id': 1,
+            'educational_status': 'ACTIVE',
+            'finantial_status': None,
+            'id': 1,
+            'role': 'REVIEWER',
+            'user_id': 1,
+            'watching': False,
+            'history_log': {},
+        }])
+        self.bc.check.calls(build_plan_financing.delay.call_args_list, [])
+
+    """
+    🔽🔽🔽 POST Academy saas
+    """
+
+    @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock(return_value=None))
+    def test__post__academy_saas(self):
+        user = {'email': 'user@dotdotdotdot.dot', 'first_name': 'Lord', 'last_name': 'Valdomero'}
+        plan = {'time_of_life': None, 'time_of_life_unit': None}
+        cohort = {'available_as_saas': None}
+        academy = {'available_as_saas': True}
+        model = self.bc.database.create(user=user,
+                                        user_invite=user,
+                                        profile_academy=user,
+                                        role='reviewer',
+                                        plan=plan,
+                                        currency=1,
+                                        cohort=cohort,
+                                        academy=academy)
+        url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite.token})
+        data = {
+            'first_name': 'abc',
+            'last_name': 'xyz',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
+        }
+        response = self.client.post(url, data)
+
+        content = self.bc.format.from_bytes(response.content)
+        expected = render_page_post_successfully()
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        self.assertEqual(content, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
+                         [{
+                             **self.bc.format.to_dict(model.user_invite),
+                             'status': 'ACCEPTED',
+                             'is_email_validated': True,
+                         }])
+
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
+            self.bc.format.to_dict(model.user),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
+                         [{
+                             **self.bc.format.to_dict(model.profile_academy),
+                             'first_name': model.user.first_name,
+                             'last_name': model.user.last_name,
+                             'status': 'ACTIVE',
+                         }])
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
+            'cohort_id': 1,
+            'educational_status': 'ACTIVE',
+            'finantial_status': None,
+            'id': 1,
+            'role': 'REVIEWER',
+            'user_id': 1,
+            'watching': False,
+            'history_log': {},
+        }])
+        self.bc.check.calls(build_plan_financing.delay.call_args_list, [])
 
     """
     🔽🔽🔽 POST with first name, last name and passwords, UserInvite and User with email and Cohort
@@ -641,7 +790,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': model.role.slug.upper(),
@@ -701,7 +850,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': model.role.slug.upper(),
@@ -756,7 +905,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 2,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': model.role.slug.upper(),
@@ -813,7 +962,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [{
             'cohort_id': 1,
-            'educational_status': None,
+            'educational_status': 'ACTIVE',
             'finantial_status': None,
             'id': 1,
             'role': 'STUDENT',

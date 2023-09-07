@@ -97,22 +97,13 @@ def get_downloadable(request, slug=None):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_alias(request, slug=None):
-
-    if slug is not None:
-        alias = AcademyAlias.objects.filter(slug=slug).first()
-        if alias is None:
-            raise ValidationException('Alias not found', 404, slug='not-found')
-
-        seri = AcademyAliasSmallSerializer(download, many=False)
-        return Response(seri.data)
+def get_alias(request):
 
     items = AcademyAlias.objects.all()
     academy = request.GET.get('academy', None)
     if academy is not None:
-        items = items.filter(academy__slug__in=academy.split(','))
+        items = items.filter(academy__id__in=academy.split(','))
 
-    items = items.order_by('created_at')
     serializer = AcademyAliasSmallSerializer(items, many=True)
     return Response(serializer.data)
 

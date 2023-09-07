@@ -1,12 +1,13 @@
 import serpy
 from breathecode.payments.models import Consumable
 from breathecode.utils import ValidationException
-from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
+from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill, CalendlyOrganization
 import breathecode.mentorship.actions as actions
 from breathecode.admissions.models import CohortUser
 from .actions import generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
+from breathecode.services.calendly import Calendly
 from breathecode.utils.datetime_integer import duration_to_str
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils.i18n import translation
@@ -82,6 +83,17 @@ class SupportChannelTinySerializer(serpy.Serializer):
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+
+class CalendlyOrganizationBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    access_token = serpy.Field()
+    max_concurrent_sessions = serpy.Field()
+    sync_status = serpy.Field()
+    sync_desc = serpy.Field()
+    updated_at = serpy.Field()
+    created_at = serpy.Field()
 
 
 class GETAgentSmallSerializer(serpy.Serializer):
@@ -301,6 +313,34 @@ class GETSessionReportSerializer(serpy.Serializer):
 
 
 class SessionBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    name = serpy.Field()
+    status = serpy.Field()
+    bill = TinyBillSerializer(required=False)
+    # mentor = serpy.Field()
+    # mentee = serpy.Field()
+    mentor = GETMentorTinyTinySerializer()
+    mentee = GetUserSmallSerializer(required=False)
+    latitude = serpy.Field()
+    longitude = serpy.Field()
+    is_online = serpy.Field()
+    mentor_joined_at = serpy.Field()
+    mentor_left_at = serpy.Field()
+    service = GETServiceTinyTinySerializer(required=False)
+    starts_at = serpy.Field()
+    allow_billing = serpy.Field()
+    online_meeting_url = serpy.Field()
+    online_recording_url = serpy.Field()
+    agenda = serpy.Field()
+    summary = serpy.Field()
+    started_at = serpy.Field()
+    accounted_duration = serpy.Field()
+    ended_at = serpy.Field()
+    ends_at = serpy.Field()
+    mentee_left_at = serpy.Field()
+
+
+class SessionHookSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     status = serpy.Field()
@@ -752,7 +792,22 @@ class SessionSerializer(SessionPUTSerializer):
                 slug='mentor-mentee-same-person'),
                                       code=400)
 
-        print({**data, 'service': service, 'mentor': mentor, 'mentee': mentee})
+        calendlyOrganization = CalendlyOrganization.objects.filter(academy=self.context['academy_id']).first()
+        if calendlyOrganization is not None:
+            max_sessions = calendlyOrganization.max_concurrent_sessions
+            if max_sessions is not None and max_sessions > 0:
+                total_service_mentorships = MentorshipSession.objects.filter(
+                    academy=self.context['academy_id'], status='PENDING', mentee=mentee,
+                    service=service).count()
+                if max_sessions <= total_service_mentorships:
+                    raise ValidationException(translation(
+                        lang,
+                        en=
+                        f'You can only schedule {max_sessions} mentoring sessions in advanced. Fix this by cancelling an upcoming session or waiting for it to happen before booking a new one. ',
+                        es=
+                        f'Sólo puedes agendar un máximo de {max_sessions} sessiones de mentoría por adelantado. Soluciona esto cancelando una de tus próximas sesiones o espera a que alguna ocurra antes de volver a agendar',
+                        slug='max-concurrent-sessions'),
+                                              code=400)
 
         return super().validate({**data, 'service': service, 'mentor': mentor, 'mentee': mentee})
 
@@ -786,3 +841,59 @@ class MentorshipBillPUTSerializer(serializers.ModelSerializer):
                                       slug='academy-not-found')
 
         return {**data, 'academy': academy}
+
+
+class CalendlyOrganizationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CalendlyOrganization
+        fields = ('access_token', 'sync_status', 'sync_desc', 'username')
+
+    def validate(self, data):
+
+        if 'access_token' not in data:
+            ValidationException(
+                translation(
+                    self.context['lang'],
+                    en=
+                    'You need to specify the access token to be used by the calendly organization credentials',
+                    es=
+                    'Por favor especifíca el access_token para conectar la organización con el API de calendly',
+                    slug='missing-access-token'))
+
+        if 'username' not in data:
+            ValidationException(
+                translation(
+                    self.context['lang'],
+                    en='You need to specify the organization calendly username or handle',
+                    es='Por favor especifíca el nombre de usuario o handle para la organizacion en calendly',
+                    slug='missing-access-token'))
+
+        academy = Academy.objects.get(pk=self.context['academy_id'])
+
+        return super().validate({**data.copy(), 'academy': academy})
+
+    def create(self, validated_data):
+
+        cal = Calendly(token=validated_data['access_token'])
+        try:
+            organization = cal.get_organization()
+            validated_data['uri'] = organization['resource']['current_organization']
+        except Exception as e:
+            raise ValidationException('Organization not found for the given access token: ' + str(e))
+
+        org = super().create(validated_data)
+
+        organization = None
+
+        try:
+            res = cal.subscribe(org.uri, org.hash)
+        except Exception as e:
+            raise ValidationException('Error while creating calendly organization: ' + str(e))
+
+        try:
+            subscriptions = cal.get_subscriptions(org.uri)
+        except Exception as e:
+            raise ValidationException('Error retrieving organization subscriptions: ' + str(e))
+
+        return org

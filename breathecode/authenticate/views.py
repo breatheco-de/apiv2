@@ -13,7 +13,6 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import Q
-from django.db.models.functions import Now
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -35,15 +34,13 @@ from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
 from breathecode.utils import (GenerateLookupsMixin, HeaderLimitOffsetPagination, ValidationException,
-                               capable_of, response_207)
+                               capable_of)
 from breathecode.utils.api_view_extensions.api_view_extensions import \
     APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.scope import scope
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
-from breathecode.utils.multi_status_response import MultiStatusResponse
-from breathecode.utils.service import Service
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
@@ -67,6 +64,8 @@ from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerial
                           UserSerializer, UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
                           PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer,
                           POSTGithubUserSerializer)
+
+import breathecode.payments.tasks as payment_tasks
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -716,6 +715,9 @@ class StudentView(APIView, GenerateLookupsMixin):
                                   slug='delete-is-forbidden')
 
 
+import breathecode.activity.tasks as tasks_activity
+
+
 class LoginView(ObtainAuthToken):
     schema = AutoSchema()
 
@@ -725,6 +727,9 @@ class LoginView(ObtainAuthToken):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.get_or_create(user=user, token_type='login')
+
+        tasks_activity.add_activity.delay(user.id, 'login', related_type='auth.User', related_id=user.id)
+
         return Response({
             'token': token.key,
             'user_id': user.pk,
@@ -1562,6 +1567,7 @@ def render_user_invite(request, token):
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def render_invite(request, token, member_id=None):
+    from breathecode.payments.models import Invoice, Bag, Plan
     _dict = request.POST.copy()
     _dict['token'] = token
     _dict['callback'] = request.GET.get('callback', '')
@@ -1669,6 +1675,43 @@ def render_invite(request, token, member_id=None):
                 cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
                 cu.save()
 
+            plan = Plan.objects.filter(available_cohorts=invite.cohort, invites=invite).first()
+
+            if plan and invite.user and invite.cohort.academy.main_currency and (
+                    invite.cohort.available_as_saas == True or
+                (invite.cohort.available_as_saas == None
+                 and invite.cohort.academy.available_as_saas == True)):
+                utc_now = timezone.now()
+
+                bag = Bag()
+                bag.chosen_period = 'NO_SET'
+                bag.status = 'PAID'
+                bag.type = 'INVITED'
+                bag.how_many_installments = 1
+                bag.academy = invite.cohort.academy
+                bag.user = user
+                bag.is_recurrent = False
+                bag.was_delivered = False
+                bag.token = None
+                bag.currency = invite.cohort.academy.main_currency
+                bag.expires_at = None
+
+                bag.save()
+
+                bag.plans.add(plan)
+                bag.selected_cohorts.add(invite.cohort)
+
+                invoice = Invoice(amount=0,
+                                  paid_at=utc_now,
+                                  user=invite.user,
+                                  bag=bag,
+                                  academy=bag.academy,
+                                  status='FULFILLED',
+                                  currency=bag.academy.main_currency)
+                invoice.save()
+
+                payment_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
+
         invite.status = 'ACCEPTED'
         invite.is_email_validated = True
         invite.save()
@@ -1679,7 +1722,6 @@ def render_invite(request, token, member_id=None):
             if len(uri) > 0 and uri[0] == '[':
                 uri = uri[2:-2]
             if settings.DEBUG:
-                print(type(callback))
                 return HttpResponse(f"Redirect to: <a href='{uri}'>{uri}</a>")
             else:
                 return HttpResponseRedirect(redirect_to=uri)
@@ -2205,7 +2247,7 @@ class ProfileMePictureView(APIView):
 
             if json['shape'] != 'Square':
                 cloud_file.delete()
-                raise ValidationException(f'just can upload square images', slug='not-square-image')
+                raise ValidationException('just can upload square images', slug='not-square-image')
 
             func = FunctionV1(region='us-central1', project_id=get_google_project_id(), name='resize-image')
 
@@ -2213,7 +2255,7 @@ class ProfileMePictureView(APIView):
                 'width': 100,
                 'filename': hash,
                 'bucket': get_profile_bucket(),
-            }, timeout=10)
+            }, timeout=28)
 
             cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
             cloud_file_thumbnail_url = cloud_file_thumbnail.url()

@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 import stripe
 from django.contrib.auth.models import User
@@ -33,13 +32,15 @@ class Stripe:
     def create_card_token(self, card_number: str, exp_month: int, exp_year: int, cvc: str) -> None:
         stripe.api_key = self.api_key
 
-        token = stripe.Token.create(card={
-            'number': card_number,
-            'exp_month': exp_month,
-            'exp_year': exp_year,
-            'cvc': cvc,
-        })
-        return token.id
+        def callback():
+            return stripe.Token.create(card={
+                'number': card_number,
+                'exp_month': exp_month,
+                'exp_year': exp_year,
+                'cvc': cvc,
+            })
+
+        return self._i18n_validations(callback).id
 
     def add_payment_method(self, user: User, token: str):
         stripe.api_key = self.api_key
@@ -49,8 +50,7 @@ class Stripe:
             contact = self.add_contact(user)
 
         def callback():
-            # return stripe.Customer.create_source(contact.stripe_id, source=token)
-            stripe.Customer.modify(contact.stripe_id, source=token)
+            return stripe.Customer.modify(contact.stripe_id, source=token)
 
         return self._i18n_validations(callback)
 
@@ -65,7 +65,11 @@ class Stripe:
         name = user.first_name
         name += f' {user.last_name}' if name and user.last_name else f'{user.last_name}'
 
-        response = stripe.Customer.create(email=user.email, name=name)
+        def callback():
+            return stripe.Customer.create(email=user.email, name=name)
+
+        response = self._i18n_validations(callback)
+
         contact.stripe_id = response['id']
         contact.save()
 

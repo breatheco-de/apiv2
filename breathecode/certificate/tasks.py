@@ -73,7 +73,7 @@ def generate_cohort_certificates(self, cohort_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def generate_one_certificate(self, cohort_id, user_id, layout):
-    logger.debug('Starting generate_cohort_certificates', slug='starting-generating-certificate')
+    logger.info('Starting generate_cohort_certificates', slug='starting-generating-certificate')
     from .actions import generate_certificate
 
     cohort_user = CohortUser.objects.filter(cohort__id=cohort_id, user__id=user_id, role='STUDENT').first()
@@ -82,8 +82,8 @@ def generate_one_certificate(self, cohort_id, user_id, layout):
         logger.error(f'Cant generate certificate with {user_id}', slug='cohort-user-not-found')
         return
 
-    logger.debug(f'Generating gertificate for {str(cohort_user.user)} student that GRADUATED',
-                 slug='generating-certificate')
+    logger.info(f'Generating gertificate for {str(cohort_user.user)} student that GRADUATED',
+                slug='generating-certificate')
     try:
         generate_certificate(cohort_user.user, cohort_user.cohort, layout)
 

@@ -826,6 +826,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
             **self.model_to_dict(model, 'cohort')
         }])
@@ -845,6 +846,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
             **self.model_to_dict(model, 'cohort')
         }])
@@ -867,10 +869,12 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:cohort_all') + f'?plan={slug}'
         response = self.client.get(url)
         json = response.json()
+
         expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
             **self.model_to_dict(model, 'cohort')
         }])

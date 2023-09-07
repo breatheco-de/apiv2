@@ -24,7 +24,7 @@ class BaseTaskWithRetry(CeleryTask):
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def student_task_notification(self, task_id):
     """Notify if the task was change"""
-    logger.debug('Starting student_task_notification')
+    logger.info('Starting student_task_notification')
 
     task = Task.objects.filter(id=task_id).first()
     if not task_is_valid_for_notifications(task):
@@ -122,19 +122,24 @@ def set_cohort_user_assignments(task_id: int):
             s = Service('rigobot', task.user.id)
 
         if s and task.task_status == 'DONE':
-            s.post('/v1/finetuning/me/repository/',
-                   json={
-                       'url': task.github_url,
-                       'watchers': task.user.credentialsgithub.username,
-                   })
+            response = s.post('/v1/finetuning/me/repository/',
+                              json={
+                                  'url': task.github_url,
+                                  'watchers': task.user.credentialsgithub.username,
+                              })
+            data = response.json()
+            task.rigobot_repository_id = data['id']
 
         elif s:
-            s.put('/v1/finetuning/me/repository/',
-                  json={
-                      'url': task.github_url,
-                      'activity_status': 'INACTIVE',
-                  })
-    except:
+            response = s.put('/v1/finetuning/me/repository/',
+                             json={
+                                 'url': task.github_url,
+                                 'activity_status': 'INACTIVE',
+                             })
+            data = response.json()
+            task.rigobot_repository_id = data['id']
+
+    except Exception:
         logger.error('App Rigobot not found')
 
     logger.info('History log saved')

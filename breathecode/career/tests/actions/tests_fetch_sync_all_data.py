@@ -164,12 +164,13 @@ class ActionTestFetchSyncAllDataAdminTestCase(CareerTestCase):
                              [call('First you must specify a spider (fetch_sync_all_data)')])
             self.assertEqual(str(e), 'without-spider')
 
-    @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([
-               (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA),
-               (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS),
-               (200, 'https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json', JOBS2)
-           ]))
+    @patch(
+        REQUESTS_PATH['get'],
+        apply_requests_get_mock([
+            (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA),
+            (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS),
+            (200, 'https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json', JOBS2)
+        ]))
     def test_fetch_funtion__with_one_spider_two_requests(self):
         import requests
 
@@ -187,11 +188,12 @@ class ActionTestFetchSyncAllDataAdminTestCase(CareerTestCase):
             call('https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json', timeout=2)
         ])
 
-    @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([
-               (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA1),
-               (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS)
-           ]))
+    @patch(
+        REQUESTS_PATH['get'],
+        apply_requests_get_mock([
+            (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA1),
+            (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS)
+        ]))
     def test_verify_fetch_funtions_was_called(self):
         import requests
 

@@ -49,6 +49,42 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
 
+    # When: no tasks
+    # Then: response 404
+    def test_no_tasks(self):
+        self.bc.request.set_headers(academy=1)
+
+        expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
+        query = {
+            self.bc.fake.slug(): self.bc.fake.slug(),
+            self.bc.fake.slug(): self.bc.fake.slug(),
+            self.bc.fake.slug(): self.bc.fake.slug(),
+        }
+
+        mock = MagicMock()
+        mock.raw = iter([json.dumps(expected).encode()])
+        mock.headers = {'Content-Type': 'application/json'}
+        code = random.randint(200, 299)
+        mock.status_code = code
+        mock.reason = 'OK'
+
+        task = {'github_url': self.bc.fake.url()}
+        model = self.bc.database.create(profile_academy=1, role=1, capability='read_assignment')
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:academy_task_id_coderevision',
+                           kwargs={'task_id': 1}) + '?' + self.bc.format.querystring(query)
+
+        with patch.multiple('breathecode.utils.service.Service',
+                            __init__=MagicMock(return_value=None),
+                            get=MagicMock(return_value=mock)):
+            response = self.client.get(url)
+            self.bc.check.calls(Service.get.call_args_list, [])
+
+        self.assertEqual(response.getvalue().decode('utf-8'), '{"detail":"task-not-found","status_code":404}')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+
     # When: auth
     # Then: response 200
     def test_auth(self):

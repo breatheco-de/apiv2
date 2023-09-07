@@ -1,4 +1,5 @@
 import logging
+import os
 
 import pytz
 from django.contrib.auth.models import AnonymousUser, User
@@ -54,7 +55,22 @@ def get_all_academies(request, id=None):
     if status:
         items = items.filter(status__in=status.upper().split(','))
 
+    academy_ids = request.GET.get('academy_id')
+    if academy_ids:
+        items = items.filter(id__in=academy_ids.split(','))
+
     serializer = AcademySerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_single_academy(request, academy_id=None):
+    item = Academy.objects.filter(id=academy_id).first()
+    if item is None:
+        raise ValidationException(f'Academy {academy_id} not found', slug='academy-not-found')
+
+    serializer = GetBigAcademySerializer(item)
     return Response(serializer.data)
 
 
@@ -142,102 +158,105 @@ def get_public_syllabus(request, id=None):
     return Response(serializer.data)
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def get_cohorts(request, id=None):
-    items = Cohort.objects.filter(private=False)
+class PublicCohortView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=CohortCache, paginate=True, sort='-kickoff_date')
 
-    items = items.annotate(longitude=Value(None, output_field=FloatField()),
-                           latitude=Value(None, output_field=FloatField()))
+    def get(self, request, id=None):
+        handler = self.extensions(request)
 
-    upcoming = request.GET.get('upcoming', None)
-    if upcoming == 'true':
-        now = timezone.now()
-        items = items.filter(Q(kickoff_date__gte=now) | Q(never_ends=True))
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
 
-    never_ends = request.GET.get('never_ends', None)
-    if never_ends == 'false':
-        items = items.filter(never_ends=False)
+        items = Cohort.objects.filter(private=False).select_related('syllabus_version__syllabus')
 
-    academy = request.GET.get('academy', None)
-    if academy is not None:
-        items = items.filter(academy__slug__in=academy.split(','))
+        items = items.annotate(longitude=Value(None, output_field=FloatField()),
+                               latitude=Value(None, output_field=FloatField()))
 
-    location = request.GET.get('location', None)
-    if location is not None:
-        items = items.filter(academy__slug__in=location.split(','))
+        upcoming = request.GET.get('upcoming', None)
+        if upcoming == 'true':
+            now = timezone.now()
+            items = items.filter(Q(kickoff_date__gte=now) | Q(never_ends=True))
 
-    ids = request.GET.get('id', None)
-    if ids is not None:
-        items = items.filter(id__in=ids.split(','))
+        never_ends = request.GET.get('never_ends', None)
+        if never_ends == 'false':
+            items = items.filter(never_ends=False)
 
-    slugs = request.GET.get('slug', None)
-    if slugs is not None:
-        items = items.filter(slug__in=slugs.split(','))
+        academy = request.GET.get('academy', None)
+        if academy is not None:
+            items = items.filter(academy__slug__in=academy.split(','))
 
-    stage = request.GET.get('stage')
-    if stage:
-        items = items.filter(stage__in=stage.upper().split(','))
-    else:
-        items = items.exclude(stage='DELETED')
+        location = request.GET.get('location', None)
+        if location is not None:
+            items = items.filter(academy__slug__in=location.split(','))
 
-    if coordinates := request.GET.get('coordinates', ''):
-        try:
-            latitude, longitude = coordinates.split(',')
-            latitude = float(latitude)
-            longitude = float(longitude)
-        except:
-            raise ValidationException('Bad coordinates, the format is latitude,longitude',
-                                      slug='bad-coordinates')
+        ids = request.GET.get('id', None)
+        if ids is not None:
+            items = items.filter(id__in=ids.split(','))
 
-        if latitude > 90 or latitude < -90:
-            raise ValidationException('Bad latitude', slug='bad-latitude')
+        slugs = request.GET.get('slug', None)
+        if slugs is not None:
+            items = items.filter(slug__in=slugs.split(','))
 
-        if longitude > 180 or longitude < -180:
-            raise ValidationException('Bad longitude', slug='bad-longitude')
-
-        items = items.annotate(longitude=Value(longitude, FloatField()),
-                               latitude=Value(latitude, FloatField()))
-
-    saas = request.GET.get('saas', '').lower()
-    if saas == 'true':
-        items = items.filter(academy__available_as_saas=True)
-
-    elif saas == 'false':
-        items = items.filter(academy__available_as_saas=False)
-
-    syllabus_slug = request.GET.get('syllabus_slug', '')
-    if syllabus_slug:
-        items = items.filter(syllabus_version__syllabus__slug=syllabus_slug)
-
-    plan = request.GET.get('plan', '')
-    if plan == 'true':
-        items = items.filter(academy__main_currency__isnull=False, plan__id__gte=1).distinct()
-
-    elif plan == 'false':
-        items = items.filter().exclude(plan__id__gte=1).distinct()
-
-    elif plan:
-        kwargs = {}
-
-        if isinstance(plan, int) or plan.isnumeric():
-            kwargs['plan__id'] = plan
+        stage = request.GET.get('stage')
+        if stage:
+            items = items.filter(stage__in=stage.upper().split(','))
         else:
-            kwargs['plan__slug'] = plan
+            items = items.exclude(stage='DELETED')
 
-        items = items.filter(**kwargs).distinct()
+        if coordinates := request.GET.get('coordinates', ''):
+            try:
+                latitude, longitude = coordinates.split(',')
+                latitude = float(latitude)
+                longitude = float(longitude)
+            except:
+                raise ValidationException('Bad coordinates, the format is latitude,longitude',
+                                          slug='bad-coordinates')
 
-    sort = request.GET.get('sort', None)
-    if sort is None or sort == '':
-        sort = '-kickoff_date'
+            if latitude > 90 or latitude < -90:
+                raise ValidationException('Bad latitude', slug='bad-latitude')
 
-    items = items.order_by(sort)
+            if longitude > 180 or longitude < -180:
+                raise ValidationException('Bad longitude', slug='bad-longitude')
 
-    serializer = PublicCohortSerializer(items, many=True)
-    data = sorted(serializer.data,
-                  key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
+            items = items.annotate(longitude=Value(longitude, FloatField()),
+                                   latitude=Value(latitude, FloatField()))
 
-    return Response(data)
+        saas = request.GET.get('saas', '').lower()
+        if saas == 'true':
+            items = items.filter(academy__available_as_saas=True)
+
+        elif saas == 'false':
+            items = items.filter(academy__available_as_saas=False)
+
+        syllabus_slug = request.GET.get('syllabus_slug', '')
+        if syllabus_slug:
+            items = items.filter(syllabus_version__syllabus__slug=syllabus_slug)
+
+        plan = request.GET.get('plan', '')
+        if plan == 'true':
+            items = items.filter(academy__main_currency__isnull=False, plan__id__gte=1).distinct()
+
+        elif plan == 'false':
+            items = items.filter().exclude(plan__id__gte=1).distinct()
+
+        elif plan:
+            kwargs = {}
+
+            if isinstance(plan, int) or plan.isnumeric():
+                kwargs['plan__id'] = plan
+            else:
+                kwargs['plan__slug'] = plan
+
+            items = items.filter(**kwargs).distinct()
+
+        items = handler.queryset(items)
+        serializer = PublicCohortSerializer(items, many=True)
+        data = sorted(serializer.data,
+                      key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
+
+        return handler.response(data)
 
 
 class AcademyReportView(APIView):
@@ -366,7 +385,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         items = handler.queryset(items)
         serializer = GetCohortUserSerializer(items, many=True)
-        return Response(serializer.data)
+        return handler.response(serializer.data)
 
     def post(self, request, cohort_id=None, user_id=None):
 
@@ -1703,7 +1722,7 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
         items = handler.queryset(items)
         serializer = GetPublicCohortUserSerializer(items, many=True)
-        return Response(serializer.data)
+        return handler.response(serializer.data)
 
 
 class AcademyCohortHistoryView(APIView):
