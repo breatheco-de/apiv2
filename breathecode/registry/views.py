@@ -557,7 +557,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         if 'difficulty' in self.request.GET:
             param = self.request.GET.get('difficulty')
-            lookup['difficulty__in'] = [p.lower() for p in param.split(',')]
+            lookup['difficulty__in'] = [p.upper() for p in param.split(',')]
 
         if 'keywords' in self.request.GET:
             param = self.request.GET.get('keywords')
