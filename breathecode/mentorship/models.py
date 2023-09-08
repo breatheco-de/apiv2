@@ -404,9 +404,11 @@ class MentorshipSession(models.Model):
 
     def save(self, *args, **kwargs):
 
+        is_creating = self.pk is None
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
-        if self.__old_status != self.status:
+        if is_creating or self.__old_status != self.status:
             signals.mentorship_session_status.send(instance=self, sender=MentorshipSession)
 
         self.__old_status = self.status
