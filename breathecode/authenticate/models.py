@@ -19,8 +19,6 @@ from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType,
 from breathecode.utils.validators import validate_language_code
 from .signals import invite_status_updated, academy_invite_accepted
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.events.models import Event
-from breathecode.registry.models import Asset
 
 __all__ = [
     'User', 'Group', 'ContentType', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
@@ -433,18 +431,14 @@ class UserInvite(models.Model):
                                  blank=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
-    event = models.ForeignKey(Event,
-                              on_delete=models.CASCADE,
-                              null=True,
-                              default=None,
-                              blank=True,
-                              help_text='If set, the user signed up because of an Event')
-    asset = models.ForeignKey(Asset,
-                              on_delete=models.CASCADE,
-                              null=True,
-                              default=None,
-                              blank=True,
-                              help_text='If set, the user signed up because of an Asset')
+    event_slug = models.SlugField(max_length=40,
+                                  blank=True,
+                                  null=True,
+                                  help_text='If set, the user signed up because of an Event')
+    asset_slug = models.SlugField(max_length=40,
+                                  blank=True,
+                                  null=True,
+                                  help_text='If set, the user signed up because of an Asset')
 
     first_name = models.CharField(max_length=100, default=None, null=True)
     last_name = models.CharField(max_length=100, default=None, null=True)
