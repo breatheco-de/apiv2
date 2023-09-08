@@ -46,7 +46,7 @@ from breathecode.utils.views import (private_view, render_message, set_query_par
 
 from .actions import (generate_academy_token, get_app, get_user_language, resend_invite, reset_password,
                       set_gitpod_user_expiration, update_gitpod_users, sync_organization_members,
-                      get_github_scopes)
+                      get_github_scopes, accept_invite)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
@@ -373,6 +373,8 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     def put(self, request, new_status=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
+
+        accept_invite(user=request.user)
 
         if new_status is None:
             raise ValidationException(f'Please specify new status for the invites', slug='missing-status')
@@ -1538,50 +1540,7 @@ def render_user_invite(request, token):
     accepting = request.GET.get('accepting', '')
     rejecting = request.GET.get('rejecting', '')
     if accepting.strip() != '':
-        invites = UserInvite.objects.filter(id__in=accepting.split(','),
-                                            email=token.user.email,
-                                            status='PENDING')
-
-        for invite in invites:
-            if invite.academy is not None:
-                profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
-
-                #
-                if profile is None:
-                    role = invite.role
-                    if not role:
-                        role = Role.objects.filter(slug='STUDENT').first()
-
-                    # is better generate a role without capability that have a exception in this case
-                    if not role:
-                        role = Role(slug='student', name='Student')
-                        role.save()
-
-                    profile = ProfileAcademy(email=invite.email,
-                                             academy=invite.academy,
-                                             role=role,
-                                             first_name=token.user.first_name,
-                                             last_name=token.user.last_name)
-
-                profile.user = token.user
-                profile.status = 'ACTIVE'
-                profile.save()
-
-            if invite.cohort is not None:
-                role = 'student'
-                if invite.role is not None and invite.role.slug != 'student':
-                    role = invite.role.slug.upper()
-
-                cu = CohortUser.objects.filter(user=token.user, cohort=invite.cohort).first()
-                if cu is None:
-                    cu = CohortUser(user=token.user,
-                                    cohort=invite.cohort,
-                                    role=role.upper(),
-                                    educational_status='ACTIVE')
-                    cu.save()
-
-            invite.status = 'ACCEPTED'
-            invite.save()
+        accept_invite(accepting, token.user)
 
     if rejecting.strip() != '':
         UserInvite.objects.filter(id__in=rejecting.split(','), email=token.user.email,
