@@ -63,6 +63,7 @@ class PlanAdmin(admin.ModelAdmin):
     list_filter = ['trial_duration_unit', 'owner']
     search_fields = ['lang', 'title']
     raw_id_fields = ['owner']
+    filter_horizontal = ('available_cohorts', 'invites')
 
 
 @admin.register(PlanTranslation)

@@ -411,6 +411,16 @@ class EventCheckinSerializer(serpy.Serializer):
     event = EventTinySerializer()
 
 
+class EventHookCheckinSerializer(serpy.Serializer):
+    id = serpy.Field()
+    email = serpy.Field()
+    status = serpy.Field()
+    created_at = serpy.Field()
+    attended_at = serpy.Field()
+    attendee = UserSerializer(required=False)
+    event = EventPublicBigSerializer()
+
+
 class EventSerializer(serializers.ModelSerializer):
 
     class Meta:
