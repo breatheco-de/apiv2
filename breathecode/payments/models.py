@@ -141,6 +141,8 @@ class AbstractAsset(models.Model):
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
 
+    title = models.CharField(max_length=60, default=None, null=True, blank=True)
+
     owner = models.ForeignKey(Academy,
                               on_delete=models.CASCADE,
                               blank=True,

@@ -24,6 +24,7 @@ def service_item_serializer(service_item, service):
             'groups': [],
             'private': service.private,
             'slug': service.slug,
+            'title': service.title,
         },
         'unit_type': service_item.unit_type,
     }

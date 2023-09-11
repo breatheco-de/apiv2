@@ -33,6 +33,7 @@ def service_serializer(service):
         'groups': [],
         'private': service.private,
         'slug': service.slug,
+        'title': service.title,
     }
 
 
