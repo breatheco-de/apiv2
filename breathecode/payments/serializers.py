@@ -64,7 +64,7 @@ class GetGroupSerializer(serpy.Serializer):
 
 
 class GetServiceSmallSerializer(serpy.Serializer):
-    # title = serpy.Field()
+    title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
     # owner = GetAcademySmallSerializer(many=False)
@@ -76,7 +76,7 @@ class GetServiceSmallSerializer(serpy.Serializer):
 
 
 class GetServiceSerializer(custom_serpy.Serializer):
-    # title = serpy.Field()
+    title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
     currency = GetCurrencySmallSerializer(many=False)
