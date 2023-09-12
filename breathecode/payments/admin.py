@@ -83,7 +83,7 @@ class ConsumableAdmin(admin.ModelAdmin):
     list_display = ('id', 'unit_type', 'how_many', 'service_item', 'user', 'valid_until')
     list_filter = ['unit_type']
     search_fields = ['service_item__service__slug']
-    raw_id_fields = ['user', 'service_item', 'cohort', 'event_type_set', 'mentorship_service_set']
+    raw_id_fields = ['user', 'service_item', 'cohort_set', 'event_type_set', 'mentorship_service_set']
     actions = [grant_service_permissions]
 
 
@@ -106,7 +106,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_filter = ['status', 'is_refundable', 'pay_every_unit']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
     raw_id_fields = [
-        'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
+        'user', 'academy', 'selected_cohort_set', 'selected_mentorship_service_set', 'selected_event_type_set'
     ]
     actions = [renew_subscription_consumables]
 
@@ -130,7 +130,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
     list_filter = ['status']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
     raw_id_fields = [
-        'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
+        'user', 'academy', 'selected_cohort_set', 'selected_mentorship_service_set', 'selected_event_type_set'
     ]
     actions = [renew_plan_financing_consumables]
 
