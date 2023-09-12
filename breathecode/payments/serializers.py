@@ -3,7 +3,7 @@ from breathecode.admissions.models import Cohort
 from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
-from breathecode.utils import serializers, serpy
+from breathecode.utils import serializers, serpy, custom_serpy
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
